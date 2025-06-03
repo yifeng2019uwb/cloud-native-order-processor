@@ -45,6 +45,5 @@ variable "db_username" {
 variable "db_password" {
   description = "Password for the PostgreSQL database."
   type        = string
-  type        = string
   sensitive   = true # Mark as sensitive to prevent outputting to console
 }
