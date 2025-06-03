@@ -1,0 +1,1 @@
+# Create the main AWS resource - EC2, VPN, IAM, LAMBDA, API GATEWAY, ETC
