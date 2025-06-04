@@ -1,3 +1,10 @@
+name: CI for Practice Project # It's good practice to give your workflow a name
+
+on:
+  push:
+    branches:
+      - '**' # This means it will trigger on pushes to any branch
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
