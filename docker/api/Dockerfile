@@ -1,16 +1,24 @@
 # Use the official AWS Lambda Python base image (or a standard Python image for a web server)
-FROM public.ecr.aws/lambda/python:3.11 # Or python:3.11-slim-buster for a web server
+# Or python:3.11-slim-buster for a web server (Moved comment to its own line)
+FROM public.ecr.aws/lambda/python:3.11
 
-WORKDIR /var/task # Or /app for a web server
+# Set the working directory in the container
+WORKDIR /var/task
 
+# Copy the requirements.txt file into the container
+# This step is cached, so dependencies are only reinstalled if requirements.txt changes
 COPY requirements.txt .
+
+# Install Python dependencies
+# The --no-cache-dir flag is used to prevent pip from storing downloaded packages,
+# which helps keep the image size small.
 RUN pip install -r requirements.txt --target . --no-cache-dir
 
+# Copy your Lambda function code into the container
+# The '.' copies everything from the build context (the directory where Dockerfile is)
 COPY . .
 
-# If it's a web server (e.g., Flask/Django), you might expose a port and use a WSGI server
-# EXPOSE 8000
-# CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"] # Example for Flask
-
-# If it's a Lambda function, keep the CMD as before:
+# Set the CMD to your handler (e.g., 'your_file_name.your_handler_function_name')
+# For example, if your file is 'app.py' and your handler function is 'lambda_handler',
+# then CMD would be 'app.lambda_handler'
 CMD [ "app.lambda_handler" ]
