@@ -16,7 +16,7 @@ jobs:
      # --- ADD TERRAFORM SET STEP ---
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
-        with:
+      #  with:
           # cli_config_credentials_path: ~/.terraformrc 
 
       - name: Configure AWS Credentials
