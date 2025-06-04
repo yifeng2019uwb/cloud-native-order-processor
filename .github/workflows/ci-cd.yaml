@@ -50,11 +50,17 @@ jobs:
       uses: aws-actions/amazon-ecr-login@v2
       with:
           mask-password: 'false'
+          registry-type: private
     
     - name: Build and push Docker images
+      env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }} 
+          ECR_REPOSITORY: cloud-native-order-processor-api 
+          IMAGE_TAG: ${{ github.sha }} 
       run: |
-        chmod +x scripts/build-and-push.sh
-        ./scripts/build-and-push.sh
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
     
     - name: Deploy with Terraform
       run: |
