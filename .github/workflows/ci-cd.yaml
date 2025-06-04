@@ -1,89 +1,60 @@
-name: CI/CD Pipeline
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-
-env:
-  AWS_REGION: us-west-2
-  PROJECT_NAME: order-processor
-
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-    
-    - name: Install dependencies
-      run: |
-        pip install -r docker/api/requirements.txt
-        pip install pytest
-    
-    - name: Run tests
-      run: |
-        python -m pytest tests/ || echo "No tests found"
-
   build-and-deploy:
-    needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-west-2
-    
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
-      with:
-          registry-type: private
-    
-    # --- Build and Push Backend API Docker Image ---
-    - name: Build and push Backend API Docker image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        API_ECR_REPOSITORY: cloud-native-order-processor-api # Matches Terraform name
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        echo "Building backend API image..."
-        cd ./docker/api/ # Navigate to the backend API folder
-        docker build -t $API_ECR_REPOSITORY:$IMAGE_TAG .
-        docker tag $API_ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$API_ECR_REPOSITORY:$IMAGE_TAG
-        docker push $ECR_REGISTRY/$API_ECR_REPOSITORY:$IMAGE_TAG
-        echo "Backend API image pushed successfully."
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    # --- Build and Push Frontend HTML Docker Image ---
-    - name: Build and push Frontend HTML Docker image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        FRONTEND_ECR_REPOSITORY: cloud-native-order-processor-frontend # Matches Terraform name
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        echo "Building frontend HTML image..."
-        cd ./docker/frontend/ # Navigate to the frontend HTML folder
-        docker build -t $FRONTEND_ECR_REPOSITORY:$IMAGE_TAG .
-        docker tag $FRONTEND_ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG
-        docker push $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG
-        echo "Frontend HTML image pushed successfully."
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
 
-    - name: Deploy with Terraform
-      run: |
-        echo "Running Terraform deployment..."
-        cd terraform
-        terraform init
-        terraform apply -auto-approve
-        echo "Terraform deployment complete."
+      # - name: Login to Amazon ECR # No need if not pushing/pulling
+      #   id: login-ecr
+      #   uses: aws-actions/amazon-ecr-login@v2
+      #   with:
+      #     registry-type: private
+      #     mask-password: 'true'
+
+      - name: Plan Terraform Deployment (No Apply)
+        run: |
+          echo "Running Terraform plan..."
+          cd terraform
+          terraform init
+          terraform plan -out=tfplan # Stores the plan
+          #     terraform apply -auto-approve
+          echo "Terraform plan complete."
+
+      # *STOP* here. The following steps would likely fail without terraform apply
+      # if ECR repositories were not created by a prior 'terraform apply'.
+      # For a practice project without 'apply', you'd comment these out.
+
+      # - name: Build and push Backend API Docker image
+      #   env:
+      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      #     API_ECR_REPOSITORY: cloud-native-order-processor-api
+      #     IMAGE_TAG: ${{ github.sha }}
+      #   run: |
+      #     echo "Building backend API image..."
+      #     cd backend-api/
+      #     docker build -t $API_ECR_REPOSITORY:$IMAGE_TAG .
+      #     docker tag $API_ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$API_ECR_REPOSITORY:$IMAGE_TAG
+      #     docker push $ECR_REGISTRY/$API_ECR_REPOSITORY:$IMAGE_TAG
+      #     echo "Backend API image pushed successfully."
+
+      # - name: Build and push Frontend HTML Docker image
+      #   env:
+      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      #     FRONTEND_ECR_REPOSITORY: cloud-native-order-processor-frontend
+      #     IMAGE_TAG: ${{ github.sha }}
+      #   run: |
+      #     echo "Building frontend HTML image..."
+      #     cd frontend-html/
+      #     docker build -t $FRONTEND_ECR_REPOSITORY:$IMAGE_TAG .
+      #     docker tag $FRONTEND_ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG
+      #     docker push $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG
+      #     echo "Frontend HTML image pushed successfully."
