@@ -1,2 +1,2 @@
-Flask==2.3.3
-gunicorn==21.2.0
+requests==2.31.0
+boto3==1.34.100 # Often useful for interacting with AWS services

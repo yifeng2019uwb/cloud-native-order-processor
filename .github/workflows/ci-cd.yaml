@@ -36,7 +36,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
     
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
@@ -51,18 +52,38 @@ jobs:
       with:
           registry-type: private
     
-    - name: Build and push Docker images
+    # --- Build and Push Backend API Docker Image ---
+    - name: Build and push Backend API Docker image
       env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }} 
-          ECR_REPOSITORY: cloud-native-order-processor-api 
-          IMAGE_TAG: ${{ github.sha }} 
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        API_ECR_REPOSITORY: cloud-native-order-processor-api # Matches Terraform name
+        IMAGE_TAG: ${{ github.sha }}
       run: |
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
-          docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-    
+        echo "Building backend API image..."
+        cd api/ # Navigate to the backend API folder
+        docker build -t $API_ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $API_ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$API_ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$API_ECR_REPOSITORY:$IMAGE_TAG
+        echo "Backend API image pushed successfully."
+
+    # --- Build and Push Frontend HTML Docker Image ---
+    - name: Build and push Frontend HTML Docker image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        FRONTEND_ECR_REPOSITORY: cloud-native-order-processor-frontend # Matches Terraform name
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        echo "Building frontend HTML image..."
+        cd frontend/ # Navigate to the frontend HTML folder
+        docker build -t $FRONTEND_ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $FRONTEND_ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG
+        echo "Frontend HTML image pushed successfully."
+
     - name: Deploy with Terraform
       run: |
+        echo "Running Terraform deployment..."
         cd terraform
         terraform init
         terraform apply -auto-approve
+        echo "Terraform deployment complete."
