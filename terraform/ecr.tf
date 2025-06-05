@@ -1,7 +1,7 @@
 # ECR Repository for the Backend API
 resource "aws_ecr_repository" "api_repository" {
   name                 = "cloud-native-order-processor-api"
-  image_tag_mutability = "MUTABLE" 
+  image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
@@ -16,8 +16,8 @@ resource "aws_ecr_repository" "api_repository" {
 
 # ECR Repository for the Frontend
 resource "aws_ecr_repository" "frontend_repository" {
-  name                 = "cloud-native-order-processor-frontend" 
-  image_tag_mutability = "MUTABLE" 
+  name                 = "cloud-native-order-processor-frontend"
+  image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
