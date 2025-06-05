@@ -53,7 +53,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           echo "Building backend API image..."
-          cd backend-api/
+          cd ./docker/api/
           docker build -t $API_ECR_REPOSITORY:$IMAGE_TAG .
           docker tag $API_ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$API_ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$API_ECR_REPOSITORY:$IMAGE_TAG
@@ -66,7 +66,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           echo "Building frontend HTML image..."
-          cd frontend-html/
+          cd ./docker/frontend/
           docker build -t $FRONTEND_ECR_REPOSITORY:$IMAGE_TAG .
           docker tag $FRONTEND_ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG
