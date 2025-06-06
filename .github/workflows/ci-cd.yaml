@@ -68,7 +68,7 @@ jobs:
     needs: test
     if: github.event_name == 'push'
     
-  steps:
+    steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
