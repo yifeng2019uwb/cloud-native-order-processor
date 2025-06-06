@@ -2,12 +2,24 @@ name: CI for Practice Project # It's good practice to give your workflow a name
 
 on:
   push:
-    branches:
-      - '**' # This means it will trigger on pushes to any branch
+    branches: [ main, develop ]
+    paths:
+      - 'docker/api/**'
+      - 'docker/tests/**'
+      - 'requirements*.txt'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docker/api/**'
+      - 'docker/tests/**'
+      - 'requirements*.txt'
 
 jobs:
-  build-and-deploy:
+  test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
 
     steps:
       - name: Checkout code
