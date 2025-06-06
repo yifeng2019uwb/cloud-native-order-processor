@@ -68,7 +68,7 @@ jobs:
     needs: test
     if: github.event_name == 'push'
     
-    steps:
+  steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
@@ -86,7 +86,7 @@ jobs:
         docker save ${{ env.ECR_REPOSITORY }}:${{ github.sha }} > order-api.tar
     
     - name: Upload Docker image as artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # Changed from v3 to v4
       with:
         name: docker-image
         path: order-api.tar
@@ -115,7 +115,7 @@ jobs:
       uses: aws-actions/amazon-ecr-login@v2
     
     - name: Download Docker image artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4  # Changed from v3 to v4
       with:
         name: docker-image
     
@@ -129,18 +129,18 @@ jobs:
         docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
         docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest
     
-    - name: Update EKS deployment
-      run: |
-        # Install kubectl
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-        chmod +x kubectl
-        sudo mv kubectl /usr/local/bin/
+    # - name: Update EKS deployment
+    #   run: |
+    #     # Install kubectl
+    #     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    #     chmod +x kubectl
+    #     sudo mv kubectl /usr/local/bin/
         
-        # Update kubeconfig
-        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name order-processor-cluster
+    #     # Update kubeconfig
+    #     aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name order-processor-cluster
         
-        # Update deployment with new image
-        kubectl set image deployment/order-api order-api=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }} -n default
+    #     # Update deployment with new image
+    #     kubectl set image deployment/order-api order-api=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }} -n default
         
-        # Wait for rollout to complete
-        kubectl rollout status deployment/order-api -n default
+    #     # Wait for rollout to complete
+    #     kubectl rollout status deployment/order-api -n default
