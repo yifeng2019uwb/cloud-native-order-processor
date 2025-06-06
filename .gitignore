@@ -29,3 +29,14 @@ replay_pid*
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
+
+# Build/Distribution files
+build/
+dist/
+*.egg-info/
+.tox/                 
+.nox/     
+.venv       
+.docker/.venv     
+
+.DS_Store

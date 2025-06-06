@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
 from datetime import datetime
 
+
 @dataclass
 class Product:
     product_id: str
@@ -16,6 +17,6 @@ class Product:
             self.created_at = datetime.utcnow().isoformat()
         if self.updated_at is None:
             self.updated_at = self.created_at
-    
+
     def to_dict(self):
         return asdict(self)

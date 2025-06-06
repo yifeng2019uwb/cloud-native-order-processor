@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict
-from datetime import datetime
+
 
 @dataclass
 class OrderItem:
@@ -10,7 +10,7 @@ class OrderItem:
 
     def to_dict(self):
         return asdict(self)
-    
+
     @property
     def subtotal(self) -> float:
         return self.quantity * self.price
