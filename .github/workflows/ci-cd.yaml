@@ -38,8 +38,14 @@ jobs:
       working-directory: ./docker
       run: |
         python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+        # Install core dependencies (if requirements.txt is in ./docker/api or ./docker)
+        if [ -f api/requirements.txt ]; then pip install -r api/requirements.txt; fi # Adjust path if needed
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi # Adjust path if needed
+
+        # Install dev dependencies (THIS IS KEY)
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi # Ensure this points to the correct location
+        # If your requirements-dev.txt is specifically in ./docker/api, then:
+        # if [ -f api/requirements-dev.txt ]; then pip install -r api/requirements-dev.txt; fi
     
     - name: Run linting
       working-directory: ./docker
