@@ -10,3 +10,10 @@ class PaymentTransaction:
     payment_method: str
     gateway_response: Dict
     created_at: str
+    
+    def __post_init__(self):
+        if self.created_at is None:
+            self.created_at = datetime.utcnow().isoformat()
+    
+    def to_dict(self):
+        return asdict(self)

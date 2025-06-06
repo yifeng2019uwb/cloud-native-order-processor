@@ -7,3 +7,10 @@ class OrderItem:
     product_name: str
     quantity: int
     price: float
+
+    def to_dict(self):
+        return asdict(self)
+    
+    @property
+    def subtotal(self) -> float:
+        return self.quantity * self.price

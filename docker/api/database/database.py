@@ -3,7 +3,7 @@ import psycopg2.extras
 import os
 import json
 from datetime import datetime
-from contextmanager import contextmanager
+from contextlib import contextmanager  # Fixed import
 from models import Order, OrderItem, Product
 
 class PostgreSQLManager:
