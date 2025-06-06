@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  PYTHON_VERSION: '3.13'
+  PYTHON_VERSION: '3.11'
   AWS_REGION: 'us-west-2'
   ECR_REPOSITORY: 'order-processor-api'
 
