@@ -35,7 +35,7 @@ jobs:
           ${{ runner.os }}-pip-
     
     - name: Install dependencies
-      working-directory: ./docker/api
+      working-directory: ./docker
       run: |
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
