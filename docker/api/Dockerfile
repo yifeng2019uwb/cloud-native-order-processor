@@ -1,24 +1,31 @@
-# Use the official AWS Lambda Python base image (or a standard Python image for a web server)
-# Or python:3.11-slim-buster for a web server (Moved comment to its own line)
-FROM public.ecr.aws/lambda/python:3.11
+# docker/api/Dockerfile
+FROM python:3.13-slim
 
-# Set the working directory in the container
-WORKDIR /api
+# Set working directory
+WORKDIR /app
 
-# Copy the requirements.txt file into the container
-# This step is cached, so dependencies are only reinstalled if requirements.txt changes
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
 COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Python dependencies
-# The --no-cache-dir flag is used to prevent pip from storing downloaded packages,
-# which helps keep the image size small.
-RUN pip install -r requirements.txt --target . --no-cache-dir
-
-# Copy your Lambda function code into the container
-# The '.' copies everything from the build context (the directory where Dockerfile is)
+# Copy application code
 COPY . .
 
-# Set the CMD to your handler (e.g., 'your_file_name.your_handler_function_name')
-# For example, if your file is 'app.py' and your handler function is 'lambda_handler',
-# then CMD would be 'app.lambda_handler'
-CMD [ "app.lambda_handler" ]
+# Create non-root user
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+
+# Run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
