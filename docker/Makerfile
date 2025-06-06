@@ -1,0 +1,146 @@
+# Makefile for Order Processor API Build and Test
+
+# Variables
+PYTHON := python3
+PIP := $(PYTHON) -m pip
+PYTEST := $(PYTHON) -m pytest
+PROJECT_NAME := order-processor-api
+DOCKER_IMAGE := $(PROJECT_NAME):latest
+TEST_PATH := docker/tests
+API_PATH := docker/api
+VENV := venv
+
+# Colors for output
+GREEN := \033[0;32m
+YELLOW := \033[0;33m
+RED := \033[0;31m
+NC := \033[0m # No Color
+
+.PHONY: help
+help: ## Show this help message
+	@echo '$(GREEN)Order Processor API - Build and Test Commands$(NC)'
+	@echo ''
+	@echo 'Usage:'
+	@echo '  make [target]'
+	@echo ''
+	@echo 'Targets:'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(YELLOW)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+.PHONY: setup
+setup: ## Set up Python virtual environment and install dependencies
+	@echo "$(GREEN)Setting up virtual environment...$(NC)"
+	$(PYTHON) -m venv $(VENV)
+	@echo "$(GREEN)Activating virtual environment and installing dependencies...$(NC)"
+	. $(VENV)/bin/activate && $(PIP) install --upgrade pip
+	. $(VENV)/bin/activate && $(PIP) install -r requirements.txt
+	. $(VENV)/bin/activate && $(PIP) install -r requirements-dev.txt
+	@echo "$(GREEN)Setup complete! Activate with: source $(VENV)/bin/activate$(NC)"
+
+.PHONY: install
+install: ## Install all dependencies
+	@echo "$(GREEN)Installing dependencies...$(NC)"
+	$(PIP) install -r requirements.txt
+	$(PIP) install -r requirements-dev.txt
+
+.PHONY: install-dev
+install-dev: ## Install development dependencies only
+	@echo "$(GREEN)Installing development dependencies...$(NC)"
+	$(PIP) install pytest pytest-mock pytest-cov pytest-asyncio black flake8 mypy
+
+.PHONY: format
+format: ## Format code with black
+	@echo "$(GREEN)Formatting code...$(NC)"
+	$(PYTHON) -m black $(API_PATH) $(TEST_PATH)
+
+.PHONY: lint
+lint: ## Run linting with flake8
+	@echo "$(GREEN)Running flake8...$(NC)"
+	$(PYTHON) -m flake8 $(API_PATH) $(TEST_PATH) --max-line-length=100 --exclude=__pycache__
+
+.PHONY: type-check
+type-check: ## Run type checking with mypy
+	@echo "$(GREEN)Running mypy type checks...$(NC)"
+	$(PYTHON) -m mypy $(API_PATH) --ignore-missing-imports
+
+.PHONY: test
+test: ## Run all tests
+	@echo "$(GREEN)Running all tests...$(NC)"
+	$(PYTEST) $(TEST_PATH) -v --color=yes
+
+.PHONY: test-unit
+test-unit: ## Run unit tests only
+	@echo "$(GREEN)Running unit tests...$(NC)"
+	$(PYTEST) $(TEST_PATH) -v -m "not integration" --color=yes
+
+.PHONY: test-integration
+test-integration: ## Run integration tests only
+	@echo "$(GREEN)Running integration tests...$(NC)"
+	$(PYTEST) $(TEST_PATH) -v -m integration --color=yes
+
+.PHONY: test-coverage
+test-coverage: ## Run tests with coverage report
+	@echo "$(GREEN)Running tests with coverage...$(NC)"
+	$(PYTEST) $(TEST_PATH) -v --cov=$(API_PATH) --cov-report=html --cov-report=term --color=yes
+	@echo "$(GREEN)Coverage report generated in htmlcov/index.html$(NC)"
+
+.PHONY: test-watch
+test-watch: ## Run tests in watch mode (requires pytest-watch)
+	@echo "$(GREEN)Running tests in watch mode...$(NC)"
+	$(PYTHON) -m pytest_watch $(TEST_PATH) --clear
+
+.PHONY: test-failed
+test-failed: ## Run only failed tests from last run
+	@echo "$(GREEN)Running previously failed tests...$(NC)"
+	$(PYTEST) $(TEST_PATH) -v --lf --color=yes
+
+.PHONY: test-file
+test-file: ## Run tests for a specific file (use FILE=path/to/test_file.py)
+	@echo "$(GREEN)Running tests in $(FILE)...$(NC)"
+	$(PYTEST) $(FILE) -v --color=yes
+
+.PHONY: clean
+clean: ## Clean up cache and temporary files
+	@echo "$(GREEN)Cleaning up...$(NC)"
+	find . -type d -name __pycache__ -exec rm -rf {} +
+	find . -type d -name .pytest_cache -exec rm -rf {} +
+	find . -type d -name .mypy_cache -exec rm -rf {} +
+	find . -type d -name htmlcov -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	find . -type f -name ".coverage" -delete
+
+.PHONY: build
+build: clean lint type-check test ## Run full build pipeline (clean, lint, type-check, test)
+	@echo "$(GREEN)Build completed successfully!$(NC)"
+
+.PHONY: docker-build
+docker-build: ## Build Docker image for API
+	@echo "$(GREEN)Building Docker image...$(NC)"
+	cd docker && docker build -t $(DOCKER_IMAGE) -f api/Dockerfile .
+
+.PHONY: docker-test
+docker-test: docker-build ## Run tests inside Docker container
+	@echo "$(GREEN)Running tests in Docker container...$(NC)"
+	docker run --rm $(DOCKER_IMAGE) pytest /app/tests -v
+
+.PHONY: pre-commit
+pre-commit: format lint type-check test ## Run all checks before committing
+	@echo "$(GREEN)Pre-commit checks passed!$(NC)"
+
+.PHONY: ci
+ci: install build ## Run CI pipeline
+	@echo "$(GREEN)CI pipeline completed!$(NC)"
+
+# Create necessary files if they don't exist
+.PHONY: init-project
+init-project: ## Initialize project structure
+	@echo "$(GREEN)Initializing project structure...$(NC)"
+	@mkdir -p $(TEST_PATH)
+	@touch $(TEST_PATH)/__init__.py
+	@if [ ! -f requirements.txt ]; then echo "# Production dependencies" > requirements.txt; fi
+	@if [ ! -f requirements-dev.txt ]; then echo "# Development dependencies\npytest>=7.4.0\npytest-mock>=3.11.0\npytest-cov>=4.1.0\npytest-asyncio>=0.21.0\nblack>=23.0.0\nflake8>=6.0.0\nmypy>=1.0.0" > requirements-dev.txt; fi
+	@if [ ! -f .flake8 ]; then echo "[flake8]\nmax-line-length = 100\nexclude = .git,__pycache__,venv\nignore = E203,W503" > .flake8; fi
+	@if [ ! -f pytest.ini ]; then echo "[pytest]\ntestpaths = docker/tests\npython_files = test_*.py\npython_classes = Test*\npython_functions = test_*\naddopts = -ra -q --strict-markers\nmarkers =\n    unit: Unit tests\n    integration: Integration tests\n    slow: Slow tests" > pytest.ini; fi
+	@echo "$(GREEN)Project structure initialized!$(NC)"
+
+# Default target
+.DEFAULT_GOAL := help
