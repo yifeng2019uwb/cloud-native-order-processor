@@ -1,0 +1,50 @@
+# values-staging.yaml - Staging environment overrides
+
+# Application Configuration for Staging
+orderApi:
+  replicas: 2
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+
+inventoryService:
+  replicas: 2
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+frontend:
+  replicas: 2
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Image tags for staging
+images:
+  orderApi:
+    tag: "staging"
+  inventoryService:
+    tag: "staging"
+  frontend:
+    tag: "staging"
+
+# Database configuration for staging
+database:
+  name: "order_processor_staging"
+
+# Moderate logging in staging
+debug:
+  enabled: false
+  logLevel: "info"

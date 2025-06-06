@@ -1,0 +1,68 @@
+# templates/frontend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: order-processor
+  labels:
+    app: frontend
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      app: frontend
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: frontend
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: frontend
+        image: "{{ .Values.aws.accountId }}.dkr.ecr.{{ .Values.aws.region }}.amazonaws.com/{{ .Values.images.frontend.repository }}:{{ .Values.images.frontend.tag }}"
+        ports:
+        - containerPort: {{ .Values.frontend.port }}
+        env:
+        # API Endpoints
+        - name: REACT_APP_ORDER_API_URL
+          value: "http://order-api:{{ .Values.orderApi.port }}"
+        - name: REACT_APP_INVENTORY_API_URL
+          value: "http://inventory-service:{{ .Values.inventoryService.port }}"
+        
+        # AWS Configuration (for client-side AWS SDK if needed)
+        - name: REACT_APP_AWS_REGION
+          value: "{{ .Values.aws.region }}"
+        
+        # Environment Configuration
+        - name: NODE_ENV
+          value: "production"
+        
+        {{- if .Values.debug.enabled }}
+        - name: REACT_APP_DEBUG
+          value: "true"
+        {{- end }}
+        
+        resources:
+          requests:
+            memory: {{ .Values.frontend.resources.requests.memory }}
+            cpu: {{ .Values.frontend.resources.requests.cpu }}
+          limits:
+            memory: {{ .Values.frontend.resources.limits.memory }}
+            cpu: {{ .Values.frontend.resources.limits.cpu }}
+        
+        livenessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.frontend.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.frontend.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5

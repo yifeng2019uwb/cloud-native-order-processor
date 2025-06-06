@@ -1,2 +1,5 @@
-requests==2.31.0
-boto3==1.34.100 # Often useful for interacting with AWS services
+Flask==2.3.3
+Flask-CORS==4.0.0
+boto3==1.28.62
+psycopg2-binary==2.9.7
+gunicorn==21.2.0

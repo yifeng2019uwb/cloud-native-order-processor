@@ -3,7 +3,7 @@
 FROM public.ecr.aws/lambda/python:3.11
 
 # Set the working directory in the container
-WORKDIR /var/task
+WORKDIR /app
 
 # Copy the requirements.txt file into the container
 # This step is cached, so dependencies are only reinstalled if requirements.txt changes

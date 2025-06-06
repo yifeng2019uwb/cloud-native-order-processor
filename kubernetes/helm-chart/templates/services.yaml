@@ -1,0 +1,63 @@
+# templates/services.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api
+  namespace: order-processor
+  labels:
+    app: order-api
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    release: {{ .Release.Name }}
+spec:
+  type: LoadBalancer
+  ports:
+  - port: {{ .Values.orderApi.port }}
+    targetPort: {{ .Values.orderApi.port }}
+    protocol: TCP
+    name: http
+  selector:
+    app: order-api
+    release: {{ .Release.Name }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: order-processor
+  labels:
+    app: inventory-service
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    release: {{ .Release.Name }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.inventoryService.port }}
+    targetPort: {{ .Values.inventoryService.port }}
+    protocol: TCP
+    name: http
+  selector:
+    app: inventory-service
+    release: {{ .Release.Name }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: order-processor
+  labels:
+    app: frontend
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    release: {{ .Release.Name }}
+spec:
+  type: LoadBalancer
+  ports:
+  - port: {{ .Values.frontend.port }}
+    targetPort: {{ .Values.frontend.port }}
+    protocol: TCP
+    name: http
+  selector:
+    app: frontend
+    release: {{ .Release.Name }}

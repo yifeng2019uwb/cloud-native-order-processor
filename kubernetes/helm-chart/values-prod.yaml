@@ -1,0 +1,57 @@
+# values-prod.yaml - Production environment overrides
+
+# Application Configuration for Production
+orderApi:
+  replicas: 5
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+inventoryService:
+  replicas: 3
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+
+frontend:
+  replicas: 3
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+
+# Image tags for production
+images:
+  orderApi:
+    tag: "latest"
+  inventoryService:
+    tag: "latest"
+  frontend:
+    tag: "latest"
+
+# Database configuration for production
+database:
+  name: "order_processor"
+
+# Minimal logging in production
+debug:
+  enabled: false
+  logLevel: "warn"
+
+# Production-specific configurations
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70

@@ -1,0 +1,50 @@
+# values-dev.yaml - Development environment overrides
+
+# Application Configuration for Development
+orderApi:
+  replicas: 1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+inventoryService:
+  replicas: 1
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+frontend:
+  replicas: 1
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+# Image tags for development
+images:
+  orderApi:
+    tag: "dev"
+  inventoryService:
+    tag: "dev"
+  frontend:
+    tag: "dev"
+
+# Database configuration for development
+database:
+  name: "order_processor_dev"
+
+# Enable debug logging in development
+debug:
+  enabled: true
+  logLevel: "debug"
