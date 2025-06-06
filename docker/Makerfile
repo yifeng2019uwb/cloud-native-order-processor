@@ -1,27 +1,43 @@
-# docker/Makefile
-.PHONY: help install test build run clean
+# Start with your base image (e.g., python:3.11-slim-buster or a similar official Python image)
+# Example:
+FROM python:3.11-slim-buster
 
-help:
-	@echo "Available commands:"
-	@echo "  install    Install dependencies"
-	@echo "  test       Run tests"
-	@echo "  build      Build Docker image"
-	@echo "  run        Run locally"
-	@echo "  clean      Clean up files"
+# Set the working directory inside the container
+WORKDIR /app
 
-install:
-	cd api && pip install -r requirements.txt -r requirements-dev.txt
+# Install system dependencies required for building Python packages,
+# including curl for downloading rustup and development libraries for psycopg2-binary and confluent-kafka.
+# build-essential provides compilers like gcc.
+# librdkafka-dev is needed by confluent-kafka.
+# libpq-dev is needed by psycopg2-binary.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    librdkafka-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-test:
-	pytest tests -v --cov=api
+# Set environment variables for Rust and Cargo to ensure proper installation paths
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
 
-build:
-	docker build -t order-api:latest -f api/Dockerfile .
+# Install Rust and Cargo using rustup
+# -sSf for silent, fail-fast download
+# -y for non-interactive installation
+# --profile minimal to keep the image size small
+# --no-modify-path because we set PATH explicitly with ENV
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path \
+    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME
 
-run:
-	cd api && uvicorn main:app --reload --port 8000
+# Copy your requirements file into the container
+COPY requirements.txt .
 
-clean:
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
-	rm -rf .pytest_cache .coverage htmlcov
+# Install Python dependencies (this step will now find Rust/Cargo for pydantic-core and confluent-kafka)
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of your application code
+COPY . .
+
+# Define the command to run your application (adjust as needed)
+CMD ["python", "your_app_entrypoint.py"]
