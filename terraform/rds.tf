@@ -69,7 +69,7 @@ resource "aws_db_instance" "postgres_product" {
   apply_immediately = true 
 
   # Cost optimization settings
-  backup_retention_period = 0  
+  backup_retention_period = 0 
   skip_final_snapshot     = true
   deletion_protection     = false
   

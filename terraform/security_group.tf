@@ -47,7 +47,6 @@ resource "aws_security_group" "rds_order" {
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.app.id]
-    cidr_blocks     = [aws_vpc.main.cidr_block]
   }
 
   egress {
@@ -73,7 +72,6 @@ resource "aws_security_group" "rds_product" {
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.app.id]
-    cidr_blocks     = [aws_vpc.main.cidr_block]
   }
 
   egress {
@@ -99,7 +97,6 @@ resource "aws_security_group" "rds_inventory" {
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.app.id]
-    cidr_blocks     = [aws_vpc.main.cidr_block]
   }
 
   egress {
