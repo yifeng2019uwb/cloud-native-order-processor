@@ -90,7 +90,7 @@ jobs:
         docker save ${{ env.ECR_REPOSITORY }}:${{ github.sha }} > order-api.tar
     
     - name: Upload Docker image as artifact
-      uses: actions/upload-artifact@v4  # Changed from v3 to v4
+      uses: actions/upload-artifact@v4  
       with:
         name: docker-image
         path: order-api.tar
@@ -147,8 +147,8 @@ jobs:
     
     - name: Terraform Apply
       id: apply
-      if: steps.plan.outcome == 'success' # Only apply if plan succeeded (and optionally if there are changes)
-      run: terraform apply -auto-approve # -auto-approve is required for automated apply
+      if: steps.plan.outcome == 'success'
+      run: terraform apply -auto-approve 
       working-directory: ./terraform
 
   # Job 4: Deploy to AWS (Push Docker Image & EKS Update)
@@ -156,7 +156,7 @@ jobs:
   deploy_application: # Renamed from 'deploy' to 'deploy_application' for clarity
     name: Push Image & Deploy Application
     runs-on: ubuntu-latest
-    needs: terraform_deploy # This job now waits for infrastructure to be deployed/updated
+    needs: terraform_deploy 
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
@@ -192,7 +192,7 @@ jobs:
         docker push $ECR_REGISTRY/$ECR_REPO_NAME:${{ github.sha }}
         docker push $ECR_REGISTRY/$ECR_REPO_NAME:latest
     
-    - name: Update EKS deployment # This section remains commented out as per your previous setup
+    - name: Update EKS deployment 
       # This step should be uncommented and configured once you set up EKS.
       run: |
         echo "EKS deployment steps are commented out. Uncomment and configure when ready."
