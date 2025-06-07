@@ -44,8 +44,6 @@ jobs:
 
         # Install dev dependencies (THIS IS KEY)
         if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi # Ensure this points to the correct location
-        # If your requirements-dev.txt is specifically in ./docker/api, then:
-        # if [ -f api/requirements-dev.txt ]; then pip install -r api/requirements-dev.txt; fi
     
     - name: Run linting
       working-directory: ./docker
@@ -98,9 +96,9 @@ jobs:
         path: order-api.tar
         retention-days: 1
 
-  # Job 3: Deploy to AWS (only on main branch)
+  # Job 3:  Deploy AWS Infrastructure (Terraform) (only on main branch)
   deploy:
-    name: Deploy to AWS
+    name: Deploy AWS Infrastructure
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -121,7 +119,63 @@ jobs:
       uses: aws-actions/amazon-ecr-login@v2
     
     - name: Download Docker image artifact
-      uses: actions/download-artifact@v4  # Changed from v3 to v4
+      uses: actions/download-artifact@v4  
+      with:
+        name: docker-image
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.5.0 
+    
+    - name: Terraform Init
+      id: init
+      run: terraform init
+      working-directory: ./terraform 
+    
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate
+      working-directory: ./terraform
+
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -no-color 
+      working-directory: ./terraform
+      # Optionally, you can save the plan to an artifact if you want to review it later
+      # run: terraform plan -out=tfplan.out
+    
+    - name: Terraform Apply
+      id: apply
+      if: steps.plan.outcome == 'success' # Only apply if plan succeeded (and optionally if there are changes)
+      run: terraform apply -auto-approve # -auto-approve is required for automated apply
+      working-directory: ./terraform
+
+  # Job 4: Deploy to AWS (Push Docker Image & EKS Update)
+  # This job now depends on the terraform_deploy job completing successfully.
+  deploy_application: # Renamed from 'deploy' to 'deploy_application' for clarity
+    name: Push Image & Deploy Application
+    runs-on: ubuntu-latest
+    needs: terraform_deploy # This job now waits for infrastructure to be deployed/updated
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    
+    - name: Download Docker image artifact
+      uses: actions/download-artifact@v4  
       with:
         name: docker-image
     
@@ -130,23 +184,30 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
         docker load < order-api.tar
-        docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-        docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest
-        docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-        docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest
+        # Tag with the correct ECR URI, using the full repository name from Terraform
+        # If your Terraform defines `order-processor-api` as the repo name
+        ECR_REPO_NAME="order-processor-api" # Adjust this to your actual ECR repo name from Terraform
+        docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} $ECR_REGISTRY/$ECR_REPO_NAME:${{ github.sha }}
+        docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} $ECR_REGISTRY/$ECR_REPO_NAME:latest
+        docker push $ECR_REGISTRY/$ECR_REPO_NAME:${{ github.sha }}
+        docker push $ECR_REGISTRY/$ECR_REPO_NAME:latest
     
-    # - name: Update EKS deployment
-    #   run: |
-    #     # Install kubectl
-    #     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-    #     chmod +x kubectl
-    #     sudo mv kubectl /usr/local/bin/
+    - name: Update EKS deployment # This section remains commented out as per your previous setup
+      # This step should be uncommented and configured once you set up EKS.
+      run: |
+        echo "EKS deployment steps are commented out. Uncomment and configure when ready."
+        # # Install kubectl
+        # curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        # chmod +x kubectl
+        # sudo mv kubectl /usr/local/bin/
+
+  # # Update kubeconfig
+  # aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name order-processor-cluster
         
-    #     # Update kubeconfig
-    #     aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name order-processor-cluster
+  # # Update deployment with new image
+  # # Make sure 'order-api' matches your Kubernetes Deployment name and container name
+  # kubectl set image deployment/order-api order-api=$ECR_REGISTRY/$ECR_REPO_NAME:${{ github.sha }} -n default
         
-    #     # Update deployment with new image
-    #     kubectl set image deployment/order-api order-api=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }} -n default
-        
-    #     # Wait for rollout to complete
-    #     kubectl rollout status deployment/order-api -n default
+  # # Wait for rollout to complete
+  # kubectl rollout status deployment/order-api -n default    
+      
