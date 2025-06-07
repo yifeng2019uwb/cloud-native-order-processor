@@ -7,6 +7,13 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {
+    bucket         = "yifeng2019uwb-order-processor-terraform-state" 
+    key            = "terraform.tfstate" 
+    region         = "us-west-2"        
+    encrypt        = true              
+  }
 }
 
 provider "aws" {
