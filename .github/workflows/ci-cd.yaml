@@ -116,7 +116,7 @@ jobs:
       working-directory: . 
       run: |
         # Ensure the 'services' directory exists relative to the repo root
-        mkdir -p services
+        # mkdir -p services
         
         # Change into the services directory. All subsequent commands in this block
         # will operate relative to 'services/'.
