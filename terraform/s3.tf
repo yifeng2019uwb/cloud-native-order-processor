@@ -1,4 +1,4 @@
-# New: aws-terraform-backend-s3-only/backend.tf
+# aws-terraform-backend-s3-only/backend.tf
 
 resource "aws_s3_bucket" "terraform_state_bucket" {
   bucket = "yifeng2019uwb-order-processor-terraform-state"
@@ -9,14 +9,6 @@ resource "aws_s3_bucket" "terraform_state_bucket" {
   }
 }
 
-# Add this new resource for ACL
-resource "aws_s3_bucket_acl" "terraform_state_bucket_acl" {
-  bucket = aws_s3_bucket.terraform_state_bucket.id
-  acl    = "private"
-}
-
-# (Keep your existing aws_s3_bucket_versioning, aws_s3_bucket_server_side_encryption_configuration,
-# and aws_s3_bucket_public_access_block resources here)
 resource "aws_s3_bucket_versioning" "terraform_state_bucket_versioning" {
   bucket = aws_s3_bucket.terraform_state_bucket.id
   versioning_configuration {
@@ -41,6 +33,12 @@ resource "aws_s3_bucket_public_access_block" "terraform_state_bucket_public_acce
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
+
+# REMOVE THIS BLOCK if it exists in your backend.tf, as ACLs are not supported
+# resource "aws_s3_bucket_acl" "terraform_state_bucket_acl" {
+#   bucket = aws_s3_bucket.terraform_state_bucket.id
+#   acl    = "private"
+# }
 
 output "s3_bucket_name" {
   description = "Name of the S3 bucket for Terraform state"
