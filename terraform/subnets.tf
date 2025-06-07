@@ -34,7 +34,7 @@ resource "aws_subnet" "private" {
 
 # DB Subnet Group
 resource "aws_db_subnet_group" "main" {
-  name       = "order_processor_dev_subnet_group"
+  name       = "${var.project_name}-${var.environment}-db-subnet-group"
   subnet_ids = aws_subnet.private[*].id
 
   tags = {
