@@ -1,0 +1,23 @@
+# Core dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+
+# Database (comment out for now if not using)
+# psycopg2-binary==2.9.9
+# sqlalchemy==2.0.23
+# alembic==1.12.1
+
+# Kafka (comment out for now if not using)
+# aiokafka==0.10.0
+# confluent-kafka==2.3.0
+
+# AWS SDK (comment out for now if not using)
+# boto3==1.29.7
+
+# Utilities
+python-dotenv==1.0.0
+pyyaml==6.0.1
+requests==2.31.0
+httpx==0.25.2
