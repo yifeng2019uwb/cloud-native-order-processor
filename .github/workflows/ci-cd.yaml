@@ -111,32 +111,38 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Create dummy Lambda deployment packages
-      # Execute from root, as the 'services' directory will be created relative to the root.
+      # The working-directory is the root of your repository.
+      # The script will navigate into and work within the 'services' directory.
       working-directory: . 
       run: |
         # Ensure the 'services' directory exists relative to the repo root
         mkdir -p services
         
-        # Create a dummy Python file for Lambda (temp.py)
-        # This function simply returns 200, it's a placeholder.
-        # It also includes a print statement for better logging.
-        echo 'def lambda_handler(event, context): import os; print(f"Lambda executed in {os.getcwd()}"); return {"statusCode": 200, "body": "Dummy Lambda executed"}' > services/temp.py
-        
-        # Change to the services directory for zipping operations
+        # Change into the services directory. All subsequent commands in this block
+        # will operate relative to 'services/'.
         cd services
         
+        # Define a temporary file name within the 'services' directory
+        TEMP_FILE="temp_dummy_lambda.py"
+        
+        # Create the dummy Python file directly in the 'services' directory
+        echo 'def lambda_handler(event, context): import os; print(f"Lambda executed in {os.getcwd()}"); return {"statusCode": 200, "body": "Dummy Lambda executed"}' > "${TEMP_FILE}"
+        
         # Loop through the names of your Lambda functions and create their zip files
-        # The -j flag ensures only the file itself is zipped (junking directory names)
         for name in order_processor inventory_manager notification_handler; do
-          # Copy temp.py to the specific lambda's python file name (e.g., order_processor.py)
-          cp temp.py ${name}.py 
-          # Create the zip file for each Lambda
-          zip -j ${name}.zip ${name}.py
+          # Copy the temporary dummy file to the specific lambda's Python file name
+          # (e.g., 'order_processor.py') within the 'services' directory.
+          cp "${TEMP_FILE}" "${name}.py"
+          
+          # Create the zip file for each Lambda. The -j flag ensures only the file
+          # itself is zipped, not its parent directory (services/).
+          zip -j "${name}.zip" "${name}.py"
           echo "Created ${name}.zip"
         done
         
-        # Clean up the temporary Python files after zipping
-        rm temp.py *.py 
+        # Clean up all Python files (including the temporary dummy file and the copied ones)
+        # from the 'services' directory.
+        rm *.py
 
     - name: Upload Lambda packages as artifact
       uses: actions/upload-artifact@v4
