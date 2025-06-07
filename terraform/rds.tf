@@ -4,10 +4,10 @@ resource "aws_db_instance" "postgres_order" {
 
   engine         = "postgres"
   engine_version = "15"
-  instance_class = "db.t3.micro"
+  instance_class = "db.t4g.micro"
 
   allocated_storage     = 20
-  max_allocated_storage = 100
+  max_allocated_storage = 40
   storage_type          = "gp2"
   storage_encrypted     = true
 
@@ -18,12 +18,22 @@ resource "aws_db_instance" "postgres_order" {
   vpc_security_group_ids = [aws_security_group.rds_order.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
-  backup_retention_period = 7
-  backup_window           = "03:00-04:00"
-  maintenance_window      = "sun:04:00-sun:05:00"
+  # Cost optimization settings
+  backup_retention_period = 0  
+  skip_final_snapshot     = true
+  deletion_protection     = false
+  
+  # Enable auto-stop after inactivity
+  # Note: RDS automatically stops after 7 days of no connections
+  # and stays stopped until you manually start it
+  
+  # Free Performance Insights for t4g.micro
+  performance_insights_enabled          = true
+  performance_insights_retention_period = 7  
 
-  skip_final_snapshot = true
-  deletion_protection = false
+  # Disable unnecessary features
+  enabled_cloudwatch_logs_exports = []
+  auto_minor_version_upgrade      = false
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-postgres-order"
@@ -38,10 +48,10 @@ resource "aws_db_instance" "postgres_product" {
 
   engine         = "postgres"
   engine_version = "15"
-  instance_class = "db.t3.micro"
+  instance_class = "db.t4g.micro"
 
   allocated_storage     = 20
-  max_allocated_storage = 100
+  max_allocated_storage = 40
   storage_type          = "gp2"
   storage_encrypted     = true
 
@@ -52,12 +62,22 @@ resource "aws_db_instance" "postgres_product" {
   vpc_security_group_ids = [aws_security_group.rds_product.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
-  backup_retention_period = 7
-  backup_window           = "03:30-04:30"
-  maintenance_window      = "sun:05:00-sun:06:00"
+  # Cost optimization settings
+  backup_retention_period = 0  
+  skip_final_snapshot     = true
+  deletion_protection     = false
+  
+  # Enable auto-stop after inactivity
+  # Note: RDS automatically stops after 7 days of no connections
+  # and stays stopped until you manually start it
+  
+  # Free Performance Insights for t4g.micro
+  performance_insights_enabled          = true
+  performance_insights_retention_period = 7  
 
-  skip_final_snapshot = true
-  deletion_protection = false
+  # Disable unnecessary features
+  enabled_cloudwatch_logs_exports = []
+  auto_minor_version_upgrade      = false
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-postgres-product"
@@ -72,10 +92,10 @@ resource "aws_db_instance" "postgres_inventory" {
 
   engine         = "postgres"
   engine_version = "15"
-  instance_class = "db.t3.micro"
+  instance_class = "db.t4g.micro"
 
   allocated_storage     = 20
-  max_allocated_storage = 100
+  max_allocated_storage = 40
   storage_type          = "gp2"
   storage_encrypted     = true
 
@@ -86,12 +106,22 @@ resource "aws_db_instance" "postgres_inventory" {
   vpc_security_group_ids = [aws_security_group.rds_inventory.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
-  backup_retention_period = 7
-  backup_window           = "04:00-05:00"
-  maintenance_window      = "sun:06:00-sun:07:00"
+  # Cost optimization settings
+  backup_retention_period = 0  
+  skip_final_snapshot     = true
+  deletion_protection     = false
+  
+  # Enable auto-stop after inactivity
+  # Note: RDS automatically stops after 7 days of no connections
+  # and stays stopped until you manually start it
+  
+  # Free Performance Insights for t4g.micro
+  performance_insights_enabled          = true
+  performance_insights_retention_period = 7  
 
-  skip_final_snapshot = true
-  deletion_protection = false
+  # Disable unnecessary features
+  enabled_cloudwatch_logs_exports = []
+  auto_minor_version_upgrade      = false
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-postgres-inventory"
