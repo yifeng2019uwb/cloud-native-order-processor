@@ -156,7 +156,7 @@ jobs:
   deploy: # This job name remains 'deploy'
     name: Deploy AWS Infrastructure
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, package_lambdas]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Only deploy infra on push to main
     
     steps:
