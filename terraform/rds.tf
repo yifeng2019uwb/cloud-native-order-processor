@@ -18,6 +18,9 @@ resource "aws_db_instance" "postgres_order" {
   vpc_security_group_ids = [aws_security_group.rds_order.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
+  # Add this line to apply changes immediately
+  apply_immediately = true 
+
   # Cost optimization settings
   backup_retention_period = 0  
   skip_final_snapshot     = true
@@ -61,6 +64,9 @@ resource "aws_db_instance" "postgres_product" {
 
   vpc_security_group_ids = [aws_security_group.rds_product.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
+
+  # Add this line to apply changes immediately
+  apply_immediately = true 
 
   # Cost optimization settings
   backup_retention_period = 0  
@@ -106,6 +112,9 @@ resource "aws_db_instance" "postgres_inventory" {
   vpc_security_group_ids = [aws_security_group.rds_inventory.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
+  # Add this line to apply changes immediately
+  apply_immediately = true 
+  
   # Cost optimization settings
   backup_retention_period = 0  
   skip_final_snapshot     = true
