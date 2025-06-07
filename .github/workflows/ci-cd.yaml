@@ -100,17 +100,18 @@ jobs:
         retention-days: 1
 
   # Job 2-1: Create Lambda deployment packages - dummy
-  name: Create Lambda deployment packages
-  working-directory: ./terraform
-  run: |
-    mkdir -p ../services
-    echo 'def lambda_handler(event, context): return {"statusCode": 200}' > ../services/temp.py
-    cd ../services
-    for name in order_processor inventory_manager notification_handler; do
-      cp temp.py ${name}.py
-      zip ${name}.zip ${name}.py
-    done
-    rm *.py
+  build:
+    name: Create Lambda deployment packages
+    working-directory: ./terraform
+    run: |
+      mkdir -p ../services
+      echo 'def lambda_handler(event, context): return {"statusCode": 200}' > ../services/temp.py
+      cd ../services
+      for name in order_processor inventory_manager notification_handler; do
+        cp temp.py ${name}.py
+        zip ${name}.zip ${name}.py
+      done
+      rm *.py
 
   # Job 3: Deploy AWS Infrastructure (Terraform) (only on main branch)
   deploy: # This job name remains 'deploy'
