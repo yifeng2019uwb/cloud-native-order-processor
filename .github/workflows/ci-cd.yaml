@@ -99,19 +99,52 @@ jobs:
         path: order-api.tar
         retention-days: 1
 
-  # Job 2-1: Create Lambda deployment packages - dummy
-  build:
+  # Job 2-1 (New Job): Create Lambda deployment packages
+  package_lambdas:
     name: Create Lambda deployment packages
-    working-directory: ./terraform
-    run: |
-      mkdir -p ../services
-      echo 'def lambda_handler(event, context): return {"statusCode": 200}' > ../services/temp.py
-      cd ../services
-      for name in order_processor inventory_manager notification_handler; do
-        cp temp.py ${name}.py
-        zip ${name}.zip ${name}.py
-      done
-      rm *.py
+    runs-on: ubuntu-latest
+    needs: test # Ensure tests pass before packaging
+    if: github.event_name == 'push' # Only package on push (main or develop)
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Create dummy Lambda deployment packages
+      # Execute from root, as the 'services' directory will be created relative to the root.
+      working-directory: . 
+      run: |
+        # Ensure the 'services' directory exists relative to the repo root
+        mkdir -p services
+        
+        # Create a dummy Python file for Lambda (temp.py)
+        # This function simply returns 200, it's a placeholder.
+        # It also includes a print statement for better logging.
+        echo 'def lambda_handler(event, context): import os; print(f"Lambda executed in {os.getcwd()}"); return {"statusCode": 200, "body": "Dummy Lambda executed"}' > services/temp.py
+        
+        # Change to the services directory for zipping operations
+        cd services
+        
+        # Loop through the names of your Lambda functions and create their zip files
+        # The -j flag ensures only the file itself is zipped (junking directory names)
+        for name in order_processor inventory_manager notification_handler; do
+          # Copy temp.py to the specific lambda's python file name (e.g., order_processor.py)
+          cp temp.py ${name}.py 
+          # Create the zip file for each Lambda
+          zip -j ${name}.zip ${name}.py
+          echo "Created ${name}.zip"
+        done
+        
+        # Clean up the temporary Python files after zipping
+        rm temp.py *.py 
+
+    - name: Upload Lambda packages as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: lambda-packages
+        path: services/*.zip # Upload all generated zip files
+        retention-days: 1
+
 
   # Job 3: Deploy AWS Infrastructure (Terraform) (only on main branch)
   deploy: # This job name remains 'deploy'
