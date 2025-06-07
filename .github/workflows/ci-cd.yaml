@@ -302,146 +302,146 @@ jobs:
 
   # # Job 6: Destroy Infrastructure
   # destroy_infrastructure:
-    name: Destroy Infrastructure
-    runs-on: ubuntu-latest
-    needs: integration_tests
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # name: Destroy Infrastructure
+    # runs-on: ubuntu-latest
+    # needs: integration_tests
+    # if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
     
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    # steps:
+    # - name: Checkout code
+    #   uses: actions/checkout@v4
     
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+    # - name: Configure AWS credentials
+    #   uses: aws-actions/configure-aws-credentials@v4
+    #   with:
+    #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #     aws-region: ${{ env.AWS_REGION }}
     
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.5.0
+    # - name: Setup Terraform
+    #   uses: hashicorp/setup-terraform@v3
+    #   with:
+    #     terraform_version: 1.5.0
     
-    - name: Terraform Init
-      working-directory: ./terraform
-      run: terraform init
+    # - name: Terraform Init
+    #   working-directory: ./terraform
+    #   run: terraform init
 
-    - name: Pre-destroy Cleanup
-      working-directory: ./terraform
-      run: |
-        echo "=== Starting pre-destroy cleanup ==="
+    # - name: Pre-destroy Cleanup
+    #   working-directory: ./terraform
+    #   run: |
+    #     echo "=== Starting pre-destroy cleanup ==="
         
-        # Empty S3 buckets if they exist
-        echo "Checking for S3 buckets to empty..."
+    #     # Empty S3 buckets if they exist
+    #     echo "Checking for S3 buckets to empty..."
         
-        # Get all S3 buckets created by this Terraform
-        BUCKETS=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'order-processor') || contains(Name, 'cloud-native')].Name" --output text || true)
+    #     # Get all S3 buckets created by this Terraform
+    #     BUCKETS=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'order-processor') || contains(Name, 'cloud-native')].Name" --output text || true)
         
-        if [ ! -z "$BUCKETS" ]; then
-          for bucket in $BUCKETS; do
-            echo "Emptying bucket: $bucket"
-            aws s3 rm s3://$bucket --recursive || true
+    #     if [ ! -z "$BUCKETS" ]; then
+    #       for bucket in $BUCKETS; do
+    #         echo "Emptying bucket: $bucket"
+    #         aws s3 rm s3://$bucket --recursive || true
             
-            # Also remove versioned objects if versioning is enabled
-            aws s3api list-object-versions --bucket "$bucket" --output json | \
-            jq -r '.Versions[]? | "\(.Key) \(.VersionId)"' | \
-            while read key version; do
-              if [ ! -z "$key" ] && [ ! -z "$version" ]; then
-                aws s3api delete-object --bucket "$bucket" --key "$key" --version-id "$version" || true
-              fi
-            done 2>/dev/null || true
-          done
-        fi
+    #         # Also remove versioned objects if versioning is enabled
+    #         aws s3api list-object-versions --bucket "$bucket" --output json | \
+    #         jq -r '.Versions[]? | "\(.Key) \(.VersionId)"' | \
+    #         while read key version; do
+    #           if [ ! -z "$key" ] && [ ! -z "$version" ]; then
+    #             aws s3api delete-object --bucket "$bucket" --key "$key" --version-id "$version" || true
+    #           fi
+    #         done 2>/dev/null || true
+    #       done
+    #     fi
         
-        echo "=== Pre-destroy cleanup completed ==="
+    #     echo "=== Pre-destroy cleanup completed ==="
 
-    - name: Terraform Destroy
-      working-directory: ./terraform
-      run: |
-        echo "=== Starting Terraform destroy ==="
+    # - name: Terraform Destroy
+    #   working-directory: ./terraform
+    #   run: |
+    #     echo "=== Starting Terraform destroy ==="
         
-        # Attempt to destroy with auto-approve
-        terraform destroy -auto-approve || {
-          echo "First destroy attempt failed, checking for stuck resources..."
+    #     # Attempt to destroy with auto-approve
+    #     terraform destroy -auto-approve || {
+    #       echo "First destroy attempt failed, checking for stuck resources..."
           
-          # List current state
-          echo "Current Terraform state:"
-          terraform state list || true
+    #       # List current state
+    #       echo "Current Terraform state:"
+    #       terraform state list || true
           
-          # Common problematic resources - remove from state if destroy fails
-          PROBLEM_RESOURCES="aws_s3_bucket aws_db_instance aws_msk_cluster"
+    #       # Common problematic resources - remove from state if destroy fails
+    #       PROBLEM_RESOURCES="aws_s3_bucket aws_db_instance aws_msk_cluster"
           
-          for resource_type in $PROBLEM_RESOURCES; do
-            echo "Checking for $resource_type in state..."
-            terraform state list | grep "^${resource_type}\." | while read resource; do
-              echo "Removing $resource from state"
-              terraform state rm "$resource" || true
-            done
-          done
+    #       for resource_type in $PROBLEM_RESOURCES; do
+    #         echo "Checking for $resource_type in state..."
+    #         terraform state list | grep "^${resource_type}\." | while read resource; do
+    #           echo "Removing $resource from state"
+    #           terraform state rm "$resource" || true
+    #         done
+    #       done
           
-          # Try destroy again
-          echo "Retrying destroy after state cleanup..."
-          terraform destroy -auto-approve || {
-            echo "WARNING: Destroy failed again. Manual cleanup may be required."
-            echo "Remaining resources in state:"
-            terraform state list || true
-          }
-        }
+    #       # Try destroy again
+    #       echo "Retrying destroy after state cleanup..."
+    #       terraform destroy -auto-approve || {
+    #         echo "WARNING: Destroy failed again. Manual cleanup may be required."
+    #         echo "Remaining resources in state:"
+    #         terraform state list || true
+    #       }
+    #     }
         
-        echo "=== Terraform destroy completed ==="
+    #     echo "=== Terraform destroy completed ==="
 
-    - name: Verify Cleanup
-      if: always()
-      run: |
-        echo "=== Verifying resource cleanup ==="
+    # - name: Verify Cleanup
+    #   if: always()
+    #   run: |
+    #     echo "=== Verifying resource cleanup ==="
         
-        # Check for remaining RDS instances
-        echo "Checking for RDS instances..."
-        REMAINING_RDS=$(aws rds describe-db-instances --query "DBInstances[?contains(DBInstanceIdentifier, 'order-processor')].DBInstanceIdentifier" --output text || true)
-        if [ ! -z "$REMAINING_RDS" ]; then
-          echo "WARNING: RDS instances still exist: $REMAINING_RDS"
-        else
-          echo "✓ No RDS instances found"
-        fi
+    #     # Check for remaining RDS instances
+    #     echo "Checking for RDS instances..."
+    #     REMAINING_RDS=$(aws rds describe-db-instances --query "DBInstances[?contains(DBInstanceIdentifier, 'order-processor')].DBInstanceIdentifier" --output text || true)
+    #     if [ ! -z "$REMAINING_RDS" ]; then
+    #       echo "WARNING: RDS instances still exist: $REMAINING_RDS"
+    #     else
+    #       echo "✓ No RDS instances found"
+    #     fi
         
-        # Check for remaining Lambda functions
-        echo "Checking for Lambda functions..."
-        REMAINING_LAMBDA=$(aws lambda list-functions --query "Functions[?contains(FunctionName, 'order-processor')].FunctionName" --output text || true)
-        if [ ! -z "$REMAINING_LAMBDA" ]; then
-          echo "WARNING: Lambda functions still exist: $REMAINING_LAMBDA"
-        else
-          echo "✓ No Lambda functions found"
-        fi
+    #     # Check for remaining Lambda functions
+    #     echo "Checking for Lambda functions..."
+    #     REMAINING_LAMBDA=$(aws lambda list-functions --query "Functions[?contains(FunctionName, 'order-processor')].FunctionName" --output text || true)
+    #     if [ ! -z "$REMAINING_LAMBDA" ]; then
+    #       echo "WARNING: Lambda functions still exist: $REMAINING_LAMBDA"
+    #     else
+    #       echo "✓ No Lambda functions found"
+    #     fi
         
-        # Check for remaining S3 buckets
-        echo "Checking for S3 buckets..."
-        REMAINING_S3=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'order-processor') || contains(Name, 'cloud-native')].Name" --output text || true)
-        if [ ! -z "$REMAINING_S3" ]; then
-          echo "WARNING: S3 buckets still exist: $REMAINING_S3"
-        else
-          echo "✓ No S3 buckets found"
-        fi
+    #     # Check for remaining S3 buckets
+    #     echo "Checking for S3 buckets..."
+    #     REMAINING_S3=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'order-processor') || contains(Name, 'cloud-native')].Name" --output text || true)
+    #     if [ ! -z "$REMAINING_S3" ]; then
+    #       echo "WARNING: S3 buckets still exist: $REMAINING_S3"
+    #     else
+    #       echo "✓ No S3 buckets found"
+    #     fi
         
-        echo "=== Cleanup verification completed ==="
+    #     echo "=== Cleanup verification completed ==="
 
-    - name: Cost Report
-      if: always()
-      run: |
-        echo "=== Generating cost report ==="
+    # - name: Cost Report
+    #   if: always()
+    #   run: |
+    #     echo "=== Generating cost report ==="
         
-        # Get today's date
-        END_DATE=$(date +%Y-%m-%d)
-        START_DATE=$(date -d '1 day ago' +%Y-%m-%d)
+    #     # Get today's date
+    #     END_DATE=$(date +%Y-%m-%d)
+    #     START_DATE=$(date -d '1 day ago' +%Y-%m-%d)
         
-        # Try to get cost data
-        echo "Estimated costs for this pipeline run:"
-        aws ce get-cost-and-usage \
-          --time-period Start=$START_DATE,End=$END_DATE \
-          --granularity DAILY \
-          --metrics "BlendedCost" \
-          --group-by Type=DIMENSION,Key=SERVICE \
-          --query 'ResultsByTime[0].Groups[?Metrics.BlendedCost.Amount > `0`].[Keys[0], Metrics.BlendedCost.Amount]' \
-          --output table 2>/dev/null || echo "Cost data not available yet"
+    #     # Try to get cost data
+    #     echo "Estimated costs for this pipeline run:"
+    #     aws ce get-cost-and-usage \
+    #       --time-period Start=$START_DATE,End=$END_DATE \
+    #       --granularity DAILY \
+    #       --metrics "BlendedCost" \
+    #       --group-by Type=DIMENSION,Key=SERVICE \
+    #       --query 'ResultsByTime[0].Groups[?Metrics.BlendedCost.Amount > `0`].[Keys[0], Metrics.BlendedCost.Amount]' \
+    #       --output table 2>/dev/null || echo "Cost data not available yet"
         
-        echo "=== Cost report completed ==="
+    #     echo "=== Cost report completed ==="
