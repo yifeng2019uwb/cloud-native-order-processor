@@ -1,45 +1,40 @@
-# terraform/s3.tf (or main.tf)
+# New: aws-terraform-backend-s3-only/backend.tf
 
-resource "aws_s3_bucket" "recovery_data_bucket" {
-  bucket = "cloud-native-order-processor-recovery-data-${var.environment}"
-  acl    = "private" # Moved acl here, or use aws_s3_bucket_acl
-
+resource "aws_s3_bucket" "terraform_state_bucket" {
+  bucket = "yifeng2019uwb-order-processor-terraform-state"
   tags = {
-    Name        = "OrderProcessorRecoveryData"
-    Environment = var.environment
-    Project     = "CloudNativeOrderProcessor"
-    Purpose     = "DataRecovery"
+    Name        = "TerraformStateBucket"
+    Environment = "Shared"
+    Purpose     = "TerraformState"
   }
-  # REMOVE this block if it exists here:
-  # server_side_encryption_configuration {
-  #   rule {
-  #     apply_server_side_encryption_by_default {
-  #       sse_algorithm = "AES256"
-  #     }
-  #   }
-  # }
 }
 
-resource "aws_s3_bucket_versioning" "recovery_data_bucket_versioning" {
-  bucket = aws_s3_bucket.recovery_data_bucket.id
+# Add this new resource for ACL
+resource "aws_s3_bucket_acl" "terraform_state_bucket_acl" {
+  bucket = aws_s3_bucket.terraform_state_bucket.id
+  acl    = "private"
+}
+
+# (Keep your existing aws_s3_bucket_versioning, aws_s3_bucket_server_side_encryption_configuration,
+# and aws_s3_bucket_public_access_block resources here)
+resource "aws_s3_bucket_versioning" "terraform_state_bucket_versioning" {
+  bucket = aws_s3_bucket.terraform_state_bucket.id
   versioning_configuration {
-    status = "Enabled" # Crucial for data recovery: keeps previous versions of objects
+    status = "Enabled"
   }
 }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "recovery_data_bucket_encryption" {
-  bucket = aws_s3_bucket.recovery_data_bucket.id
-
+resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state_bucket_encryption" {
+  bucket = aws_s3_bucket.terraform_state_bucket.id
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256" # Encrypts data at rest using S3-managed keys
+      sse_algorithm = "AES256"
     }
   }
 }
 
-# Highly recommended: Block public access explicitly with dedicated resources
-resource "aws_s3_bucket_public_access_block" "recovery_data_bucket_public_access" {
-  bucket = aws_s3_bucket.recovery_data_bucket.id
+resource "aws_s3_bucket_public_access_block" "terraform_state_bucket_public_access" {
+  bucket = aws_s3_bucket.terraform_state_bucket.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -47,32 +42,7 @@ resource "aws_s3_bucket_public_access_block" "recovery_data_bucket_public_access
   restrict_public_buckets = true
 }
 
-# Optional: Add lifecycle rules for cost management (e.g., move older versions to Glacier)
-/*
-resource "aws_s3_bucket_lifecycle_configuration" "recovery_data_bucket_lifecycle" {
-  bucket = aws_s3_bucket.recovery_data_bucket.id
-
-  rule {
-    id     = "move-old-versions-to-glacier"
-    status = "Enabled"
-
-    noncurrent_version_transition {
-      days          = 30
-      storage_class = "GLACIER"
-    }
-
-    noncurrent_version_expiration {
-      days = 365 # Delete old non-current versions after a year
-    }
-  }
-
-  rule {
-    id     = "delete-old-objects"
-    status = "Enabled"
-
-    expiration {
-      days = 730 # Delete current objects after two years (adjust as needed)
-    }
-  }
+output "s3_bucket_name" {
+  description = "Name of the S3 bucket for Terraform state"
+  value       = aws_s3_bucket.terraform_state_bucket.bucket
 }
-*/
