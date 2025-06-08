@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from enum import Enum
 
+
 class EventType(str, Enum):
     ORDER_CREATED = "order_created"
     ORDER_UPDATED = "order_updated"
@@ -12,6 +13,7 @@ class EventType(str, Enum):
     INVENTORY_LOW_STOCK = "inventory_low_stock"
     PAYMENT_PROCESSED = "payment_processed"
 
+
 class BaseEvent(BaseModel):
     event_id: str
     event_type: EventType
@@ -20,9 +22,11 @@ class BaseEvent(BaseModel):
     data: Dict[str, Any]
     metadata: Optional[Dict[str, Any]] = None
 
+
 class OrderEvent(BaseEvent):
     order_id: str
     customer_email: str
+
 
 class InventoryEvent(BaseEvent):
     product_id: str

@@ -16,9 +16,9 @@ class TestProductCreate:
             name="Test Product",
             description="A test product for unit testing",
             price=Decimal("29.99"),
-            category="Electronics"
+            category="Electronics",
         )
-        
+
         assert product.sku == "TEST-SKU-001"
         assert product.name == "Test Product"
         assert product.description == "A test product for unit testing"
@@ -31,15 +31,15 @@ class TestProductCreate:
             "sku": "TEST-SKU-001",
             "name": "Test Product",
             "price": Decimal("29.99"),
-            "category": "Electronics"
+            "category": "Electronics",
         }
-        
+
         required_fields = ["sku", "name", "price", "category"]
-        
+
         for field in required_fields:
             test_data = base_data.copy()
             del test_data[field]
-            
+
             with pytest.raises(ValidationError) as exc_info:
                 ProductCreate(**test_data)
             assert field in str(exc_info.value)
@@ -50,10 +50,10 @@ class TestProductCreate:
             sku="TEST-SKU-001",
             name="Test Product",
             price=Decimal("29.99"),
-            category="Electronics"
+            category="Electronics",
             # description not provided
         )
-        
+
         assert product.description is None
 
     def test_product_create_with_none_description(self):
@@ -63,9 +63,9 @@ class TestProductCreate:
             name="Test Product",
             description=None,
             price=Decimal("29.99"),
-            category="Electronics"
+            category="Electronics",
         )
-        
+
         assert product.description is None
 
     def test_product_create_price_validation(self):
@@ -76,7 +76,7 @@ class TestProductCreate:
                 sku="TEST-SKU-001",
                 name="Test Product",
                 price=Decimal("-10.00"),
-                category="Electronics"
+                category="Electronics",
             )
 
         # Zero price should be valid
@@ -84,7 +84,7 @@ class TestProductCreate:
             sku="TEST-SKU-001",
             name="Test Product",
             price=Decimal("0.00"),
-            category="Electronics"
+            category="Electronics",
         )
         assert product.price == Decimal("0.00")
 
@@ -93,7 +93,7 @@ class TestProductCreate:
             sku="TEST-SKU-001",
             name="Test Product",
             price=Decimal("123.456789"),
-            category="Electronics"
+            category="Electronics",
         )
         assert product.price == Decimal("123.456789")
 
@@ -105,7 +105,7 @@ class TestProductCreate:
                 sku="",
                 name="Test Product",
                 price=Decimal("29.99"),
-                category="Electronics"
+                category="Electronics",
             )
 
         with pytest.raises(ValidationError):
@@ -113,7 +113,7 @@ class TestProductCreate:
                 sku="TEST-SKU-001",
                 name="",
                 price=Decimal("29.99"),
-                category="Electronics"
+                category="Electronics",
             )
 
         with pytest.raises(ValidationError):
@@ -121,7 +121,7 @@ class TestProductCreate:
                 sku="TEST-SKU-001",
                 name="Test Product",
                 price=Decimal("29.99"),
-                category=""
+                category="",
             )
 
     def test_product_create_serialization(self):
@@ -131,9 +131,9 @@ class TestProductCreate:
             name="Test Product",
             description="A test product",
             price=Decimal("29.99"),
-            category="Electronics"
+            category="Electronics",
         )
-        
+
         json_str = product.model_dump_json()
         assert "TEST-SKU-001" in json_str
         assert "Test Product" in json_str
@@ -147,9 +147,9 @@ class TestProductCreate:
             "name": "Test Product",
             "description": "A test product",
             "price": "29.99",
-            "category": "Electronics"
+            "category": "Electronics",
         }
-        
+
         product = ProductCreate(**json_data)
         assert product.price == Decimal("29.99")
 
@@ -160,9 +160,9 @@ class TestProductCreate:
             name="Test Product with Special Chars: !@#$%",
             description="Description with émojis 🚀 and ñoñó",
             price=Decimal("29.99"),
-            category="Electronics & Gadgets"
+            category="Electronics & Gadgets",
         )
-        
+
         assert "Special Chars" in product.name
         assert "émojis" in product.description
         assert "&" in product.category
@@ -174,7 +174,7 @@ class TestProduct:
     def test_product_creation_success(self, sample_product_data):
         """Test successful Product creation."""
         product = Product(**sample_product_data)
-        
+
         assert product.product_id == "prod-123"
         assert product.sku == "TEST-SKU-001"
         assert product.name == "Test Product"
@@ -193,18 +193,23 @@ class TestProduct:
             "price": Decimal("29.99"),
             "category": "Electronics",
             "created_at": datetime.now(),
-            "updated_at": datetime.now()
+            "updated_at": datetime.now(),
         }
-        
+
         required_fields = [
-            "product_id", "sku", "name", "price", "category", 
-            "created_at", "updated_at"
+            "product_id",
+            "sku",
+            "name",
+            "price",
+            "category",
+            "created_at",
+            "updated_at",
         ]
-        
+
         for field in required_fields:
             test_data = base_data.copy()
             del test_data[field]
-            
+
             with pytest.raises(ValidationError) as exc_info:
                 Product(**test_data)
             assert field in str(exc_info.value)
@@ -218,10 +223,10 @@ class TestProduct:
             price=Decimal("29.99"),
             category="Electronics",
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
             # description not provided
         )
-        
+
         assert product.description is None
 
     def test_product_with_description(self):
@@ -234,16 +239,16 @@ class TestProduct:
             price=Decimal("29.99"),
             category="Electronics",
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert product.description == "A detailed product description"
 
     def test_product_datetime_fields(self):
         """Test that datetime fields are properly handled."""
         created_at = datetime(2024, 1, 1, 10, 0, 0)
         updated_at = datetime(2024, 1, 1, 12, 0, 0)
-        
+
         product = Product(
             product_id="prod-123",
             sku="TEST-SKU-001",
@@ -251,16 +256,16 @@ class TestProduct:
             price=Decimal("29.99"),
             category="Electronics",
             created_at=created_at,
-            updated_at=updated_at
+            updated_at=updated_at,
         )
-        
+
         assert product.created_at == created_at
         assert product.updated_at == updated_at
 
     def test_product_price_precision(self):
         """Test that Product maintains price precision."""
         high_precision_price = Decimal("123.456789")
-        
+
         product = Product(
             product_id="prod-123",
             sku="TEST-SKU-001",
@@ -268,15 +273,15 @@ class TestProduct:
             price=high_precision_price,
             category="Electronics",
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert product.price == high_precision_price
 
     def test_product_serialization(self, sample_product_data):
         """Test Product JSON serialization."""
         product = Product(**sample_product_data)
-        
+
         json_str = product.model_dump_json()
         assert "prod-123" in json_str
         assert "TEST-SKU-001" in json_str
@@ -293,9 +298,9 @@ class TestProduct:
             "price": "29.99",
             "category": "Electronics",
             "created_at": "2024-01-01T12:00:00",
-            "updated_at": "2024-01-01T12:00:00"
+            "updated_at": "2024-01-01T12:00:00",
         }
-        
+
         product = Product(**json_data)
         assert product.price == Decimal("29.99")
         assert isinstance(product.created_at, datetime)
@@ -311,16 +316,16 @@ class TestProduct:
                 price=Decimal("29.99"),
                 category="Electronics",
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
 
     def test_product_sku_uniqueness_assumption(self):
         """Test that SKU should be unique (business logic assumption)."""
         # Note: This test documents the assumption that SKUs should be unique
         # The actual uniqueness constraint would be enforced at the database level
-        
+
         sku = "UNIQUE-SKU-001"
-        
+
         product1 = Product(
             product_id="prod-123",
             sku=sku,
@@ -328,9 +333,9 @@ class TestProduct:
             price=Decimal("29.99"),
             category="Electronics",
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         product2 = Product(
             product_id="prod-456",
             sku=sku,  # Same SKU - should be prevented at business logic level
@@ -338,9 +343,9 @@ class TestProduct:
             price=Decimal("39.99"),
             category="Electronics",
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         # Both products can be created (model doesn't enforce uniqueness)
         # But business logic should prevent this
         assert product1.sku == product2.sku
@@ -358,9 +363,9 @@ class TestProductModelsIntegration:
             name="New Product",
             description="A newly created product",
             price=Decimal("49.99"),
-            category="Home & Garden"
+            category="Home & Garden",
         )
-        
+
         # Simulate creating a Product from ProductCreate
         now = datetime.now()
         product = Product(
@@ -371,9 +376,9 @@ class TestProductModelsIntegration:
             price=product_create.price,
             category=product_create.category,
             created_at=now,
-            updated_at=now
+            updated_at=now,
         )
-        
+
         # Verify consistency
         assert product.sku == product_create.sku
         assert product.name == product_create.name
@@ -392,27 +397,29 @@ class TestProductModelsIntegration:
             price=Decimal("29.99"),
             category="Electronics",
             created_at=datetime(2024, 1, 1, 12, 0, 0),
-            updated_at=datetime(2024, 1, 1, 12, 0, 0)
+            updated_at=datetime(2024, 1, 1, 12, 0, 0),
         )
-        
+
         # Update data
         update_data = ProductCreate(
             sku="TEST-SKU-001",  # SKU typically doesn't change
             name="Updated Product Name",
             description="Updated description with more details",
             price=Decimal("34.99"),
-            category="Electronics"
+            category="Electronics",
         )
-        
+
         # Simulate applying update
-        updated_product = original_product.model_copy(update={
-            "name": update_data.name,
-            "description": update_data.description,
-            "price": update_data.price,
-            "category": update_data.category,
-            "updated_at": datetime.now()
-        })
-        
+        updated_product = original_product.model_copy(
+            update={
+                "name": update_data.name,
+                "description": update_data.description,
+                "price": update_data.price,
+                "category": update_data.category,
+                "updated_at": datetime.now(),
+            }
+        )
+
         assert updated_product.product_id == original_product.product_id
         assert updated_product.sku == original_product.sku
         assert updated_product.created_at == original_product.created_at
@@ -424,12 +431,14 @@ class TestProductModelsIntegration:
         """Test that ProductCreate and Product have compatible fields."""
         product_create_fields = set(ProductCreate.model_fields.keys())
         product_fields = set(Product.model_fields.keys())
-        
+
         # ProductCreate fields should be a subset of Product fields
         # (except for the additional fields in Product like product_id, timestamps)
         create_only_fields = product_create_fields - product_fields
-        assert len(create_only_fields) == 0, f"ProductCreate has fields not in Product: {create_only_fields}"
-        
+        assert (
+            len(create_only_fields) == 0
+        ), f"ProductCreate has fields not in Product: {create_only_fields}"
+
         # Product should have additional fields
         product_only_fields = product_fields - product_create_fields
         expected_additional_fields = {"product_id", "created_at", "updated_at"}

@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
+
 class OrderStatus(str, Enum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
@@ -14,9 +15,11 @@ class OrderStatus(str, Enum):
     CANCELLED = "cancelled"
     REFUNDED = "refunded"
 
+
 class OrderItemCreate(BaseModel):
     product_id: str
     quantity: int
+
 
 class OrderItem(BaseModel):
     product_id: str
@@ -25,11 +28,13 @@ class OrderItem(BaseModel):
     unit_price: Decimal
     line_total: Decimal
 
+
 class OrderCreate(BaseModel):
     customer_email: EmailStr
     customer_name: str
     items: List[OrderItemCreate]
     shipping_address: Optional[Dict[str, Any]] = None
+
 
 class Order(BaseModel):
     order_id: str
@@ -43,6 +48,7 @@ class Order(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
 class OrderResponse(BaseModel):
     order_id: str
     customer_email: str
@@ -54,6 +60,7 @@ class OrderResponse(BaseModel):
     shipping_address: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
+
 
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus

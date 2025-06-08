@@ -6,11 +6,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class DatabaseManager:
     def __init__(self):
         self.database_url = os.getenv(
             "DATABASE_URL",
-            "postgresql://orderuser:ChangeThisPassword123!@localhost:5432/orderprocessor"
+            "postgresql://orderuser:ChangeThisPassword123!@localhost:5432/orderprocessor",
         )
         self.pool = None
 
@@ -18,10 +19,7 @@ class DatabaseManager:
         """Initialize connection pool"""
         if not self.pool:
             self.pool = await asyncpg.create_pool(
-                self.database_url,
-                min_size=1,
-                max_size=10,
-                command_timeout=60
+                self.database_url, min_size=1, max_size=10, command_timeout=60
             )
             logger.info("Database connection pool initialized")
 
@@ -37,12 +35,14 @@ class DatabaseManager:
         """Get database connection from pool"""
         if not self.pool:
             await self.init_pool()
-        
+
         async with self.pool.acquire() as connection:
             yield connection
 
+
 # Global database manager instance
 db_manager = DatabaseManager()
+
 
 # Dependency for FastAPI
 async def get_db():

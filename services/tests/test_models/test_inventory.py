@@ -11,17 +11,14 @@ class TestInventoryUpdate:
     def test_inventory_update_creation_success(self):
         """Test successful InventoryUpdate creation."""
         update = InventoryUpdate(quantity_change=10)
-        
+
         assert update.quantity_change == 10
         assert update.reason is None
 
     def test_inventory_update_with_reason(self):
         """Test InventoryUpdate creation with reason."""
-        update = InventoryUpdate(
-            quantity_change=-5,
-            reason="Customer return"
-        )
-        
+        update = InventoryUpdate(quantity_change=-5, reason="Customer return")
+
         assert update.quantity_change == -5
         assert update.reason == "Customer return"
 
@@ -48,11 +45,8 @@ class TestInventoryUpdate:
 
     def test_inventory_update_serialization(self):
         """Test InventoryUpdate JSON serialization."""
-        update = InventoryUpdate(
-            quantity_change=15,
-            reason="New stock received"
-        )
-        
+        update = InventoryUpdate(quantity_change=15, reason="New stock received")
+
         json_str = update.model_dump_json()
         assert "15" in json_str
         assert "New stock received" in json_str
@@ -61,7 +55,7 @@ class TestInventoryUpdate:
         """Test that reason field is optional."""
         update = InventoryUpdate(quantity_change=10)
         data = update.model_dump()
-        
+
         assert "quantity_change" in data
         assert data["reason"] is None
 
@@ -72,7 +66,7 @@ class TestInventoryItem:
     def test_inventory_item_creation_success(self, sample_inventory_data):
         """Test successful InventoryItem creation."""
         item = InventoryItem(**sample_inventory_data)
-        
+
         assert item.product_id == "prod-123"
         assert item.stock_quantity == 100
         assert item.reserved_quantity == 10
@@ -88,7 +82,7 @@ class TestInventoryItem:
                 reserved_quantity=10,
                 min_stock_level=5,
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
         assert "product_id" in str(exc_info.value)
 
@@ -99,7 +93,7 @@ class TestInventoryItem:
                 reserved_quantity=10,
                 min_stock_level=5,
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
         assert "stock_quantity" in str(exc_info.value)
 
@@ -111,10 +105,10 @@ class TestInventoryItem:
             reserved_quantity=10,
             min_stock_level=5,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
             # warehouse_location and last_restocked_at are optional
         )
-        
+
         assert item.warehouse_location is None
         assert item.last_restocked_at is None
 
@@ -126,9 +120,9 @@ class TestInventoryItem:
             reserved_quantity=25,
             min_stock_level=5,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert item.available_quantity == 75  # 100 - 25
 
     def test_available_quantity_negative_protection(self):
@@ -139,9 +133,9 @@ class TestInventoryItem:
             reserved_quantity=25,  # More reserved than stock
             min_stock_level=5,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert item.available_quantity == 0  # max(0, 10 - 25)
 
     def test_is_low_stock_property_true(self):
@@ -150,11 +144,11 @@ class TestInventoryItem:
             product_id="prod-123",
             stock_quantity=10,
             reserved_quantity=7,  # Available: 3
-            min_stock_level=5,    # 3 <= 5, so low stock
+            min_stock_level=5,  # 3 <= 5, so low stock
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert item.is_low_stock is True
 
     def test_is_low_stock_property_false(self):
@@ -162,12 +156,12 @@ class TestInventoryItem:
         item = InventoryItem(
             product_id="prod-123",
             stock_quantity=20,
-            reserved_quantity=5,   # Available: 15
-            min_stock_level=10,    # 15 > 10, so not low stock
+            reserved_quantity=5,  # Available: 15
+            min_stock_level=10,  # 15 > 10, so not low stock
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert item.is_low_stock is False
 
     def test_is_low_stock_property_boundary(self):
@@ -175,12 +169,12 @@ class TestInventoryItem:
         item = InventoryItem(
             product_id="prod-123",
             stock_quantity=15,
-            reserved_quantity=5,   # Available: 10
-            min_stock_level=10,    # 10 <= 10, so low stock
+            reserved_quantity=5,  # Available: 10
+            min_stock_level=10,  # 10 <= 10, so low stock
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert item.is_low_stock is True
 
     def test_is_out_of_stock_property_true(self):
@@ -188,12 +182,12 @@ class TestInventoryItem:
         item = InventoryItem(
             product_id="prod-123",
             stock_quantity=5,
-            reserved_quantity=5,   # Available: 0
+            reserved_quantity=5,  # Available: 0
             min_stock_level=2,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert item.is_out_of_stock is True
 
     def test_is_out_of_stock_property_false(self):
@@ -201,12 +195,12 @@ class TestInventoryItem:
         item = InventoryItem(
             product_id="prod-123",
             stock_quantity=10,
-            reserved_quantity=5,   # Available: 5
+            reserved_quantity=5,  # Available: 5
             min_stock_level=2,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert item.is_out_of_stock is False
 
     def test_is_out_of_stock_property_negative_scenario(self):
@@ -217,9 +211,9 @@ class TestInventoryItem:
             reserved_quantity=10,  # Available: 0 (protected by max)
             min_stock_level=2,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert item.is_out_of_stock is True
 
     def test_inventory_item_negative_values_validation(self):
@@ -232,7 +226,7 @@ class TestInventoryItem:
                 reserved_quantity=5,
                 min_stock_level=2,
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
 
         # Negative reserved_quantity should be invalid
@@ -243,13 +237,13 @@ class TestInventoryItem:
                 reserved_quantity=-5,
                 min_stock_level=2,
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
 
     def test_inventory_item_serialization(self, sample_inventory_data):
         """Test InventoryItem JSON serialization."""
         item = InventoryItem(**sample_inventory_data)
-        
+
         json_str = item.model_dump_json()
         assert "prod-123" in json_str
         assert "100" in json_str
@@ -259,7 +253,7 @@ class TestInventoryItem:
         """Test that datetime fields are properly handled."""
         now = datetime.now()
         earlier = datetime(2024, 1, 1, 12, 0, 0)
-        
+
         item = InventoryItem(
             product_id="prod-123",
             stock_quantity=100,
@@ -267,9 +261,9 @@ class TestInventoryItem:
             min_stock_level=5,
             last_restocked_at=earlier,
             created_at=now,
-            updated_at=now
+            updated_at=now,
         )
-        
+
         assert isinstance(item.created_at, datetime)
         assert isinstance(item.updated_at, datetime)
         assert isinstance(item.last_restocked_at, datetime)
@@ -284,9 +278,9 @@ class TestInventoryItem:
             reserved_quantity=0,
             min_stock_level=0,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert item.available_quantity == 0
         assert item.is_out_of_stock is True
         assert item.is_low_stock is True
@@ -298,9 +292,9 @@ class TestInventoryItem:
             reserved_quantity=100,
             min_stock_level=50,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert item.available_quantity == 999900
         assert item.is_out_of_stock is False
         assert item.is_low_stock is False
@@ -318,17 +312,14 @@ class TestInventoryModelsIntegration:
             reserved_quantity=10,
             min_stock_level=5,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
-        update = InventoryUpdate(
-            quantity_change=25,
-            reason="New shipment received"
-        )
-        
+
+        update = InventoryUpdate(quantity_change=25, reason="New shipment received")
+
         # Simulate applying the update (this would be done in a service)
         new_stock = original_item.stock_quantity + update.quantity_change
-        
+
         assert new_stock == 125
         assert update.reason == "New shipment received"
 
@@ -340,27 +331,27 @@ class TestInventoryModelsIntegration:
             reserved_quantity=5,
             min_stock_level=10,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         updates = [
             InventoryUpdate(quantity_change=20, reason="Restock"),
             InventoryUpdate(quantity_change=-15, reason="Sale"),
-            InventoryUpdate(quantity_change=10, reason="Return")
+            InventoryUpdate(quantity_change=10, reason="Return"),
         ]
-        
+
         final_stock = item.stock_quantity
         for update in updates:
             final_stock += update.quantity_change
-        
+
         assert final_stock == 65  # 50 + 20 - 15 + 10
 
     def test_warehouse_location_consistency(self):
         """Test warehouse location handling across models."""
         # InventoryUpdate doesn't have warehouse info (it's applied to specific items)
         update = InventoryUpdate(quantity_change=10)
-        assert not hasattr(update, 'warehouse_location')
-        
+        assert not hasattr(update, "warehouse_location")
+
         # InventoryItem does have warehouse info
         item = InventoryItem(
             product_id="prod-123",
@@ -369,9 +360,9 @@ class TestInventoryModelsIntegration:
             min_stock_level=5,
             warehouse_location="Main Warehouse",
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert item.warehouse_location == "Main Warehouse"
 
     def test_model_validation_consistency(self):
@@ -379,7 +370,7 @@ class TestInventoryModelsIntegration:
         # Both models should reject invalid data types appropriately
         with pytest.raises(ValidationError):
             InventoryUpdate(quantity_change=None)
-        
+
         with pytest.raises(ValidationError):
             InventoryItem(
                 product_id=None,
@@ -387,5 +378,5 @@ class TestInventoryModelsIntegration:
                 reserved_quantity=10,
                 min_stock_level=5,
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )

@@ -76,6 +76,18 @@ EOF
 detect_service_name() {
     local current_dir=$(basename "$PWD")
     
+    # Check if we're in the services root directory
+    if [[ "$current_dir" == "services" ]]; then
+        print_error "You are in the services root directory. Please specify a service name or navigate to a specific service directory."
+        print_error "Available services:"
+        for dir in */; do
+            if [[ -d "$dir" && "$dir" != "*/" ]]; then
+                echo "  - ${dir%/}"
+            fi
+        done
+        exit 1
+    fi
+    
     # Check if we're in a service directory
     if [[ -f "src/app.py" || -f "app.py" ]]; then
         echo "$current_dir"
@@ -304,12 +316,19 @@ get_service_directory() {
     # If we're already in the service directory
     if [[ -f "app.py" || -f "src/app.py" || -f "setup.py" ]]; then
         echo "."
-    elif [[ -d "services/$service_name" ]]; then
-        echo "services/$service_name"
+    # If we're in the services root and looking for a specific service
     elif [[ -d "$service_name" ]]; then
         echo "$service_name"
+    # If we're somewhere else and need to find the service in a services subdirectory
+    elif [[ -d "services/$service_name" ]]; then
+        echo "services/$service_name"
     else
         print_error "Service directory not found: $service_name"
+        print_error "Current directory: $PWD"
+        print_error "Looking for one of:"
+        print_error "  - ./$service_name"
+        print_error "  - ./services/$service_name"
+        print_error "  - Current directory (if it contains app.py, src/app.py, or setup.py)"
         exit 1
     fi
 }

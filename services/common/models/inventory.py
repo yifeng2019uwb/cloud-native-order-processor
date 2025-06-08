@@ -2,9 +2,11 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
+
 class InventoryUpdate(BaseModel):
     quantity_change: int
     reason: Optional[str] = None
+
 
 class InventoryItem(BaseModel):
     product_id: str
@@ -15,15 +17,15 @@ class InventoryItem(BaseModel):
     last_restocked_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
-    
+
     @property
     def available_quantity(self) -> int:
         return max(0, self.stock_quantity - self.reserved_quantity)
-    
+
     @property
     def is_low_stock(self) -> bool:
         return self.available_quantity <= self.min_stock_level
-    
+
     @property
     def is_out_of_stock(self) -> bool:
         return self.available_quantity <= 0

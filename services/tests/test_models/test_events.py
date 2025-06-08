@@ -13,14 +13,14 @@ class TestEventType:
         """Test that all expected event types are defined."""
         expected_events = [
             "order_created",
-            "order_updated", 
+            "order_updated",
             "order_status_changed",
             "order_cancelled",
             "inventory_updated",
             "inventory_low_stock",
-            "payment_processed"
+            "payment_processed",
         ]
-        
+
         for event in expected_events:
             assert hasattr(EventType, event.upper())
             assert EventType[event.upper()].value == event
@@ -44,9 +44,9 @@ class TestEventType:
             EventType.ORDER_CANCELLED,
             EventType.INVENTORY_UPDATED,
             EventType.INVENTORY_LOW_STOCK,
-            EventType.PAYMENT_PROCESSED
+            EventType.PAYMENT_PROCESSED,
         ]
-        
+
         assert len(event_types) == 7
         for event_type in event_types:
             assert isinstance(event_type, EventType)
@@ -62,11 +62,11 @@ class TestBaseEvent:
             "event_type": EventType.ORDER_CREATED,
             "timestamp": datetime.now(),
             "service_name": "order-service",
-            "data": {"order_id": "order_123"}
+            "data": {"order_id": "order_123"},
         }
-        
+
         event = BaseEvent(**event_data)
-        
+
         assert event.event_id == "evt_123"
         assert event.event_type == EventType.ORDER_CREATED
         assert event.service_name == "order-service"
@@ -81,11 +81,11 @@ class TestBaseEvent:
             "timestamp": datetime.now(),
             "service_name": "order-service",
             "data": {"order_id": "order_123"},
-            "metadata": {"source": "api", "version": "v1"}
+            "metadata": {"source": "api", "version": "v1"},
         }
-        
+
         event = BaseEvent(**event_data)
-        
+
         assert event.metadata == {"source": "api", "version": "v1"}
 
     def test_base_event_required_fields(self):
@@ -96,7 +96,7 @@ class TestBaseEvent:
                 event_type=EventType.ORDER_CREATED,
                 timestamp=datetime.now(),
                 service_name="order-service",
-                data={}
+                data={},
             )
         assert "event_id" in str(exc_info.value)
 
@@ -106,7 +106,7 @@ class TestBaseEvent:
                 event_id="evt_123",
                 timestamp=datetime.now(),
                 service_name="order-service",
-                data={}
+                data={},
             )
         assert "event_type" in str(exc_info.value)
 
@@ -116,7 +116,7 @@ class TestBaseEvent:
                 event_id="evt_123",
                 event_type=EventType.ORDER_CREATED,
                 service_name="order-service",
-                data={}
+                data={},
             )
         assert "timestamp" in str(exc_info.value)
 
@@ -128,7 +128,7 @@ class TestBaseEvent:
                 event_type="invalid_event_type",
                 timestamp=datetime.now(),
                 service_name="order-service",
-                data={}
+                data={},
             )
 
     def test_base_event_serialization(self):
@@ -138,9 +138,9 @@ class TestBaseEvent:
             event_type=EventType.ORDER_CREATED,
             timestamp=datetime(2024, 1, 1, 12, 0, 0),
             service_name="order-service",
-            data={"order_id": "order_123"}
+            data={"order_id": "order_123"},
         )
-        
+
         json_str = event.model_dump_json()
         assert "evt_123" in json_str
         assert "order_created" in json_str
@@ -153,9 +153,9 @@ class TestBaseEvent:
             "event_type": "order_created",
             "timestamp": "2024-01-01T12:00:00",
             "service_name": "order-service",
-            "data": {"order_id": "order_123"}
+            "data": {"order_id": "order_123"},
         }
-        
+
         event = BaseEvent(**json_data)
         assert event.event_id == "evt_123"
         assert event.event_type == EventType.ORDER_CREATED
@@ -173,11 +173,11 @@ class TestOrderEvent:
             "service_name": "order-service",
             "data": {"order_id": "order_123"},
             "order_id": "order_123",
-            "customer_email": "test@example.com"
+            "customer_email": "test@example.com",
         }
-        
+
         event = OrderEvent(**event_data)
-        
+
         assert event.order_id == "order_123"
         assert event.customer_email == "test@example.com"
         assert isinstance(event, BaseEvent)
@@ -193,9 +193,9 @@ class TestOrderEvent:
             "event_type": EventType.ORDER_CREATED,
             "timestamp": datetime.now(),
             "service_name": "order-service",
-            "data": {"order_id": "order_123"}
+            "data": {"order_id": "order_123"},
         }
-        
+
         # Missing order_id
         with pytest.raises(ValidationError) as exc_info:
             OrderEvent(**base_data, customer_email="test@example.com")
@@ -213,24 +213,18 @@ class TestOrderEvent:
             "event_type": EventType.ORDER_STATUS_CHANGED,
             "timestamp": datetime.now(),
             "service_name": "order-service",
-            "data": {"order_id": "order_123", "old_status": "pending", "new_status": "confirmed"},
+            "data": {
+                "order_id": "order_123",
+                "old_status": "pending",
+                "new_status": "confirmed",
+            },
             "metadata": {"user_id": "user_456"},
             "order_id": "order_123",
-            "customer_email": "test@example.com"
+            "customer_email": "test@example.com",
         }
-        
+
         event = OrderEvent(**event_data)
-        
+
         assert event.event_type == EventType.ORDER_STATUS_CHANGED
         assert event.metadata == {"user_id": "user_456"}
         assert event.data["old_status"] == "pending"
-
-    def test_order_event_serialization(self):
-        """Test OrderEvent JSON serialization."""
-        event = OrderEvent(
-            event_id="evt_123",
-            event_type=EventType.ORDER_CREATED,
-            timestamp=datetime(2024, 1, 1, 12, 0, 0),
-            service_name="order-service",
-            data={"order_id": "order_123"},
-            order_i

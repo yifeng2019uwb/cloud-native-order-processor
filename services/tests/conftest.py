@@ -7,7 +7,8 @@ from datetime import datetime
 from decimal import Decimal
 
 # Add common package to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'common'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "common"))
+
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -15,6 +16,7 @@ def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
+
 
 @pytest.fixture
 def mock_db_connection():
@@ -25,6 +27,7 @@ def mock_db_connection():
     mock_conn.execute = AsyncMock()
     mock_conn.transaction = AsyncMock()
     return mock_conn
+
 
 @pytest.fixture
 def sample_order_data():
@@ -39,8 +42,9 @@ def sample_order_data():
         "currency": "USD",
         "shipping_address": {"street": "123 Main St", "city": "Test City"},
         "created_at": datetime(2024, 1, 1, 12, 0, 0),
-        "updated_at": datetime(2024, 1, 1, 12, 0, 0)
+        "updated_at": datetime(2024, 1, 1, 12, 0, 0),
     }
+
 
 @pytest.fixture
 def sample_product_data():
@@ -53,8 +57,9 @@ def sample_product_data():
         "price": Decimal("29.99"),
         "category": "Electronics",
         "created_at": datetime(2024, 1, 1, 12, 0, 0),
-        "updated_at": datetime(2024, 1, 1, 12, 0, 0)
+        "updated_at": datetime(2024, 1, 1, 12, 0, 0),
     }
+
 
 @pytest.fixture
 def sample_inventory_data():
@@ -67,5 +72,5 @@ def sample_inventory_data():
         "warehouse_location": "Warehouse A",
         "last_restocked_at": datetime(2024, 1, 1, 10, 0, 0),
         "created_at": datetime(2024, 1, 1, 12, 0, 0),
-        "updated_at": datetime(2024, 1, 1, 12, 0, 0)
+        "updated_at": datetime(2024, 1, 1, 12, 0, 0),
     }

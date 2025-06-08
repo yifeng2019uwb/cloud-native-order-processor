@@ -6,8 +6,13 @@ from pydantic import ValidationError
 from typing import Dict, Any
 
 from models.order import (
-    OrderStatus, OrderItemCreate, OrderItem, OrderCreate, 
-    Order, OrderResponse, OrderStatusUpdate
+    OrderStatus,
+    OrderItemCreate,
+    OrderItem,
+    OrderCreate,
+    Order,
+    OrderResponse,
+    OrderStatusUpdate,
 )
 
 
@@ -17,10 +22,16 @@ class TestOrderStatus:
     def test_order_status_values(self):
         """Test that all expected order statuses are defined."""
         expected_statuses = [
-            "pending", "confirmed", "processing", "paid", 
-            "shipped", "delivered", "cancelled", "refunded"
+            "pending",
+            "confirmed",
+            "processing",
+            "paid",
+            "shipped",
+            "delivered",
+            "cancelled",
+            "refunded",
         ]
-        
+
         for status in expected_statuses:
             assert hasattr(OrderStatus, status.upper())
             assert OrderStatus[status.upper()].value == status
@@ -46,9 +57,9 @@ class TestOrderStatus:
             OrderStatus.SHIPPED,
             OrderStatus.DELIVERED,
             OrderStatus.CANCELLED,
-            OrderStatus.REFUNDED
+            OrderStatus.REFUNDED,
         ]
-        
+
         assert len(statuses) == 8
         for status in statuses:
             assert isinstance(status, OrderStatus)
@@ -59,11 +70,8 @@ class TestOrderItemCreate:
 
     def test_order_item_create_success(self):
         """Test successful OrderItemCreate creation."""
-        item = OrderItemCreate(
-            product_id="prod-123",
-            quantity=2
-        )
-        
+        item = OrderItemCreate(product_id="prod-123", quantity=2)
+
         assert item.product_id == "prod-123"
         assert item.quantity == 2
 
@@ -97,7 +105,7 @@ class TestOrderItemCreate:
         """Test OrderItemCreate JSON serialization."""
         item = OrderItemCreate(product_id="prod-123", quantity=3)
         json_str = item.model_dump_json()
-        
+
         assert "prod-123" in json_str
         assert "3" in json_str
 
@@ -112,9 +120,9 @@ class TestOrderItem:
             product_name="Test Product",
             quantity=2,
             unit_price=Decimal("29.99"),
-            line_total=Decimal("59.98")
+            line_total=Decimal("59.98"),
         )
-        
+
         assert item.product_id == "prod-123"
         assert item.product_name == "Test Product"
         assert item.quantity == 2
@@ -124,21 +132,25 @@ class TestOrderItem:
     def test_order_item_required_fields(self):
         """Test that all fields are required."""
         required_fields = [
-            "product_id", "product_name", "quantity", "unit_price", "line_total"
+            "product_id",
+            "product_name",
+            "quantity",
+            "unit_price",
+            "line_total",
         ]
-        
+
         base_data = {
             "product_id": "prod-123",
             "product_name": "Test Product",
             "quantity": 2,
             "unit_price": Decimal("29.99"),
-            "line_total": Decimal("59.98")
+            "line_total": Decimal("59.98"),
         }
-        
+
         for field in required_fields:
             test_data = base_data.copy()
             del test_data[field]
-            
+
             with pytest.raises(ValidationError) as exc_info:
                 OrderItem(**test_data)
             assert field in str(exc_info.value)
@@ -150,9 +162,9 @@ class TestOrderItem:
             product_name="Test Product",
             quantity=3,
             unit_price=Decimal("12.345"),
-            line_total=Decimal("37.035")
+            line_total=Decimal("37.035"),
         )
-        
+
         assert item.unit_price == Decimal("12.345")
         assert item.line_total == Decimal("37.035")
 
@@ -163,9 +175,9 @@ class TestOrderItem:
             product_name="Test Product",
             quantity=2,
             unit_price=Decimal("29.99"),
-            line_total=Decimal("59.98")
+            line_total=Decimal("59.98"),
         )
-        
+
         json_str = item.model_dump_json()
         assert "prod-123" in json_str
         assert "Test Product" in json_str
@@ -179,16 +191,16 @@ class TestOrderCreate:
         """Test successful OrderCreate creation."""
         items = [
             OrderItemCreate(product_id="prod-123", quantity=2),
-            OrderItemCreate(product_id="prod-456", quantity=1)
+            OrderItemCreate(product_id="prod-456", quantity=1),
         ]
-        
+
         order = OrderCreate(
             customer_email="test@example.com",
             customer_name="John Doe",
             items=items,
-            shipping_address={"street": "123 Main St", "city": "Test City"}
+            shipping_address={"street": "123 Main St", "city": "Test City"},
         )
-        
+
         assert order.customer_email == "test@example.com"
         assert order.customer_name == "John Doe"
         assert len(order.items) == 2
@@ -197,48 +209,35 @@ class TestOrderCreate:
     def test_order_create_required_fields(self):
         """Test that required fields are enforced."""
         items = [OrderItemCreate(product_id="prod-123", quantity=1)]
-        
+
         # Missing customer_email
         with pytest.raises(ValidationError) as exc_info:
-            OrderCreate(
-                customer_name="John Doe",
-                items=items
-            )
+            OrderCreate(customer_name="John Doe", items=items)
         assert "customer_email" in str(exc_info.value)
 
         # Missing customer_name
         with pytest.raises(ValidationError) as exc_info:
-            OrderCreate(
-                customer_email="test@example.com",
-                items=items
-            )
+            OrderCreate(customer_email="test@example.com", items=items)
         assert "customer_name" in str(exc_info.value)
 
         # Missing items
         with pytest.raises(ValidationError) as exc_info:
-            OrderCreate(
-                customer_email="test@example.com",
-                customer_name="John Doe"
-            )
+            OrderCreate(customer_email="test@example.com", customer_name="John Doe")
         assert "items" in str(exc_info.value)
 
     def test_order_create_email_validation(self):
         """Test email validation in OrderCreate."""
         items = [OrderItemCreate(product_id="prod-123", quantity=1)]
-        
+
         # Invalid email format
         with pytest.raises(ValidationError):
             OrderCreate(
-                customer_email="invalid-email",
-                customer_name="John Doe",
-                items=items
+                customer_email="invalid-email", customer_name="John Doe", items=items
             )
 
         # Valid email format
         order = OrderCreate(
-            customer_email="valid@example.com",
-            customer_name="John Doe",
-            items=items
+            customer_email="valid@example.com", customer_name="John Doe", items=items
         )
         assert order.customer_email == "valid@example.com"
 
@@ -246,22 +245,20 @@ class TestOrderCreate:
         """Test that empty items list is rejected."""
         with pytest.raises(ValidationError):
             OrderCreate(
-                customer_email="test@example.com",
-                customer_name="John Doe",
-                items=[]
+                customer_email="test@example.com", customer_name="John Doe", items=[]
             )
 
     def test_order_create_optional_shipping_address(self):
         """Test that shipping_address is optional."""
         items = [OrderItemCreate(product_id="prod-123", quantity=1)]
-        
+
         order = OrderCreate(
             customer_email="test@example.com",
             customer_name="John Doe",
-            items=items
+            items=items,
             # shipping_address not provided
         )
-        
+
         assert order.shipping_address is None
 
 
@@ -271,7 +268,7 @@ class TestOrder:
     def test_order_creation_success(self, sample_order_data):
         """Test successful Order creation."""
         order = Order(**sample_order_data)
-        
+
         assert order.order_id == "test-order-123"
         assert order.customer_email == "test@example.com"
         assert order.status == OrderStatus.PENDING
@@ -288,18 +285,24 @@ class TestOrder:
             "status": OrderStatus.PENDING,
             "total_amount": Decimal("99.99"),
             "created_at": datetime.now(),
-            "updated_at": datetime.now()
+            "updated_at": datetime.now(),
         }
-        
+
         required_fields = [
-            "order_id", "customer_id", "customer_email", "customer_name",
-            "status", "total_amount", "created_at", "updated_at"
+            "order_id",
+            "customer_id",
+            "customer_email",
+            "customer_name",
+            "status",
+            "total_amount",
+            "created_at",
+            "updated_at",
         ]
-        
+
         for field in required_fields:
             test_data = base_data.copy()
             del test_data[field]
-            
+
             with pytest.raises(ValidationError) as exc_info:
                 Order(**test_data)
             assert field in str(exc_info.value)
@@ -314,9 +317,9 @@ class TestOrder:
             status=OrderStatus.PENDING,
             total_amount=Decimal("99.99"),
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert order.currency == "USD"
 
     def test_order_custom_currency(self):
@@ -330,9 +333,9 @@ class TestOrder:
             total_amount=Decimal("99.99"),
             currency="EUR",
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert order.currency == "EUR"
 
     def test_order_status_enum_validation(self):
@@ -346,7 +349,7 @@ class TestOrder:
                 status=status,
                 total_amount=Decimal("99.99"),
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
             assert order.status == status
 
@@ -362,10 +365,10 @@ class TestOrderResponse:
                 product_name="Test Product",
                 quantity=2,
                 unit_price=Decimal("29.99"),
-                line_total=Decimal("59.98")
+                line_total=Decimal("59.98"),
             )
         ]
-        
+
         response = OrderResponse(
             order_id="test-order-123",
             customer_email="test@example.com",
@@ -375,9 +378,9 @@ class TestOrderResponse:
             currency="USD",
             items=items,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert response.order_id == "test-order-123"
         assert len(response.items) == 1
         assert response.items[0].product_name == "Test Product"
@@ -390,17 +393,17 @@ class TestOrderResponse:
                 product_name="Test Product",
                 quantity=1,
                 unit_price=Decimal("50.00"),
-                line_total=Decimal("50.00")
+                line_total=Decimal("50.00"),
             )
         ]
-        
+
         shipping_address = {
             "street": "123 Main St",
             "city": "Test City",
             "state": "TS",
-            "zip_code": "12345"
+            "zip_code": "12345",
         }
-        
+
         response = OrderResponse(
             order_id="test-order-123",
             customer_email="test@example.com",
@@ -411,9 +414,9 @@ class TestOrderResponse:
             items=items,
             shipping_address=shipping_address,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert response.shipping_address == shipping_address
         assert response.shipping_address["city"] == "Test City"
 
@@ -428,9 +431,9 @@ class TestOrderResponse:
             currency="USD",
             items=[],
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         assert len(response.items) == 0
 
     def test_order_response_serialization(self):
@@ -441,10 +444,10 @@ class TestOrderResponse:
                 product_name="Test Product",
                 quantity=1,
                 unit_price=Decimal("25.50"),
-                line_total=Decimal("25.50")
+                line_total=Decimal("25.50"),
             )
         ]
-        
+
         response = OrderResponse(
             order_id="test-order-123",
             customer_email="test@example.com",
@@ -454,9 +457,9 @@ class TestOrderResponse:
             currency="USD",
             items=items,
             created_at=datetime(2024, 1, 1, 12, 0, 0),
-            updated_at=datetime(2024, 1, 1, 12, 0, 0)
+            updated_at=datetime(2024, 1, 1, 12, 0, 0),
         )
-        
+
         json_str = response.model_dump_json()
         assert "test-order-123" in json_str
         assert "paid" in json_str
@@ -500,11 +503,11 @@ class TestOrderModelsIntegration:
             customer_name="John Doe",
             items=[
                 OrderItemCreate(product_id="prod-123", quantity=2),
-                OrderItemCreate(product_id="prod-456", quantity=1)
+                OrderItemCreate(product_id="prod-456", quantity=1),
             ],
-            shipping_address={"street": "123 Main St", "city": "Test City"}
+            shipping_address={"street": "123 Main St", "city": "Test City"},
         )
-        
+
         # Simulate processing into OrderResponse
         order_items = [
             OrderItem(
@@ -512,17 +515,17 @@ class TestOrderModelsIntegration:
                 product_name="Product 1",
                 quantity=2,
                 unit_price=Decimal("29.99"),
-                line_total=Decimal("59.98")
+                line_total=Decimal("59.98"),
             ),
             OrderItem(
                 product_id="prod-456",
                 product_name="Product 2",
                 quantity=1,
                 unit_price=Decimal("19.99"),
-                line_total=Decimal("19.99")
-            )
+                line_total=Decimal("19.99"),
+            ),
         ]
-        
+
         order_response = OrderResponse(
             order_id="generated-order-id",
             customer_email=order_create.customer_email,
@@ -533,9 +536,9 @@ class TestOrderModelsIntegration:
             items=order_items,
             shipping_address=order_create.shipping_address,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         # Verify consistency
         assert order_response.customer_email == order_create.customer_email
         assert order_response.customer_name == order_create.customer_name
@@ -553,18 +556,17 @@ class TestOrderModelsIntegration:
             status=OrderStatus.PENDING,
             total_amount=Decimal("99.99"),
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
-        
+
         # Create status update
         status_update = OrderStatusUpdate(status=OrderStatus.CONFIRMED)
-        
+
         # Simulate applying the update
-        updated_order = order.model_copy(update={
-            "status": status_update.status,
-            "updated_at": datetime.now()
-        })
-        
+        updated_order = order.model_copy(
+            update={"status": status_update.status, "updated_at": datetime.now()}
+        )
+
         assert updated_order.status == OrderStatus.CONFIRMED
         assert updated_order.order_id == order.order_id
 
@@ -573,15 +575,15 @@ class TestOrderModelsIntegration:
         unit_price = Decimal("12.345")
         quantity = 3
         line_total = unit_price * quantity
-        
+
         order_item = OrderItem(
             product_id="prod-123",
             product_name="Test Product",
             quantity=quantity,
             unit_price=unit_price,
-            line_total=line_total
+            line_total=line_total,
         )
-        
+
         assert order_item.unit_price == Decimal("12.345")
         assert order_item.line_total == Decimal("37.035")
 
@@ -595,12 +597,12 @@ class TestOrderModelsIntegration:
                 product_name="Test",
                 quantity=1,
                 unit_price=Decimal("10.00"),
-                line_total=Decimal("10.00")
+                line_total=Decimal("10.00"),
             ),
             OrderCreate(
                 customer_email="test@example.com",
                 customer_name="Test User",
-                items=[OrderItemCreate(product_id="prod-123", quantity=1)]
+                items=[OrderItemCreate(product_id="prod-123", quantity=1)],
             ),
             Order(
                 order_id="test",
@@ -610,17 +612,17 @@ class TestOrderModelsIntegration:
                 status=OrderStatus.PENDING,
                 total_amount=Decimal("10.00"),
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             ),
-            OrderStatusUpdate(status=OrderStatus.CONFIRMED)
+            OrderStatusUpdate(status=OrderStatus.CONFIRMED),
         ]
-        
+
         for model in models:
             # All should be serializable
             json_str = model.model_dump_json()
             assert isinstance(json_str, str)
             assert len(json_str) > 0
-            
+
             # All should be deserializable
             data = model.model_dump()
             assert isinstance(data, dict)
