@@ -162,16 +162,18 @@ install_dependencies() {
         
         # Install common package in development mode
         if [[ -f "../common/setup.py" ]]; then
+            print_status "Installing common package in development mode"
             pip install -e ../common
         fi
     fi
     
     # Install service-specific dependencies
     if [[ -f "requirements.txt" ]]; then
+        print_status "Installing service requirements"
         pip install -r requirements.txt
     fi
     
-    # Install test dependencies
+    # Install test dependencies from multiple possible locations
     local test_requirements=""
     if [[ -f "test-requirements.txt" ]]; then
         test_requirements="test-requirements.txt"
@@ -182,14 +184,24 @@ install_dependencies() {
     fi
     
     if [[ -n "$test_requirements" && -f "$test_requirements" ]]; then
-        print_status "Installing test dependencies"
+        print_status "Installing test dependencies from $test_requirements"
         pip install -r "$test_requirements"
+    else
+        print_status "No test requirements file found, installing basic test dependencies"
+        pip install pytest pytest-asyncio pytest-mock pytest-cov
     fi
     
     # Install package in development mode if setup.py exists
     if [[ -f "setup.py" ]]; then
         print_status "Installing package in development mode"
         pip install -e .
+    fi
+    
+    # For order-service, ensure we can import the common modules and service modules
+    if [[ "$service_name" == "order-service" ]]; then
+        # Add paths to enable imports during testing
+        export PYTHONPATH="${PWD}/src:${PWD}/../common:${PYTHONPATH:-}"
+        print_status "Set PYTHONPATH for order-service: $PYTHONPATH"
     fi
 }
 
@@ -230,42 +242,105 @@ run_tests() {
     local coverage_threshold=$1
     local no_coverage=$2
     local verbose=$3
+    local service_name=$4
     
-    print_status "Running tests"
+    print_status "Running tests for service: $service_name"
     
-    # Find test directory
+    # Find test directory - look in multiple locations
     local test_dir=""
+    local pytest_args=""
+    
+    # Check for service-specific test directory first
     if [[ -d "tests" ]]; then
         test_dir="tests"
+        print_status "Found service-specific tests in: $test_dir"
     elif [[ -d "test" ]]; then
         test_dir="test"
+        print_status "Found service-specific tests in: $test_dir"
+    # Check for shared test directory
     elif [[ -d "../tests" ]]; then
         test_dir="../tests"
+        print_status "Found shared tests in: $test_dir"
+        
+        # For shared tests, we need to set up the Python path correctly
+        # and potentially filter tests based on the service
+        
+        # Add current service to Python path so tests can import from it
+        export PYTHONPATH="${PWD}:${PWD}/src:${PYTHONPATH:-}"
+        
+        # For specific services, we might want to run all tests since they test shared components
+        if [[ "$service_name" == "common" ]]; then
+            # For common package, run all tests
+            pytest_args="$test_dir"
+        elif [[ "$service_name" == "order-service" ]]; then
+            # For order-service, run all tests but exclude service-specific ones that don't apply
+            pytest_args="$test_dir"
+        else
+            # For other services, run all tests
+            pytest_args="$test_dir"
+        fi
+    elif [[ -d "../../tests" ]]; then
+        test_dir="../../tests"
+        print_status "Found shared tests in: $test_dir"
+        export PYTHONPATH="${PWD}:${PWD}/src:${PYTHONPATH:-}"
+        pytest_args="$test_dir"
     else
-        print_warning "No test directory found"
+        print_warning "No test directory found. Checked:"
+        print_warning "  - ./tests/"
+        print_warning "  - ./test/"
+        print_warning "  - ../tests/"
+        print_warning "  - ../../tests/"
+        print_warning "Skipping tests for $service_name"
         return 0
     fi
     
     # Build pytest command
-    local pytest_cmd="pytest $test_dir"
+    local pytest_cmd="pytest"
     
     if [[ "$verbose" == "true" ]]; then
         pytest_cmd="$pytest_cmd -v"
     fi
     
+    # Add the test arguments
+    if [[ -n "$pytest_args" ]]; then
+        pytest_cmd="$pytest_cmd $pytest_args"
+    else
+        pytest_cmd="$pytest_cmd $test_dir"
+    fi
+    
+    # Add coverage options
     if [[ "$no_coverage" != "true" ]]; then
         # Check if pytest-cov is available
         local has_coverage=$(pip list | grep pytest-cov || true)
         if [[ -n "$has_coverage" ]]; then
-            pytest_cmd="$pytest_cmd --cov=. --cov-report=html --cov-report=term-missing"
+            # For shared test directory, we need to be more specific about what to cover
+            if [[ "$test_dir" == "../tests" || "$test_dir" == "../../tests" ]]; then
+                # Cover the service code, not the test code
+                if [[ -d "src" ]]; then
+                    pytest_cmd="$pytest_cmd --cov=src"
+                elif [[ "$service_name" == "common" ]]; then
+                    # For common package, cover the common modules
+                    pytest_cmd="$pytest_cmd --cov=."
+                else
+                    # For services, cover the service source
+                    pytest_cmd="$pytest_cmd --cov=."
+                fi
+                pytest_cmd="$pytest_cmd --cov-report=html --cov-report=term-missing"
+            else
+                pytest_cmd="$pytest_cmd --cov=. --cov-report=html --cov-report=term-missing"
+            fi
+            
             if [[ -n "$coverage_threshold" ]]; then
                 pytest_cmd="$pytest_cmd --cov-fail-under=$coverage_threshold"
             fi
         fi
     fi
     
+    print_status "Test command: $pytest_cmd"
+    print_status "PYTHONPATH: ${PYTHONPATH:-<not set>}"
+    
     # Run tests
-    if ! $pytest_cmd; then
+    if ! eval "$pytest_cmd"; then
         print_error "Tests failed"
         return 1
     fi
@@ -447,7 +522,7 @@ main() {
     
     # Run tests (unless build-only is specified)
     if [[ "$build_only" != "true" ]]; then
-        if ! run_tests "$coverage_threshold" "$no_coverage" "$verbose"; then
+        if ! run_tests "$coverage_threshold" "$no_coverage" "$verbose" "$service_name"; then
             cd "$original_dir"
             exit 1
         fi
