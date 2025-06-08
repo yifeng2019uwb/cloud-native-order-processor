@@ -47,3 +47,19 @@ resource "aws_db_instance" "postgres_main" {
     AutoStop    = "7days"
   }
 }
+
+# Create tables rds.tf
+# Null resource to initialize database schema automatically
+resource "null_resource" "init_database" {
+  depends_on = [aws_db_instance.postgres_main]
+
+  provisioner "local-exec" {
+    command = "./scripts/init-db.sh"
+    working_dir = path.module
+  }
+
+  triggers = {
+    database_endpoint = aws_db_instance.postgres_main.endpoint
+    script_hash = filemd5("${path.module}/scripts/init-database.sql")
+  }
+}

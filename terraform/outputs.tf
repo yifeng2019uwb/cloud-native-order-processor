@@ -46,3 +46,16 @@ output "order_service_role_arn" {
   description = "IAM role ARN for order service"
   value       = aws_iam_role.order_service.arn
 }
+
+# Add these outputs to existing outputs.tf
+output "db_password" {
+  description = "Database password for initialization"
+  value       = var.db_password
+  sensitive   = true
+}
+
+output "database_initialization_status" {
+  description = "Database initialization completed"
+  value       = "Database schema initialized with 3 tables: products, inventory, orders"
+  depends_on  = [null_resource.init_database]
+}
