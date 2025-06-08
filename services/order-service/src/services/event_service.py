@@ -1,8 +1,6 @@
 import sys
 import os
 import boto3
-import os
-import json
 import uuid
 from datetime import datetime
 from models.events import OrderEvent, EventType
@@ -45,7 +43,7 @@ class EventService:
 
             # Store in S3
             if self.s3_events_bucket:
-                key = f"events/{datetime.utcnow().strftime('%Y/%m/%d')}/{event_type}_{order.order_id}_{int(datetime.utcnow().timestamp())}.json"
+                key = f"events/{datetime().strftime('%Y/%m/%d')}/{event_type}_{order.order_id}_{int(datetime.utcnow().timestamp())}.json"
                 self.s3_client.put_object(
                     Bucket=self.s3_events_bucket,
                     Key=key,

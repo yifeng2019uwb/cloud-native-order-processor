@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 
 from database import get_db
-from models.order import OrderCreate, OrderResponse, OrderStatusUpdate, OrderStatus
+from models.order import OrderCreate, OrderResponse, OrderStatusUpdate
 from services.order_service import OrderService
 
 sys.path.append(
