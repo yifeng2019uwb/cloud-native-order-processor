@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := help
 
 # Variables
-SERVICE ?= 
+SERVICE ?=
 PYTHON_VERSION ?= 3.11
 COVERAGE_THRESHOLD ?= 80
 
