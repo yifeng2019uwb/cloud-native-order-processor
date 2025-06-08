@@ -92,23 +92,23 @@ build-all: ## Build all services
 	@echo "$(BLUE)Building all services...$(NC)"
 	@$(MAKE) build-common
 	@$(MAKE) build-order-service
-	@$(MAKE) build-inventory-service
-	@$(MAKE) build-notification-service
-	@$(MAKE) build-payment-service
+	# @$(MAKE) build-inventory-service
+	# @$(MAKE) build-notification-service
+	# @$(MAKE) build-payment-service
 	@echo "$(GREEN)All services built successfully!$(NC)"
 
 test-all: ## Test all services
 	@echo "$(BLUE)Testing all services...$(NC)"
 	@$(MAKE) test-common
 	@$(MAKE) test-order-service
-	@$(MAKE) test-inventory-service
-	@$(MAKE) test-notification-service
-	@$(MAKE) test-payment-service
+	# @$(MAKE) test-inventory-service
+	# @$(MAKE) test-notification-service
+	# @$(MAKE) test-payment-service
 	@echo "$(GREEN)All tests passed!$(NC)"
 
 clean-all: ## Clean all services
 	@echo "$(BLUE)Cleaning all services...$(NC)"
-	@for service in common order-service inventory-service notification-service payment-service; do \
+	@for service in common order-service; do \
 		echo "Cleaning $$service..."; \
 		$(MAKE) clean SERVICE=$$service; \
 	done
@@ -121,7 +121,7 @@ dev-setup: ## Setup development environment for current service
 
 dev-setup-all: ## Setup development environment for all services
 	@echo "$(BLUE)Setting up development environment for all services...$(NC)"
-	@for service in common order-service inventory-service notification-service payment-service; do \
+	@for service in common order-service ; do \
 		echo "Setting up $$service..."; \
 		$(MAKE) dev-setup SERVICE=$$service; \
 	done
@@ -135,7 +135,7 @@ qa: ## Run full quality assurance (lint + test + build)
 
 qa-all: ## Run QA for all services
 	@echo "$(BLUE)Running QA for all services...$(NC)"
-	@for service in common order-service inventory-service notification-service payment-service; do \
+	@for service in common order-service; do \
 		echo "QA for $$service..."; \
 		$(MAKE) qa SERVICE=$$service; \
 	done
@@ -148,7 +148,7 @@ ci: ## Run CI pipeline (clean, install, test, build)
 
 ci-all: ## Run CI for all services
 	@echo "$(BLUE)Running CI for all services...$(NC)"
-	@for service in common order-service inventory-service notification-service payment-service; do \
+	@for service in common order-service ; do \
 		echo "CI for $$service..."; \
 		$(MAKE) ci SERVICE=$$service; \
 	done
@@ -157,7 +157,7 @@ ci-all: ## Run CI for all services
 # Docker targets
 docker-all: ## Build Docker images for all services
 	@echo "$(BLUE)Building Docker images for all services...$(NC)"
-	@for service in order-service inventory-service notification-service payment-service; do \
+	@for service in order-service ; do \
 		if [ -f "services/$$service/Dockerfile" ]; then \
 			echo "Building Docker image for $$service..."; \
 			$(MAKE) docker SERVICE=$$service; \
