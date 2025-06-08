@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from decimal import Decimal
@@ -20,6 +20,20 @@ class OrderItemCreate(BaseModel):
     product_id: str
     quantity: int
 
+    @field_validator('quantity')
+    @classmethod
+    def validate_quantity(cls, v):
+        if v <= 0:
+            raise ValueError('Quantity must be greater than 0')
+        return v
+
+    @field_validator('product_id')
+    @classmethod
+    def validate_product_id(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Product ID cannot be empty')
+        return v
+
 
 class OrderItem(BaseModel):
     product_id: str
@@ -35,6 +49,19 @@ class OrderCreate(BaseModel):
     items: List[OrderItemCreate]
     shipping_address: Optional[Dict[str, Any]] = None
 
+    @field_validator('items')
+    @classmethod
+    def validate_items(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError('Order must contain at least one item')
+        return v
+
+    @field_validator('customer_name')
+    @classmethod
+    def validate_customer_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Customer name cannot be empty')
+        return v
 
 class Order(BaseModel):
     order_id: str
