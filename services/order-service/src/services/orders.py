@@ -1,16 +1,16 @@
 import sys
 import os
 
-sys.path.append(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common")
-)
-
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 
 from database import get_db
 from models.order import OrderCreate, OrderResponse, OrderStatusUpdate, OrderStatus
 from services.order_service import OrderService
+
+sys.path.append(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common")
+)
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 order_service = OrderService()

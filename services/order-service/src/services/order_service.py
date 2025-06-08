@@ -1,8 +1,5 @@
 import sys
 import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "common"))
-
 import json
 import uuid
 from datetime import datetime
@@ -13,6 +10,8 @@ import asyncpg
 from models.order import OrderCreate, OrderResponse, OrderItem, OrderStatus
 from database.queries import OrderQueries, ProductQueries, InventoryQueries
 from .event_service import EventService
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "common"))
 
 
 class OrderService:

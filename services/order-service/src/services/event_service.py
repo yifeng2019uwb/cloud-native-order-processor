@@ -1,8 +1,5 @@
 import sys
 import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "common"))
-
 import boto3
 import os
 import json
@@ -10,6 +7,8 @@ import uuid
 from datetime import datetime
 from models.events import OrderEvent, EventType
 from models.order import OrderResponse
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "common"))
 
 
 class EventService:

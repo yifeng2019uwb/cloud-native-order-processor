@@ -1,14 +1,14 @@
 import sys
 import os
 
-# Add common package to path
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "common"))
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from api.routes import health, orders, products, inventory
+
+# Add common package to path
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "common"))
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
