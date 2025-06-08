@@ -1,44 +1,38 @@
-# ECR Repository for the Backend API
-resource "aws_ecr_repository" "api_repository" {
-  name                 = "order-processor-api"
+# ===== ECR REPOSITORY =====
+# ecr.tf
+resource "aws_ecr_repository" "order_api" {
+  name                 = "${var.project_name}-order-api"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
+  # Disable image scanning for cost savings
   image_scanning_configuration {
-    scan_on_push = true
+    scan_on_push = false
   }
 
   tags = {
-    Environment = "dev"
-    Project     = "CloudNativeOrderProcessor"
-    Service     = "API"
+    Name = "${var.project_name}-order-api"
   }
 }
 
-# ECR Repository for the Frontend
-resource "aws_ecr_repository" "frontend_repository" {
-  name                 = "order-processor-frontend"
-  image_tag_mutability = "MUTABLE"
-  force_delete         = true
+# Aggressive cleanup policy
+resource "aws_ecr_lifecycle_policy" "order_api" {
+  repository = aws_ecr_repository.order_api.name
 
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  tags = {
-    Environment = "dev"
-    Project     = "CloudNativeOrderProcessor"
-    Service     = "Frontend"
-  }
-}
-
-# Optional: Output the ECR repository URLs, useful for your CI/CD pipeline or other Terraform modules
-output "api_ecr_repository_url" {
-  description = "The URL of the ECR repository for the API."
-  value       = aws_ecr_repository.api_repository.repository_url
-}
-
-output "frontend_ecr_repository_url" {
-  description = "The URL of the ECR repository for the Frontend."
-  value       = aws_ecr_repository.frontend_repository.repository_url
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Keep only last 3 images"
+        selection = {
+          tagStatus   = "any"
+          countType   = "imageCountMoreThan"
+          countNumber = 3
+        }
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
 }

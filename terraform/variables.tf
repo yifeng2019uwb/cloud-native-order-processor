@@ -1,3 +1,5 @@
+# ===== Variables Configuration =====
+# variables.tf
 variable "aws_region" {
   description = "AWS region"
   type        = string
@@ -26,5 +28,5 @@ variable "db_password" {
   description = "Database password"
   type        = string
   sensitive   = true
-  default     = "dummypassword"
+  default     = "ChangeThisPassword123!"
 }
