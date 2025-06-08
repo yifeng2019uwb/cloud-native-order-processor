@@ -13,7 +13,6 @@ env:
 
 jobs:
   # Job 1: Run Tests
-  # Job 1: Run Tests
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -34,6 +33,10 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('services/*/requirements*.txt', 'services/common/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
+
+    - name: Install build tools
+      run: |
+        python -m pip install --upgrade pip setuptools wheel build
 
     - name: Make build script executable
       working-directory: ./services
@@ -61,7 +64,7 @@ jobs:
       working-directory: ./services
       run: |
         echo "=== Building all service packages ==="
-        ./build.sh build-all --verbose
+        make build-all
 
     - name: Upload test coverage reports
       uses: actions/upload-artifact@v4
