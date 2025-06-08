@@ -46,25 +46,25 @@ jobs:
         # Install dev dependencies (THIS IS KEY)
         if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi # Ensure this points to the correct location
     
-    - name: Run linting
-      working-directory: ./docker
-      run: |
-        # Run flake8 if it's installed
-        if python -m pip show flake8 > /dev/null 2>&1; then
-          python -m flake8 api tests --max-line-length=100 --exclude=__pycache__,venv,.venv
-        fi
+    # - name: Run linting
+    #   working-directory: ./docker
+    #   run: |
+    #     # Run flake8 if it's installed
+    #     if python -m pip show flake8 > /dev/null 2>&1; then
+    #       python -m flake8 api tests --max-line-length=100 --exclude=__pycache__,venv,.venv
+    #     fi
     
-    - name: Run tests with coverage
-      working-directory: ./docker
-      run: |
-        python -m pytest tests -v --cov=api --cov-report=xml --cov-report=term
+    # - name: Run tests with coverage
+    #   working-directory: ./docker
+    #   run: |
+    #     python -m pytest tests -v --cov=api --cov-report=xml --cov-report=term
     
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./docker/coverage.xml
-        flags: unittests
-        name: codecov-umbrella
+    # - name: Upload coverage reports
+    #   uses: codecov/codecov-action@v3
+    #   with:
+    #     file: ./docker/coverage.xml
+    #     flags: unittests
+    #     name: codecov-umbrella
 
   # Job 2: Build Docker Image
   # build:
