@@ -64,7 +64,8 @@ jobs:
       working-directory: ./services
       run: |
         echo "=== Building all service packages ==="
-        make ci-build-all
+        # Use build-only to skip tests since we already ran comprehensive tests above
+        make build-only-all || make build-all
 
     - name: Upload test coverage reports
       uses: actions/upload-artifact@v4
