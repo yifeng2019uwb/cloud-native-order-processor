@@ -3,18 +3,13 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 pydantic==2.5.0
 python-multipart==0.0.6
+email-validator==2.1.0
 
-# Database (comment out for now if not using)
-# psycopg2-binary==2.9.9
-# sqlalchemy==2.0.23
-# alembic==1.12.1
+# Database
+asyncpg==0.29.0
 
-# Kafka (comment out for now if not using)
-# aiokafka==0.10.0
-# confluent-kafka==2.3.0
-
-# AWS SDK (comment out for now if not using)
-# boto3==1.29.7
+# AWS SDK
+boto3==1.29.7
 
 # Utilities
 python-dotenv==1.0.0
