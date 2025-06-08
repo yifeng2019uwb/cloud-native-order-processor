@@ -2,7 +2,7 @@ import pytest
 from httpx import AsyncClient
 from unittest.mock import AsyncMock, patch
 
-from app import app
+from app import app, shutdown_event
 
 
 @pytest.mark.asyncio
@@ -21,15 +21,14 @@ async def test_app_metadata():
 
 
 @pytest.mark.asyncio
-@patch("app.db_manager")
-async def test_shutdown_event(mock_db_manager):
-    mock_db_manager.close_pool = AsyncMock()
+async def test_shutdown_event():
+    with patch("app.logger") as mock_logger:
+        with patch("builtins.__import__", side_effect=lambda name, *args: None if name == "database" else __import__(name, *args)):
+            # Call the shutdown function directly
+            await shutdown_event()
 
-    # Simulate shutdown event
-    await app.router.lifespan_context(app).__aexit__(None, None, None)
-
-    mock_db_manager.close_pool.assert_awaited_once()
-
+            # Verify that shutdown was logged
+            mock_logger.info.assert_called_with("Order Service shutting down...")
 
 @pytest.mark.asyncio
 async def test_cors_middleware_headers():

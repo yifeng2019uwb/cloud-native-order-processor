@@ -14,7 +14,9 @@ class TestDatabaseManager:
 
     def test_init_calls_build_database_url(self):
         """Test DatabaseManager initialization calls _build_database_url."""
-        with patch.object(DatabaseManager, '_build_database_url', return_value="test://url") as mock_build:
+        with patch.object(
+            DatabaseManager, "_build_database_url", return_value="test://url"
+        ) as mock_build:
             db_mgr = DatabaseManager()
             mock_build.assert_called_once()
             assert db_mgr.database_url == "test://url"
@@ -34,7 +36,7 @@ class TestDatabaseManager:
             "DB_PORT": "5432",
             "DB_NAME": "orderprocessor",
             "DB_USER": "orderuser",
-            "DB_PASSWORD": "terraform-generated-password"
+            "DB_PASSWORD": "terraform-generated-password",
         }
         with patch.dict(os.environ, env_vars, clear=True):
             db_mgr = DatabaseManager()
@@ -43,23 +45,21 @@ class TestDatabaseManager:
 
     def test_build_database_url_missing_db_host_uses_fallback(self):
         """Test _build_database_url falls back to localhost when DB_HOST missing."""
-        env_vars = {
-            "DB_PASSWORD": "test-password"
-        }
+        env_vars = {"DB_PASSWORD": "test-password"}
         with patch.dict(os.environ, env_vars, clear=True):
-            with patch('database.connection.logger') as mock_logger:
+            with patch("database.connection.logger") as mock_logger:
                 db_mgr = DatabaseManager()
-                expected_url = "postgresql://orderuser:test-password@localhost:5432/orderprocessor"
+                expected_url = (
+                    "postgresql://orderuser:test-password@localhost:5432/orderprocessor"
+                )
                 assert db_mgr.database_url == expected_url
                 mock_logger.warning.assert_called_once()
 
     def test_build_database_url_missing_password_uses_fallback(self):
         """Test _build_database_url falls back when DB_PASSWORD missing."""
-        env_vars = {
-            "DB_HOST": "terraform-host"
-        }
+        env_vars = {"DB_HOST": "terraform-host"}
         with patch.dict(os.environ, env_vars, clear=True):
-            with patch('database.connection.logger') as mock_logger:
+            with patch("database.connection.logger") as mock_logger:
                 db_mgr = DatabaseManager()
                 expected_url = "postgresql://orderuser:ChangeThisPassword123!@localhost:5432/orderprocessor"
                 assert db_mgr.database_url == expected_url
@@ -69,7 +69,7 @@ class TestDatabaseManager:
         """Test _build_database_url with default values for optional components."""
         env_vars = {
             "DB_HOST": "terraform-host",
-            "DB_PASSWORD": "terraform-password"
+            "DB_PASSWORD": "terraform-password",
             # DB_PORT, DB_NAME, DB_USER should use defaults
         }
         with patch.dict(os.environ, env_vars, clear=True):
@@ -84,7 +84,7 @@ class TestDatabaseManager:
             "DB_PORT": "5433",
             "DB_NAME": "custom_db",
             "DB_USER": "custom_user",
-            "DB_PASSWORD": "terraform-password"
+            "DB_PASSWORD": "terraform-password",
         }
         with patch.dict(os.environ, env_vars, clear=True):
             db_mgr = DatabaseManager()
@@ -97,7 +97,7 @@ class TestDatabaseManager:
         env_vars = {
             "DATABASE_URL": complete_url,
             "DB_HOST": "component-host",
-            "DB_PASSWORD": "component-password"
+            "DB_PASSWORD": "component-password",
         }
         with patch.dict(os.environ, env_vars, clear=True):
             db_mgr = DatabaseManager()
@@ -106,7 +106,9 @@ class TestDatabaseManager:
     @pytest.mark.asyncio
     async def test_init_pool_success(self):
         """Test successful pool initialization."""
-        with patch.object(DatabaseManager, '_build_database_url', return_value="test://url"):
+        with patch.object(
+            DatabaseManager, "_build_database_url", return_value="test://url"
+        ):
             db_mgr = DatabaseManager()
             mock_pool = AsyncMock()
 
@@ -114,19 +116,21 @@ class TestDatabaseManager:
             async def mock_create_pool(*args, **kwargs):
                 return mock_pool
 
-            with patch('asyncpg.create_pool', side_effect=mock_create_pool):
+            with patch("asyncpg.create_pool", side_effect=mock_create_pool):
                 await db_mgr.init_pool()
                 assert db_mgr.pool == mock_pool
 
     @pytest.mark.asyncio
     async def test_init_pool_already_initialized(self):
         """Test that pool initialization is skipped if pool already exists."""
-        with patch.object(DatabaseManager, '_build_database_url', return_value="test://url"):
+        with patch.object(
+            DatabaseManager, "_build_database_url", return_value="test://url"
+        ):
             db_mgr = DatabaseManager()
             existing_pool = AsyncMock()
             db_mgr.pool = existing_pool
 
-            with patch('asyncpg.create_pool') as mock_create_pool:
+            with patch("asyncpg.create_pool") as mock_create_pool:
                 await db_mgr.init_pool()
 
                 mock_create_pool.assert_not_called()
@@ -135,7 +139,9 @@ class TestDatabaseManager:
     @pytest.mark.asyncio
     async def test_close_pool_success(self):
         """Test successful pool closure."""
-        with patch.object(DatabaseManager, '_build_database_url', return_value="test://url"):
+        with patch.object(
+            DatabaseManager, "_build_database_url", return_value="test://url"
+        ):
             db_mgr = DatabaseManager()
             mock_pool = AsyncMock()
             db_mgr.pool = mock_pool
@@ -148,7 +154,9 @@ class TestDatabaseManager:
     @pytest.mark.asyncio
     async def test_close_pool_no_pool(self):
         """Test pool closure when no pool exists."""
-        with patch.object(DatabaseManager, '_build_database_url', return_value="test://url"):
+        with patch.object(
+            DatabaseManager, "_build_database_url", return_value="test://url"
+        ):
             db_mgr = DatabaseManager()
             db_mgr.pool = None
 
@@ -159,7 +167,9 @@ class TestDatabaseManager:
     @pytest.mark.asyncio
     async def test_get_connection_success(self):
         """Test successful connection acquisition."""
-        with patch.object(DatabaseManager, '_build_database_url', return_value="test://url"):
+        with patch.object(
+            DatabaseManager, "_build_database_url", return_value="test://url"
+        ):
             db_mgr = DatabaseManager()
             mock_connection = AsyncMock()
 
@@ -183,7 +193,9 @@ class TestDatabaseManager:
     @pytest.mark.asyncio
     async def test_get_connection_initializes_pool(self):
         """Test that get_connection initializes pool if not exists."""
-        with patch.object(DatabaseManager, '_build_database_url', return_value="test://url"):
+        with patch.object(
+            DatabaseManager, "_build_database_url", return_value="test://url"
+        ):
             db_mgr = DatabaseManager()
             mock_connection = AsyncMock()
 
@@ -203,17 +215,21 @@ class TestDatabaseManager:
             async def mock_init_pool():
                 db_mgr.pool = mock_pool
 
-            with patch.object(db_mgr, 'init_pool', side_effect=mock_init_pool):
+            with patch.object(db_mgr, "init_pool", side_effect=mock_init_pool):
                 async with db_mgr.get_connection() as conn:
                     assert conn == mock_connection
 
     @pytest.mark.asyncio
     async def test_get_connection_error_handling(self):
         """Test error handling in get_connection."""
-        with patch.object(DatabaseManager, '_build_database_url', return_value="test://url"):
+        with patch.object(
+            DatabaseManager, "_build_database_url", return_value="test://url"
+        ):
             db_mgr = DatabaseManager()
 
-            with patch.object(db_mgr, 'init_pool', side_effect=Exception("Connection failed")):
+            with patch.object(
+                db_mgr, "init_pool", side_effect=Exception("Connection failed")
+            ):
                 with pytest.raises(Exception, match="Connection failed"):
                     async with db_mgr.get_connection():
                         pass
@@ -230,7 +246,9 @@ class TestGetDbDependency:
         mock_context_manager.__aenter__ = AsyncMock(return_value=mock_connection)
         mock_context_manager.__aexit__ = AsyncMock(return_value=None)
 
-        with patch.object(db_manager, 'get_connection', return_value=mock_context_manager):
+        with patch.object(
+            db_manager, "get_connection", return_value=mock_context_manager
+        ):
             async for conn in get_db():
                 assert conn == mock_connection
                 break
@@ -243,7 +261,9 @@ class TestGetDbDependency:
         mock_context_manager.__aenter__ = AsyncMock(return_value=mock_connection)
         mock_context_manager.__aexit__ = AsyncMock(return_value=None)
 
-        with patch.object(db_manager, 'get_connection', return_value=mock_context_manager):
+        with patch.object(
+            db_manager, "get_connection", return_value=mock_context_manager
+        ):
             connections = []
             async for conn in get_db():
                 connections.append(conn)
@@ -265,6 +285,7 @@ class TestGlobalDatabaseManager:
     def test_global_db_manager_singleton_behavior(self):
         """Test that importing db_manager returns the same instance."""
         from database.connection import db_manager as db_manager2
+
         assert db_manager is db_manager2
 
 
@@ -278,7 +299,7 @@ class TestDatabaseUrlBuildingIntegration:
             "DB_NAME": "orderprocessor",
             "DB_USER": "orderuser",
             "DB_PASSWORD": "terraform-managed-password-123",
-            "DB_PORT": "5432"
+            "DB_PORT": "5432",
         }
 
         with patch.dict(os.environ, terraform_env, clear=True):
@@ -298,12 +319,10 @@ class TestDatabaseUrlBuildingIntegration:
 
     def test_local_development_scenario(self):
         """Test local development with minimal environment variables."""
-        local_env = {
-            "DB_PASSWORD": "local-dev-password"
-        }
+        local_env = {"DB_PASSWORD": "local-dev-password"}
 
         with patch.dict(os.environ, local_env, clear=True):
-            with patch('database.connection.logger') as mock_logger:
+            with patch("database.connection.logger") as mock_logger:
                 db_mgr = DatabaseManager()
                 expected_url = "postgresql://orderuser:local-dev-password@localhost:5432/orderprocessor"
                 assert db_mgr.database_url == expected_url
@@ -316,11 +335,11 @@ class TestDatabaseUrlBuildingIntegration:
         edge_case_env = {
             "DATABASE_URL": "",
             "DB_HOST": "",
-            "DB_PASSWORD": "valid-password"
+            "DB_PASSWORD": "valid-password",
         }
 
         with patch.dict(os.environ, edge_case_env, clear=True):
-            with patch('database.connection.logger') as mock_logger:
+            with patch("database.connection.logger") as mock_logger:
                 db_mgr = DatabaseManager()
                 # Should fall back to localhost since DB_HOST is empty
                 expected_url = "postgresql://orderuser:valid-password@localhost:5432/orderprocessor"
@@ -329,12 +348,11 @@ class TestDatabaseUrlBuildingIntegration:
 
     def test_url_building_with_special_characters(self):
         """Test URL building with special characters in password."""
-        special_char_env = {
-            "DB_HOST": "terraform-host",
-            "DB_PASSWORD": "p@ssw0rd!#$%"
-        }
+        special_char_env = {"DB_HOST": "terraform-host", "DB_PASSWORD": "p@ssw0rd!#$%"}
 
         with patch.dict(os.environ, special_char_env, clear=True):
             db_mgr = DatabaseManager()
-            expected_url = "postgresql://orderuser:p@ssw0rd!#$%@terraform-host:5432/orderprocessor"
+            expected_url = (
+                "postgresql://orderuser:p@ssw0rd!#$%@terraform-host:5432/orderprocessor"
+            )
             assert db_mgr.database_url == expected_url

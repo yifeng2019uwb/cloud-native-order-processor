@@ -246,28 +246,26 @@ install_all_tests_dependencies() {
     if [[ -f "tests/requirements.txt" ]]; then
         print_status "Installing test dependencies"
         pip install -r tests/requirements.txt
+    elif [[ -f "order-service/tests/requirements.txt" ]]; then
+        print_status "Installing test dependencies from order-service/tests"
+        pip install -r order-service/tests/requirements.txt
     else
         print_status "Installing basic test dependencies"
         pip install pytest pytest-asyncio pytest-mock pytest-cov
     fi
 
     # Set up Python path for tests - include all service source directories
-    local python_paths="${PWD}/common"
-
-    # Add order-service src directory to Python path
-    if [[ -d "order-service/src" ]]; then
-        python_paths="${python_paths}:${PWD}/order-service/src"
-    fi
+    local python_paths="${PWD}/common:${PWD}/order-service/src:${PWD}/order-service/tests:${PWD}"
 
     # Add any other service directories that might be needed
     for service_dir in */; do
         if [[ -d "$service_dir/src" && "$service_dir" != "common/" && "$service_dir" != "tests/" ]]; then
             python_paths="${python_paths}:${PWD}/${service_dir}src"
         fi
+        if [[ -d "$service_dir/tests" && "$service_dir" != "tests/" ]]; then
+            python_paths="${python_paths}:${PWD}/${service_dir}tests"
+        fi
     done
-
-    # Add the services root directory itself
-    python_paths="${python_paths}:${PWD}"
 
     export PYTHONPATH="${python_paths}:${PYTHONPATH:-}"
     print_status "Set PYTHONPATH for all tests: $PYTHONPATH"
@@ -305,6 +303,78 @@ run_linting() {
     fi
 }
 
+# Function to find test directories for a service
+find_test_directories() {
+    local service_name=$1
+    local test_dirs=()
+
+    print_status "Looking for test directories for service: $service_name"
+
+    # Check for service-specific test directories in the new structure
+    if [[ -d "tests" ]]; then
+        test_dirs+=("tests")
+        print_status "Found service-specific tests in: tests"
+    elif [[ -d "test" ]]; then
+        test_dirs+=("test")
+        print_status "Found service-specific tests in: test"
+    fi
+
+    # Check for shared test directories in common package
+    if [[ -d "../common/tests" ]]; then
+        test_dirs+=("../common/tests")
+        print_status "Found common package tests in: ../common/tests"
+    elif [[ -d "common/tests" ]]; then
+        test_dirs+=("common/tests")
+        print_status "Found common package tests in: common/tests"
+    fi
+
+    # For common service specifically, also check the common tests directory structure
+    if [[ "$service_name" == "common" ]]; then
+        if [[ -d "./common/tests" ]]; then
+            test_dirs+=("./common/tests")
+            print_status "Found common tests in: common/tests"
+        fi
+    fi
+
+    # Check for service-specific tests in the new hierarchical structure
+    if [[ "$service_name" == "order-service" ]]; then
+        # Look for order-service specific tests
+        if [[ -d "./order-service/tests" ]]; then
+            test_dirs+=("./order-service/tests")
+            print_status "Found order-service tests in: ../order-service/tests"
+        elif [[ -d "order-service/tests" ]]; then
+            test_dirs+=("order-service/tests")
+            print_status "Found order-service tests in: order-service/tests"
+        fi
+    fi
+
+    # Check for shared tests directory at services level
+    if [[ -d "../tests" ]]; then
+        test_dirs+=("../tests")
+        print_status "Found shared tests in: ../tests"
+    elif [[ -d "../../tests" ]]; then
+        test_dirs+=("../../tests")
+        print_status "Found shared tests in: ../../tests"
+    fi
+
+    if [[ ${#test_dirs[@]} -eq 0 ]]; then
+        print_warning "No test directories found. Checked:"
+        print_warning "  - ./tests/"
+        print_warning "  - ./test/"
+        print_warning "  - ./tests/test_database/ (for common)"
+        print_warning "  - ../common/tests/"
+        print_warning "  - ./common/tests/"
+        print_warning "  - ../order-service/tests/"
+        print_warning "  - ./order-service/tests/"
+        print_warning "  - ../tests/"
+        print_warning "  - ../../tests/"
+        return 1
+    fi
+
+    # Return the test directories (space-separated)
+    echo "${test_dirs[@]}"
+}
+
 # Function to run tests
 run_tests() {
     local coverage_threshold=$1
@@ -314,52 +384,56 @@ run_tests() {
 
     print_status "Running tests for service: $service_name"
 
-    # Find test directory - look in multiple locations
-    local test_dir=""
-    local pytest_args=""
-
-    # Check for service-specific test directory first
-    if [[ -d "tests" ]]; then
-        test_dir="tests"
-        print_status "Found service-specific tests in: $test_dir"
-    elif [[ -d "test" ]]; then
-        test_dir="test"
-        print_status "Found service-specific tests in: $test_dir"
-    # Check for shared test directory
-    elif [[ -d "../tests" ]]; then
-        test_dir="../tests"
-        print_status "Found shared tests in: $test_dir"
-
-        # For shared tests, we need to set up the Python path correctly
-        # and potentially filter tests based on the service
-
-        # Add current service to Python path so tests can import from it
-        export PYTHONPATH="${PWD}:${PWD}/src:${PYTHONPATH:-}"
-
-        # For specific services, we might want to run all tests since they test shared components
-        if [[ "$service_name" == "common" ]]; then
-            # For common package, run all tests
-            pytest_args="$test_dir"
-        elif [[ "$service_name" == "order-service" ]]; then
-            # For order-service, run all tests but exclude service-specific ones that don't apply
-            pytest_args="$test_dir"
-        else
-            # For other services, run all tests
-            pytest_args="$test_dir"
-        fi
-    elif [[ -d "../../tests" ]]; then
-        test_dir="../../tests"
-        print_status "Found shared tests in: $test_dir"
-        export PYTHONPATH="${PWD}:${PWD}/src:${PYTHONPATH:-}"
-        pytest_args="$test_dir"
-    else
-        print_warning "No test directory found. Checked:"
-        print_warning "  - ./tests/"
-        print_warning "  - ./test/"
-        print_warning "  - ../tests/"
-        print_warning "  - ../../tests/"
+    # Find test directories
+    local test_dirs_result
+    test_dirs_result=$(find_test_directories "$service_name")
+    if [[ $? -ne 0 ]]; then
         print_warning "Skipping tests for $service_name"
         return 0
+    fi
+
+    # Convert string back to array
+    local test_dirs=($test_dirs_result)
+
+    # For service-specific testing, we want to focus on relevant tests
+    local pytest_args=""
+
+    if [[ "$service_name" == "common" ]]; then
+        # For common package, run common tests only
+        for dir in "${test_dirs[@]}"; do
+            if [[ "$dir" == *"common"* ]]; then
+                pytest_args="$pytest_args $dir"
+            fi
+        done
+    elif [[ "$service_name" == "order-service" ]]; then
+        # For order-service, run both common tests and order-service specific tests
+        for dir in "${test_dirs[@]}"; do
+            if [[ "$dir" == *"common"* || "$dir" == *"order-service"* ]]; then
+                pytest_args="$pytest_args $dir"
+            fi
+        done
+    else
+        # For other services, run all available tests
+        pytest_args="${test_dirs[@]}"
+    fi
+
+    # Remove leading/trailing spaces
+    pytest_args=$(echo "$pytest_args" | xargs)
+
+    if [[ -z "$pytest_args" ]]; then
+        print_warning "No relevant test directories found for $service_name"
+        return 0
+    fi
+
+    # Set up Python path for imports
+    if [[ -d "src" ]]; then
+        export PYTHONPATH="${PWD}/src:${PYTHONPATH:-}"
+    fi
+    if [[ -d "../common" ]]; then
+        export PYTHONPATH="${PWD}/../common:${PYTHONPATH:-}"
+    fi
+    if [[ -d "common" ]]; then
+        export PYTHONPATH="${PWD}/common:${PYTHONPATH:-}"
     fi
 
     # Build pytest command
@@ -370,36 +444,46 @@ run_tests() {
     fi
 
     # Add the test arguments
-    if [[ -n "$pytest_args" ]]; then
-        pytest_cmd="$pytest_cmd $pytest_args"
-    else
-        pytest_cmd="$pytest_cmd $test_dir"
-    fi
+    pytest_cmd="$pytest_cmd $pytest_args"
 
     # Add coverage options
     if [[ "$no_coverage" != "true" ]]; then
         # Check if pytest-cov is available
         local has_coverage=$(pip list | grep pytest-cov || true)
         if [[ -n "$has_coverage" ]]; then
-            # For shared test directory, we need to be more specific about what to cover
-            if [[ "$test_dir" == "../tests" || "$test_dir" == "../../tests" ]]; then
-                # Cover the service code, not the test code
-                if [[ -d "src" ]]; then
-                    pytest_cmd="$pytest_cmd --cov=src"
-                elif [[ "$service_name" == "common" ]]; then
-                    # For common package, cover the common modules
-                    pytest_cmd="$pytest_cmd --cov=."
-                else
-                    # For services, cover the service source
-                    pytest_cmd="$pytest_cmd --cov=."
+            # Determine what to cover based on service
+            local coverage_sources=""
+
+            if [[ "$service_name" == "common" ]]; then
+                # Cover common package only
+                if [[ -d "." && -f "setup.py" ]]; then
+                    coverage_sources="--cov=."
                 fi
-                pytest_cmd="$pytest_cmd --cov-report=html --cov-report=term-missing"
+            elif [[ "$service_name" == "order-service" ]]; then
+                # Cover order-service src and common
+                if [[ -d "src" ]]; then
+                    coverage_sources="--cov=src"
+                fi
+                if [[ -d "../common" ]]; then
+                    coverage_sources="$coverage_sources --cov=../common"
+                elif [[ -d "common" ]]; then
+                    coverage_sources="$coverage_sources --cov=common"
+                fi
             else
-                pytest_cmd="$pytest_cmd --cov=. --cov-report=html --cov-report=term-missing"
+                # Default coverage for other services
+                if [[ -d "src" ]]; then
+                    coverage_sources="--cov=src"
+                elif [[ -f "setup.py" ]]; then
+                    coverage_sources="--cov=."
+                fi
             fi
 
-            if [[ -n "$coverage_threshold" ]]; then
-                pytest_cmd="$pytest_cmd --cov-fail-under=$coverage_threshold"
+            if [[ -n "$coverage_sources" ]]; then
+                pytest_cmd="$pytest_cmd $coverage_sources --cov-report=html --cov-report=term-missing"
+
+                if [[ -n "$coverage_threshold" ]]; then
+                    pytest_cmd="$pytest_cmd --cov-fail-under=$coverage_threshold"
+                fi
             fi
         fi
     fi
@@ -422,21 +506,49 @@ run_all_tests() {
     local no_coverage=$2
     local verbose=$3
 
-    print_status "Running all tests from services/tests directory"
+    print_status "Running all tests from services directory"
 
-    if [[ ! -d "tests" ]]; then
-        print_error "No tests directory found in services root"
+    # Look for test directories
+    local test_dirs=()
+
+    # Check for common tests
+    if [[ -d "common/tests" ]]; then
+        test_dirs+=("common/tests")
+        print_status "Found common tests in: common/tests"
+    fi
+
+    # Check for order-service tests
+    if [[ -d "order-service/tests" ]]; then
+        test_dirs+=("order-service/tests")
+        print_status "Found order-service tests in: order-service/tests"
+    fi
+
+    # Check for shared tests directory
+    if [[ -d "tests" ]]; then
+        test_dirs+=("tests")
+        print_status "Found shared tests in: tests"
+    fi
+
+    if [[ ${#test_dirs[@]} -eq 0 ]]; then
+        print_error "No test directories found in services root"
+        print_error "Checked: common/tests/, order-service/tests/, tests/"
         return 1
     fi
 
-    # Build pytest command
-    local pytest_cmd="pytest"
+    # Copy conftest.py to make fixtures available to all tests
+    if [[ -f "order-service/tests/conftest.py" && -d "common/tests" ]]; then
+        print_status "Copying conftest.py to common/tests for fixture sharing"
+        cp "order-service/tests/conftest.py" "common/tests/"
+    fi
+
+    # Build pytest command with explicit conftest discovery
+    local pytest_cmd="pytest --confcutdir=${PWD}"
 
     if [[ "$verbose" == "true" ]]; then
         pytest_cmd="$pytest_cmd -v"
     fi
 
-    pytest_cmd="$pytest_cmd tests"
+    pytest_cmd="$pytest_cmd ${test_dirs[@]}"
 
     # Add coverage options
     if [[ "$no_coverage" != "true" ]]; then
@@ -465,7 +577,16 @@ run_all_tests() {
     # Run tests
     if ! eval "$pytest_cmd"; then
         print_error "Tests failed"
+        # Clean up copied conftest.py
+        if [[ -f "common/tests/conftest.py" ]]; then
+            rm -f "common/tests/conftest.py"
+        fi
         return 1
+    fi
+
+    # Clean up copied conftest.py
+    if [[ -f "common/tests/conftest.py" ]]; then
+        rm -f "common/tests/conftest.py"
     fi
 
     print_success "All tests passed"

@@ -227,7 +227,7 @@ class TestQueriesIntegration:
     def test_sql_injection_prevention(self):
         """Test that queries are protected against SQL injection."""
         all_queries = []
-    
+
         # Collect all string queries
         for cls in [OrderQueries, ProductQueries, InventoryQueries]:
             for attr_name in dir(cls):
@@ -235,7 +235,7 @@ class TestQueriesIntegration:
                     attr_value = getattr(cls, attr_name)
                     if isinstance(attr_value, str):
                         all_queries.append(attr_value)
-    
+
         for query in all_queries:
             # Should use parameterized queries
             if "WHERE" in query.upper():
@@ -244,11 +244,15 @@ class TestQueriesIntegration:
                     # This is acceptable as it's a base query that gets parameters added dynamically
                     continue
                 # Should use $1, $2, etc. for parameters
-                assert any(f"${i}" in query for i in range(1, 10)), f"Query should use parameterized queries: {query}"
-        
+                assert any(
+                    f"${i}" in query for i in range(1, 10)
+                ), f"Query should use parameterized queries: {query}"
+
             # Should not have obvious SQL injection patterns
             dangerous_patterns = ["'", '"', ";", "--", "/*", "*/"]
             for pattern in dangerous_patterns:
                 if pattern in query:
                     # Only acceptable in specific contexts (like comments or quoted identifiers)
-                    assert pattern == "'" and "name" in query.lower() or pattern == '"', f"Potentially dangerous pattern '{pattern}' found in query: {query}"
+                    assert (
+                        pattern == "'" and "name" in query.lower() or pattern == '"'
+                    ), f"Potentially dangerous pattern '{pattern}' found in query: {query}"

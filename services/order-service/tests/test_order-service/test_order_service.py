@@ -15,7 +15,9 @@ from services.event_service import EventService
 @pytest.fixture
 def order_service():
     """Create OrderService instance with mocked event service."""
-    with patch.object(OrderService, '__init__', lambda x: setattr(x, 'event_service', AsyncMock())):
+    with patch.object(
+        OrderService, "__init__", lambda x: setattr(x, "event_service", AsyncMock())
+    ):
         service = OrderService()
         return service
 
@@ -34,8 +36,8 @@ def sample_order_create():
             "street": "123 Main St",
             "city": "Test City",
             "state": "TS",
-            "zip": "12345"
-        }
+            "zip": "12345",
+        },
     )
 
 
@@ -48,6 +50,7 @@ def mock_db_connection():
     class MockTransaction:
         async def __aenter__(self):
             return self
+
         async def __aexit__(self, exc_type, exc_val, exc_tb):
             return None
 
@@ -59,39 +62,41 @@ class TestOrderService:
     """Test cases for OrderService class."""
 
     @pytest.mark.asyncio
-    async def test_create_order_success(self, order_service, sample_order_create, mock_db_connection):
+    async def test_create_order_success(
+        self, order_service, sample_order_create, mock_db_connection
+    ):
         """Test successful order creation."""
         # Mock product data
         mock_product_1 = {
             "product_id": "prod-123",
             "name": "Product 1",
             "price": 29.99,
-            "sku": "PROD-123"
+            "sku": "PROD-123",
         }
         mock_product_2 = {
             "product_id": "prod-456",
             "name": "Product 2",
             "price": 49.99,
-            "sku": "PROD-456"
+            "sku": "PROD-456",
         }
 
         # Mock inventory data
         mock_inventory_1 = {
             "product_id": "prod-123",
             "stock_quantity": 100,
-            "reserved_quantity": 10
+            "reserved_quantity": 10,
         }
         mock_inventory_2 = {
             "product_id": "prod-456",
             "stock_quantity": 50,
-            "reserved_quantity": 5
+            "reserved_quantity": 5,
         }
 
         # Configure mock database responses
         mock_db_connection.fetchrow.side_effect = [
-            mock_product_1,    # First product lookup
+            mock_product_1,  # First product lookup
             mock_inventory_1,  # First inventory lookup
-            mock_product_2,    # Second product lookup
+            mock_product_2,  # Second product lookup
             mock_inventory_2,  # Second inventory lookup
         ]
 
@@ -102,7 +107,9 @@ class TestOrderService:
         order_service.event_service.publish_order_event = AsyncMock()
 
         # Execute test
-        result = await order_service.create_order(sample_order_create, mock_db_connection)
+        result = await order_service.create_order(
+            sample_order_create, mock_db_connection
+        )
 
         # Assertions
         assert isinstance(result, OrderResponse)
@@ -122,7 +129,9 @@ class TestOrderService:
 
         # Verify database calls
         assert mock_db_connection.fetchrow.call_count == 4
-        assert mock_db_connection.execute.call_count == 5  # 1 order + 2 items + 2 inventory reserves
+        assert (
+            mock_db_connection.execute.call_count == 5
+        )  # 1 order + 2 items + 2 inventory reserves
 
         # Verify event was published
         order_service.event_service.publish_order_event.assert_called_once_with(
@@ -130,7 +139,9 @@ class TestOrderService:
         )
 
     @pytest.mark.asyncio
-    async def test_create_order_product_not_found(self, order_service, sample_order_create, mock_db_connection):
+    async def test_create_order_product_not_found(
+        self, order_service, sample_order_create, mock_db_connection
+    ):
         """Test order creation fails when product not found."""
         # Mock product not found
         mock_db_connection.fetchrow.return_value = None
@@ -139,13 +150,11 @@ class TestOrderService:
             await order_service.create_order(sample_order_create, mock_db_connection)
 
     @pytest.mark.asyncio
-    async def test_create_order_no_inventory(self, order_service, sample_order_create, mock_db_connection):
+    async def test_create_order_no_inventory(
+        self, order_service, sample_order_create, mock_db_connection
+    ):
         """Test order creation fails when no inventory found."""
-        mock_product = {
-            "product_id": "prod-123",
-            "name": "Product 1",
-            "price": 29.99
-        }
+        mock_product = {"product_id": "prod-123", "name": "Product 1", "price": 29.99}
 
         # Return product, then None for inventory
         mock_db_connection.fetchrow.side_effect = [mock_product, None]
@@ -154,22 +163,22 @@ class TestOrderService:
             await order_service.create_order(sample_order_create, mock_db_connection)
 
     @pytest.mark.asyncio
-    async def test_create_order_insufficient_stock(self, order_service, sample_order_create, mock_db_connection):
+    async def test_create_order_insufficient_stock(
+        self, order_service, sample_order_create, mock_db_connection
+    ):
         """Test order creation fails when insufficient stock."""
-        mock_product = {
-            "product_id": "prod-123",
-            "name": "Product 1",
-            "price": 29.99
-        }
+        mock_product = {"product_id": "prod-123", "name": "Product 1", "price": 29.99}
         mock_inventory = {
             "product_id": "prod-123",
             "stock_quantity": 5,
-            "reserved_quantity": 4  # Available: 1, but need 2
+            "reserved_quantity": 4,  # Available: 1, but need 2
         }
 
         mock_db_connection.fetchrow.side_effect = [mock_product, mock_inventory]
 
-        with pytest.raises(ValueError, match="Insufficient stock for Product 1. Available: 1"):
+        with pytest.raises(
+            ValueError, match="Insufficient stock for Product 1. Available: 1"
+        ):
             await order_service.create_order(sample_order_create, mock_db_connection)
 
     @pytest.mark.asyncio
@@ -187,7 +196,7 @@ class TestOrderService:
             "currency": "USD",
             "shipping_address": '{"street": "123 Main St"}',
             "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "updated_at": datetime.utcnow(),
         }
 
         # Mock order items
@@ -197,15 +206,15 @@ class TestOrderService:
                 "product_name": "Product 1",
                 "quantity": 2,
                 "unit_price": 29.99,
-                "line_total": 59.98
+                "line_total": 59.98,
             },
             {
                 "product_id": "prod-456",
                 "product_name": "Product 2",
                 "quantity": 1,
                 "unit_price": 19.99,
-                "line_total": 19.99
-            }
+                "line_total": 19.99,
+            },
         ]
 
         mock_db_connection.fetchrow.return_value = mock_order
@@ -234,13 +243,13 @@ class TestOrderService:
         """Test listing orders without filters."""
         mock_orders = [
             {"order_id": "order-1", "created_at": datetime.utcnow()},
-            {"order_id": "order-2", "created_at": datetime.utcnow()}
+            {"order_id": "order-2", "created_at": datetime.utcnow()},
         ]
 
         mock_db_connection.fetch.return_value = mock_orders
 
         # Mock get_order calls
-        with patch.object(order_service, 'get_order') as mock_get_order:
+        with patch.object(order_service, "get_order") as mock_get_order:
             mock_order_response = OrderResponse(
                 order_id="order-1",
                 customer_email="test@example.com",
@@ -250,7 +259,7 @@ class TestOrderService:
                 currency="USD",
                 items=[],
                 created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                updated_at=datetime.utcnow(),
             )
             mock_get_order.return_value = mock_order_response
 
@@ -265,14 +274,14 @@ class TestOrderService:
         mock_orders = [{"order_id": "order-1", "created_at": datetime.utcnow()}]
         mock_db_connection.fetch.return_value = mock_orders
 
-        with patch.object(order_service, 'get_order') as mock_get_order:
+        with patch.object(order_service, "get_order") as mock_get_order:
             mock_get_order.return_value = None  # Simulate order not found
 
             result = await order_service.list_orders(
                 mock_db_connection,
                 limit=10,
                 status="pending",
-                customer_email="test@example.com"
+                customer_email="test@example.com",
             )
 
             # Verify the query was built with filters
@@ -294,7 +303,7 @@ class TestOrderService:
         mock_db_connection.execute.return_value = "UPDATE 1"
 
         # Mock get_order for event publishing
-        with patch.object(order_service, 'get_order') as mock_get_order:
+        with patch.object(order_service, "get_order") as mock_get_order:
             mock_order = OrderResponse(
                 order_id=order_id,
                 customer_email="test@example.com",
@@ -304,7 +313,7 @@ class TestOrderService:
                 currency="USD",
                 items=[],
                 created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                updated_at=datetime.utcnow(),
             )
             mock_get_order.return_value = mock_order
 
@@ -321,7 +330,9 @@ class TestOrderService:
             )
 
     @pytest.mark.asyncio
-    async def test_update_order_status_not_found(self, order_service, mock_db_connection):
+    async def test_update_order_status_not_found(
+        self, order_service, mock_db_connection
+    ):
         """Test order status update when order doesn't exist."""
         mock_db_connection.execute.return_value = "UPDATE 0"
 
@@ -332,13 +343,15 @@ class TestOrderService:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_create_order_with_shipping_address(self, order_service, mock_db_connection):
+    async def test_create_order_with_shipping_address(
+        self, order_service, mock_db_connection
+    ):
         """Test order creation with shipping address handling."""
         order_data = OrderCreate(
             customer_email="test@example.com",
             customer_name="John Doe",
             items=[OrderItemCreate(product_id="prod-123", quantity=1)],
-            shipping_address={"street": "456 Oak Ave", "city": "New City"}
+            shipping_address={"street": "456 Oak Ave", "city": "New City"},
         )
 
         # Mock product and inventory data
@@ -360,12 +373,14 @@ class TestOrderService:
         assert json.loads(shipping_arg) == {"street": "456 Oak Ave", "city": "New City"}
 
     @pytest.mark.asyncio
-    async def test_create_order_without_shipping_address(self, order_service, mock_db_connection):
+    async def test_create_order_without_shipping_address(
+        self, order_service, mock_db_connection
+    ):
         """Test order creation without shipping address."""
         order_data = OrderCreate(
             customer_email="test@example.com",
             customer_name="John Doe",
-            items=[OrderItemCreate(product_id="prod-123", quantity=1)]
+            items=[OrderItemCreate(product_id="prod-123", quantity=1)],
             # No shipping_address
         )
 
@@ -398,10 +413,14 @@ class TestOrderServiceIntegration:
         order_data = OrderCreate(
             customer_email="integration@test.com",
             customer_name="Integration Test",
-            items=[OrderItemCreate(product_id="prod-integration", quantity=1)]
+            items=[OrderItemCreate(product_id="prod-integration", quantity=1)],
         )
 
-        mock_product = {"product_id": "prod-integration", "name": "Integration Product", "price": 100.00}
+        mock_product = {
+            "product_id": "prod-integration",
+            "name": "Integration Product",
+            "price": 100.00,
+        }
         mock_inventory = {"stock_quantity": 20, "reserved_quantity": 5}
 
         mock_db_connection.fetchrow.side_effect = [mock_product, mock_inventory]
@@ -416,8 +435,10 @@ class TestOrderServiceIntegration:
         # Step 2: Update order status
         mock_db_connection.execute.return_value = "UPDATE 1"
 
-        with patch.object(order_service, 'get_order') as mock_get_order:
-            updated_order = created_order.model_copy(update={"status": OrderStatus.CONFIRMED})
+        with patch.object(order_service, "get_order") as mock_get_order:
+            updated_order = created_order.model_copy(
+                update={"status": OrderStatus.CONFIRMED}
+            )
             mock_get_order.return_value = updated_order
 
             success = await order_service.update_order_status(
@@ -433,15 +454,21 @@ class TestOrderServiceIntegration:
             assert event_calls[1][0][0] == "order_status_updated"
 
     @pytest.mark.asyncio
-    async def test_order_creation_rollback_scenario(self, order_service, mock_db_connection):
+    async def test_order_creation_rollback_scenario(
+        self, order_service, mock_db_connection
+    ):
         """Test that order creation handles database transaction failures."""
         order_data = OrderCreate(
             customer_email="rollback@test.com",
             customer_name="Rollback Test",
-            items=[OrderItemCreate(product_id="prod-fail", quantity=1)]
+            items=[OrderItemCreate(product_id="prod-fail", quantity=1)],
         )
 
-        mock_product = {"product_id": "prod-fail", "name": "Failing Product", "price": 50.00}
+        mock_product = {
+            "product_id": "prod-fail",
+            "name": "Failing Product",
+            "price": 50.00,
+        }
         mock_inventory = {"stock_quantity": 10, "reserved_quantity": 0}
 
         mock_db_connection.fetchrow.side_effect = [mock_product, mock_inventory]
@@ -457,7 +484,7 @@ class TestOrderServiceIntegration:
 
     def test_order_service_initialization(self):
         """Test OrderService initialization creates EventService."""
-        with patch('services.order_service.EventService') as mock_event_service_class:
+        with patch("services.order_service.EventService") as mock_event_service_class:
             mock_event_service_instance = MagicMock()
             mock_event_service_class.return_value = mock_event_service_instance
 

@@ -10,7 +10,9 @@ from decimal import Decimal
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "common"))
 
 # Add order-service src to path for order-service tests
-order_service_src = os.path.join(os.path.dirname(__file__), "..", "order-service", "src")
+order_service_src = os.path.join(
+    os.path.dirname(__file__), "..", "order-service", "src"
+)
 if os.path.exists(order_service_src):
     sys.path.insert(0, order_service_src)
 
