@@ -9,6 +9,15 @@ from decimal import Decimal
 # Add common package to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "common"))
 
+# Add order-service src to path for order-service tests
+order_service_src = os.path.join(os.path.dirname(__file__), "..", "order-service", "src")
+if os.path.exists(order_service_src):
+    sys.path.insert(0, order_service_src)
+
+# Add services root to path
+services_root = os.path.join(os.path.dirname(__file__), "..")
+sys.path.insert(0, services_root)
+
 
 @pytest.fixture(scope="session")
 def event_loop():

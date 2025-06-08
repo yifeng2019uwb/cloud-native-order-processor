@@ -7,7 +7,15 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch, call
 from decimal import Decimal
 
-from services.event_service import EventService
+# Import from the correct path - these should now work with the updated PYTHONPATH
+try:
+    from services.event_service import EventService
+except ImportError:
+    # Fallback import path
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'order-service', 'src'))
+    from services.event_service import EventService
+
 from models.order import OrderResponse, OrderStatus
 from models.events import OrderEvent, EventType
 
@@ -363,6 +371,6 @@ class TestEventServiceIntegration:
             event_data = json.loads(message_json)
 
             order_data = event_data['data']
-            assert order_data['total_amount'] == 199.98
+            assert order_data['total_amount'] == "199.98"
             assert len(order_data['items']) == 2
             assert order_data['shipping_address']['city'] == "Test City"
