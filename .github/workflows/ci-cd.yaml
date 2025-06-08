@@ -64,7 +64,7 @@ jobs:
       working-directory: ./services
       run: |
         echo "=== Building all service packages ==="
-        make build-all
+        make ci-build-all
 
     - name: Upload test coverage reports
       uses: actions/upload-artifact@v4
