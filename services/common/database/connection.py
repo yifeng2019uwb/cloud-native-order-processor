@@ -9,11 +9,36 @@ logger = logging.getLogger(__name__)
 
 class DatabaseManager:
     def __init__(self):
-        self.database_url = os.getenv(
-            "DATABASE_URL",
-            "postgresql://orderuser:ChangeThisPassword123!@localhost:5432/orderprocessor",
-        )
+        # Build the database URL from Terraform-created infrastructure
+        self.database_url = self._build_database_url()
         self.pool = None
+
+    def _build_database_url(self) -> str:
+        """Build database URL from environment variables set by Terraform deployment"""
+
+        # Primary approach: Use complete DATABASE_URL if provided
+        database_url = os.getenv("DATABASE_URL")
+        if database_url:
+            return database_url
+
+        # Secondary approach: Build from individual components
+        db_host = os.getenv("DB_HOST")
+        db_port = os.getenv("DB_PORT", "5432")
+        db_name = os.getenv("DB_NAME", "orderprocessor")
+        db_user = os.getenv("DB_USER", "orderuser")
+        db_password = os.getenv("DB_PASSWORD")
+
+        if db_host and db_password:
+            return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+        # Fallback for local development only
+        logger.warning(
+            "Using localhost database URL - this should only happen in local development"
+        )
+        fallback_password = os.getenv("DB_PASSWORD", "ChangeThisPassword123!")
+        return (
+            f"postgresql://orderuser:{fallback_password}@localhost:5432/orderprocessor"
+        )
 
     async def init_pool(self):
         """Initialize connection pool"""

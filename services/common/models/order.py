@@ -20,18 +20,18 @@ class OrderItemCreate(BaseModel):
     product_id: str
     quantity: int
 
-    @field_validator('quantity')
+    @field_validator("quantity")
     @classmethod
     def validate_quantity(cls, v):
         if v <= 0:
-            raise ValueError('Quantity must be greater than 0')
+            raise ValueError("Quantity must be greater than 0")
         return v
 
-    @field_validator('product_id')
+    @field_validator("product_id")
     @classmethod
     def validate_product_id(cls, v):
         if not v or not v.strip():
-            raise ValueError('Product ID cannot be empty')
+            raise ValueError("Product ID cannot be empty")
         return v
 
 
@@ -49,19 +49,20 @@ class OrderCreate(BaseModel):
     items: List[OrderItemCreate]
     shipping_address: Optional[Dict[str, Any]] = None
 
-    @field_validator('items')
+    @field_validator("items")
     @classmethod
     def validate_items(cls, v):
         if not v or len(v) == 0:
-            raise ValueError('Order must contain at least one item')
+            raise ValueError("Order must contain at least one item")
         return v
 
-    @field_validator('customer_name')
+    @field_validator("customer_name")
     @classmethod
     def validate_customer_name(cls, v):
         if not v or not v.strip():
-            raise ValueError('Customer name cannot be empty')
+            raise ValueError("Customer name cannot be empty")
         return v
+
 
 class Order(BaseModel):
     order_id: str
