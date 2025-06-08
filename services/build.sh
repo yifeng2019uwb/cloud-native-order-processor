@@ -395,26 +395,43 @@ run_tests() {
     # Convert string back to array
     local test_dirs=($test_dirs_result)
 
-    # For service-specific testing, we want to focus on relevant tests
+    # Filter and validate test directories
+    local valid_test_dirs=()
+    for dir in "${test_dirs[@]}"; do
+        if [[ -d "$dir" ]]; then
+            valid_test_dirs+=("$dir")
+        fi
+    done
+
+    if [[ ${#valid_test_dirs[@]} -eq 0 ]]; then
+        print_warning "No valid test directories found for $service_name"
+        return 0
+    fi
+
+    # Remove duplicates and build pytest args
     local pytest_args=""
+    local unique_dirs=($(printf '%s\n' "${valid_test_dirs[@]}" | sort -u))
 
     if [[ "$service_name" == "common" ]]; then
-        # For common package, run common tests only
-        for dir in "${test_dirs[@]}"; do
-            if [[ "$dir" == *"common"* ]]; then
-                pytest_args="$pytest_args $dir"
-            fi
-        done
+        # For common package, only run tests in the current directory
+        if [[ -d "tests" ]]; then
+            pytest_args="tests"
+        else
+            print_warning "No tests directory found for common package"
+            return 0
+        fi
     elif [[ "$service_name" == "order-service" ]]; then
-        # For order-service, run both common tests and order-service specific tests
-        for dir in "${test_dirs[@]}"; do
-            if [[ "$dir" == *"common"* || "$dir" == *"order-service"* ]]; then
-                pytest_args="$pytest_args $dir"
+        # For order-service, run tests in the current directory and common tests if available
+        local service_test_args=""
+        for dir in "${unique_dirs[@]}"; do
+            if [[ "$dir" == "tests" || "$dir" == "../common/tests" || "$dir" == "common/tests" ]]; then
+                service_test_args="$service_test_args $dir"
             fi
         done
+        pytest_args=$(echo "$service_test_args" | xargs)
     else
         # For other services, run all available tests
-        pytest_args="${test_dirs[@]}"
+        pytest_args="${unique_dirs[@]}"
     fi
 
     # Remove leading/trailing spaces
