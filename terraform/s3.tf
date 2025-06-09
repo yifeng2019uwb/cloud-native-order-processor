@@ -1,4 +1,4 @@
-# ===== BASIC S3 BUCKETS (No intelligent tiering for practice) =====
+# ===== S3 BUCKETS WITH FORCE DELETE =====
 # s3.tf
 resource "random_string" "bucket_suffix" {
   length  = 8
@@ -7,7 +7,8 @@ resource "random_string" "bucket_suffix" {
 }
 
 resource "aws_s3_bucket" "events" {
-  bucket = "${var.project_name}-${var.environment}-events-${random_string.bucket_suffix.result}"
+  bucket        = "${var.project_name}-${var.environment}-events-${random_string.bucket_suffix.result}"
+  force_destroy = true  # FORCE DELETE - remove all objects when destroying
 
   tags = {
     Name    = "${var.project_name}-${var.environment}-events"
@@ -16,7 +17,8 @@ resource "aws_s3_bucket" "events" {
 }
 
 resource "aws_s3_bucket" "backups" {
-  bucket = "${var.project_name}-${var.environment}-backups-${random_string.bucket_suffix.result}"
+  bucket        = "${var.project_name}-${var.environment}-backups-${random_string.bucket_suffix.result}"
+  force_destroy = true  # FORCE DELETE - remove all objects when destroying
 
   tags = {
     Name    = "${var.project_name}-${var.environment}-backups"
@@ -64,5 +66,52 @@ resource "aws_s3_bucket_lifecycle_configuration" "events" {
     noncurrent_version_expiration {
       noncurrent_days = 7
     }
+
+    # Force delete incomplete multipart uploads
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+}
+
+# Add lifecycle for backups bucket too
+resource "aws_s3_bucket_lifecycle_configuration" "backups" {
+  bucket = aws_s3_bucket.backups.id
+
+  rule {
+    id     = "practice_cleanup"
+    status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
+
+    expiration {
+      days = 7  # Delete backups after 7 days for practice
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 1
+    }
+
+    # Force delete incomplete multipart uploads
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+}
+
+# Disable versioning to make deletion easier
+resource "aws_s3_bucket_versioning" "events" {
+  bucket = aws_s3_bucket.events.id
+  versioning_configuration {
+    status = "Disabled"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "backups" {
+  bucket = aws_s3_bucket.backups.id
+  versioning_configuration {
+    status = "Disabled"
   }
 }

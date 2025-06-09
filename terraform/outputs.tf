@@ -16,10 +16,14 @@ output "database_endpoint" {
   sensitive   = true
 }
 
-output "database_connection_string" {
-  description = "Database connection string"
-  value       = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.postgres_main.endpoint}:${aws_db_instance.postgres_main.port}/${aws_db_instance.postgres_main.db_name}"
-  sensitive   = true
+output "database_secret_arn" {
+  description = "ARN of the database credentials in Secrets Manager"
+  value       = aws_secretsmanager_secret.db_credentials.arn
+}
+
+output "database_secret_name" {
+  description = "Name of the database secret in Secrets Manager"
+  value       = aws_secretsmanager_secret.db_credentials.name
 }
 
 output "s3_events_bucket_name" {
@@ -47,15 +51,19 @@ output "order_service_role_arn" {
   value       = aws_iam_role.order_service.arn
 }
 
-# Add these outputs to existing outputs.tf
-output "db_password" {
-  description = "Database password for initialization"
-  value       = var.db_password
-  sensitive   = true
-}
-
 output "database_initialization_status" {
   description = "Database initialization completed"
   value       = "Database schema initialized with 3 tables: products, inventory, orders"
   depends_on  = [null_resource.init_database]
+}
+
+# Instructions for accessing database
+output "database_access_instructions" {
+  description = "How to access the database credentials"
+  value = "Use AWS CLI: aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name}"
+}
+
+output "database_connection_example" {
+  description = "Example of how to connect to the database"
+  value = "After getting credentials: PGPASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.password') psql -h $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.host') -U $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.username') -d $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.dbname')"
 }

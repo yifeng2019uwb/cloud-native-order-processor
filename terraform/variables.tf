@@ -24,9 +24,4 @@ variable "db_username" {
   default     = "orderuser"
 }
 
-variable "db_password" {
-  description = "Database password"
-  type        = string
-  sensitive   = true
-  default     = "ChangeThisPassword123!"
-}
+# No db_password variable needed - handled by Secrets Manager
