@@ -5,7 +5,7 @@ set -e
 
 # Configuration
 AWS_REGION="us-west-2"
-ECR_REPOSITORY="order-processor-dev"
+ECR_REPOSITORY="order-processor-order-api"
 SERVICE_NAME="order-service"
 
 echo "🚀 Quick ECR Build and Push"
@@ -22,7 +22,15 @@ echo "   Registry: $ECR_REGISTRY"
 echo "   Repository: $ECR_REPOSITORY"
 echo ""
 
-# Step 1: ECR Login
+# Step 1: Create ECR repository if it doesn't exist
+echo "📦 Ensuring ECR repository exists..."
+aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region $AWS_REGION > /dev/null 2>&1 || {
+    echo "🔨 Creating ECR repository: $ECR_REPOSITORY"
+    aws ecr create-repository --repository-name $ECR_REPOSITORY --region $AWS_REGION
+    echo "✅ ECR repository created successfully"
+}
+
+# Step 2: ECR Login
 echo "🔐 Logging into ECR..."
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
