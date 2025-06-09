@@ -1,3 +1,7 @@
+echo "*.tfvars" >> .gitignore
+echo ".env" >> .gitignore
+echo "terraform.tfstate*" >> .gitignore
+
 # Compiled class file
 *.class
 
@@ -34,10 +38,10 @@ replay_pid*
 build/
 dist/
 *.egg-info/
-.tox/                 
-.nox/     
-.venv       
-.docker/.venv     
+.tox/
+.nox/
+.venv
+.docker/.venv
 
 .DS_Store
 
