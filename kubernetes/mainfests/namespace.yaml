@@ -1,11 +1,7 @@
-# manifests/namespace.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
   name: order-processor
   labels:
     name: order-processor
-    app: order-processor
-    env: shared
-  annotations:
-    description: "Namespace for Cloud Native Order Processing System"
+    environment: dev
