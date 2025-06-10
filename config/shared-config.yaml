@@ -1,0 +1,303 @@
+# File: config/shared-config.yaml
+# Cross-project configuration for the cloud-native order processor
+# This file contains structured configuration that applies across all environments
+
+project:
+  name: "cloud-native-order-processor"
+  version: "1.0.0"
+  description: "Microservices-based order processing system"
+  repository: "https://github.com/yourusername/cloud-native-order-processor"
+
+# AWS Service Configuration
+aws:
+  # Default regions (can be overridden by environment)
+  primary_region: "us-west-2"
+  backup_region: "us-east-1"
+
+  # AWS Services Used
+  services:
+    - eks
+    - rds
+    - s3
+    - sns
+    - sqs
+    - ecr
+    - secrets-manager
+    - iam
+    - vpc
+    - cloudwatch
+    - systems-manager
+
+# Infrastructure Components
+infrastructure:
+  # Terraform Configuration
+  terraform:
+    version: ">= 1.5.0"
+    backend: "s3"
+    state_locking: true
+    workspace_strategy: "environment-based"
+
+  # Networking
+  networking:
+    vpc:
+      cidr_blocks:
+        dev: "10.0.0.0/16"
+        staging: "10.1.0.0/16"  # Future use
+        prod: "10.2.0.0/16"     # Future use
+        ci: "10.10.0.0/16"
+
+    subnets:
+      private_count: 2
+      public_count: 2
+      availability_zones: 2
+
+  # Container Orchestration
+  kubernetes:
+    version: "1.28"
+    platform: "eks"
+    node_groups:
+      - name: "general"
+        instance_types: ["t3.medium"]
+        scaling:
+          min: 1
+          max: 10
+          desired: 2
+
+  # Database
+  database:
+    engine: "postgres"
+    version: "15.4"
+    port: 5432
+    name: "orderprocessor"
+
+# Application Services
+services:
+  # Microservices in the system
+  microservices:
+    - name: "order-service"
+      port: 8000
+      health_endpoint: "/health"
+      database_required: true
+      messaging_required: true
+
+    - name: "inventory-service"
+      port: 8001
+      health_endpoint: "/health"
+      database_required: true
+      messaging_required: true
+      status: "planned"  # Not yet implemented
+
+    - name: "notification-service"
+      port: 8002
+      health_endpoint: "/health"
+      database_required: false
+      messaging_required: true
+      status: "planned"  # Not yet implemented
+
+    - name: "payment-service"
+      port: 8003
+      health_endpoint: "/health"
+      database_required: true
+      messaging_required: true
+      status: "planned"  # Not yet implemented
+
+# Testing Configuration
+testing:
+  # Test Categories
+  categories:
+    unit:
+      parallel: true
+      timeout: 300
+      coverage_threshold: 80
+
+    integration:
+      parallel: false  # For now, can be changed later
+      timeout: 900
+      cleanup_required: true
+
+    infrastructure:
+      parallel: false
+      timeout: 1200
+      prerequisites:
+        - terraform
+        - aws-cli
+        - kubectl
+
+    end_to_end:
+      parallel: false
+      timeout: 1800
+      data_cleanup: true
+
+  # Test Data
+  test_data:
+    customers:
+      - email: "test1@example.com"
+        name: "Test Customer 1"
+      - email: "test2@example.com"
+        name: "Test Customer 2"
+
+    products:
+      - id: "prod-001"
+        name: "Test Widget"
+        price: 29.99
+      - id: "prod-002"
+        name: "Test Gadget"
+        price: 49.99
+
+# Environment-Specific Overrides
+environments:
+  dev:
+    description: "Development environment for feature development and testing"
+    auto_scaling: false
+    high_availability: false
+    cost_optimization: true
+
+  staging:
+    description: "Staging environment (future implementation)"
+    auto_scaling: true
+    high_availability: true
+    cost_optimization: false
+    configured: false  # Not yet set up
+
+  ci:
+    description: "CI/CD environment for automated testing"
+    auto_scaling: false
+    high_availability: false
+    cost_optimization: true
+    ephemeral: true
+    ttl_hours: 4
+
+# Resource Naming Conventions
+naming:
+  # Pattern: {project}-{environment}-{service}-{resource}
+  pattern: "{project}-{environment}-{service}-{resource}"
+
+  # Common resource suffixes
+  suffixes:
+    eks_cluster: "cluster"
+    rds_instance: "db"
+    s3_bucket: "bucket"
+    sns_topic: "topic"
+    sqs_queue: "queue"
+    ecr_repository: "repo"
+    iam_role: "role"
+    vpc: "vpc"
+
+  # Tagging strategy
+  tags:
+    required:
+      - Project
+      - Environment
+      - Owner
+      - CostCenter
+    optional:
+      - Team
+      - Application
+      - BackupSchedule
+
+# Security Configuration
+security:
+  # Encryption requirements
+  encryption:
+    at_rest: true
+    in_transit: true
+    key_management: "aws-managed"
+
+  # Access control
+  access_control:
+    principle: "least-privilege"
+    mfa_required: false  # For practice project
+    session_timeout: 3600
+
+  # Network security
+  network:
+    vpc_flow_logs: true
+    nacl_rules: "restrictive"
+    security_group_rules: "minimal"
+
+# Monitoring and Observability
+monitoring:
+  # Logging
+  logging:
+    level: "INFO"
+    format: "json"
+    retention_days: 30
+    centralized: true
+
+  # Metrics
+  metrics:
+    enabled: true
+    namespace: "OrderProcessor"
+    custom_metrics: true
+
+  # Alerting (future implementation)
+  alerting:
+    enabled: false
+    channels: []
+
+  # Tracing (future implementation)
+  tracing:
+    enabled: false
+    sampling_rate: 0.1
+
+# Cost Management
+cost_management:
+  # Budget limits (in USD)
+  budgets:
+    dev: 50
+    staging: 100    # Future
+    ci: 20
+
+  # Resource limits
+  limits:
+    max_ec2_instances: 10
+    max_rds_instances: 2
+    max_s3_buckets: 10
+
+  # Cleanup policies
+  cleanup:
+    unused_resources: true
+    old_snapshots: true
+    test_data: true
+
+# Integration Points
+integrations:
+  # External services (future)
+  external_services: []
+
+  # Third-party tools
+  tools:
+    - name: "terraform"
+      version: ">= 1.5.0"
+      required: true
+    - name: "kubectl"
+      version: ">= 1.28.0"
+      required: true
+    - name: "aws-cli"
+      version: ">= 2.0.0"
+      required: true
+    - name: "docker"
+      version: ">= 24.0.0"
+      required: true
+    - name: "pytest"
+      version: ">= 7.0.0"
+      required: true
+
+# Documentation
+documentation:
+  # Architecture diagrams
+  diagrams:
+    - architecture_overview
+    - network_topology
+    - service_interactions
+
+  # Runbooks
+  runbooks:
+    - deployment_process
+    - troubleshooting_guide
+    - disaster_recovery
+
+  # API documentation
+  apis:
+    format: "openapi"
+    auto_generated: true
