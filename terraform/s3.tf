@@ -8,7 +8,7 @@ resource "random_string" "bucket_suffix" {
 
 resource "aws_s3_bucket" "events" {
   bucket        = "${var.project_name}-${var.environment}-events-${random_string.bucket_suffix.result}"
-  force_destroy = true  # FORCE DELETE - remove all objects when destroying
+  force_destroy = true # FORCE DELETE - remove all objects when destroying
 
   tags = {
     Name    = "${var.project_name}-${var.environment}-events"
@@ -18,7 +18,7 @@ resource "aws_s3_bucket" "events" {
 
 resource "aws_s3_bucket" "backups" {
   bucket        = "${var.project_name}-${var.environment}-backups-${random_string.bucket_suffix.result}"
-  force_destroy = true  # FORCE DELETE - remove all objects when destroying
+  force_destroy = true # FORCE DELETE - remove all objects when destroying
 
   tags = {
     Name    = "${var.project_name}-${var.environment}-backups"
@@ -60,7 +60,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "events" {
     }
 
     expiration {
-      days = 30  # Delete after 30 days for practice
+      days = 30 # Delete after 30 days for practice
     }
 
     noncurrent_version_expiration {
@@ -87,7 +87,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
     }
 
     expiration {
-      days = 7  # Delete backups after 7 days for practice
+      days = 7 # Delete backups after 7 days for practice
     }
 
     noncurrent_version_expiration {

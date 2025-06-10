@@ -13,7 +13,7 @@ resource "aws_eks_cluster" "main" {
   }
 
   # Minimal logging to reduce costs and easier cleanup
-  enabled_cluster_log_types = []  # Disable all logging for easier cleanup
+  enabled_cluster_log_types = [] # Disable all logging for easier cleanup
 
   tags = {
     Name = "${var.project_name}-${var.environment}-cluster"

@@ -208,26 +208,20 @@ class TestS3Resources:
 
                 # Find buckets matching our pattern
                 our_buckets = [b for b in buckets if resource_prefix in b['Name']]
-                assert len(our_tables) > 0, f"No DynamoDB tables found with prefix {resource_prefix}"
+                assert len(our_buckets) > 0, f"No S3 buckets found with prefix {resource_prefix}"
 
-            for table_name in our_tables:
-                # Test table status
-                table_info = dynamodb.describe_table(TableName=table_name)
-                table = table_info['Table']
+                for bucket in our_buckets:
+                    # Test bucket configuration
+                    bucket_name = bucket['Name']
+                    try:
+                        # Check bucket encryption
+                        encryption = s3.get_bucket_encryption(Bucket=bucket_name)
+                        assert 'ServerSideEncryptionConfiguration' in encryption
+                    except ClientError:
+                        pytest.fail(f"Bucket {bucket_name} should have encryption enabled")
 
-                assert table['TableStatus'] == 'ACTIVE', f"Table {table_name} is not active"
-
-                # Test table has proper tags
-                try:
-                    tags_response = dynamodb.list_tags_of_resource(ResourceArn=table['TableArn'])
-                    tags = {tag['Key']: tag['Value'] for tag in tags_response['Tags']}
-                    assert 'Environment' in tags, f"Table {table_name} should have Environment tag"
-                except ClientError:
-                    # Some environments might not support tagging
-                    pass
-
-        except ClientError as e:
-            pytest.fail(f"Failed to access DynamoDB tables: {e}")
+            except ClientError as e:
+                pytest.fail(f"Failed to access S3 buckets: {e}")
 
 @pytest.mark.aws
 @pytest.mark.integration

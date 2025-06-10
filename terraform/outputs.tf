@@ -60,10 +60,10 @@ output "database_initialization_status" {
 # Instructions for accessing database
 output "database_access_instructions" {
   description = "How to access the database credentials"
-  value = "Use AWS CLI: aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name}"
+  value       = "Use AWS CLI: aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name}"
 }
 
 output "database_connection_example" {
   description = "Example of how to connect to the database"
-  value = "After getting credentials: PGPASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.password') psql -h $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.host') -U $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.username') -d $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.dbname')"
+  value       = "After getting credentials: PGPASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.password') psql -h $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.host') -U $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.username') -d $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.dbname')"
 }

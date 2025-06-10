@@ -14,10 +14,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "yifeng-order-processor-terraform-state"
-    key            = "terraform.tfstate"
-    region         = "us-west-2"
-    encrypt        = true
+    bucket  = "yifeng-order-processor-terraform-state"
+    key     = "terraform.tfstate"
+    region  = "us-west-2"
+    encrypt = true
   }
 }
 

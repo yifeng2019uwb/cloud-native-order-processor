@@ -3,8 +3,8 @@
 
 # Generate a random password first
 resource "random_password" "db_password" {
-  length  = 16
-  special = true
+  length           = 16
+  special          = true
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
@@ -37,22 +37,22 @@ resource "aws_db_instance" "postgres_main" {
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
   # DESTROY-FRIENDLY SETTINGS
-  backup_retention_period   = 0        # No backups to retain
-  skip_final_snapshot      = true      # Don't create final snapshot
-  final_snapshot_identifier = null     # No final snapshot
-  deletion_protection      = false     # Allow deletion
-  delete_automated_backups = true      # Delete automated backups
-  apply_immediately        = true      # Apply changes immediately
+  backup_retention_period   = 0     # No backups to retain
+  skip_final_snapshot       = true  # Don't create final snapshot
+  final_snapshot_identifier = null  # No final snapshot
+  deletion_protection       = false # Allow deletion
+  delete_automated_backups  = true  # Delete automated backups
+  apply_immediately         = true  # Apply changes immediately
 
-  performance_insights_enabled = false
+  performance_insights_enabled    = false
   enabled_cloudwatch_logs_exports = []
-  auto_minor_version_upgrade = false
+  auto_minor_version_upgrade      = false
 
   publicly_accessible = false
 
   tags = {
-    Name        = "${var.project_name}-${var.environment}-postgres"
-    AutoStop    = "7days"
+    Name     = "${var.project_name}-${var.environment}-postgres"
+    AutoStop = "7days"
   }
 }
 
@@ -60,7 +60,7 @@ resource "aws_db_instance" "postgres_main" {
 resource "aws_secretsmanager_secret" "db_credentials" {
   name                    = "${var.project_name}-${var.environment}-db-credentials"
   description             = "Database credentials for ${var.project_name}"
-  recovery_window_in_days = 0  # IMMEDIATE DELETION - no recovery period
+  recovery_window_in_days = 0 # IMMEDIATE DELETION - no recovery period
 
   tags = {
     Name = "${var.project_name}-${var.environment}-db-credentials"
@@ -92,13 +92,13 @@ resource "null_resource" "init_database" {
   ]
 
   provisioner "local-exec" {
-    command = "bash -c 'export SECRET_ARN=\"${aws_secretsmanager_secret.db_credentials.arn}\" && export DB_IDENTIFIER=\"${aws_db_instance.postgres_main.identifier}\" && ${path.module}/scripts/init-db.sh'"
+    command     = "bash -c 'export SECRET_ARN=\"${aws_secretsmanager_secret.db_credentials.arn}\" && export DB_IDENTIFIER=\"${aws_db_instance.postgres_main.identifier}\" && ${path.module}/scripts/init-db.sh'"
     working_dir = path.module
   }
 
   triggers = {
     database_endpoint = aws_db_instance.postgres_main.endpoint
-    script_hash = filemd5("${path.module}/scripts/init-database.sql")
-    secret_version = aws_secretsmanager_secret_version.db_credentials.version_id
+    script_hash       = filemd5("${path.module}/scripts/init-database.sql")
+    secret_version    = aws_secretsmanager_secret_version.db_credentials.version_id
   }
 }

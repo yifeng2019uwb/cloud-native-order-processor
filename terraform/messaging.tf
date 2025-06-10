@@ -48,10 +48,10 @@ resource "aws_sqs_queue_policy" "order_processing" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
+        Effect    = "Allow"
         Principal = "*"
-        Action   = "sqs:SendMessage"
-        Resource = aws_sqs_queue.order_processing.arn
+        Action    = "sqs:SendMessage"
+        Resource  = aws_sqs_queue.order_processing.arn
         Condition = {
           ArnEquals = {
             "aws:SourceArn" = aws_sns_topic.order_events.arn

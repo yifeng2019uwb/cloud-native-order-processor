@@ -3,7 +3,7 @@
 resource "aws_ecr_repository" "order_api" {
   name                 = "${var.project_name}-order-api"
   image_tag_mutability = "MUTABLE"
-  force_delete         = true  # FORCE DELETE - remove all images when destroying
+  force_delete         = true # FORCE DELETE - remove all images when destroying
 
   # Disable image scanning for cost savings
   image_scanning_configuration {
@@ -25,9 +25,9 @@ resource "aws_ecr_lifecycle_policy" "order_api" {
         rulePriority = 1
         description  = "Delete untagged images immediately"
         selection = {
-          tagStatus = "untagged"
-          countType = "sinceImagePushed"
-          countUnit = "days"
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
           countNumber = 1
         }
         action = {
@@ -40,7 +40,7 @@ resource "aws_ecr_lifecycle_policy" "order_api" {
         selection = {
           tagStatus   = "any"
           countType   = "imageCountMoreThan"
-          countNumber = 2  # Keep only 2 images instead of 3
+          countNumber = 2 # Keep only 2 images instead of 3
         }
         action = {
           type = "expire"
