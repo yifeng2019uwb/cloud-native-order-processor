@@ -1,7 +1,20 @@
 # ===== SIMPLIFIED MESSAGING (SNS + SQS) =====
 # messaging.tf
+
+resource "aws_kms_key" "sqs" {
+  description             = "SQS encryption key"
+  deletion_window_in_days = 7
+}
+
+resource "aws_kms_key" "sns" {
+  description             = "SNS encryption key"
+  deletion_window_in_days = 7
+}
+
 resource "aws_sns_topic" "order_events" {
   name = "${var.project_name}-${var.environment}-order-events"
+
+  kms_master_key_id = aws_kms_key.sns.arn
 
   tags = {
     Name = "${var.project_name}-${var.environment}-order-events"
@@ -14,6 +27,7 @@ resource "aws_sqs_queue" "order_processing" {
   max_message_size          = 262144
   message_retention_seconds = 345600
   receive_wait_time_seconds = 10
+  kms_master_key_id = aws_kms_key.sqs.arn
 
   # Minimal DLQ for practice
   redrive_policy = jsonencode({
@@ -27,8 +41,7 @@ resource "aws_sqs_queue" "order_processing" {
 }
 
 resource "aws_sqs_queue" "order_dlq" {
-  name = "${var.project_name}-${var.environment}-order-dlq"
-
+  kms_master_key_id = aws_kms_key.sqs.arn
   tags = {
     Name = "${var.project_name}-${var.environment}-order-dlq"
   }

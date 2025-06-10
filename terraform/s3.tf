@@ -1,5 +1,11 @@
 # ===== S3 BUCKETS WITH FORCE DELETE =====
 # s3.tf
+
+resource "aws_kms_key" "s3" {
+  description             = "S3 encryption key"
+  deletion_window_in_days = 7
+}
+
 resource "random_string" "bucket_suffix" {
   length  = 8
   special = false
@@ -16,6 +22,16 @@ resource "aws_s3_bucket" "events" {
   }
 }
 
+# Add after aws_s3_bucket.events
+resource "aws_s3_bucket_public_access_block" "events" {
+  bucket = aws_s3_bucket.events.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource "aws_s3_bucket" "backups" {
   bucket        = "${var.project_name}-${var.environment}-backups-${random_string.bucket_suffix.result}"
   force_destroy = true # FORCE DELETE - remove all objects when destroying
@@ -26,13 +42,24 @@ resource "aws_s3_bucket" "backups" {
   }
 }
 
+# Add after aws_s3_bucket.backups
+resource "aws_s3_bucket_public_access_block" "backups" {
+  bucket = aws_s3_bucket.backups.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 # Basic encryption (not KMS to save costs)
 resource "aws_s3_bucket_server_side_encryption_configuration" "events" {
   bucket = aws_s3_bucket.events.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.s3.arn
     }
   }
 }
@@ -42,7 +69,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "backups" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.s3.arn
     }
   }
 }

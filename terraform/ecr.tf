@@ -2,12 +2,12 @@
 # ecr.tf
 resource "aws_ecr_repository" "order_api" {
   name                 = "${var.project_name}-order-api"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
   force_delete         = true # FORCE DELETE - remove all images when destroying
 
   # Disable image scanning for cost savings
   image_scanning_configuration {
-    scan_on_push = false
+    scan_on_push = true
   }
 
   tags = {

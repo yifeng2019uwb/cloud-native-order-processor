@@ -29,6 +29,10 @@ spec:
       - name: order-service
         image: 940482447349.dkr.ecr.us-west-2.amazonaws.com/order-processor-order-api:order-service-latest
         imagePullPolicy: Always
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
 
         ports:
         - containerPort: 8000

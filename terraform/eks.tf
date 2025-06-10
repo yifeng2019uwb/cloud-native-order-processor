@@ -1,15 +1,34 @@
 # ===== FARGATE-ONLY EKS WITH EASY DESTROY =====
 # eks.tf
+
+resource "aws_kms_key" "eks" {
+  description             = "EKS Secret Encryption"
+  deletion_window_in_days = 7
+}
+
+resource "aws_kms_alias" "eks" {
+  name          = "alias/eks-${var.project_name}-${var.environment}"
+  target_key_id = aws_kms_key.eks.key_id
+}
+
 resource "aws_eks_cluster" "main" {
   name     = "${var.project_name}-${var.environment}-cluster"
   role_arn = aws_iam_role.eks_cluster.arn
   version  = "1.28"
 
+encryption_config {
+  provider {
+    key_arn = aws_kms_key.eks.arn
+  }
+  resources = ["secrets"]
+}
+
+
   vpc_config {
     subnet_ids              = concat(aws_subnet.private[*].id, aws_subnet.public[*].id)
     endpoint_private_access = true
-    endpoint_public_access  = true
-    public_access_cidrs     = ["0.0.0.0/0"]
+    endpoint_public_access  = false
+    public_access_cidrs     = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
   }
 
   # Minimal logging to reduce costs and easier cleanup

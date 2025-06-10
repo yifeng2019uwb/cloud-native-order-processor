@@ -139,8 +139,6 @@ data:
 
   # Database Configuration (from your Terraform outputs)
   DATABASE_ENDPOINT: "${DATABASE_ENDPOINT}"
-  DATABASE_SECRET_ARN: "${DATABASE_SECRET_ARN}"
-  DATABASE_SECRET_NAME: "${DATABASE_SECRET_NAME}"
 
   # ECR Repository
   ECR_REPOSITORY_URL: "${ECR_REPOSITORY_URL}"
@@ -153,6 +151,24 @@ data:
   ENABLE_METRICS: "true"
   ENABLE_AUDIT_LOGGING: "true"
   ENABLE_RATE_LIMITING: "false"
+EOF
+
+# Generate Secret for sensitive data
+cat >> kubernetes/secrets-config-generated.yaml << EOF
+
+# Secret for sensitive configuration
+apiVersion: v1
+kind: Secret
+metadata:
+  name: order-service-secrets
+  namespace: order-processor
+  annotations:
+    generated-from: terraform-outputs
+    generated-at: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+type: Opaque
+stringData:
+  DATABASE_SECRET_ARN: "${DATABASE_SECRET_ARN}"
+  DATABASE_SECRET_NAME: "${DATABASE_SECRET_NAME}"
 EOF
 
 print_success "✅ Generated kubernetes/secrets-config-generated.yaml"
@@ -179,9 +195,6 @@ kind: ClusterRole
 metadata:
   name: secret-reader
 rules:
-- apiGroups: [""]
-  resources: ["secrets"]
-  verbs: ["get", "list"]
 - apiGroups: ["secrets-store.csi.x-k8s.io"]
   resources: ["secretproviderclasses"]
   verbs: ["get", "list"]
