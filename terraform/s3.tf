@@ -1,10 +1,18 @@
 # ===== S3 BUCKETS WITH FORCE DELETE =====
 # s3.tf
 
+# ORIGINAL: Custom KMS key (costs ~$1/month)
 resource "aws_kms_key" "s3" {
   description             = "S3 encryption key"
   deletion_window_in_days = 7
 }
+
+# COST OPTIMIZATION: Comment out KMS key above for free AES256 encryption
+# resource "aws_kms_key" "s3" {
+#   count                   = var.cost_profile == "minimal" ? 0 : 1  # COST EFFICIENT: No KMS for minimal profile
+#   description             = "S3 encryption key"
+#   deletion_window_in_days = 7
+# }
 
 resource "random_string" "bucket_suffix" {
   length  = 8
@@ -53,6 +61,7 @@ resource "aws_s3_bucket_public_access_block" "backups" {
 }
 
 # Basic encryption (not KMS to save costs)
+# ORIGINAL: Uses custom KMS key (costs extra ~$1/month)
 resource "aws_s3_bucket_server_side_encryption_configuration" "events" {
   bucket = aws_s3_bucket.events.id
 
@@ -75,6 +84,28 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "backups" {
   }
 }
 
+# COST OPTIMIZATION: Use free AES256 encryption instead of KMS
+# Comment out the encryption configs above and uncomment below:
+# resource "aws_s3_bucket_server_side_encryption_configuration" "events" {
+#   bucket = aws_s3_bucket.events.id
+#
+#   rule {
+#     apply_server_side_encryption_by_default {
+#       sse_algorithm = "AES256"  # COST EFFICIENT: Free vs $1/month KMS
+#     }
+#   }
+# }
+#
+# resource "aws_s3_bucket_server_side_encryption_configuration" "backups" {
+#   bucket = aws_s3_bucket.backups.id
+#
+#   rule {
+#     apply_server_side_encryption_by_default {
+#       sse_algorithm = "AES256"  # COST EFFICIENT: Free vs $1/month KMS
+#     }
+#   }
+# }
+
 # Aggressive lifecycle for practice (delete old data quickly)
 resource "aws_s3_bucket_lifecycle_configuration" "events" {
   bucket = aws_s3_bucket.events.id
@@ -87,6 +118,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "events" {
       prefix = ""
     }
 
+    # ORIGINAL: 30 days retention (could be more aggressive for practice)
     expiration {
       days = 30 # Delete after 30 days for practice
     }
@@ -102,6 +134,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "events" {
   }
 }
 
+# COST OPTIMIZATION: More aggressive cleanup for minimal cost
+# Comment out the expiration above and uncomment below:
+# expiration {
+#   days = var.cost_profile == "minimal" ? 1 : 7  # COST EFFICIENT: 1 day for minimal testing
+# }
+
 # Add lifecycle for backups bucket too
 resource "aws_s3_bucket_lifecycle_configuration" "backups" {
   bucket = aws_s3_bucket.backups.id
@@ -114,6 +152,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
       prefix = ""
     }
 
+    # ORIGINAL: 7 days for backups (could be shorter for practice)
     expiration {
       days = 7 # Delete backups after 7 days for practice
     }
@@ -128,6 +167,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
     }
   }
 }
+
+# COST OPTIMIZATION: More aggressive backup cleanup
+# Comment out the expiration above and uncomment below:
+# expiration {
+#   days = var.cost_profile == "minimal" ? 1 : 3  # COST EFFICIENT: 1 day for minimal testing
+# }
 
 # Disable versioning to make deletion easier
 resource "aws_s3_bucket_versioning" "events" {

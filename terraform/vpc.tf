@@ -16,7 +16,7 @@ resource "aws_vpc" "main" {
 
 # Two public subnets (required for EKS)
 resource "aws_subnet" "public" {
-  count = 2
+  count = var.cost_profile == "minimal" ? 1 : 2
 
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.${count.index + 1}.0/24"
@@ -55,6 +55,7 @@ resource "aws_internet_gateway" "main" {
 # COST OPTIMIZATION: Single NAT Gateway (not HA but saves 50% NAT costs)
 # All private subnets will route through one NAT Gateway in first AZ
 resource "aws_eip" "nat" {
+  count  = var.cost_profile == "production" ? 1 : 0
   domain = "vpc"
   tags = {
     Name = "${var.project_name}-${var.environment}-nat-eip"
@@ -63,6 +64,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "main" {
+  count         = var.cost_profile == "production" ? 1 : 0
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public[0].id # Use first public subnet
 
@@ -114,4 +116,15 @@ resource "aws_route_table_association" "private" {
 
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private.id
+}
+
+# VPC Endpoints for minimal/learning (replace NAT Gateway)
+resource "aws_vpc_endpoint" "s3" {
+  count        = var.cost_profile == "production" ? 0 : 1
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.aws_region}.s3"
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-s3-endpoint"
+  }
 }

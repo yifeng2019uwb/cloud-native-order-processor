@@ -25,3 +25,15 @@ variable "db_username" {
 }
 
 # No db_password variable needed - handled by Secrets Manager
+
+# COST OPTIMIZATION: Add cost profile variable for flexible cost control
+variable "cost_profile" {
+  description = "Cost optimization profile: minimal, learning, or production"
+  type        = string
+  default     = "learning"
+
+  validation {
+    condition = contains(["minimal", "learning", "production"], var.cost_profile)
+    error_message = "Cost profile must be minimal, learning, or production."
+  }
+}
