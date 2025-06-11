@@ -52,3 +52,15 @@ provider "aws" {
     }
   }
 }
+
+variable "notification_email" {
+  description = "Email for cost alerts and notifications"
+  type        = string
+  default     = ""
+}
+
+variable "use_spot_instances" {
+  description = "Use spot instances instead of Fargate for cost savings"
+  type        = bool
+  default     = false
+}

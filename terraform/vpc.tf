@@ -31,7 +31,8 @@ resource "aws_subnet" "public" {
 
 # Two private subnets (required for RDS and EKS)
 resource "aws_subnet" "private" {
-  count = 2
+  count = var.cost_profile == "minimal" ? 1 : 2
+
 
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.${count.index + 10}.0/24"
@@ -65,7 +66,7 @@ resource "aws_eip" "nat" {
 
 resource "aws_nat_gateway" "main" {
   count         = var.cost_profile == "production" ? 1 : 0
-  allocation_id = aws_eip.nat.id
+  allocation_id = aws_eip.nat[0].id
   subnet_id     = aws_subnet.public[0].id # Use first public subnet
 
   tags = {
@@ -92,9 +93,12 @@ resource "aws_route_table" "public" {
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main.id
+  dynamic "route" {
+    for_each = var.cost_profile == "production" ? [1] : []
+    content {
+      cidr_block     = "0.0.0.0/0"
+      nat_gateway_id = aws_nat_gateway.main[0].id
+    }
   }
 
   tags = {

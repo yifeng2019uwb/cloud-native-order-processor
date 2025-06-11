@@ -87,17 +87,17 @@ output "estimated_monthly_cost" {
   }
 }
 
-output "cost_optimization_summary" {
-  description = "Summary of cost optimizations applied"
-  value = {
-    nat_gateway_disabled = var.cost_profile == "production" ? false : true
-    kms_encryption = "Review KMS usage in S3 and messaging for potential $3/month savings"
-    spot_instances = "Consider spot instances for EKS nodes (60-90% savings)"
-    lifecycle_policies = "Aggressive S3 cleanup (30 days events, 7 days backups)"
-    backup_retention = "RDS backups disabled (0 days retention)"
-    monitoring = "Performance Insights disabled, minimal CloudWatch"
-  }
-}
+# output "cost_optimization_summary" {
+#   description = "Summary of cost optimizations applied"
+#   value = {
+#     nat_gateway_disabled = var.cost_profile == "production" ? false : true
+#     kms_encryption = "Review KMS usage in S3 and messaging for potential $3/month savings"
+#     spot_instances = "Consider spot instances for EKS nodes (60-90% savings)"
+#     lifecycle_policies = "Aggressive S3 cleanup (30 days events, 7 days backups)"
+#     backup_retention = "RDS backups disabled (0 days retention)"
+#     monitoring = "Performance Insights disabled, minimal CloudWatch"
+#   }
+# }
 
 # COST OPTIMIZATION: Conditional database initialization output
 # Comment out the database_initialization_status above and uncomment below:
