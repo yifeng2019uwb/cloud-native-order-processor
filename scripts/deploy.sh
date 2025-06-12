@@ -218,6 +218,94 @@ check_prerequisites() {
     log_success "Prerequisites check passed"
 }
 
+# Install Terraform if not already installed
+install_terraform() {
+    log_step "🔧 Installing Terraform"
+
+    # Check if terraform is already installed
+    if command -v terraform &> /dev/null; then
+        local terraform_version=$(terraform version -json | jq -r '.terraform_version' 2>/dev/null || terraform version | head -1 | cut -d' ' -f2 | sed 's/v//')
+        log_info "Terraform already installed: $terraform_version"
+        return 0
+    fi
+
+    log_info "Terraform not found, installing..."
+
+    # Detect OS and architecture
+    local os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    local arch=$(uname -m)
+
+    # Map architecture names
+    case $arch in
+        x86_64) arch="amd64" ;;
+        aarch64|arm64) arch="arm64" ;;
+        armv7l) arch="arm" ;;
+        *)
+            log_error "Unsupported architecture: $arch"
+            exit 1
+            ;;
+    esac
+
+    # Set Terraform version
+    local terraform_version="1.7.5"
+    local download_url="https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_${os}_${arch}.zip"
+    local install_dir="/usr/local/bin"
+
+    # For CI environments, use local bin directory
+    if [[ "$CI" == "true" || "$GITHUB_ACTIONS" == "true" ]]; then
+        install_dir="$HOME/.local/bin"
+        mkdir -p "$install_dir"
+        export PATH="$install_dir:$PATH"
+    fi
+
+    log_info "Downloading Terraform $terraform_version for $os/$arch..."
+
+    # Create temporary directory
+    local temp_dir=$(mktemp -d)
+    cd "$temp_dir"
+
+    # Download and install
+    if command -v curl &> /dev/null; then
+        curl -sL "$download_url" -o terraform.zip
+    elif command -v wget &> /dev/null; then
+        wget -q "$download_url" -O terraform.zip
+    else
+        log_error "Neither curl nor wget found. Cannot download Terraform."
+        exit 1
+    fi
+
+    # Verify download succeeded
+    if [[ ! -f terraform.zip ]]; then
+        log_error "Failed to download Terraform"
+        exit 1
+    fi
+
+    # Extract and install
+    unzip -q terraform.zip
+
+    # Install with appropriate permissions
+    if [[ "$install_dir" == "/usr/local/bin" ]]; then
+        sudo mv terraform "$install_dir/"
+        sudo chmod +x "$install_dir/terraform"
+    else
+        mv terraform "$install_dir/"
+        chmod +x "$install_dir/terraform"
+    fi
+
+    # Cleanup
+    cd - > /dev/null
+    rm -rf "$temp_dir"
+
+    # Verify installation
+    if command -v terraform &> /dev/null; then
+        local installed_version=$(terraform version -json | jq -r '.terraform_version' 2>/dev/null || terraform version | head -1 | cut -d' ' -f2 | sed 's/v//')
+        log_info "✅ Terraform installed successfully: $installed_version"
+    else
+        log_error "❌ Terraform installation failed"
+        exit 1
+    fi
+}
+
 # Deploy infrastructure
 deploy_infrastructure() {
     log_step "🚀 Deploying Infrastructure with Terraform"
