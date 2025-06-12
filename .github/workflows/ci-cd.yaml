@@ -139,29 +139,25 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Build Docker image (validation only - no AWS costs)
-      env:
-        SKIP_ECR_PUSH: 'true'  # Signal to script to skip ECR operations
       run: |
-        echo "=== Building Docker image for validation only ==="
-        echo "SKIP_ECR_PUSH=true - No AWS operations in CI validation"
+        echo "=== Building Docker image for CI validation (no ECR push) ==="
 
-        chmod +x scripts/quick_build.sh
-        # Script should check SKIP_ECR_PUSH env var to skip ECR operations
-        ./scripts/quick_build.sh --build-only || {
-          echo "Script failed, likely due to ECR push attempt"
-          echo "Building directly with docker command instead..."
+        # Use the same Dockerfile that quick_build.sh uses
+        if [ -f "docker/order-service/Dockerfile.simple" ]; then
+          echo "Using docker/order-service/Dockerfile.simple"
+          docker build -f docker/order-service/Dockerfile.simple -t order-processor-api:latest .
+        else
+          echo "Error: Dockerfile.simple not found at expected location"
+          find . -name "*Dockerfile*" -type f
+          exit 1
+        fi
 
-          # Fallback: direct docker build
-          if [ -f "docker/order-service/Dockerfile.simple" ]; then
-            docker build -f docker/order-service/Dockerfile.simple -t order-processor-api:latest .
-          else
-            docker build -t order-processor-api:latest .
-          fi
-        }
-
-        # Tag for CI/CD consistency
+        # Tag for CI/CD consistency (no push to ECR)
         docker tag order-processor-api:latest ${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-        echo "Docker image built successfully"
+
+        echo "✅ Docker image built successfully (validation only)"
+        echo "📦 Local image: order-processor-api:latest"
+        echo "📦 Tagged as: ${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
 
     - name: Test Docker image
       run: |
