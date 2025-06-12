@@ -1,18 +1,18 @@
 # Local Test Report
 
-**Generated:** 2025-06-10 11:50:53
+**Generated:** 2025-06-11 15:04:18
 **Environment:** local
 **Mode:** Full
 **CI Simulation:** No
 
 ## Test Results
 
-- ✅ Build Tests: Passed
-- ✅ Linting: Passed
-- ✅ Unit Tests: Passed
+- ⏭️ Build Tests: Skipped
+- ⏭️ Linting: Skipped
+- ⏭️ Unit Tests: Skipped
 - ✅ Infrastructure Tests: Passed
-- ✅ Docker Tests: Passed
-- ✅ Security Scan: Passed
+- ⏭️ Docker Tests: Skipped
+- ⏭️ Security Scan: Skipped
 
 ## Recommendations
 

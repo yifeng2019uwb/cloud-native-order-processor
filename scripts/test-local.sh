@@ -41,6 +41,13 @@ SKIP_CLEANUP=false
 DOCKER_BUILD=false
 CI_SIMULATION=false
 
+# Add environment variable initialization
+ENVIRONMENT=${ENVIRONMENT:-learning}
+DEPLOY_TEST=false
+INTEGRATION_ONLY=false
+KEEP_ENVIRONMENT=false
+DESTROY_ONLY=false
+
 # Usage
 show_usage() {
     cat << EOF
@@ -61,6 +68,14 @@ OPTIONS:
     --lint-only             Only run linting
     --infra-only            Only run infrastructure tests
     --security-only         Only run security tests
+    --deploy-test           Full deploy → test → destroy cycle
+    --integration-only      Only run integration tests (assumes deployed)
+    --keep-environment      Deploy and test, but don't destroy
+    --destroy-only          Only destroy existing environment
+    --deploy-test           Full deploy → test → destroy cycle
+    --integration-only      Only run integration tests (assumes deployed)
+    --keep-environment      Deploy and test, but don't destroy
+    --destroy-only          Only destroy existing environment
 
 TEST CATEGORIES:
     🏗️  Build & Package     - Service building and packaging
@@ -69,6 +84,8 @@ TEST CATEGORIES:
     🏗️  Infrastructure     - Terraform validation and tests
     🐳 Docker Build        - Container building and testing
     🔒 Security Scan       - Code and dependency scanning
+    🚀 Deploy & Test       - AWS deployment and integration testing
+    🧹 Environment Cleanup - Destroy AWS resources
 
 EXAMPLES:
     $0                      # Run all tests (recommended before push)
@@ -77,6 +94,10 @@ EXAMPLES:
     $0 --ci-simulation     # Full CI/CD simulation
     $0 --build-only        # Only test service builds
     $0 --infra-only        # Only test infrastructure
+    $0 --deploy-test          # Full deploy → test → destroy
+    $0 --integration-only    # Only integration tests
+    $0 --deploy-test --keep-environment  # Deploy and test, keep AWS resources
+    $0 --destroy-only        # Only destroy AWS environment
 
 ENVIRONMENT:
     Set these environment variables to customize behavior:
@@ -145,18 +166,8 @@ parse_arguments() {
                 ;;
             --build-only)
                 RUN_BUILD_TESTS=true
-                RUN_LINT_TESTS=false
-                RUN_UNIT_TESTS=false
-                RUN_INFRA_TESTS=false
-                RUN_DOCKER_TESTS=false
-                RUN_SECURITY_SCAN=false
-                RUN_TERRAFORM_VALIDATION=false
-                shift
-                ;;
-            --lint-only)
-                RUN_BUILD_TESTS=false
                 RUN_LINT_TESTS=true
-                RUN_UNIT_TESTS=false
+                RUN_UNIT_TESTS=true
                 RUN_INFRA_TESTS=false
                 RUN_DOCKER_TESTS=false
                 RUN_SECURITY_SCAN=false
@@ -181,6 +192,22 @@ parse_arguments() {
                 RUN_DOCKER_TESTS=false
                 RUN_SECURITY_SCAN=true
                 RUN_TERRAFORM_VALIDATION=false
+                shift
+                ;;
+            --deploy-test)
+                DEPLOY_TEST=true
+                shift
+                ;;
+            --integration-only)
+                INTEGRATION_ONLY=true
+                shift
+                ;;
+            --keep-environment)
+                KEEP_ENVIRONMENT=true
+                shift
+                ;;
+            --destroy-only)
+                DESTROY_ONLY=true
                 shift
                 ;;
             *)
@@ -556,6 +583,104 @@ test_security_scan() {
     log_success "Security scanning completed"
 }
 
+# Function: Deploy Infrastructure
+deploy_infrastructure() {
+    echo "=== 🚀 Deploying Infrastructure to AWS ==="
+    echo "--- Deploying to environment: ${ENVIRONMENT:-learning} ---"
+
+    if ! ./scripts/deploy.sh --environment "${ENVIRONMENT:-learning}"; then
+        echo "[ERROR] Infrastructure deployment failed"
+        return 1
+    fi
+
+    echo "[SUCCESS] Infrastructure deployed successfully"
+}
+
+# Function: Deploy Application
+deploy_application() {
+    echo "=== 📦 Deploying Application to AWS ==="
+    echo "--- Deploying order-service to environment: ${ENVIRONMENT:-learning} ---"
+
+    if ! ./scripts/deploy-app.sh --environment "${ENVIRONMENT:-learning}"; then
+        echo "[ERROR] Application deployment failed"
+        return 1
+    fi
+
+    echo "[SUCCESS] Application deployed successfully"
+}
+
+# Function: Run Integration Tests
+run_integration_tests() {
+    echo "=== 🧪 Running Integration Tests ==="
+    echo "--- Testing against AWS environment: ${ENVIRONMENT:-learning} ---"
+
+    # Wait for services to be ready
+    echo "Waiting for services to initialize..."
+    sleep 30
+
+    if ! ./scripts/test-integration.sh --environment "${ENVIRONMENT:-learning}"; then
+        echo "[ERROR] Integration tests failed"
+        return 1
+    fi
+
+    echo "[SUCCESS] Integration tests passed"
+}
+
+# Function: Destroy Environment
+destroy_environment() {
+    echo "=== 🧹 Destroying AWS Environment ==="
+    echo "--- Destroying environment: ${ENVIRONMENT:-learning} ---"
+
+    if ! ./scripts/destroy.sh --environment "${ENVIRONMENT:-learning}" --auto-approve; then
+        echo "[ERROR] Environment destruction failed"
+        return 1
+    fi
+
+    echo "[SUCCESS] Environment destroyed successfully"
+}
+
+# Function: Full Deploy-Test-Destroy Cycle
+run_deploy_test_cycle() {
+    echo "=== 🚀 Full Deploy → Test → Destroy Cycle ==="
+
+    # Deploy infrastructure
+    if ! deploy_infrastructure; then
+        echo "[ERROR] Deploy-test cycle failed at infrastructure deployment"
+        return 1
+    fi
+
+    # Deploy application
+    if ! deploy_application; then
+        echo "[ERROR] Deploy-test cycle failed at application deployment"
+        destroy_environment  # Cleanup on failure
+        return 1
+    fi
+
+    # Run integration tests
+    if ! run_integration_tests; then
+        echo "[ERROR] Deploy-test cycle failed at integration testing"
+        if [[ "$KEEP_ENVIRONMENT" != "true" ]]; then
+            destroy_environment  # Cleanup on failure
+        fi
+        return 1
+    fi
+
+    # Destroy environment (unless keeping it)
+    if [[ "$KEEP_ENVIRONMENT" != "true" ]]; then
+        if ! destroy_environment; then
+            echo "[WARNING] Deploy-test cycle completed but cleanup failed"
+            echo "[WARNING] Manual cleanup may be required"
+            return 1
+        fi
+    else
+        echo "[INFO] Environment kept as requested (--keep-environment)"
+        echo "[INFO] Remember to run --destroy-only when finished"
+    fi
+
+    echo "[SUCCESS] Deploy-test cycle completed successfully"
+}
+
+
 # Generate test report
 generate_test_report() {
     log_step "📊 Generating Test Report"
@@ -683,6 +808,24 @@ main() {
 
     if ! test_security_scan; then
         failed_stages+=("Security")
+    fi
+
+    # Handle deploy-test cycle
+    if [[ "$DEPLOY_TEST" == "true" ]]; then
+        run_deploy_test_cycle
+        exit $?
+    fi
+
+    # Handle integration-only
+    if [[ "$INTEGRATION_ONLY" == "true" ]]; then
+        run_integration_tests
+        exit $?
+    fi
+
+    # Handle destroy-only
+    if [[ "$DESTROY_ONLY" == "true" ]]; then
+        destroy_environment
+        exit $?
     fi
 
     # Generate report

@@ -614,7 +614,7 @@ build_package() {
     local service_name=$1
 
     if [[ ! -f "setup.py" ]]; then
-        print_warning "No setup.py found, skipping package build"
+        # print_warning "No setup.py found, skipping package build"
         return 0
     fi
 

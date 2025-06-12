@@ -29,8 +29,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY ../../services/order-service/src ./src
 
 # Copy Docker-specific scripts
-COPY scripts/ ./scripts/
-COPY healthcheck/ ./healthcheck/
+COPY docker/order-service/scripts/ ./scripts/
+COPY docker/order-service/healthcheck/ ./healthcheck/
 
 # Make scripts executable
 RUN chmod +x ./scripts/*.sh

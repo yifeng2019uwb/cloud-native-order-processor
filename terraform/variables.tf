@@ -30,7 +30,7 @@ variable "db_username" {
 variable "cost_profile" {
   description = "Cost optimization profile: minimal, learning, or production"
   type        = string
-  default     = "learning"
+  default     = "prod"
 
   validation {
     condition = contains(["minimal", "learning", "production"], var.cost_profile)

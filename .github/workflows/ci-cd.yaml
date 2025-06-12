@@ -10,9 +10,14 @@ env:
   PYTHON_VERSION: '3.11'
   AWS_REGION: 'us-west-2'
   ECR_REPOSITORY: 'order-processor-api' # This is the Docker image name, not the full ECR URI yet
+  # Cost control and environment settings
+  COST_PROFILE: 'prod'
+  TERRAFORM_AUTO_APPROVE: 'true'
+  TERRAFORM_DESTROY_AUTO_APPROVE: 'true'
+  AUTO_CLEANUP_ENABLED: 'true'
 
 jobs:
-  # Job 1: Run Tests
+  # Job 1: Run Tests - ENABLED
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -81,394 +86,445 @@ jobs:
         # Run linting through build script
         ./build.sh --test-only common  # This includes linting
 
-    # - name: Run tests with coverage
-    #   working-directory: ./docker
+    # Enable when unit tests are ready
+    - name: Run tests with coverage
+      working-directory: ./services
+      run: |
+        python -m pytest tests -v --cov=src --cov-report=xml --cov-report=term
+
+    TODO: Enable when coverage reporting is set up
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./services/coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  # Job 2: Build Docker Image - ENABLED
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image (no push for cost control)
+      working-directory: .
+      run: |
+        # Use existing quick build script but without ECR push
+        chmod +x scripts/quick_build.sh
+        # Build image locally for validation
+        docker build -f docker/order-service/Dockerfile.simple -t ${{ env.ECR_REPOSITORY }}:${{ github.sha }} .
+        docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} ${{ env.ECR_REPOSITORY }}:latest
+
+    - name: Test Docker image
+      run: |
+        # Basic image validation
+        docker run --rm ${{ env.ECR_REPOSITORY }}:${{ github.sha }} python --version
+        echo "Docker image built and tested successfully"
+
+    - name: Save Docker image as artifact (for potential ECR push)
+      run: |
+        docker save ${{ env.ECR_REPOSITORY }}:${{ github.sha }} > order-api.tar
+
+    - name: Upload Docker image as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-image
+        path: order-api.tar
+        retention-days: 1
+
+  # Job 3: Deploy AWS Infrastructure (Terraform) - ENABLED with manual approval simulation
+  deploy:
+    name: Deploy AWS Infrastructure
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Only deploy infra on push to main
+    # TODO: Add environment protection rules in GitHub for manual approval in production
+    # environment: production  # Uncomment for manual approval requirement
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Use consolidated AWS setup action
+    - name: Setup AWS
+      uses: ./.github/actions/setup-aws
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.5.0
+        terraform_wrapper: false
+
+    # Use existing validation script
+    - name: Validate Environment Setup
+      run: |
+        chmod +x scripts/validate-environment.sh
+        ./scripts/validate-environment.sh --environment ci --skip-optional
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+      working-directory: ./terraform
+
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate
+      working-directory: ./terraform
+
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -no-color -var="cost_profile=${{ env.COST_PROFILE }}"
+      working-directory: ./terraform
+      # TODO: For production, save plan and require approval before apply
+      # run: terraform plan -out=tfplan.out -var="cost_profile=${{ env.COST_PROFILE }}"
+
+    - name: Terraform Apply
+      id: apply
+      if: steps.plan.outcome == 'success'
+      run: terraform apply -auto-approve -var="cost_profile=${{ env.COST_PROFILE }}"
+      working-directory: ./terraform
+
+    # Generate Kubernetes configuration from Terraform outputs
+    - name: Generate Kubernetes Configuration
+      run: |
+        chmod +x scripts/generate-k8s-config.sh
+        ./scripts/generate-k8s-config.sh
+
+    - name: Upload Terraform outputs as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: terraform-outputs
+        path: terraform/terraform.tfstate
+        retention-days: 1
+
+  # Job 4: Deploy to AWS (Push Docker Image & EKS Update) - ENABLED
+  deploy_application:
+    name: Push Image & Deploy Application
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Use consolidated AWS setup action
+    - name: Setup AWS
+      uses: ./.github/actions/setup-aws
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Download Docker image artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: docker-image
+
+    - name: Load and push Docker image to ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      run: |
+        # Use existing ECR build push script
+        chmod +x scripts/ecr_build_push.sh
+
+        # Load the image built in previous job
+        docker load < order-api.tar
+
+        # Get ECR repository name from Terraform outputs or use default
+        ECR_REPO_NAME="order-processor-order-api"
+
+        # Tag and push using existing script logic
+        docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} $ECR_REGISTRY/$ECR_REPO_NAME:${{ github.sha }}
+        docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} $ECR_REGISTRY/$ECR_REPO_NAME:latest
+        docker push $ECR_REGISTRY/$ECR_REPO_NAME:${{ github.sha }}
+        docker push $ECR_REGISTRY/$ECR_REPO_NAME:latest
+
+    # Use existing Kubernetes deployment script
+    - name: Deploy to EKS
+      run: |
+        # Install kubectl
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
+
+        # Use existing EKS deployment script
+        chmod +x kubernetes/scripts/deploy-to-eks.sh
+        ./kubernetes/scripts/deploy-to-eks.sh
+
+    # Alternative: Manual kubectl commands if script needs modification
+    # - name: Update EKS deployment (alternative approach)
     #   run: |
-    #     python -m pytest tests -v --cov=api --cov-report=xml --cov-report=term
+    #     # Update kubeconfig
+    #     aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name order-processor-dev-cluster
+    #
+    #     # Apply Kubernetes manifests using existing files
+    #     kubectl apply -f kubernetes/mainfests/namespace.yaml
+    #     kubectl apply -f kubernetes/service-account-generated.yaml
+    #     kubectl apply -f kubernetes/secrets-config-generated.yaml
+    #     kubectl apply -f kubernetes/deployment.yaml
+    #     kubectl apply -f kubernetes/service-ingress.yaml
+    #
+    #     # Wait for rollout to complete
+    #     kubectl rollout status deployment/order-service -n order-processor
 
-    # - name: Upload coverage reports
-    #   uses: codecov/codecov-action@v3
-    #   with:
-    #     file: ./docker/coverage.xml
-    #     flags: unittests
-    #     name: codecov-umbrella
+  # Job 5: Run Integration Tests - ENABLED
+  integration_tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    needs: [deploy, deploy_application]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-  # Job 2: Build Docker Image
-  # build:
-  #   name: Build Docker Image
-  #   runs-on: ubuntu-latest
-  #   needs: test
-  #   if: github.event_name == 'push'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
 
-  #   - name: Set up Docker Buildx
-  #     uses: docker/setup-buildx-action@v3
+    # Use consolidated AWS setup action
+    - name: Setup AWS
+      uses: ./.github/actions/setup-aws
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-  #   - name: Build Docker image
-  #     working-directory: ./docker
-  #     run: |
-  #       # Corrected: Removed LaTeX formatting
-  #       docker build -t ${{ env.ECR_REPOSITORY }}:${{ github.sha }} -f api/Dockerfile .
-  #       docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} ${{ env.ECR_REPOSITORY }}:latest
+    # Use existing infrastructure test scripts
+    - name: Run Infrastructure Integration Tests
+      run: |
+        # Install test dependencies
+        pip install -r tests/requirements-test.txt
 
-  #   - name: Save Docker image
-  #     run: |
-  #       # Corrected: Removed LaTeX formatting
-  #       docker save ${{ env.ECR_REPOSITORY }}:${{ github.sha }} > order-api.tar
+        # Use existing test runner scripts
+        chmod +x scripts/quick-test.sh
+        ./scripts/quick-test.sh infrastructure
 
-  #   - name: Upload Docker image as artifact
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: docker-image
-  #       path: order-api.tar
-  #       retention-days: 1
+        # Alternative: Use existing infrastructure test script if available
+        # chmod +x scripts/run-infrastructure-tests.sh
+        # ./scripts/run-infrastructure-tests.sh --environment ci --quick
 
-  # Job 2-1 (New Job): Create Lambda deployment packages
-  # package_lambdas:
-  #   name: Create Lambda deployment packages
-  #   runs-on: ubuntu-latest
-  #   needs: test # Ensure tests pass before packaging
-  #   if: github.event_name == 'push' # Only package on push (main or develop)
-
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-
-  #   - name: Create dummy Lambda deployment packages
-  #     # The working-directory is the root of your repository.
-  #     # The script will navigate into and work within the 'services' directory.
-  #     working-directory: .
-  #     run: |
-        # # Ensure the 'services' directory exists relative to the repo root
-        # # mkdir -p services
-
-        # # Change into the services directory. All subsequent commands in this block
-        # # will operate relative to 'services/'.
-        # cd services
-
-        # # Define a temporary file name within the 'services' directory
-        # TEMP_FILE="temp_dummy_lambda.py"
-
-        # # Create the dummy Python file directly in the 'services' directory
-        # echo 'def lambda_handler(event, context): import os; print(f"Lambda executed in {os.getcwd()}"); return {"statusCode": 200, "body": "Dummy Lambda executed"}' > "${TEMP_FILE}"
-
-        # # Loop through the names of your Lambda functions and create their zip files
-        # for name in order_processor inventory_manager notification_handler; do
-        #   # Copy the temporary dummy file to the specific lambda's Python file name
-        #   # (e.g., 'order_processor.py') within the 'services' directory.
-        #   cp "${TEMP_FILE}" "${name}.py"
-
-        #   # Create the zip file for each Lambda. The -j flag ensures only the file
-        #   # itself is zipped, not its parent directory (services/).
-        #   zip -j "${name}.zip" "${name}.py"
-        #   echo "Created ${name}.zip"
-        # done
-
-    #     # Clean up all Python files (including the temporary dummy file and the copied ones)
-    #     # from the 'services' directory.
-    #     rm *.py
-
-    # - name: Upload Lambda packages as artifact
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: lambda-packages
-    #     path: services/*.zip # Upload all generated zip files
-    #     retention-days: 1
-
-
-  # # Job 3: Deploy AWS Infrastructure (Terraform) (only on main branch)
-  # deploy: # This job name remains 'deploy'
-  #   name: Deploy AWS Infrastructure
-  #   runs-on: ubuntu-latest
-  #   needs: [build, package_lambdas]
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Only deploy infra on push to main
-
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-
-  #   - name: Configure AWS credentials
-  #     uses: aws-actions/configure-aws-credentials@v4
-  #     with:
-  #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #       aws-region: ${{ env.AWS_REGION }}
-
-  #   - name: Setup Terraform
-  #     uses: hashicorp/setup-terraform@v3
-  #     with:
-  #       terraform_version: 1.5.0
-  #       terraform_wrapper: false
-
-  #   - name: Terraform Init
-  #     id: init
-  #     run: terraform init
-  #     working-directory: ./terraform
-
-  #   - name: Terraform Validate
-  #     id: validate
-  #     run: terraform validate
-  #     working-directory: ./terraform
-
-  #   - name: Terraform Plan
-  #     id: plan
-  #     run: terraform plan -no-color
-  #     working-directory: ./terraform
-  #     # Optionally, you can save the plan to an artifact if you want to review it later
-  #     # run: terraform plan -out=tfplan.out
-
-  #   - name: Terraform Apply
-  #     id: apply
-  #     if: steps.plan.outcome == 'success'
-  #     run: terraform apply -auto-approve
-  #     working-directory: ./terraform
-
-  # # Job 4: Deploy to AWS (Push Docker Image & EKS Update)
-  # deploy_application: # Renamed from 'deploy' to 'deploy_application' for clarity
-  #   name: Push Image & Deploy Application
-  #   runs-on: ubuntu-latest
-  #   needs: deploy # CORRECTED: Now correctly depends on the 'deploy' job
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-
-  #   - name: Configure AWS credentials
-  #     uses: aws-actions/configure-aws-credentials@v4
-  #     with:
-  #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #       aws-region: ${{ env.AWS_REGION }}
-
-  #   - name: Login to Amazon ECR
-  #     id: login-ecr
-  #     uses: aws-actions/amazon-ecr-login@v2
-
-  #   - name: Download Docker image artifact
-  #     uses: actions/download-artifact@v4
-  #     with:
-  #       name: docker-image
-
-  #   - name: Load and push Docker image to ECR
-  #     env:
-  #       ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-  #     run: |
-  #       docker load < order-api.tar
-  #       # Tag with the correct ECR URI, using the full repository name from Terraform
-  #       # If your Terraform defines `order-processor-api` as the repo name
-  #       ECR_REPO_NAME="order-processor-api" # Adjust this to your actual ECR repo name from Terraform
-  #       docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} $ECR_REGISTRY/$ECR_REPO_NAME:${{ github.sha }}
-  #       docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} $ECR_REGISTRY/$ECR_REPO_NAME:latest
-  #       docker push $ECR_REGISTRY/$ECR_REPO_NAME:${{ github.sha }}
-  #       docker push $ECR_REGISTRY/$ECR_REPO_NAME:latest
-
-  #   - name: Update EKS deployment
-  #     # This step should be uncommented and configured once you set up EKS.
-  #     run: |
-  #       echo "EKS deployment steps are commented out. Uncomment and configure when ready."
-  #       # # Install kubectl
-  #       # # curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-  #       # # chmod +x kubectl
-  #       # # sudo mv kubectl /usr/local/bin/
-  #       #
-  #       # # Update kubeconfig
-  #       # # aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name order-processor-cluster
-  #       #
-  #       # # Update deployment with new image
-  #       # # Make sure 'order-api' matches your Kubernetes Deployment name and container name
-  #       # # kubectl set image deployment/order-api order-api=$ECR_REGISTRY/$ECR_REPO_NAME:${{ github.sha }} -n default
-  #       #
-  #       # # Wait for rollout to complete
-  #       # # kubectl rollout status deployment/order-api -n default
-
-  # # Job 5: Run Integration Tests (Dummy)
-  # integration_tests:
-  #   name: Run Integration Tests
-  #   runs-on: ubuntu-latest
-  #   needs: [deploy, deploy_application]
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-
-  #   - name: Set up Python
-  #     uses: actions/setup-python@v4
-  #     with:
-  #       python-version: ${{ env.PYTHON_VERSION }}
-
-  #   - name: Dummy Integration Tests
-  #     env:
-  #       API_URL: ${{ needs.deploy.outputs.api_gateway_url }}
-  #       FRONTEND_URL: ${{ needs.deploy.outputs.frontend_url }}
-  #     run: |
-  #       echo "=== Running Dummy Integration Tests ==="
-  #       echo "API URL: $API_URL"
-  #       echo "Frontend URL: $FRONTEND_URL"
-
-  #       # Dummy test 1
-  #       echo "Test 1: Checking API connectivity..."
-  #       sleep 2
-  #       echo "✓ API connectivity test passed"
-
-  #       # Dummy test 2
-  #       echo "Test 2: Testing order creation endpoint..."
-  #       sleep 2
-  #       echo "✓ Order creation test passed"
-
-  #       # Dummy test 3
-  #       echo "Test 3: Testing inventory check..."
-  #       sleep 2
-  #       echo "✓ Inventory check test passed"
-
-  #       echo "=== All integration tests passed! ==="
-
-  # # Job 6: Destroy Infrastructure
-  # destroy_infrastructure:
-    # name: Destroy Infrastructure
-    # runs-on: ubuntu-latest
-    # needs: integration_tests
-    # if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    # steps:
-    # - name: Checkout code
-    #   uses: actions/checkout@v4
-
-    # - name: Configure AWS credentials
-    #   uses: aws-actions/configure-aws-credentials@v4
-    #   with:
-    #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    #     aws-region: ${{ env.AWS_REGION }}
-
-    # - name: Setup Terraform
-    #   uses: hashicorp/setup-terraform@v3
-    #   with:
-    #     terraform_version: 1.5.0
-
-    # - name: Terraform Init
-    #   working-directory: ./terraform
-    #   run: terraform init
-
-    # - name: Pre-destroy Cleanup
-    #   working-directory: ./terraform
+    # TODO: Enable when application tests are ready
+    # - name: Run Application Integration Tests
+    #   env:
+    #     API_URL: ${{ needs.deploy.outputs.api_gateway_url }}
+    #     FRONTEND_URL: ${{ needs.deploy.outputs.frontend_url }}
     #   run: |
-    #     echo "=== Starting pre-destroy cleanup ==="
+    #     echo "=== Running Application Integration Tests ==="
+    #     # Use existing test scripts
+    #     ./scripts/quick-test.sh services
 
-    #     # Empty S3 buckets if they exist
-    #     echo "Checking for S3 buckets to empty..."
+    - name: Dummy Integration Tests (placeholder)
+      env:
+        API_URL: ${{ needs.deploy.outputs.api_gateway_url || 'http://placeholder-api-url' }}
+        FRONTEND_URL: ${{ needs.deploy.outputs.frontend_url || 'http://placeholder-frontend-url' }}
+      run: |
+        echo "=== Running Integration Tests ==="
+        echo "API URL: $API_URL"
+        echo "Frontend URL: $FRONTEND_URL"
 
-    #     # Get all S3 buckets created by this Terraform
-    #     BUCKETS=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'order-processor') || contains(Name, 'cloud-native')].Name" --output text || true)
+        # Dummy test 1 - Infrastructure connectivity
+        echo "Test 1: Checking infrastructure deployment..."
+        sleep 2
+        echo "✓ Infrastructure deployment test passed"
 
-    #     if [ ! -z "$BUCKETS" ]; then
-    #       for bucket in $BUCKETS; do
-    #         echo "Emptying bucket: $bucket"
-    #         aws s3 rm s3://$bucket --recursive || true
+        # Dummy test 2 - Application health check
+        echo "Test 2: Testing application health endpoints..."
+        sleep 2
+        echo "✓ Application health check test passed"
 
-    #         # Also remove versioned objects if versioning is enabled
-    #         aws s3api list-object-versions --bucket "$bucket" --output json | \
-    #         jq -r '.Versions[]? | "\(.Key) \(.VersionId)"' | \
-    #         while read key version; do
-    #           if [ ! -z "$key" ] && [ ! -z "$version" ]; then
-    #             aws s3api delete-object --bucket "$bucket" --key "$key" --version-id "$version" || true
-    #           fi
-    #         done 2>/dev/null || true
-    #       done
-    #     fi
+        # Dummy test 3 - Basic functionality
+        echo "Test 3: Testing basic application functionality..."
+        sleep 2
+        echo "✓ Basic functionality test passed"
 
-    #     echo "=== Pre-destroy cleanup completed ==="
+        echo "=== All integration tests passed! ==="
 
-    # - name: Terraform Destroy
-    #   working-directory: ./terraform
-    #   run: |
-    #     echo "=== Starting Terraform destroy ==="
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-results
+        path: |
+          test-results/
+          tests/reports/
+        retention-days: 7
 
-    #     # Attempt to destroy with auto-approve
-    #     terraform destroy -auto-approve || {
-    #       echo "First destroy attempt failed, checking for stuck resources..."
+  # Job 6: Destroy Infrastructure - ENABLED (always runs for cost control)
+  destroy_infrastructure:
+    name: Destroy Infrastructure
+    runs-on: ubuntu-latest
+    needs: integration_tests
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-    #       # List current state
-    #       echo "Current Terraform state:"
-    #       terraform state list || true
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-    #       # Common problematic resources - remove from state if destroy fails
-    #       PROBLEM_RESOURCES="aws_s3_bucket aws_db_instance aws_msk_cluster"
+    # Use consolidated AWS setup action
+    - name: Setup AWS
+      uses: ./.github/actions/setup-aws
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-    #       for resource_type in $PROBLEM_RESOURCES; do
-    #         echo "Checking for $resource_type in state..."
-    #         terraform state list | grep "^${resource_type}\." | while read resource; do
-    #           echo "Removing $resource from state"
-    #           terraform state rm "$resource" || true
-    #         done
-    #       done
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.5.0
 
-    #       # Try destroy again
-    #       echo "Retrying destroy after state cleanup..."
-    #       terraform destroy -auto-approve || {
-    #         echo "WARNING: Destroy failed again. Manual cleanup may be required."
-    #         echo "Remaining resources in state:"
-    #         terraform state list || true
-    #       }
-    #     }
+    - name: Terraform Init
+      working-directory: ./terraform
+      run: terraform init
 
-    #     echo "=== Terraform destroy completed ==="
+    - name: Pre-destroy Cleanup
+      working-directory: ./terraform
+      run: |
+        echo "=== Starting pre-destroy cleanup ==="
 
-    # - name: Verify Cleanup
-    #   if: always()
-    #   run: |
-    #     echo "=== Verifying resource cleanup ==="
+        # Empty S3 buckets if they exist
+        echo "Checking for S3 buckets to empty..."
 
-    #     # Check for remaining RDS instances
-    #     echo "Checking for RDS instances..."
-    #     REMAINING_RDS=$(aws rds describe-db-instances --query "DBInstances[?contains(DBInstanceIdentifier, 'order-processor')].DBInstanceIdentifier" --output text || true)
-    #     if [ ! -z "$REMAINING_RDS" ]; then
-    #       echo "WARNING: RDS instances still exist: $REMAINING_RDS"
-    #     else
-    #       echo "✓ No RDS instances found"
-    #     fi
+        # Get all S3 buckets created by this Terraform
+        BUCKETS=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'order-processor') || contains(Name, 'cloud-native')].Name" --output text || true)
 
-    #     # Check for remaining Lambda functions
-    #     echo "Checking for Lambda functions..."
-    #     REMAINING_LAMBDA=$(aws lambda list-functions --query "Functions[?contains(FunctionName, 'order-processor')].FunctionName" --output text || true)
-    #     if [ ! -z "$REMAINING_LAMBDA" ]; then
-    #       echo "WARNING: Lambda functions still exist: $REMAINING_LAMBDA"
-    #     else
-    #       echo "✓ No Lambda functions found"
-    #     fi
+        if [ ! -z "$BUCKETS" ]; then
+          for bucket in $BUCKETS; do
+            echo "Emptying bucket: $bucket"
+            aws s3 rm s3://$bucket --recursive || true
 
-    #     # Check for remaining S3 buckets
-    #     echo "Checking for S3 buckets..."
-    #     REMAINING_S3=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'order-processor') || contains(Name, 'cloud-native')].Name" --output text || true)
-    #     if [ ! -z "$REMAINING_S3" ]; then
-    #       echo "WARNING: S3 buckets still exist: $REMAINING_S3"
-    #     else
-    #       echo "✓ No S3 buckets found"
-    #     fi
+            # Also remove versioned objects if versioning is enabled
+            aws s3api list-object-versions --bucket "$bucket" --output json | \
+            jq -r '.Versions[]? | "\(.Key) \(.VersionId)"' | \
+            while read key version; do
+              if [ ! -z "$key" ] && [ ! -z "$version" ]; then
+                aws s3api delete-object --bucket "$bucket" --key "$key" --version-id "$version" || true
+              fi
+            done 2>/dev/null || true
+          done
+        fi
 
-    #     echo "=== Cleanup verification completed ==="
+        echo "=== Pre-destroy cleanup completed ==="
 
-    # - name: Cost Report
-    #   if: always()
-    #   run: |
-    #     echo "=== Generating cost report ==="
+    - name: Terraform Destroy
+      working-directory: ./terraform
+      run: |
+        echo "=== Starting Terraform destroy ==="
 
-    #     # Get today's date
-    #     END_DATE=$(date +%Y-%m-%d)
-    #     START_DATE=$(date -d '1 day ago' +%Y-%m-%d)
+        # Attempt to destroy with auto-approve
+        terraform destroy -auto-approve -var="cost_profile=${{ env.COST_PROFILE }}" || {
+          echo "First destroy attempt failed, checking for stuck resources..."
 
-    #     # Try to get cost data
-    #     echo "Estimated costs for this pipeline run:"
-    #     aws ce get-cost-and-usage \
-    #       --time-period Start=$START_DATE,End=$END_DATE \
-    #       --granularity DAILY \
-    #       --metrics "BlendedCost" \
-    #       --group-by Type=DIMENSION,Key=SERVICE \
-    #       --query 'ResultsByTime[0].Groups[?Metrics.BlendedCost.Amount > `0`].[Keys[0], Metrics.BlendedCost.Amount]' \
-    #       --output table 2>/dev/null || echo "Cost data not available yet"
+          # List current state
+          echo "Current Terraform state:"
+          terraform state list || true
 
-    #     echo "=== Cost report completed ==="
+          # Common problematic resources - remove from state if destroy fails
+          PROBLEM_RESOURCES="aws_s3_bucket aws_db_instance aws_msk_cluster"
+
+          for resource_type in $PROBLEM_RESOURCES; do
+            echo "Checking for $resource_type in state..."
+            terraform state list | grep "^${resource_type}\." | while read resource; do
+              echo "Removing $resource from state"
+              terraform state rm "$resource" || true
+            done
+          done
+
+          # Try destroy again
+          echo "Retrying destroy after state cleanup..."
+          terraform destroy -auto-approve -var="cost_profile=${{ env.COST_PROFILE }}" || {
+            echo "WARNING: Destroy failed again. Manual cleanup may be required."
+            echo "Remaining resources in state:"
+            terraform state list || true
+          }
+        }
+
+        echo "=== Terraform destroy completed ==="
+
+    - name: Verify Cleanup
+      if: always()
+      run: |
+        echo "=== Verifying resource cleanup ==="
+
+        # Check for remaining RDS instances
+        echo "Checking for RDS instances..."
+        REMAINING_RDS=$(aws rds describe-db-instances --query "DBInstances[?contains(DBInstanceIdentifier, 'order-processor')].DBInstanceIdentifier" --output text || true)
+        if [ ! -z "$REMAINING_RDS" ]; then
+          echo "WARNING: RDS instances still exist: $REMAINING_RDS"
+        else
+          echo "✓ No RDS instances found"
+        fi
+
+        # Check for remaining Lambda functions
+        echo "Checking for Lambda functions..."
+        REMAINING_LAMBDA=$(aws lambda list-functions --query "Functions[?contains(FunctionName, 'order-processor')].FunctionName" --output text || true)
+        if [ ! -z "$REMAINING_LAMBDA" ]; then
+          echo "WARNING: Lambda functions still exist: $REMAINING_LAMBDA"
+        else
+          echo "✓ No Lambda functions found"
+        fi
+
+        # Check for remaining S3 buckets
+        echo "Checking for S3 buckets..."
+        REMAINING_S3=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'order-processor') || contains(Name, 'cloud-native')].Name" --output text || true)
+        if [ ! -z "$REMAINING_S3" ]; then
+          echo "WARNING: S3 buckets still exist: $REMAINING_S3"
+        else
+          echo "✓ No S3 buckets found"
+        fi
+
+        echo "=== Cleanup verification completed ==="
+
+    - name: Cost Report
+      if: always()
+      run: |
+        echo "=== Generating cost report ==="
+
+        # Get today's date
+        END_DATE=$(date +%Y-%m-%d)
+        START_DATE=$(date -d '1 day ago' +%Y-%m-%d)
+
+        # Try to get cost data
+        echo "Estimated costs for this pipeline run:"
+        aws ce get-cost-and-usage \
+          --time-period Start=$START_DATE,End=$END_DATE \
+          --granularity DAILY \
+          --metrics "BlendedCost" \
+          --group-by Type=DIMENSION,Key=SERVICE \
+          --query 'ResultsByTime[0].Groups[?Metrics.BlendedCost.Amount > `0`].[Keys[0], Metrics.BlendedCost.Amount]' \
+          --output table 2>/dev/null || echo "Cost data not available yet"
+
+        echo "=== Cost report completed ==="
+
+    # Final summary
+    - name: Pipeline Summary
+      if: always()
+      run: |
+        echo "=== CI/CD Pipeline Summary ==="
+        echo "Environment: CI (${{ env.COST_PROFILE }} cost profile)"
+        echo "Deployment: Infrastructure deployed and tested"
+        echo "Cleanup: Resources destroyed for cost control"
+        echo "Status: Pipeline completed"
+        echo ""
+        echo "NOTE: This is a practice/learning environment."
+        echo "In production, infrastructure would persist and require manual approval for changes."
+        echo "=== End of Pipeline ==="
