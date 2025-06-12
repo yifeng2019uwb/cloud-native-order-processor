@@ -213,7 +213,7 @@ jobs:
         chmod +x scripts/deploy.sh
         ./scripts/deploy.sh \
           --environment prod \
-          --profile learning \
+          --profile prod \
           --verbose
 
     - name: Upload Terraform outputs as artifact
