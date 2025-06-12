@@ -177,7 +177,7 @@ jobs:
         path: order-api.tar
         retention-days: 1
 
-  # Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
+ # Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
   deploy:
     name: Deploy AWS Infrastructure
     runs-on: ubuntu-latest
@@ -186,16 +186,15 @@ jobs:
 
     steps:
     - name: Debug Info
-    run: |
-      echo "Event name: ${{ github.event_name }}"
-      echo "Environment input: ${{ github.event.inputs.environment }}"
-      echo "All inputs: ${{ toJson(github.event.inputs) }}"
+      run: |
+        echo "Event name: ${{ github.event_name }}"
+        echo "Environment input: ${{ github.event.inputs.environment }}"
+        echo "All inputs: ${{ toJson(github.event.inputs) }}"
 
     - name: Show deployment info
       run: |
         echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
         echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
-        echo "🔒 Environment protection: ${{ github.event.inputs.environment }}"
 
     - name: Checkout code
       uses: actions/checkout@v4
