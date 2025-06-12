@@ -192,6 +192,12 @@ jobs:
         echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
         echo "🔧 Deploy application: ${{ github.event.inputs.deploy_application }}"
 
+    - name: Show deployment info
+      run: |
+        echo "🚀 Deploying to environment: prod"
+        echo "📋 Resource profile: learning"
+        echo "🔧 Deploy application: true"
+
     - name: Checkout code
       uses: actions/checkout@v4
 
@@ -312,6 +318,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy, deploy_application, integration_tests]
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.inputs.auto_destroy == 'true'
+
+    - name: Show deployment info
+      run: |
+        echo "🚀 Deploying to environment: prod"
+        echo "📋 Resource profile: learning"
+        echo "🔧 Deploy application: true"
 
     steps:
     - name: Checkout code
