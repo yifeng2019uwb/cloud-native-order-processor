@@ -118,7 +118,24 @@ jobs:
     - name: Run tests with coverage
       working-directory: ./services
       run: |
-        python -m pytest tests -v --cov=src --cov-report=xml --cov-report=term
+        echo "=== Running tests using build script pattern ==="
+
+        # Use build script to run tests (matches your original working pattern)
+        ./build.sh --test-only common
+        ./build.sh --test-only order-service
+
+        # Also run pytest directly for each service with coverage
+        echo "Running additional coverage tests..."
+
+        if [ -d "common/tests" ]; then
+          echo "Testing common package..."
+          cd common && python -m pytest tests -v --cov=src --cov-report=term && cd ..
+        fi
+
+        if [ -d "order-service/tests" ]; then
+          echo "Testing order-service package..."
+          cd order-service && python -m pytest tests -v --cov=src --cov-report=term && cd ..
+        fi
 
   # Job 2: Build Docker Image - Always runs (FREE) - Validation only
   build:
