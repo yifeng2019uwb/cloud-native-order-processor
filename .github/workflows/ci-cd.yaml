@@ -17,7 +17,7 @@ on:
         type: choice
         options:
           - dev
-          - prod
+          - prod # Changed: Removed 'production' and kept 'prod' to match deploy.sh script
       profile:
         description: 'Resource profile'
         required: true
@@ -182,16 +182,15 @@ jobs:
     name: Deploy AWS Infrastructure
     runs-on: ubuntu-latest
     needs: [test, build]
-    # if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_application == 'true'
-    environment: ${{ github.event.inputs.environment }}
-
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment }} # Changed: Simplified environment mapping
 
     steps:
     - name: Show deployment info
       run: |
         echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
         echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
-        echo "🔒 Environment protection: ${{ github.event.inputs.environment == 'prod' && 'prod' ' && 'production' || 'none') }}"
+        echo "🔒 Environment protection: ${{ github.event.inputs.environment }}"
 
     - name: Checkout code
       uses: actions/checkout@v4
@@ -229,14 +228,14 @@ jobs:
     name: Deploy Application
     runs-on: ubuntu-latest
     needs: deploy
-    # if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_application == 'true'
-    environment: ${{ github.event.inputs.environment }}
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_application == 'true'
+    environment: ${{ github.event.inputs.environment }} # Changed: Simplified environment mapping
 
     steps:
     - name: Show deployment info
       run: |
         echo "📦 Deploying application to: ${{ github.event.inputs.environment }}"
-        if [[ "${{ github.event.inputs.environment }}" == "prod" || "${{ github.event.inputs.environment }}" == "production" ]]; then
+        if [[ "${{ github.event.inputs.environment }}" == "prod" ]]; then
           echo "⚠️  Manual approval was required for this deployment"
         fi
 
@@ -269,14 +268,14 @@ jobs:
     name: Run Integration Tests
     runs-on: ubuntu-latest
     needs: [deploy, deploy_application]
-    # if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_integration_tests == 'true'
-    environment: ${{ github.event.inputs.environment }}
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_integration_tests == 'true'
+    environment: ${{ github.event.inputs.environment }} # Changed: Simplified environment mapping
 
     steps:
     - name: Show test info
       run: |
         echo "🧪 Running integration tests for: ${{ github.event.inputs.environment }}"
-        if [[ "${{ github.event.inputs.environment }}" == "prod" || "${{ github.event.inputs.environment }}" == "production" ]]; then
+        if [[ "${{ github.event.inputs.environment }}" == "prod" ]]; then
           echo "⚠️  Manual approval was required for this test run"
         fi
 
