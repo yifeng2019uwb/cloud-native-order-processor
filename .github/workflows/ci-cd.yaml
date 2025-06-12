@@ -16,18 +16,18 @@ on:
         default: 'dev'
         type: choice
         options:
-        - dev
-        - prod
-        - production
+          - dev
+          - prod
+          - production
       profile:
         description: 'Resource profile'
         required: true
         default: 'learning'
         type: choice
         options:
-        - learning
-        - minimum
-        - prod
+          - learning
+          - minimum
+          - prod
       deploy_application:
         description: 'Deploy application after infrastructure'
         required: false
@@ -179,51 +179,50 @@ jobs:
         retention-days: 1
 
   # Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
-  # Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
-deploy:
-  name: Deploy AWS Infrastructure
-  runs-on: ubuntu-latest
-  needs: [test, build]
-  if: github.event_name == 'workflow_dispatch'
-  environment: ${{ github.event.inputs.environment == 'prod' && 'prod' || (github.event.inputs.environment == 'production' && 'production' || null) }}
+  deploy:
+    name: Deploy AWS Infrastructure
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment == 'prod' && 'prod' || (github.event.inputs.environment == 'production' && 'production' || null) }}
 
-  steps:
-  - name: Show deployment info
-    run: |
-      echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
-      echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
-      echo "🔒 Environment protection: ${{ github.event.inputs.environment == 'prod' && 'prod' || (github.event.inputs.environment == 'production' && 'production' || 'none') }}"
+    steps:
+    - name: Show deployment info
+      run: |
+        echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
+        echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
+        echo "🔒 Environment protection: ${{ github.event.inputs.environment == 'prod' && 'prod' || (github.event.inputs.environment == 'production' && 'production' || 'none') }}"
 
-  - name: Checkout code
-    uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-  - name: Setup AWS
-    uses: ./.github/actions/setup-aws
-    with:
-      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      aws-region: ${{ env.AWS_REGION }}
+    - name: Setup AWS
+      uses: ./.github/actions/setup-aws
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-  - name: Setup Terraform
-    uses: hashicorp/setup-terraform@v3
-    with:
-      terraform_version: 1.5.0
-      terraform_wrapper: false
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.5.0
+        terraform_wrapper: false
 
-  - name: Deploy Infrastructure using Enhanced Script
-    run: |
-      chmod +x scripts/deploy.sh
-      ./scripts/deploy.sh \
-        --environment ${{ github.event.inputs.environment }} \
-        --profile ${{ github.event.inputs.profile }} \
-        --verbose
+    - name: Deploy Infrastructure using Enhanced Script
+      run: |
+        chmod +x scripts/deploy.sh
+        ./scripts/deploy.sh \
+          --environment ${{ github.event.inputs.environment }} \
+          --profile ${{ github.event.inputs.profile }} \
+          --verbose
 
-  - name: Upload Terraform outputs as artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: terraform-outputs
-      path: terraform/terraform.tfstate
-      retention-days: 1
+    - name: Upload Terraform outputs as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: terraform-outputs
+        path: terraform/terraform.tfstate
+        retention-days: 1
 
   # Job 4: Deploy Application - ONLY runs manually if selected
   deploy_application:
