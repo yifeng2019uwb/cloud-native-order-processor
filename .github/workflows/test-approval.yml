@@ -16,7 +16,7 @@ jobs:
     name: Approval Test (should require approval)
     needs: test-job
     runs-on: ubuntu-latest
-    environment: production
+    environment: prod
     steps:
       - name: This should require approval
         run: |
