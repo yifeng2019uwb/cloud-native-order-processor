@@ -9,40 +9,39 @@ on:
 
   # CD runs ONLY manually (cost control) - actual AWS deployment
   workflow_dispatch:
-  inputs:
-    environment:
-      description: 'Environment to deploy to'
-      required: true
-      default: 'dev'
-      type: choice
-      options:
-      - dev
-      - prod
-      - production  # Add this option
-    profile:
-      description: 'Resource profile'
-      required: true
-      default: 'learning'
-      type: choice
-      options:
-      - learning
-      - minimum
-      - prod
-    deploy_application:
-      description: 'Deploy application after infrastructure'
-      required: false
-      default: true
-      type: boolean
-    run_integration_tests:
-      description: 'Run integration tests'
-      required: false
-      default: true
-      type: boolean
-    auto_destroy:
-      description: 'Auto-destroy infrastructure after tests (COST CONTROL)'
-      required: false
-      default: true
-      type: boolean
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - prod
+      profile:
+        description: 'Resource profile'
+        required: true
+        default: 'learning'
+        type: choice
+        options:
+        - learning
+        - minimum
+        - prod
+      deploy_application:
+        description: 'Deploy application after infrastructure'
+        required: false
+        default: true
+        type: boolean
+      run_integration_tests:
+        description: 'Run integration tests'
+        required: false
+        default: true
+        type: boolean
+      auto_destroy:
+        description: 'Auto-destroy infrastructure after tests (COST CONTROL)'
+        required: false
+        default: true
+        type: boolean
 
 env:
   PYTHON_VERSION: '3.11'
