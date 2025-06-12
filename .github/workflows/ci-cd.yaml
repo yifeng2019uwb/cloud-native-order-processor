@@ -178,13 +178,12 @@ jobs:
         retention-days: 1
 
   # Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
-# Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
-deploy:
-  name: Deploy AWS Infrastructure
-  runs-on: ubuntu-latest
-  needs: [test, build]
-  if: github.event_name == 'workflow_dispatch'
-  environment: ${{ (github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'production') && github.event.inputs.environment || null }}
+  deploy:
+    name: Deploy AWS Infrastructure
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ (github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'production') && github.event.inputs.environment || null }}
 
   steps:
   - name: Show deployment info
