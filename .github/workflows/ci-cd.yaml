@@ -188,15 +188,15 @@ jobs:
     steps:
     - name: Show deployment info
       run: |
-        echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
-        echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
-        echo "🔧 Deploy application: ${{ github.event.inputs.deploy_application }}"
-
-    - name: Show deployment info
-      run: |
         echo "🚀 Deploying to environment: prod"
         echo "📋 Resource profile: learning"
         echo "🔧 Deploy application: true"
+
+    - name: Show deployment info
+      run: |
+        echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
+        echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
+        echo "🔧 Deploy application: ${{ github.event.inputs.deploy_application }}"
 
     - name: Checkout code
       uses: actions/checkout@v4
@@ -212,8 +212,8 @@ jobs:
       run: |
         chmod +x scripts/deploy.sh
         ./scripts/deploy.sh \
-          --environment ${{ github.event.inputs.environment }} \
-          --profile ${{ github.event.inputs.profile }} \
+          --environment prod \
+          --profile learning \
           --verbose
 
     - name: Upload Terraform outputs as artifact
@@ -259,8 +259,8 @@ jobs:
       run: |
         chmod +x scripts/deploy-app.sh
         ./scripts/deploy-app.sh \
-          --environment ${{ github.event.inputs.environment }} \
-          --profile ${{ github.event.inputs.profile }} \
+          --environment prod \
+          --profile learning \
           --verbose
 
   # Job 5: Integration Tests - ONLY runs manually if selected
@@ -299,7 +299,7 @@ jobs:
       run: |
         chmod +x scripts/test-integration.sh
         ./scripts/test-integration.sh \
-          --environment ${{ github.event.inputs.environment }} \
+          --environment prod \
           --verbose
 
     - name: Upload test results
@@ -346,8 +346,8 @@ jobs:
       run: |
         chmod +x scripts/destroy.sh
         ./scripts/destroy.sh \
-          --environment ${{ github.event.inputs.environment }} \
-          --profile ${{ github.event.inputs.profile }} \
+          --environment prod \
+          --profile learning \
           --auto-approve \
           --force-cleanup \
           --verbose
