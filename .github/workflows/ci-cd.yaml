@@ -182,7 +182,7 @@ jobs:
     name: Deploy AWS Infrastructure
     runs-on: ubuntu-latest
     needs: [test, build]
-    if: github.event_name == 'workflow_dispatch'  # This line was missing!
+    if: github.event_name == 'workflow_dispatch'
 
 
     steps:
