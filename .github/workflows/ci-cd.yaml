@@ -189,7 +189,7 @@ jobs:
     - name: Show deployment info
       run: |
         echo "🚀 Deploying to environment: prod"
-        echo "📋 Resource profile: learning"
+        echo "📋 Resource profile: prod"
         echo "🔧 Deploy application: true"
 
     - name: Show deployment info
@@ -260,7 +260,7 @@ jobs:
         chmod +x scripts/deploy-app.sh
         ./scripts/deploy-app.sh \
           --environment prod \
-          --profile learning \
+          --profile prod \
           --verbose
 
   # Job 5: Integration Tests - ONLY runs manually if selected
@@ -323,7 +323,7 @@ jobs:
     - name: Show deployment info
       run: |
         echo "🚀 Deploying to environment: prod"
-        echo "📋 Resource profile: learning"
+        echo "📋 Resource profile: prod"
         echo "🔧 Deploy application: true"
 
     - name: Checkout code
@@ -347,7 +347,7 @@ jobs:
         chmod +x scripts/destroy.sh
         ./scripts/destroy.sh \
           --environment prod \
-          --profile learning \
+          --profile prod \
           --auto-approve \
           --force-cleanup \
           --verbose
