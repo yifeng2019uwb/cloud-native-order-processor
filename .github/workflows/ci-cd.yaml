@@ -269,6 +269,7 @@ deploy_application:
         --verbose
 
 # Job 5: Integration Tests - Apply same conditional approval
+# Job 5: Integration Tests - Apply same conditional approval
 integration_tests:
   name: Run Integration Tests
   runs-on: ubuntu-latest
@@ -316,24 +317,6 @@ integration_tests:
         test-results/
         tests/reports/
       retention-days: 7
-
-    # Use enhanced integration test script
-    - name: Run Integration Tests using Enhanced Script
-      run: |
-        chmod +x scripts/test-integration.sh
-        ./scripts/test-integration.sh \
-          --environment ${{ github.event.inputs.environment }} \
-          --verbose
-
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: integration-test-results
-        path: |
-          test-results/
-          tests/reports/
-        retention-days: 7
 
   # Job 6: Enhanced Destroy Infrastructure - ALWAYS runs for cost control
   destroy_infrastructure:
