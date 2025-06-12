@@ -18,7 +18,6 @@ on:
         options:
           - dev
           - prod
-          - production
       profile:
         description: 'Resource profile'
         required: true
@@ -184,14 +183,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, build]
     # if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_application == 'true'
-    environment: ${{ (github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'production') && github.event.inputs.environment || null }}
+    environment: ${{ github.event.inputs.environment }}
+
 
     steps:
     - name: Show deployment info
       run: |
         echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
         echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
-        echo "🔒 Environment protection: ${{ github.event.inputs.environment == 'prod' && 'prod' || (github.event.inputs.environment == 'production' && 'production' || 'none') }}"
+        echo "🔒 Environment protection: ${{ github.event.inputs.environment == 'prod' && 'prod' ' && 'production' || 'none') }}"
 
     - name: Checkout code
       uses: actions/checkout@v4
@@ -230,7 +230,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     # if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_application == 'true'
-    environment: ${{ (github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'production') && github.event.inputs.environment || null }}
+    environment: ${{ github.event.inputs.environment }}
 
     steps:
     - name: Show deployment info
@@ -270,7 +270,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy, deploy_application]
     # if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_integration_tests == 'true'
-    environment: ${{ (github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'production') && github.event.inputs.environment || null }}
+    environment: ${{ github.event.inputs.environment }}
 
     steps:
     - name: Show test info
