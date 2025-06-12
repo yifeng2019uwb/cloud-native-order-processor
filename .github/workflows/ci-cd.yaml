@@ -9,40 +9,40 @@ on:
 
   # CD runs ONLY manually (cost control) - actual AWS deployment
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        default: 'dev'
-        type: choice
-        options:
-        - dev
-        - prod
-      profile:
-        description: 'Resource profile'
-        required: true
-        default: 'learning'
-        type: choice
-        options:
-        - learning
-        - minimum
-        - prod
-      deploy_application:
-        description: 'Deploy application after infrastructure'
-        required: false
-        default: true
-        type: boolean
-      run_integration_tests:
-        description: 'Run integration tests'
-        required: false
-        default: true
-        type: boolean
-      auto_destroy:
-        description: 'Auto-destroy infrastructure after tests (COST CONTROL)'
-        required: false
-        default: true
-        type: boolean
-
+  inputs:
+    environment:
+      description: 'Environment to deploy to'
+      required: true
+      default: 'dev'
+      type: choice
+      options:
+      - dev
+      - prod
+      - production  # Add this option
+    profile:
+      description: 'Resource profile'
+      required: true
+      default: 'learning'
+      type: choice
+      options:
+      - learning
+      - minimum
+      - prod
+    deploy_application:
+      description: 'Deploy application after infrastructure'
+      required: false
+      default: true
+      type: boolean
+    run_integration_tests:
+      description: 'Run integration tests'
+      required: false
+      default: true
+      type: boolean
+    auto_destroy:
+      description: 'Auto-destroy infrastructure after tests (COST CONTROL)'
+      required: false
+      default: true
+      type: boolean
 env:
   PYTHON_VERSION: '3.11'
   AWS_REGION: 'us-west-2'
@@ -177,102 +177,145 @@ jobs:
         path: order-api.tar
         retention-days: 1
 
-  # Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
-  deploy:
-    name: Deploy AWS Infrastructure
-    runs-on: ubuntu-latest
-    needs: [test, build]
-    if: github.event_name == 'workflow_dispatch'
-    environment:
-      name: ${{ github.event.inputs.environment }}
+# Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
+deploy:
+  name: Deploy AWS Infrastructure
+  runs-on: ubuntu-latest
+  needs: [test, build]
+  if: github.event_name == 'workflow_dispatch'
+  environment: ${{ (github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'production') && github.event.inputs.environment || null }}
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+  steps:
+  - name: Show deployment info
+    run: |
+      echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
+      echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
+      if [[ "${{ github.event.inputs.environment }}" == "prod" || "${{ github.event.inputs.environment }}" == "production" ]]; then
+        echo "⚠️  Manual approval was required for this deployment"
+      else
+        echo "✅ No approval required for dev environment"
+      fi
 
-    - name: Setup AWS
-      uses: ./.github/actions/setup-aws
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+  - name: Checkout code
+    uses: actions/checkout@v4
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.5.0
-        terraform_wrapper: false
+  - name: Setup AWS
+    uses: ./.github/actions/setup-aws
+    with:
+      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      aws-region: ${{ env.AWS_REGION }}
 
-    # Use enhanced deploy script
-    - name: Deploy Infrastructure using Enhanced Script
-      run: |
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh \
-          --environment ${{ github.event.inputs.environment }} \
-          --profile ${{ github.event.inputs.profile }} \
-          --verbose
+  - name: Setup Terraform
+    uses: hashicorp/setup-terraform@v3
+    with:
+      terraform_version: 1.5.0
+      terraform_wrapper: false
 
-    - name: Upload Terraform outputs as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: terraform-outputs
-        path: terraform/terraform.tfstate
-        retention-days: 1
+  # Use enhanced deploy script
+  - name: Deploy Infrastructure using Enhanced Script
+    run: |
+      chmod +x scripts/deploy.sh
+      ./scripts/deploy.sh \
+        --environment ${{ github.event.inputs.environment }} \
+        --profile ${{ github.event.inputs.profile }} \
+        --verbose
 
-  # Job 4: Deploy Application - ONLY runs manually if selected
-  deploy_application:
-    name: Deploy Application
-    runs-on: ubuntu-latest
-    needs: deploy
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_application == 'true'
+  - name: Upload Terraform outputs as artifact
+    uses: actions/upload-artifact@v4
+    with:
+      name: terraform-outputs
+      path: terraform/terraform.tfstate
+      retention-days: 1
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+# Job 4: Deploy Application - Apply same conditional approval
+deploy_application:
+  name: Deploy Application
+  runs-on: ubuntu-latest
+  needs: deploy
+  if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_application == 'true'
+  environment: ${{ (github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'production') && github.event.inputs.environment || null }}
 
-    - name: Setup AWS
-      uses: ./.github/actions/setup-aws
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+  steps:
+  - name: Show deployment info
+    run: |
+      echo "📦 Deploying application to: ${{ github.event.inputs.environment }}"
+      if [[ "${{ github.event.inputs.environment }}" == "prod" || "${{ github.event.inputs.environment }}" == "production" ]]; then
+        echo "⚠️  Manual approval was required for this deployment"
+      fi
 
-    - name: Download Docker image artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: docker-image
+  - name: Checkout code
+    uses: actions/checkout@v4
 
-    # Use enhanced deploy-app script
-    - name: Deploy Application using Enhanced Script
-      run: |
-        chmod +x scripts/deploy-app.sh
-        ./scripts/deploy-app.sh \
-          --environment ${{ github.event.inputs.environment }} \
-          --profile ${{ github.event.inputs.profile }} \
-          --verbose
+  - name: Setup AWS
+    uses: ./.github/actions/setup-aws
+    with:
+      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      aws-region: ${{ env.AWS_REGION }}
 
-  # Job 5: Integration Tests - ONLY runs manually if selected
-  integration_tests:
-    name: Run Integration Tests
-    runs-on: ubuntu-latest
-    needs: [deploy, deploy_application]
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_integration_tests == 'true'
+  - name: Download Docker image artifact
+    uses: actions/download-artifact@v4
+    with:
+      name: docker-image
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+  # Use enhanced deploy-app script
+  - name: Deploy Application using Enhanced Script
+    run: |
+      chmod +x scripts/deploy-app.sh
+      ./scripts/deploy-app.sh \
+        --environment ${{ github.event.inputs.environment }} \
+        --profile ${{ github.event.inputs.profile }} \
+        --verbose
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+# Job 5: Integration Tests - Apply same conditional approval
+integration_tests:
+  name: Run Integration Tests
+  runs-on: ubuntu-latest
+  needs: [deploy, deploy_application]
+  if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_integration_tests == 'true'
+  environment: ${{ (github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'production') && github.event.inputs.environment || null }}
 
-    - name: Setup AWS
-      uses: ./.github/actions/setup-aws
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+  steps:
+  - name: Show test info
+    run: |
+      echo "🧪 Running integration tests for: ${{ github.event.inputs.environment }}"
+      if [[ "${{ github.event.inputs.environment }}" == "prod" || "${{ github.event.inputs.environment }}" == "production" ]]; then
+        echo "⚠️  Manual approval was required for this test run"
+      fi
+
+  - name: Checkout code
+    uses: actions/checkout@v4
+
+  - name: Set up Python
+    uses: actions/setup-python@v4
+    with:
+      python-version: ${{ env.PYTHON_VERSION }}
+
+  - name: Setup AWS
+    uses: ./.github/actions/setup-aws
+    with:
+      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      aws-region: ${{ env.AWS_REGION }}
+
+  # Use enhanced integration test script
+  - name: Run Integration Tests using Enhanced Script
+    run: |
+      chmod +x scripts/test-integration.sh
+      ./scripts/test-integration.sh \
+        --environment ${{ github.event.inputs.environment }} \
+        --verbose
+
+  - name: Upload test results
+    if: always()
+    uses: actions/upload-artifact@v4
+    with:
+      name: integration-test-results
+      path: |
+        test-results/
+        tests/reports/
+      retention-days: 7
 
     # Use enhanced integration test script
     - name: Run Integration Tests using Enhanced Script
