@@ -178,23 +178,19 @@ jobs:
         retention-days: 1
 
  # Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
-  deploy:
-    name: Deploy AWS Infrastructure
-    runs-on: ubuntu-latest
-    needs: ${{ github.event_name == 'push' && '[test, build]' || '[]' }}
-    if: github.event_name == 'workflow_dispatch'
+deploy:
+  name: Deploy AWS Infrastructure
+  runs-on: ubuntu-latest
+  needs: [test, build]
+  # Run on both push (to main) and manual trigger
+  if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
 
-    steps:
-    - name: Debug Info
-      run: |
-        echo "Event name: ${{ github.event_name }}"
-        echo "Environment input: ${{ github.event.inputs.environment }}"
-        echo "All inputs: ${{ toJson(github.event.inputs) }}"
-
+  steps:
     - name: Show deployment info
       run: |
         echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
         echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
+        echo "🔧 Deploy application: ${{ github.event.inputs.deploy_application }}"
 
     - name: Checkout code
       uses: actions/checkout@v4
@@ -203,14 +199,8 @@ jobs:
       uses: ./.github/actions/setup-aws
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.5.0
-        terraform_wrapper: false
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      aws-region: ${{ env.AWS_REGION }}
 
     - name: Deploy Infrastructure using Enhanced Script
       run: |
