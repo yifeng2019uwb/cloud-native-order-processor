@@ -139,11 +139,14 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Build Docker image (validation only - no AWS costs)
-      working-directory: .
       run: |
+        # Use your existing build script that knows the correct paths
         chmod +x scripts/quick_build.sh
-        docker build -f docker/order-service/Dockerfile.simple -t ${{ env.ECR_REPOSITORY }}:${{ github.sha }} .
-        docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} ${{ env.ECR_REPOSITORY }}:latest
+        ./scripts/quick_build.sh --build-only
+
+        # Tag for artifact saving
+        docker tag order-processor-api:latest ${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+        docker tag order-processor-api:latest ${{ env.ECR_REPOSITORY }}:latest
 
     - name: Test Docker image
       run: |
