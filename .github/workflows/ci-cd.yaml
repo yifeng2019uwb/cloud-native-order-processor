@@ -319,13 +319,13 @@ jobs:
     needs: [deploy, deploy_application, integration_tests]
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.inputs.auto_destroy == 'true'
 
-    - name: Show deployment info
+    steps:
+      - name: Show deployment info
       run: |
         echo "🚀 Deploying to environment: prod"
         echo "📋 Resource profile: learning"
         echo "🔧 Deploy application: true"
 
-    steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
