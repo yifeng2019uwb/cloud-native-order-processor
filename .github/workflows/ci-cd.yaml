@@ -192,11 +192,11 @@ jobs:
         echo "📋 Resource profile: prod"
         echo "🔧 Deploy application: true"
 
-    - name: Show deployment info
-      run: |
-        echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
-        echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
-        echo "🔧 Deploy application: ${{ github.event.inputs.deploy_application }}"
+    # - name: Show deployment info
+    #   run: |
+    #     echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
+    #     echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
+    #     echo "🔧 Deploy application: ${{ github.event.inputs.deploy_application }}"
 
     - name: Checkout code
       uses: actions/checkout@v4
