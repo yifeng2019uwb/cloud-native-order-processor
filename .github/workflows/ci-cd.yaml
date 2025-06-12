@@ -320,7 +320,7 @@ jobs:
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.inputs.auto_destroy == 'true'
 
     steps:
-      - name: Show deployment info
+    - name: Show deployment info
       run: |
         echo "🚀 Deploying to environment: prod"
         echo "📋 Resource profile: learning"
