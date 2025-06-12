@@ -8,8 +8,7 @@ on:
     branches: [ main ]
 
   # CD runs ONLY manually (cost control) - actual AWS deployment
-
-workflow_dispatch:
+  workflow_dispatch:
   inputs:
     environment:
       description: 'Environment to deploy to'
