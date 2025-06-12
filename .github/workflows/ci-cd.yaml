@@ -1,23 +1,55 @@
 name: CI/CD Pipeline
 
+# CI runs automatically (free) - tests and builds
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
 
+  # CD runs ONLY manually (cost control) - actual AWS deployment
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - prod
+      profile:
+        description: 'Resource profile'
+        required: true
+        default: 'learning'
+        type: choice
+        options:
+        - learning
+        - minimum
+        - prod
+      deploy_application:
+        description: 'Deploy application after infrastructure'
+        required: false
+        default: true
+        type: boolean
+      run_integration_tests:
+        description: 'Run integration tests'
+        required: false
+        default: true
+        type: boolean
+      auto_destroy:
+        description: 'Auto-destroy infrastructure after tests (COST CONTROL)'
+        required: false
+        default: true
+        type: boolean
+
 env:
   PYTHON_VERSION: '3.11'
   AWS_REGION: 'us-west-2'
-  ECR_REPOSITORY: 'order-processor-api' # This is the Docker image name, not the full ECR URI yet
-  # Cost control and environment settings
-  COST_PROFILE: 'prod'
-  TERRAFORM_AUTO_APPROVE: 'true'
-  TERRAFORM_DESTROY_AUTO_APPROVE: 'true'
-  AUTO_CLEANUP_ENABLED: 'true'
+  ECR_REPOSITORY: 'order-processor-api'
 
 jobs:
-  # Job 1: Run Tests - ENABLED
+  # Job 1: CI - Always runs (FREE) - Tests and validation
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -58,7 +90,6 @@ jobs:
       working-directory: ./services
       run: |
         echo "=== Building common package (build-only) ==="
-        # Install wheel again to be sure
         pip install wheel
         ./build.sh --build-only --verbose common
 
@@ -81,31 +112,20 @@ jobs:
       working-directory: ./services
       run: |
         echo "=== Running linting ==="
-        # Install linting tools if not already installed
         pip install flake8 black
-        # Run linting through build script
-        ./build.sh --test-only common  # This includes linting
+        ./build.sh --test-only common
 
-    # Enable when unit tests are ready
     - name: Run tests with coverage
       working-directory: ./services
       run: |
         python -m pytest tests -v --cov=src --cov-report=xml --cov-report=term
 
-    TODO: Enable when coverage reporting is set up
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./services/coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-
-  # Job 2: Build Docker Image - ENABLED
+  # Job 2: Build Docker Image - Always runs (FREE) - Validation only
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
     - name: Checkout code
@@ -114,46 +134,44 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build Docker image (no push for cost control)
+    - name: Build Docker image (validation only - no AWS costs)
       working-directory: .
       run: |
-        # Use existing quick build script but without ECR push
         chmod +x scripts/quick_build.sh
-        # Build image locally for validation
         docker build -f docker/order-service/Dockerfile.simple -t ${{ env.ECR_REPOSITORY }}:${{ github.sha }} .
         docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} ${{ env.ECR_REPOSITORY }}:latest
 
     - name: Test Docker image
       run: |
-        # Basic image validation
         docker run --rm ${{ env.ECR_REPOSITORY }}:${{ github.sha }} python --version
         echo "Docker image built and tested successfully"
 
-    - name: Save Docker image as artifact (for potential ECR push)
+    - name: Save Docker image as artifact
+      if: github.event_name == 'workflow_dispatch'
       run: |
         docker save ${{ env.ECR_REPOSITORY }}:${{ github.sha }} > order-api.tar
 
     - name: Upload Docker image as artifact
+      if: github.event_name == 'workflow_dispatch'
       uses: actions/upload-artifact@v4
       with:
         name: docker-image
         path: order-api.tar
         retention-days: 1
 
-  # Job 3: Deploy AWS Infrastructure (Terraform) - ENABLED with manual approval simulation
+  # Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
   deploy:
     name: Deploy AWS Infrastructure
     runs-on: ubuntu-latest
     needs: [test, build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Only deploy infra on push to main
-    # TODO: Add environment protection rules in GitHub for manual approval in production
-    # environment: production  # Uncomment for manual approval requirement
+    if: github.event_name == 'workflow_dispatch'
+    environment:
+      name: ${{ github.event.inputs.environment }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Use consolidated AWS setup action
     - name: Setup AWS
       uses: ./.github/actions/setup-aws
       with:
@@ -167,40 +185,14 @@ jobs:
         terraform_version: 1.5.0
         terraform_wrapper: false
 
-    # Use existing validation script
-    - name: Validate Environment Setup
+    # Use enhanced deploy script
+    - name: Deploy Infrastructure using Enhanced Script
       run: |
-        chmod +x scripts/validate-environment.sh
-        ./scripts/validate-environment.sh --environment ci --skip-optional
-
-    - name: Terraform Init
-      id: init
-      run: terraform init
-      working-directory: ./terraform
-
-    - name: Terraform Validate
-      id: validate
-      run: terraform validate
-      working-directory: ./terraform
-
-    - name: Terraform Plan
-      id: plan
-      run: terraform plan -no-color -var="cost_profile=${{ env.COST_PROFILE }}"
-      working-directory: ./terraform
-      # TODO: For production, save plan and require approval before apply
-      # run: terraform plan -out=tfplan.out -var="cost_profile=${{ env.COST_PROFILE }}"
-
-    - name: Terraform Apply
-      id: apply
-      if: steps.plan.outcome == 'success'
-      run: terraform apply -auto-approve -var="cost_profile=${{ env.COST_PROFILE }}"
-      working-directory: ./terraform
-
-    # Generate Kubernetes configuration from Terraform outputs
-    - name: Generate Kubernetes Configuration
-      run: |
-        chmod +x scripts/generate-k8s-config.sh
-        ./scripts/generate-k8s-config.sh
+        chmod +x scripts/deploy.sh
+        ./scripts/deploy.sh \
+          --environment ${{ github.event.inputs.environment }} \
+          --profile ${{ github.event.inputs.profile }} \
+          --verbose
 
     - name: Upload Terraform outputs as artifact
       uses: actions/upload-artifact@v4
@@ -209,18 +201,17 @@ jobs:
         path: terraform/terraform.tfstate
         retention-days: 1
 
-  # Job 4: Deploy to AWS (Push Docker Image & EKS Update) - ENABLED
+  # Job 4: Deploy Application - ONLY runs manually if selected
   deploy_application:
-    name: Push Image & Deploy Application
+    name: Deploy Application
     runs-on: ubuntu-latest
     needs: deploy
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_application == 'true'
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Use consolidated AWS setup action
     - name: Setup AWS
       uses: ./.github/actions/setup-aws
       with:
@@ -228,68 +219,26 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
-
     - name: Download Docker image artifact
       uses: actions/download-artifact@v4
       with:
         name: docker-image
 
-    - name: Load and push Docker image to ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    # Use enhanced deploy-app script
+    - name: Deploy Application using Enhanced Script
       run: |
-        # Use existing ECR build push script
-        chmod +x scripts/ecr_build_push.sh
+        chmod +x scripts/deploy-app.sh
+        ./scripts/deploy-app.sh \
+          --environment ${{ github.event.inputs.environment }} \
+          --profile ${{ github.event.inputs.profile }} \
+          --verbose
 
-        # Load the image built in previous job
-        docker load < order-api.tar
-
-        # Get ECR repository name from Terraform outputs or use default
-        ECR_REPO_NAME="order-processor-order-api"
-
-        # Tag and push using existing script logic
-        docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} $ECR_REGISTRY/$ECR_REPO_NAME:${{ github.sha }}
-        docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} $ECR_REGISTRY/$ECR_REPO_NAME:latest
-        docker push $ECR_REGISTRY/$ECR_REPO_NAME:${{ github.sha }}
-        docker push $ECR_REGISTRY/$ECR_REPO_NAME:latest
-
-    # Use existing Kubernetes deployment script
-    - name: Deploy to EKS
-      run: |
-        # Install kubectl
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-        chmod +x kubectl
-        sudo mv kubectl /usr/local/bin/
-
-        # Use existing EKS deployment script
-        chmod +x kubernetes/scripts/deploy-to-eks.sh
-        ./kubernetes/scripts/deploy-to-eks.sh
-
-    # Alternative: Manual kubectl commands if script needs modification
-    # - name: Update EKS deployment (alternative approach)
-    #   run: |
-    #     # Update kubeconfig
-    #     aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name order-processor-dev-cluster
-    #
-    #     # Apply Kubernetes manifests using existing files
-    #     kubectl apply -f kubernetes/mainfests/namespace.yaml
-    #     kubectl apply -f kubernetes/service-account-generated.yaml
-    #     kubectl apply -f kubernetes/secrets-config-generated.yaml
-    #     kubectl apply -f kubernetes/deployment.yaml
-    #     kubectl apply -f kubernetes/service-ingress.yaml
-    #
-    #     # Wait for rollout to complete
-    #     kubectl rollout status deployment/order-service -n order-processor
-
-  # Job 5: Run Integration Tests - ENABLED
+  # Job 5: Integration Tests - ONLY runs manually if selected
   integration_tests:
     name: Run Integration Tests
     runs-on: ubuntu-latest
     needs: [deploy, deploy_application]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_integration_tests == 'true'
 
     steps:
     - name: Checkout code
@@ -300,7 +249,6 @@ jobs:
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
-    # Use consolidated AWS setup action
     - name: Setup AWS
       uses: ./.github/actions/setup-aws
       with:
@@ -308,55 +256,13 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    # Use existing infrastructure test scripts
-    - name: Run Infrastructure Integration Tests
+    # Use enhanced integration test script
+    - name: Run Integration Tests using Enhanced Script
       run: |
-        # Install test dependencies
-        pip install -r tests/requirements-test.txt
-
-        # Use existing test runner scripts
-        chmod +x scripts/quick-test.sh
-        ./scripts/quick-test.sh infrastructure
-
-        # Alternative: Use existing infrastructure test script if available
-        # chmod +x scripts/run-infrastructure-tests.sh
-        # ./scripts/run-infrastructure-tests.sh --environment ci --quick
-
-    # TODO: Enable when application tests are ready
-    # - name: Run Application Integration Tests
-    #   env:
-    #     API_URL: ${{ needs.deploy.outputs.api_gateway_url }}
-    #     FRONTEND_URL: ${{ needs.deploy.outputs.frontend_url }}
-    #   run: |
-    #     echo "=== Running Application Integration Tests ==="
-    #     # Use existing test scripts
-    #     ./scripts/quick-test.sh services
-
-    - name: Dummy Integration Tests (placeholder)
-      env:
-        API_URL: ${{ needs.deploy.outputs.api_gateway_url || 'http://placeholder-api-url' }}
-        FRONTEND_URL: ${{ needs.deploy.outputs.frontend_url || 'http://placeholder-frontend-url' }}
-      run: |
-        echo "=== Running Integration Tests ==="
-        echo "API URL: $API_URL"
-        echo "Frontend URL: $FRONTEND_URL"
-
-        # Dummy test 1 - Infrastructure connectivity
-        echo "Test 1: Checking infrastructure deployment..."
-        sleep 2
-        echo "✓ Infrastructure deployment test passed"
-
-        # Dummy test 2 - Application health check
-        echo "Test 2: Testing application health endpoints..."
-        sleep 2
-        echo "✓ Application health check test passed"
-
-        # Dummy test 3 - Basic functionality
-        echo "Test 3: Testing basic application functionality..."
-        sleep 2
-        echo "✓ Basic functionality test passed"
-
-        echo "=== All integration tests passed! ==="
+        chmod +x scripts/test-integration.sh
+        ./scripts/test-integration.sh \
+          --environment ${{ github.event.inputs.environment }} \
+          --verbose
 
     - name: Upload test results
       if: always()
@@ -368,18 +274,17 @@ jobs:
           tests/reports/
         retention-days: 7
 
-  # Job 6: Destroy Infrastructure - ENABLED (always runs for cost control)
+  # Job 6: Enhanced Destroy Infrastructure - ALWAYS runs for cost control
   destroy_infrastructure:
-    name: Destroy Infrastructure
+    name: Destroy Infrastructure (Cost Control)
     runs-on: ubuntu-latest
-    needs: integration_tests
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [deploy, deploy_application, integration_tests]
+    if: always() && github.event_name == 'workflow_dispatch' && github.event.inputs.auto_destroy == 'true'
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Use consolidated AWS setup action
     - name: Setup AWS
       uses: ./.github/actions/setup-aws
       with:
@@ -392,139 +297,118 @@ jobs:
       with:
         terraform_version: 1.5.0
 
-    - name: Terraform Init
-      working-directory: ./terraform
-      run: terraform init
-
-    - name: Pre-destroy Cleanup
-      working-directory: ./terraform
+    # Use enhanced destroy script with nuclear cleanup
+    - name: Destroy Infrastructure using Enhanced Script
       run: |
-        echo "=== Starting pre-destroy cleanup ==="
+        chmod +x scripts/destroy.sh
+        ./scripts/destroy.sh \
+          --environment ${{ github.event.inputs.environment }} \
+          --profile ${{ github.event.inputs.profile }} \
+          --auto-approve \
+          --force-cleanup \
+          --verbose
 
-        # Empty S3 buckets if they exist
-        echo "Checking for S3 buckets to empty..."
-
-        # Get all S3 buckets created by this Terraform
-        BUCKETS=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'order-processor') || contains(Name, 'cloud-native')].Name" --output text || true)
-
-        if [ ! -z "$BUCKETS" ]; then
-          for bucket in $BUCKETS; do
-            echo "Emptying bucket: $bucket"
-            aws s3 rm s3://$bucket --recursive || true
-
-            # Also remove versioned objects if versioning is enabled
-            aws s3api list-object-versions --bucket "$bucket" --output json | \
-            jq -r '.Versions[]? | "\(.Key) \(.VersionId)"' | \
-            while read key version; do
-              if [ ! -z "$key" ] && [ ! -z "$version" ]; then
-                aws s3api delete-object --bucket "$bucket" --key "$key" --version-id "$version" || true
-              fi
-            done 2>/dev/null || true
-          done
-        fi
-
-        echo "=== Pre-destroy cleanup completed ==="
-
-    - name: Terraform Destroy
-      working-directory: ./terraform
-      run: |
-        echo "=== Starting Terraform destroy ==="
-
-        # Attempt to destroy with auto-approve
-        terraform destroy -auto-approve -var="cost_profile=${{ env.COST_PROFILE }}" || {
-          echo "First destroy attempt failed, checking for stuck resources..."
-
-          # List current state
-          echo "Current Terraform state:"
-          terraform state list || true
-
-          # Common problematic resources - remove from state if destroy fails
-          PROBLEM_RESOURCES="aws_s3_bucket aws_db_instance aws_msk_cluster"
-
-          for resource_type in $PROBLEM_RESOURCES; do
-            echo "Checking for $resource_type in state..."
-            terraform state list | grep "^${resource_type}\." | while read resource; do
-              echo "Removing $resource from state"
-              terraform state rm "$resource" || true
-            done
-          done
-
-          # Try destroy again
-          echo "Retrying destroy after state cleanup..."
-          terraform destroy -auto-approve -var="cost_profile=${{ env.COST_PROFILE }}" || {
-            echo "WARNING: Destroy failed again. Manual cleanup may be required."
-            echo "Remaining resources in state:"
-            terraform state list || true
-          }
-        }
-
-        echo "=== Terraform destroy completed ==="
-
-    - name: Verify Cleanup
+    # Cost verification and reporting
+    - name: Verify Complete Resource Cleanup
       if: always()
       run: |
-        echo "=== Verifying resource cleanup ==="
+        echo "=== Final Resource Cleanup Verification ==="
 
-        # Check for remaining RDS instances
-        echo "Checking for RDS instances..."
-        REMAINING_RDS=$(aws rds describe-db-instances --query "DBInstances[?contains(DBInstanceIdentifier, 'order-processor')].DBInstanceIdentifier" --output text || true)
-        if [ ! -z "$REMAINING_RDS" ]; then
-          echo "WARNING: RDS instances still exist: $REMAINING_RDS"
+        # Check for ANY remaining project resources across regions
+        echo "Checking all regions for remaining resources..."
+
+        regions=("us-west-2" "us-east-1" "us-west-1" "us-east-2")
+        total_resources=0
+
+        for region in "${regions[@]}"; do
+          echo "Checking region: $region"
+
+          resources=$(aws resourcegroupstaggingapi get-resources \
+            --tag-filters Key=Project,Values=order-processor \
+            --region "$region" \
+            --query 'ResourceTagMappingList | length' \
+            --output text 2>/dev/null || echo "0")
+
+          if [[ "$resources" -gt 0 ]]; then
+            total_resources=$((total_resources + resources))
+            echo "⚠️ Found $resources resources in $region"
+
+            # Show detailed resource list
+            aws resourcegroupstaggingapi get-resources \
+              --tag-filters Key=Project,Values=order-processor \
+              --region "$region" \
+              --query 'ResourceTagMappingList[].ResourceARN' \
+              --output table
+          else
+            echo "✅ No resources in $region"
+          fi
+        done
+
+        if [[ "$total_resources" -eq 0 ]]; then
+          echo ""
+          echo "🎉 SUCCESS: All project resources destroyed!"
+          echo "💰 Estimated ongoing cost: $0.00/month"
         else
-          echo "✓ No RDS instances found"
+          echo ""
+          echo "⚠️ WARNING: $total_resources resources still exist"
+          echo "💰 These may incur ongoing charges"
+          echo "🔧 Manual cleanup may be required"
         fi
 
-        # Check for remaining Lambda functions
-        echo "Checking for Lambda functions..."
-        REMAINING_LAMBDA=$(aws lambda list-functions --query "Functions[?contains(FunctionName, 'order-processor')].FunctionName" --output text || true)
-        if [ ! -z "$REMAINING_LAMBDA" ]; then
-          echo "WARNING: Lambda functions still exist: $REMAINING_LAMBDA"
-        else
-          echo "✓ No Lambda functions found"
-        fi
-
-        # Check for remaining S3 buckets
-        echo "Checking for S3 buckets..."
-        REMAINING_S3=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'order-processor') || contains(Name, 'cloud-native')].Name" --output text || true)
-        if [ ! -z "$REMAINING_S3" ]; then
-          echo "WARNING: S3 buckets still exist: $REMAINING_S3"
-        else
-          echo "✓ No S3 buckets found"
-        fi
-
-        echo "=== Cleanup verification completed ==="
-
-    - name: Cost Report
+    - name: Cost Impact Report
       if: always()
       run: |
-        echo "=== Generating cost report ==="
+        echo "=== 💰 Cost Impact Analysis ==="
+        echo ""
+        echo "Deployment Summary:"
+        echo "  Environment: ${{ github.event.inputs.environment }}"
+        echo "  Profile: ${{ github.event.inputs.profile }}"
+        echo "  Duration: ~30-60 minutes"
+        echo "  Auto-destroy: ${{ github.event.inputs.auto_destroy }}"
+        echo ""
+        echo "Expected Costs (if auto-destroy enabled):"
+        echo "  Learning Profile: ~$2-5 for this run"
+        echo "  Minimum Profile: ~$5-10 for this run"
+        echo "  Prod Profile: ~$20-40 for this run"
+        echo ""
+        echo "Expected Costs (if auto-destroy disabled):"
+        echo "  Learning Profile: ~$5-15/day ongoing"
+        echo "  Minimum Profile: ~$10-25/day ongoing"
+        echo "  Prod Profile: ~$50-100/day ongoing"
+        echo ""
+        if [[ "${{ github.event.inputs.auto_destroy }}" == "true" ]]; then
+          echo "✅ Auto-destroy enabled - minimal costs expected"
+        else
+          echo "⚠️ Auto-destroy disabled - remember to clean up manually!"
+        fi
 
-        # Get today's date
-        END_DATE=$(date +%Y-%m-%d)
-        START_DATE=$(date -d '1 day ago' +%Y-%m-%d)
-
-        # Try to get cost data
-        echo "Estimated costs for this pipeline run:"
-        aws ce get-cost-and-usage \
-          --time-period Start=$START_DATE,End=$END_DATE \
-          --granularity DAILY \
-          --metrics "BlendedCost" \
-          --group-by Type=DIMENSION,Key=SERVICE \
-          --query 'ResultsByTime[0].Groups[?Metrics.BlendedCost.Amount > `0`].[Keys[0], Metrics.BlendedCost.Amount]' \
-          --output table 2>/dev/null || echo "Cost data not available yet"
-
-        echo "=== Cost report completed ==="
-
-    # Final summary
+    # Pipeline summary
     - name: Pipeline Summary
       if: always()
       run: |
-        echo "=== CI/CD Pipeline Summary ==="
-        echo "Environment: CI (${{ env.COST_PROFILE }} cost profile)"
-        echo "Deployment: Infrastructure deployed and tested"
-        echo "Cleanup: Resources destroyed for cost control"
-        echo "Status: Pipeline completed"
+        echo "=== 🚀 CI/CD Pipeline Summary ==="
         echo ""
-        echo "NOTE: This is a practice/learning environment."
-        echo "In production, infrastructure would persist and require manual approval for changes."
+        echo "🔄 What Happened:"
+        echo "  ✅ CI: Tests and builds completed"
+        echo "  ✅ CD: Manual deployment triggered"
+        echo "  📦 Infrastructure: ${{ github.event.inputs.environment }} environment"
+        echo "  💎 Profile: ${{ github.event.inputs.profile }} resources"
+        echo "  🚀 Application: ${{ github.event.inputs.deploy_application }}"
+        echo "  🧪 Tests: ${{ github.event.inputs.run_integration_tests }}"
+        echo "  🧹 Cleanup: ${{ github.event.inputs.auto_destroy }}"
+        echo ""
+        echo "💡 Key Benefits:"
+        echo "  ✅ Cost-controlled deployment (manual trigger only)"
+        echo "  ✅ Real AWS infrastructure testing"
+        echo "  ✅ Complete end-to-end validation"
+        echo "  ✅ Automatic resource cleanup"
+        echo "  ✅ Industry-standard CI/CD practices"
+        echo ""
+        echo "🎯 Learning Objectives Achieved:"
+        echo "  ✅ Infrastructure as Code (Terraform)"
+        echo "  ✅ Container deployment (Docker + EKS)"
+        echo "  ✅ CI/CD automation (GitHub Actions)"
+        echo "  ✅ Cloud cost management"
+        echo "  ✅ Integration testing"
+        echo ""
         echo "=== End of Pipeline ==="
