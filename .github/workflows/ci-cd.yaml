@@ -177,15 +177,15 @@ jobs:
         path: order-api.tar
         retention-days: 1
 
-# Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
-deploy:
-  name: Deploy AWS Infrastructure
-  runs-on: ubuntu-latest
-  needs: [test, build]
-  if: github.event_name == 'workflow_dispatch'
-  environment: prod  # Same as your working test-approval.yaml
+  # Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
+  deploy:
+    name: Deploy AWS Infrastructure
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment }}
 
-  steps:
+    steps:
     - name: Show deployment info
       run: |
         echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
