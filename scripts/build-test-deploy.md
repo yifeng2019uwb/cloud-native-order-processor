@@ -359,7 +359,7 @@ aws eks update-kubeconfig --region us-west-2 --name <cluster-name>
 # Test connection
 kubectl get nodes
 ```
-
+<!-- 
 ### **Cost Verification:**
 ```bash
 # Check what's running and costing money
@@ -367,7 +367,7 @@ aws resourcegroupstaggingapi get-resources --tag-filters Key=Project,Values=orde
 
 # Billing dashboard
 aws ce get-cost-and-usage --time-period Start=2025-06-01,End=2025-06-12 --granularity DAILY --metrics UnblendedCost
-```
+``` -->
 
 ## 📚 Learning Path
 

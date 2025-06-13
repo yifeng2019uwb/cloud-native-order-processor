@@ -23,6 +23,7 @@ VERBOSE=false
 DRY_RUN=false
 AUTO_APPROVE=false
 FORCE_CLEANUP=false
+FORCE=false  # ADD THIS LINE
 
 # Usage function
 show_usage() {
@@ -38,10 +39,11 @@ REQUIRED:
     --profile {learning|minimum|prod}  Resource profile
 
 OPTIONS:
-    -v, --verbose                      Enable verbose output
+    -v, --verbose                     Enable verbose output
     --dry-run                         Show what would be destroyed (don't destroy)
     --auto-approve                    Skip confirmation prompts
     --force-cleanup                   Force cleanup of stuck resources
+    --force                           Skip all validation and destroy everything
     -h, --help                        Show this help message
 
 EXAMPLES:
@@ -104,6 +106,12 @@ parse_arguments() {
                 FORCE_CLEANUP=true
                 shift
                 ;;
+            --force)
+                FORCE=true
+                FORCE_CLEANUP=true
+                AUTO_APPROVE=true
+                shift
+                ;;
             -h|--help)
                 show_usage
                 exit 0
@@ -119,6 +127,14 @@ parse_arguments() {
 
 # Validate arguments
 validate_arguments() {
+    # Skip validation if --force is used
+    if [[ "$FORCE" == "true" ]]; then
+        log_warning "FORCE mode: Skipping validation - will destroy EVERYTHING"
+        ENVIRONMENT=${ENVIRONMENT:-learning}
+        PROFILE=${PROFILE:-learning}
+        return 0
+    fi
+
     local errors=()
 
     # Check required arguments
