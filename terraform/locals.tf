@@ -1,19 +1,21 @@
-# locals.tf - Centralized conditional logic
-locals {
-  # Profile-based feature flags
-  enable_kubernetes = var.compute_type == "kubernetes"
-  enable_lambda     = var.compute_type == "lambda"
+# locals.tf - Essential conditional logic only
 
-  # Networking configuration
+locals {
+  # Basic feature flags
+  enable_kubernetes = var.environment == "prod"
+  enable_lambda     = var.environment == "dev"
+
+  # Networking
   create_vpc = local.enable_kubernetes
-  create_nat = local.enable_kubernetes && var.profile == "regular"
+  create_nat = local.enable_kubernetes
+
+  # Resource naming
+  resource_prefix = var.resource_prefix != "" ? var.resource_prefix : "${var.project_name}-${var.environment}"
 
   # Common tags
   common_tags = {
     Environment = var.environment
     Project     = var.project_name
-    Profile     = var.profile
-    ComputeType = var.compute_type
     ManagedBy   = "terraform"
   }
 }

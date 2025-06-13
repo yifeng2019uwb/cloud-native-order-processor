@@ -1,16 +1,15 @@
-# ===== SECURITY GROUPS =====
-# security_group.tf
+# security_group.tf - Basic security groups only
 
-# RDS Security Group
+# RDS Security Group (only when VPC exists)
 resource "aws_security_group" "rds" {
-  count = local.enable_kubernetes ? 1 : 0
+  count = local.create_vpc ? 1 : 0
 
-  name_prefix = "${var.project_name}-${var.environment}-rds-"
+  name_prefix = "${local.resource_prefix}-rds-"
   vpc_id      = aws_vpc.main[0].id
   description = "Security group for RDS PostgreSQL"
 
   ingress {
-    description = "PostgreSQL from EKS"
+    description = "PostgreSQL from VPC"
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
@@ -25,7 +24,9 @@ resource "aws_security_group" "rds" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "${var.project_name}-${var.environment}-rds-sg"
+  tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
