@@ -28,12 +28,12 @@ variable "db_username" {
 
 # COST OPTIMIZATION: Add cost profile variable for flexible cost control
 variable "cost_profile" {
-  description = "Cost optimization profile: minimal, learning, or production"
+  description = "Cost optimization profile: minimal, learning, prod, or production"
   type        = string
   default     = "prod"
 
   validation {
-    condition = contains(["minimal", "learning", "production"], var.cost_profile)
+    condition = contains(["minimal", "learning", "prod", "production"], var.cost_profile)
     error_message = "Cost profile must be minimal, learning, or production."
   }
 }
