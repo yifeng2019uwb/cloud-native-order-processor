@@ -1,7 +1,7 @@
 #!/bin/bash
 # scripts/deploy.sh
 # Enhanced Infrastructure Deployment Script
-# Supports environments (dev/prod) and profiles (minimum/regular)
+# Supports environments (dev/prod)
 
 set -e
 
@@ -18,7 +18,6 @@ NC='\033[0m' # No Color
 
 # Default values
 ENVIRONMENT=""
-PROFILE=""
 VERBOSE=false
 DRY_RUN=false
 
@@ -27,17 +26,12 @@ show_usage() {
     cat << EOF
 $(printf "${BLUE}🚀 Infrastructure Deployment Script${NC}")
 
-Usage: $0 --environment {dev|prod} --profile {minimum|regular} [OPTIONS]
+Usage: $0 --environment {dev|prod} [OPTIONS]
 
-Deploy AWS infrastructure using Terraform with environment and profile support.
+Deploy AWS infrastructure using Terraform with environment support.
 
 REQUIRED:
     --environment {dev|prod}           Target environment
-    --profile {minimum|regular}        Resource profile
-
-PROFILES:
-    minimum    - Lambda + API Gateway (cheapest for testing)
-    regular    - EKS + Kubernetes (full production-like)
 
 OPTIONS:
     -v, --verbose                      Enable verbose output
@@ -45,10 +39,8 @@ OPTIONS:
     -h, --help                        Show this help message
 
 EXAMPLES:
-    $0 --environment dev --profile minimum      # Deploy cheap Lambda setup
-    $0 --environment dev --profile regular      # Deploy full EKS setup
-    $0 --environment prod --profile regular     # Deploy production setup
-    $0 --environment dev --profile minimum --dry-run  # Plan only
+    $0 --environment dev     # Deploy cheap Lambda setup
+    $0 --environment prod    # Deploy production setup
 
 EOF
 }
@@ -80,10 +72,6 @@ parse_arguments() {
         case $1 in
             --environment)
                 ENVIRONMENT="$2"
-                shift 2
-                ;;
-            --profile)
-                PROFILE="$2"
                 shift 2
                 ;;
             -v|--verbose)
@@ -118,17 +106,6 @@ validate_arguments() {
         errors+=("--environment must be 'dev' or 'prod'")
     fi
 
-    if [[ -z "$PROFILE" ]]; then
-        errors+=("--profile is required")
-    elif [[ "$PROFILE" != "minimum" && "$PROFILE" != "regular" ]]; then
-        errors+=("--profile must be 'minimum' or 'regular'")
-    fi
-
-    # Validate environment/profile combinations
-    if [[ "$ENVIRONMENT" == "prod" && "$PROFILE" != "regular" ]]; then
-        log_warning "Production environment with minimum profile - are you sure?"
-        log_warning "Consider using regular profile for production-like testing"
-    fi
 
     if [[ ${#errors[@]} -gt 0 ]]; then
         log_error "Validation failed:"
@@ -141,15 +118,13 @@ validate_arguments() {
     fi
 }
 
-# Set environment variables based on environment and profile
+# Set environment variables based on environment
 setup_environment() {
-    log_step "🔧 Setting up environment: $ENVIRONMENT with profile: $PROFILE"
+    log_step "🔧 Setting up environment: $ENVIRONMENT"
 
     # Set base environment variables
     export ENVIRONMENT="$ENVIRONMENT"
-    export PROFILE="$PROFILE"
     export TF_VAR_environment="$ENVIRONMENT"
-    export TF_VAR_profile="$PROFILE"
 
     # Load environment-specific configuration
     local env_config="$PROJECT_ROOT/config/environments/.env.defaults"
@@ -167,29 +142,14 @@ setup_environment() {
         source "$env_override"
     fi
 
+
     # Set additional Terraform variables
     export TF_VAR_region="${AWS_REGION:-us-west-2}"
     export TF_IN_AUTOMATION=true
 
-    # Profile-specific settings
-    case "$PROFILE" in
-        "minimum")
-            export TF_VAR_compute_type="lambda"
-            export TF_VAR_instance_sizes="micro"
-            log_info "Using Lambda + API Gateway (minimum cost)"
-            ;;
-        "regular")
-            export TF_VAR_compute_type="kubernetes"
-            export TF_VAR_instance_sizes="small"
-            log_info "Using EKS + Kubernetes (full infrastructure)"
-            ;;
-    esac
-
     if [[ "$VERBOSE" == "true" ]]; then
         log_info "Environment variables set:"
         log_info "  ENVIRONMENT: $ENVIRONMENT"
-        log_info "  PROFILE: $PROFILE"
-        log_info "  COMPUTE_TYPE: ${TF_VAR_compute_type}"
         log_info "  AWS_REGION: ${TF_VAR_region}"
     fi
 }
@@ -347,33 +307,12 @@ check_prerequisites() {
 show_cost_estimate() {
     log_step "💰 Cost Estimate"
 
-    case "$PROFILE" in
-        "minimum")
-            log_info "Lambda + API Gateway Profile:"
-            log_info "  💸 Lambda: ~$0.01/day (usage-based)"
-            log_info "  💸 API Gateway: ~$0.01/day (usage-based)"
-            log_info "  💸 RDS: ~$0.50-1.00/day (db.t3.micro)"
-            log_info "  💸 Total: ~$0.52-1.02/day"
-            log_success "✅ Cost-optimized for testing"
-            ;;
-        "regular")
-            log_warning "EKS + Kubernetes Profile:"
-            log_warning "  💸 EKS Cluster: ~$17.52/day ($0.73/hour)"
-            log_warning "  💸 Worker Nodes: ~$1.20-2.40/day"
-            log_warning "  💸 RDS: ~$0.50-1.00/day"
-            log_warning "  💸 Load Balancer: ~$0.50/day"
-            log_warning "  💸 Total: ~$19.72-21.42/day"
-            log_warning "⚠️  Higher cost for full infrastructure testing"
-            ;;
-    esac
-
     if [[ "$DRY_RUN" == "false" ]]; then
         echo
         log_info "💡 Cost Control Tips:"
         log_info "  - Use --dry-run to preview changes"
         log_info "  - Run destroy.sh --force when done testing"
-        log_info "  - Use minimum profile for daily development"
-        log_info "  - Use regular profile for pre-push validation"
+        log_info "  - Use devfor daily development"
     fi
 }
 
@@ -397,7 +336,7 @@ deploy_infrastructure() {
 
     # Create execution plan
     log_info "Creating Terraform execution plan..."
-    local plan_args="-var=profile=$PROFILE -var=environment=$ENVIRONMENT -var=compute_type=${TF_VAR_compute_type}"
+    local plan_args="-var=environment=$ENVIRONMENT"
 
     if [[ "$VERBOSE" == "true" ]]; then
         terraform plan $plan_args
@@ -430,8 +369,6 @@ generate_summary() {
 
     log_info "Deployment Details:"
     log_info "  Environment: $ENVIRONMENT"
-    log_info "  Profile: $PROFILE"
-    log_info "  Compute Type: ${TF_VAR_compute_type}"
     log_info "  Region: ${TF_VAR_region}"
     log_info "  Terraform State: $(pwd)/terraform.tfstate"
 
@@ -439,30 +376,6 @@ generate_summary() {
     if terraform output >/dev/null 2>&1; then
         echo
         log_info "Key Infrastructure Outputs:"
-
-        # Profile-specific outputs
-        case "$PROFILE" in
-            "minimum")
-                if terraform output api_gateway_url >/dev/null 2>&1; then
-                    local api_url=$(terraform output -raw api_gateway_url)
-                    log_info "  API Gateway URL: $api_url"
-                fi
-                if terraform output lambda_function_name >/dev/null 2>&1; then
-                    local lambda_name=$(terraform output -raw lambda_function_name)
-                    log_info "  Lambda Function: $lambda_name"
-                fi
-                ;;
-            "regular")
-                if terraform output eks_cluster_name >/dev/null 2>&1; then
-                    local cluster_name=$(terraform output -raw eks_cluster_name)
-                    log_info "  EKS Cluster: $cluster_name"
-                fi
-                if terraform output eks_cluster_endpoint >/dev/null 2>&1; then
-                    local cluster_endpoint=$(terraform output -raw eks_cluster_endpoint)
-                    log_info "  EKS Endpoint: $cluster_endpoint"
-                fi
-                ;;
-        esac
 
         # Common outputs
         if terraform output database_endpoint >/dev/null 2>&1; then
@@ -474,18 +387,8 @@ generate_summary() {
     if [[ "$DRY_RUN" == "false" ]]; then
         log_success "✅ Infrastructure deployment completed successfully!"
         log_info "Next steps:"
-        case "$PROFILE" in
-            "minimum")
-                log_info "  1. Deploy application: ./scripts/deploy-app.sh --environment $ENVIRONMENT --profile $PROFILE"
-                log_info "  2. Test via API Gateway URL"
-                ;;
-            "regular")
-                log_info "  1. Deploy application: ./scripts/deploy-app.sh --environment $ENVIRONMENT --profile $PROFILE"
-                log_info "  2. Configure kubectl for EKS cluster"
-                ;;
-        esac
-        log_info "  3. Run integration tests: ./scripts/test-integration.sh --environment $ENVIRONMENT --profile $PROFILE"
-        log_info "  4. When done, cleanup: ./scripts/destroy.sh --environment $ENVIRONMENT --profile $PROFILE --force"
+        log_info "  3. Run integration tests: ./scripts/test-integration.sh --environment $ENVIRONMENT"
+        log_info "  4. When done, cleanup: ./scripts/destroy.sh --environment $ENVIRONMENT --force"
     else
         log_success "✅ Infrastructure plan validation completed!"
         log_info "Remove --dry-run flag to apply changes"
@@ -505,7 +408,7 @@ main() {
     printf "${BLUE}🚀 Infrastructure Deployment Script${NC}\n"
     printf "${BLUE}===================================${NC}\n"
     echo
-    log_info "Deploying to: $ENVIRONMENT environment with $PROFILE profile"
+    log_info "Deploying to: $ENVIRONMENT environment"
     echo
 
     # Show cost estimate

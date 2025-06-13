@@ -22,7 +22,7 @@ resource "aws_db_subnet_group" "main" {
 
 # RDS instance - always created (shared resource)
 resource "aws_db_instance" "postgres_main" {
-  identifier = "${var.project_name}-${var.environment}-postgres"
+  identifier = "${local.resource_prefix}-postgres"
 
   engine         = "postgres"
   engine_version = "15.7"
@@ -68,7 +68,7 @@ resource "aws_db_instance" "postgres_main" {
 
 # Secrets Manager secret - always created
 resource "aws_secretsmanager_secret" "db_credentials" {
-  name                    = "${var.project_name}-${var.environment}-db-credentials"
+  name                    = "${local.resource_prefix}-db-credentials"
   description             = "Database credentials for ${var.project_name}"
   recovery_window_in_days = 0  # Immediate deletion
 

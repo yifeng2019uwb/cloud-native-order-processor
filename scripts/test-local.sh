@@ -1,6 +1,6 @@
 #!/bin/bash
 # scripts/test-local.sh
-# Local Testing Script with Profile Support - Mirror CI/CD Pipeline
+# Local Testing Script - Mirror CI/CD Pipeline
 # Run this before pushing to GitHub to catch issues early
 
 set -e
@@ -25,7 +25,6 @@ AWS_REGION="us-west-2"
 
 # Default values
 ENVIRONMENT=""
-PROFILE=""
 VERBOSE=false
 DRY_RUN=false
 
@@ -45,21 +44,14 @@ KEEP_ENVIRONMENT=false
 # Usage
 show_usage() {
     cat << EOF
-$(printf "${BLUE}🧪 Local Testing Script - Profile-Aware CI/CD Mirror${NC}")
+$(printf "${BLUE}🧪 Local Testing Script CI/CD Mirror${NC}")
 
-Usage: $0 --environment {dev|prod} [--profile {minimum|regular}] [OPTIONS]
+Usage: $0 --environment {dev|prod} [OPTIONS]
 
-Test locally before pushing to GitHub. Mirrors CI/CD pipeline with profile support.
+Test locally before pushing to GitHub. Mirrors CI/CD pipeline.
 
 REQUIRED:
     --environment {dev|prod}        Target environment
-
-OPTIONAL:
-    --profile {minimum|regular}     Resource profile (default: minimum)
-
-PROFILES:
-    minimum    - Lambda + API Gateway (cheapest, ~$0.50/day)
-    regular    - EKS + Kubernetes (full-scale, ~$20/day)
 
 JOB OPTIONS:
     --build                        Only run build and package tests
@@ -79,13 +71,13 @@ WORKFLOW OPTIONS:
 
 EXAMPLES:
     # Daily development (cheap)
-    $0 --environment dev --all                           # Full pipeline with minimum profile
-    $0 --environment dev --profile minimum --dev-cycle   # Deploy and test, keep infra
+    $0 --environment dev --all                           # Full pipeline with
+    $0 --environment dev --dev-cycle   # Deploy and test, keep infra
     $0 --environment dev --app-only                      # Update app only
 
     # Pre-push validation (comprehensive)
-    $0 --environment dev --profile regular --all         # Full validation with EKS
-    $0 --environment prod --profile regular --all        # Production simulation
+    $0 --environment dev --all         # Full validation with EKS
+    $0 --environment prod --all        # Production simulation
 
     # Individual jobs
     $0 --environment dev --build                         # Build tests only
@@ -93,8 +85,8 @@ EXAMPLES:
     $0 --environment dev --destroy                       # Cleanup only
 
 COST AWARENESS:
-    - Default profile is 'minimum' for cost control
-    - Use 'regular' profile for full infrastructure validation
+    - Default environmentis 'dev' for cost control
+    - Use 'prod'for full infrastructure validation
     - Always destroy resources when done testing
 
 EOF
@@ -131,10 +123,6 @@ parse_arguments() {
         case $1 in
             --environment)
                 ENVIRONMENT="$2"
-                shift 2
-                ;;
-            --profile)
-                PROFILE="$2"
                 shift 2
                 ;;
             -v|--verbose)
@@ -206,14 +194,6 @@ validate_arguments() {
         errors+=("--environment must be 'dev' or 'prod'")
     fi
 
-    # Set default profile if not provided
-    if [[ -z "$PROFILE" ]]; then
-        PROFILE="minimum"
-        log_info "Using default profile: minimum (cost-optimized)"
-    elif [[ "$PROFILE" != "minimum" && "$PROFILE" != "regular" ]]; then
-        errors+=("--profile must be 'minimum' or 'regular'")
-    fi
-
     # Check that at least one job is selected
     if [[ "$RUN_BUILD_TESTS" == "false" && "$RUN_DEPLOY" == "false" && "$RUN_APP_DEPLOY" == "false" && "$RUN_INTEGRATION_TESTS" == "false" && "$RUN_DESTROY" == "false" && "$RUN_ALL" == "false" && "$DEV_CYCLE" == "false" ]]; then
         errors+=("At least one job must be selected (--build, --deploy, --app, --test, --destroy, --all, or --dev-cycle)")
@@ -236,31 +216,16 @@ validate_arguments() {
 }
 
 # Show cost estimate
-show_cost_estimate() {
-    log_step "💰 Cost Estimate for Profile: $PROFILE"
+# show_cost_estimate() {
+#     log_step "💰 Cost Estimate for Environment: $ENVIONMENT"
 
-    case "$PROFILE" in
-        "minimum")
-            log_info "Lambda + API Gateway Profile:"
-            log_info "  💸 Expected cost: ~$0.50-1.00/day while running"
-            log_info "  💸 Testing cost: ~$0.01-0.10 per test run"
-            log_success "✅ Cost-optimized for frequent testing"
-            ;;
-        "regular")
-            log_warning "EKS + Kubernetes Profile:"
-            log_warning "  💸 Expected cost: ~$20-25/day while running"
-            log_warning "  💸 Testing cost: ~$2-5 per test run"
-            log_warning "⚠️  Higher cost - use for validation only"
-            ;;
-    esac
+#     if [[ "$KEEP_ENVIRONMENT" == "true" || "$DEV_CYCLE" == "true" ]]; then
+#         log_warning "⚠️  Environment will be kept running after tests"
+#         log_warning "⚠️  Remember to run --destroy when finished"
+#     fi
 
-    if [[ "$KEEP_ENVIRONMENT" == "true" || "$DEV_CYCLE" == "true" ]]; then
-        log_warning "⚠️  Environment will be kept running after tests"
-        log_warning "⚠️  Remember to run --destroy when finished"
-    fi
-
-    echo
-}
+#     echo
+# }
 
 # Setup test environment
 setup_test_environment() {
@@ -268,7 +233,6 @@ setup_test_environment() {
 
     # Set environment variables
     export ENVIRONMENT="$ENVIRONMENT"
-    export PROFILE="$PROFILE"
     export AWS_DEFAULT_REGION="$AWS_REGION"
     export PYTHONPATH="$PROJECT_ROOT"
 
@@ -294,26 +258,6 @@ check_prerequisites() {
             missing_tools+=("$tool")
         fi
     done
-
-    # Profile-specific tools
-    case "$PROFILE" in
-        "minimum")
-            local lambda_tools=("python3" "pip" "zip")
-            for tool in "${lambda_tools[@]}"; do
-                if ! command -v "$tool" >/dev/null 2>&1; then
-                    missing_tools+=("$tool")
-                fi
-            done
-            ;;
-        "regular")
-            local k8s_tools=("terraform" "docker" "kubectl")
-            for tool in "${k8s_tools[@]}"; do
-                if ! command -v "$tool" >/dev/null 2>&1; then
-                    missing_tools+=("$tool")
-                fi
-            done
-            ;;
-    esac
 
     if [[ ${#missing_tools[@]} -gt 0 ]]; then
         log_error "Missing required tools: ${missing_tools[*]}"
@@ -362,30 +306,6 @@ run_build_tests() {
         fi
     fi
 
-    # Profile-specific build tests
-    case "$PROFILE" in
-        "minimum")
-            log_substep "Testing Lambda package compatibility"
-            if [[ "$DRY_RUN" == "false" ]]; then
-                # Test that Mangum can be imported
-                python3 -c "import importlib; importlib.import_module('mangum')" 2>/dev/null || {
-                    log_info "Installing Mangum for Lambda compatibility testing..."
-                    pip install mangum --quiet
-                }
-            fi
-            ;;
-        "regular")
-            log_substep "Testing Docker build capability"
-            if [[ "$DRY_RUN" == "false" ]]; then
-                # Test Docker daemon
-                if ! docker info >/dev/null 2>&1; then
-                    log_error "Docker daemon not running"
-                    return 1
-                fi
-            fi
-            ;;
-    esac
-
     cd "$PROJECT_ROOT"
     log_success "Build tests completed successfully"
     return 0
@@ -400,7 +320,7 @@ deploy_infrastructure() {
         return 0
     fi
 
-    local deploy_args="--environment $ENVIRONMENT --profile $PROFILE"
+    local deploy_args="--environment $ENVIRONMENT"
 
     if [[ "$VERBOSE" == "true" ]]; then
         deploy_args="$deploy_args --verbose"
@@ -425,7 +345,7 @@ deploy_infrastructure() {
 deploy_application() {
     log_step "📦 Deploying Application"
 
-    local deploy_args="--environment $ENVIRONMENT --profile $PROFILE"
+    local deploy_args="--environment $ENVIRONMENT"
 
     if [[ "$VERBOSE" == "true" ]]; then
         deploy_args="$deploy_args --verbose"
@@ -458,9 +378,9 @@ run_integration_tests() {
 
     log_info "Integration tests placeholder - waiting for test-integration.sh update"
 
-    # Basic connectivity test based on profile
-    case "$PROFILE" in
-        "minimum")
+    # Basic connectivity test based on environment
+    case "$ENVIRNMENT" in
+        "dev")
             log_info "Testing Lambda + API Gateway connectivity..."
             # Get API Gateway URL from Terraform outputs
             cd "$PROJECT_ROOT/terraform"
@@ -479,7 +399,7 @@ run_integration_tests() {
             fi
             cd "$PROJECT_ROOT"
             ;;
-        "regular")
+        "prod")
             log_info "Testing EKS + Kubernetes connectivity..."
             # Test kubectl connectivity
             if kubectl get nodes >/dev/null 2>&1; then
@@ -498,7 +418,7 @@ run_integration_tests() {
 destroy_infrastructure() {
     log_step "🧹 Destroying Infrastructure"
 
-    local destroy_args="--environment $ENVIRONMENT --profile $PROFILE --force"
+    local destroy_args="--environment $ENVIRONMENT --force"
 
     if [[ "$VERBOSE" == "true" ]]; then
         destroy_args="$destroy_args --verbose"
@@ -580,12 +500,12 @@ execute_workflow() {
 
     if [[ ${#failed_jobs[@]} -eq 0 ]]; then
         log_success "✅ All jobs completed successfully! (${duration}s)"
-        log_info "Environment: $ENVIRONMENT | Profile: $PROFILE"
+        log_info "Environment: $ENVIRONMENT"
 
         if [[ "$KEEP_ENVIRONMENT" == "true" || "$DEV_CYCLE" == "true" ]]; then
             log_warning "⚠️  Infrastructure is still running"
             log_info "Remember to destroy when finished:"
-            log_info "  ./scripts/test-local.sh --environment $ENVIRONMENT --profile $PROFILE --destroy"
+            log_info "  ./scripts/test-local.sh --environment $ENVIRONMENT --destroy"
         fi
 
         log_success "🚀 Ready for production deployment!"
@@ -613,10 +533,10 @@ main() {
 
     # Print header
     echo
-    printf "${PURPLE}🧪 Local Testing Script - Profile-Aware CI/CD Mirror${NC}\n"
+    printf "${PURPLE}🧪 Local Testing Script CI/CD Mirror${NC}\n"
     printf "${PURPLE}====================================================${NC}\n"
     echo
-    log_info "Environment: $ENVIRONMENT | Profile: $PROFILE"
+    log_info "Environment: $ENVIRONMENT"
 
     # Show selected jobs
     local selected_jobs=()

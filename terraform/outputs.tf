@@ -71,3 +71,8 @@ output "s3_events_bucket" {
   description = "S3 events bucket name"
   value       = aws_s3_bucket.events.bucket
 }
+
+# Add to outputs.tf temporarily
+output "debug_resource_prefix" {
+  value = local.resource_prefix
+}
