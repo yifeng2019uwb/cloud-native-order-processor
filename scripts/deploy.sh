@@ -310,9 +310,27 @@ install_terraform() {
 deploy_infrastructure() {
     log_step "🚀 Deploying Infrastructure with Terraform"
 
-    # Install Terraform if not available
+    # Debug: Show current PATH and terraform status
+    log_info "Current PATH: $PATH"
+    log_info "Checking terraform availability..."
+
     if ! command -v terraform &> /dev/null; then
+        log_info "Terraform not found, calling install_terraform..."
         install_terraform
+
+        # Debug: Check if terraform is now available
+        log_info "After installation attempt:"
+        log_info "PATH: $PATH"
+        if command -v terraform &> /dev/null; then
+            log_info "✅ Terraform now available at: $(which terraform)"
+            log_info "Version: $(terraform version)"
+        else
+            log_error "❌ Terraform still not found after installation"
+            log_error "Contents of ~/.local/bin/: $(ls -la ~/.local/bin/ 2>/dev/null || echo 'Directory not found')"
+            exit 1
+        fi
+    else
+        log_info "✅ Terraform already available at: $(which terraform)"
     fi
 
     cd "$PROJECT_ROOT/terraform"
