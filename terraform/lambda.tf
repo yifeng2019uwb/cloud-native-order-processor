@@ -5,7 +5,7 @@
 resource "aws_lambda_function" "order_api" {
   count = local.enable_lambda ? 1 : 0
 
-  function_name = "${var.resource_prefix}-order-api"
+  function_name = "${local.resource_prefix}-order-api"
   role          = aws_iam_role.lambda_execution[0].arn
   handler       = "lambda_handler.handler"
   runtime       = "python3.11"
@@ -19,7 +19,7 @@ resource "aws_lambda_function" "order_api" {
   environment {
     variables = {
       ENVIRONMENT = var.environment
-      AWS_REGION  = var.region
+      # AWS_REGION  = var.region
 
       # Database connection - now references shared RDS (no array indexing)
       DB_HOST     = aws_db_instance.postgres_main.address
