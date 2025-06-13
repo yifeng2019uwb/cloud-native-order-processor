@@ -310,6 +310,11 @@ install_terraform() {
 deploy_infrastructure() {
     log_step "🚀 Deploying Infrastructure with Terraform"
 
+    # Install Terraform if not available
+    if ! command -v terraform &> /dev/null; then
+        install_terraform
+    fi
+
     cd "$PROJECT_ROOT/terraform"
 
     # Initialize Terraform
