@@ -263,6 +263,278 @@ standard_pre_cleanup() {
     log_success "Standard pre-cleanup tasks completed"
 }
 
+# API Gateway specific cleanup
+cleanup_api_gateway() {
+    log_info "Cleaning up API Gateway resources..."
+
+    local api_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
+
+    # Get API Gateway IDs
+    local apis
+    apis=$(aws apigateway get-rest-apis \
+        --query "items[?contains(name, '${api_prefix}')].id" \
+        --output text 2>/dev/null || echo "")
+
+    for api_id in $apis; do
+        if [[ -n "$api_id" ]]; then
+            log_info "Deleting API Gateway: $api_id"
+            aws apigateway delete-rest-api --rest-api-id "$api_id" 2>/dev/null || true
+        fi
+    done
+
+    # Clean up API Gateway v2 (HTTP APIs)
+    local http_apis
+    http_apis=$(aws apigatewayv2 get-apis \
+        --query "Items[?contains(Name, '${api_prefix}')].ApiId" \
+        --output text 2>/dev/null || echo "")
+
+    for api_id in $http_apis; do
+        if [[ -n "$api_id" ]]; then
+            log_info "Deleting HTTP API Gateway: $api_id"
+            aws apigatewayv2 delete-api --api-id "$api_id" 2>/dev/null || true
+        fi
+    done
+}
+
+# KMS and Secrets cleanup
+cleanup_kms_secrets() {
+    log_info "Cleaning up KMS and Secrets Manager resources..."
+
+    local resource_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
+
+    # Clean up KMS aliases first (they block key deletion)
+    local aliases
+    aliases=$(aws kms list-aliases \
+        --query "Aliases[?contains(AliasName, '${resource_prefix}')].AliasName" \
+        --output text 2>/dev/null || echo "")
+
+    for alias in $aliases; do
+        if [[ -n "$alias" ]]; then
+            log_info "Deleting KMS alias: $alias"
+            aws kms delete-alias --alias-name "$alias" 2>/dev/null || true
+        fi
+    done
+
+    # Schedule KMS key deletion
+    local keys
+    keys=$(aws kms list-keys --query 'Keys[].KeyId' --output text 2>/dev/null || echo "")
+    for key_id in $keys; do
+        local key_description
+        key_description=$(aws kms describe-key --key-id "$key_id" \
+            --query 'KeyMetadata.Description' --output text 2>/dev/null || echo "")
+
+        if [[ "$key_description" == *"$resource_prefix"* ]]; then
+            log_info "Scheduling KMS key deletion: $key_id"
+            aws kms schedule-key-deletion --key-id "$key_id" --pending-window-in-days 7 2>/dev/null || true
+        fi
+    done
+
+    # Force delete secrets (remove deletion protection)
+    local secrets
+    secrets=$(aws secretsmanager list-secrets \
+        --query "SecretList[?contains(Name, '${resource_prefix}')].Name" \
+        --output text 2>/dev/null || echo "")
+
+    for secret in $secrets; do
+        if [[ -n "$secret" ]]; then
+            log_info "Force deleting secret: $secret"
+            aws secretsmanager delete-secret --secret-id "$secret" --force-delete-without-recovery 2>/dev/null || true
+        fi
+    done
+}
+
+# IAM roles and policies cleanup
+cleanup_iam_resources() {
+    log_info "Cleaning up IAM roles and policies..."
+
+    local resource_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
+
+    # Common auto-generated role patterns
+    local role_patterns=(
+        "*${resource_prefix}*"
+        "*eks-cluster-service-role*"
+        "*eks-nodegroup-*"
+        "*lambda-execution-role*"
+        "*codebuild-*"
+        "*codepipeline-*"
+        "*AWSServiceRole*"
+    )
+
+    # Get all roles and filter by patterns
+    local all_roles
+    all_roles=$(aws iam list-roles --query 'Roles[].RoleName' --output text 2>/dev/null || echo "")
+
+    for role_name in $all_roles; do
+        # Check if role matches our patterns
+        local should_delete=false
+        for pattern in "${role_patterns[@]}"; do
+            if [[ "$role_name" == $pattern ]] || [[ "$role_name" == *"$resource_prefix"* ]]; then
+                should_delete=true
+                break
+            fi
+        done
+
+        # Skip AWS service-linked roles (they're managed by AWS)
+        if [[ "$role_name" == *"AWSServiceRole"* ]]; then
+            continue
+        fi
+
+        if [[ "$should_delete" == "true" ]]; then
+            cleanup_single_role "$role_name"
+        fi
+    done
+
+    # Clean up orphaned policies
+    cleanup_orphaned_policies
+}
+
+# Clean up a single IAM role
+cleanup_single_role() {
+    local role_name="$1"
+
+    if [[ -z "$role_name" ]]; then
+        return
+    fi
+
+    log_info "Cleaning up IAM role: $role_name"
+
+    # Detach managed policies
+    local attached_policies
+    attached_policies=$(aws iam list-attached-role-policies \
+        --role-name "$role_name" \
+        --query 'AttachedPolicies[].PolicyArn' \
+        --output text 2>/dev/null || echo "")
+
+    for policy_arn in $attached_policies; do
+        if [[ -n "$policy_arn" ]]; then
+            log_info "  Detaching managed policy: $policy_arn"
+            aws iam detach-role-policy \
+                --role-name "$role_name" \
+                --policy-arn "$policy_arn" 2>/dev/null || true
+        fi
+    done
+
+    # Delete inline policies
+    local inline_policies
+    inline_policies=$(aws iam list-role-policies \
+        --role-name "$role_name" \
+        --query 'PolicyNames' \
+        --output text 2>/dev/null || echo "")
+
+    for policy_name in $inline_policies; do
+        if [[ -n "$policy_name" ]]; then
+            log_info "  Deleting inline policy: $policy_name"
+            aws iam delete-role-policy \
+                --role-name "$role_name" \
+                --policy-name "$policy_name" 2>/dev/null || true
+        fi
+    done
+
+    # Remove role from instance profiles
+    local instance_profiles
+    instance_profiles=$(aws iam list-instance-profiles-for-role \
+        --role-name "$role_name" \
+        --query 'InstanceProfiles[].InstanceProfileName' \
+        --output text 2>/dev/null || echo "")
+
+    for profile_name in $instance_profiles; do
+        if [[ -n "$profile_name" ]]; then
+            log_info "  Removing from instance profile: $profile_name"
+            aws iam remove-role-from-instance-profile \
+                --instance-profile-name "$profile_name" \
+                --role-name "$role_name" 2>/dev/null || true
+
+            # Delete the instance profile if it's empty
+            aws iam delete-instance-profile \
+                --instance-profile-name "$profile_name" 2>/dev/null || true
+        fi
+    done
+
+    # Finally delete the role
+    log_info "  Deleting role: $role_name"
+    aws iam delete-role --role-name "$role_name" 2>/dev/null || true
+}
+
+# EKS specific cleanup
+cleanup_eks_roles() {
+    log_info "Cleaning up EKS-specific resources..."
+
+    local cluster_name="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}-cluster"
+
+    # Get EKS cluster service role
+    local cluster_role
+    cluster_role=$(aws eks describe-cluster \
+        --name "$cluster_name" \
+        --query 'cluster.roleArn' \
+        --output text 2>/dev/null | cut -d'/' -f2 || echo "")
+
+    if [[ -n "$cluster_role" && "$cluster_role" != "None" ]]; then
+        log_info "Found EKS cluster role: $cluster_role"
+        cleanup_single_role "$cluster_role"
+    fi
+
+    # Get node group roles
+    local nodegroups
+    nodegroups=$(aws eks list-nodegroups \
+        --cluster-name "$cluster_name" \
+        --query 'nodegroups' \
+        --output text 2>/dev/null || echo "")
+
+    for nodegroup in $nodegroups; do
+        if [[ -n "$nodegroup" ]]; then
+            local nodegroup_role
+            nodegroup_role=$(aws eks describe-nodegroup \
+                --cluster-name "$cluster_name" \
+                --nodegroup-name "$nodegroup" \
+                --query 'nodegroup.nodeRole' \
+                --output text 2>/dev/null | cut -d'/' -f2 || echo "")
+
+            if [[ -n "$nodegroup_role" && "$nodegroup_role" != "None" ]]; then
+                log_info "Found EKS nodegroup role: $nodegroup_role"
+                cleanup_single_role "$nodegroup_role"
+            fi
+        fi
+    done
+}
+
+# Clean up orphaned policies
+cleanup_orphaned_policies() {
+    log_info "Cleaning up orphaned customer-managed policies..."
+
+    local resource_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
+
+    # Get customer-managed policies
+    local policies
+    policies=$(aws iam list-policies \
+        --scope Local \
+        --query 'Policies[].Arn' \
+        --output text 2>/dev/null || echo "")
+
+    for policy_arn in $policies; do
+        if [[ "$policy_arn" == *"$resource_prefix"* ]]; then
+            log_info "Attempting to delete policy: $policy_arn"
+
+            # Get policy versions and delete non-default versions first
+            local versions
+            versions=$(aws iam list-policy-versions \
+                --policy-arn "$policy_arn" \
+                --query 'Versions[?IsDefaultVersion==`false`].VersionId' \
+                --output text 2>/dev/null || echo "")
+
+            for version in $versions; do
+                if [[ -n "$version" ]]; then
+                    aws iam delete-policy-version \
+                        --policy-arn "$policy_arn" \
+                        --version-id "$version" 2>/dev/null || true
+                fi
+            done
+
+            # Delete the policy
+            aws iam delete-policy --policy-arn "$policy_arn" 2>/dev/null || true
+        fi
+    done
+}
+
 # Terraform destroy
 terraform_destroy() {
     log_step "💥 Destroying Infrastructure with Terraform"
@@ -282,6 +554,10 @@ terraform_destroy() {
         terraform init
     fi
 
+    # Pre-cleanup AWS resources that block Terraform destroy
+    cleanup_api_gateway
+    cleanup_kms_secrets
+
     # Destroy with auto-approve
     local destroy_args="-var=environment=$ENVIRONMENT -auto-approve"
 
@@ -292,6 +568,12 @@ terraform_destroy() {
         log_error "Terraform destroy failed, attempting cleanup of remaining resources"
         cleanup_remaining_resources
     fi
+
+    # Post-cleanup for resources that might not be handled by Terraform
+    log_info "Running post-destroy cleanup..."
+    cleanup_eks_roles
+    cleanup_iam_resources
+    cleanup_remaining_resources
 }
 
 # Cleanup remaining resources

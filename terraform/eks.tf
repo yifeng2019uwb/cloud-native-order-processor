@@ -46,7 +46,7 @@ resource "aws_eks_cluster" "main" {
     subnet_ids              = concat(aws_subnet.private[*].id, aws_subnet.public[*].id)
     endpoint_private_access = true
     endpoint_public_access  = false  # Private access only
-    public_access_cidrs     = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+    public_access_cidrs     = ["0.0.0.0/0"]
   }
 
   # Minimal logging to reduce costs and easier cleanup
@@ -129,7 +129,8 @@ resource "aws_eks_addon" "coredns" {
   cluster_name             = aws_eks_cluster.main[0].name
   addon_name               = "coredns"
   addon_version            = "v1.10.1-eksbuild.5"  # Compatible with EKS 1.28
-  resolve_conflicts        = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
   service_account_role_arn = null  # Use default service account
 
   depends_on = [
@@ -155,7 +156,8 @@ resource "aws_eks_addon" "kube_proxy" {
   cluster_name             = aws_eks_cluster.main[0].name
   addon_name               = "kube-proxy"
   addon_version            = "v1.28.2-eksbuild.2"  # Compatible with EKS 1.28
-  resolve_conflicts        = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
   service_account_role_arn = null  # Use default service account
 
   depends_on = [
@@ -181,7 +183,8 @@ resource "aws_eks_addon" "vpc_cni" {
   cluster_name             = aws_eks_cluster.main[0].name
   addon_name               = "vpc-cni"
   addon_version            = "v1.15.1-eksbuild.1"  # Compatible with EKS 1.28
-  resolve_conflicts        = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
   service_account_role_arn = null  # Use default service account
 
   depends_on = [
