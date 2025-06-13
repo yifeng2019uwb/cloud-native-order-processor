@@ -177,47 +177,6 @@ setup_environment() {
     fi
 }
 
-# Check prerequisites
-check_prerequisites() {
-    log_step "🔍 Checking Prerequisites"
-
-    local missing_tools=()
-
-    # Check required tools
-    local tools=("terraform" "aws" "jq")
-    for tool in "${tools[@]}"; do
-        if ! command -v "$tool" >/dev/null 2>&1; then
-            missing_tools+=("$tool")
-        fi
-    done
-
-    if [[ ${#missing_tools[@]} -gt 0 ]]; then
-        log_error "Missing required tools: ${missing_tools[*]}"
-        log_info "Install missing tools:"
-        log_info "  - Terraform: https://developer.hashicorp.com/terraform/downloads"
-        log_info "  - AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
-        log_info "  - jq: apt install jq / brew install jq"
-        exit 1
-    fi
-
-    # Check AWS credentials
-    if ! aws sts get-caller-identity >/dev/null 2>&1; then
-        log_error "AWS credentials not configured or invalid"
-        log_info "Configure AWS credentials:"
-        log_info "  - aws configure"
-        log_info "  - or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
-        exit 1
-    fi
-
-    # Check Terraform directory
-    if [[ ! -d "$PROJECT_ROOT/terraform" ]]; then
-        log_error "Terraform directory not found: $PROJECT_ROOT/terraform"
-        exit 1
-    fi
-
-    log_success "Prerequisites check passed"
-}
-
 # Install Terraform if not already installed
 install_terraform() {
     log_step "🔧 Installing Terraform"
@@ -304,6 +263,47 @@ install_terraform() {
         log_error "❌ Terraform installation failed"
         exit 1
     fi
+}
+
+# Check prerequisites
+check_prerequisites() {
+    log_step "🔍 Checking Prerequisites"
+
+    local missing_tools=()
+
+    # Check required tools
+    local tools=("terraform" "aws" "jq")
+    for tool in "${tools[@]}"; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            missing_tools+=("$tool")
+        fi
+    done
+
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        log_error "Missing required tools: ${missing_tools[*]}"
+        log_info "Install missing tools:"
+        log_info "  - Terraform: https://developer.hashicorp.com/terraform/downloads"
+        log_info "  - AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+        log_info "  - jq: apt install jq / brew install jq"
+        exit 1
+    fi
+
+    # Check AWS credentials
+    if ! aws sts get-caller-identity >/dev/null 2>&1; then
+        log_error "AWS credentials not configured or invalid"
+        log_info "Configure AWS credentials:"
+        log_info "  - aws configure"
+        log_info "  - or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
+        exit 1
+    fi
+
+    # Check Terraform directory
+    if [[ ! -d "$PROJECT_ROOT/terraform" ]]; then
+        log_error "Terraform directory not found: $PROJECT_ROOT/terraform"
+        exit 1
+    fi
+
+    log_success "Prerequisites check passed"
 }
 
 # Deploy infrastructure
