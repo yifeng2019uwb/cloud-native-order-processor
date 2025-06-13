@@ -1,140 +1,208 @@
-# ===== OUTPUTS =====
-# outputs.tf
+# terraform/outputs.tf
+# Profile-aware outputs for both Lambda and Kubernetes deployments
+
+# Environment and profile information
+output "environment" {
+  description = "Environment name"
+  value       = var.environment
+}
+
+output "profile" {
+  description = "Resource profile"
+  value       = var.profile
+}
+
+output "compute_type" {
+  description = "Compute platform type"
+  value       = var.compute_type
+}
+
+output "region" {
+  description = "AWS region"
+  value       = var.region
+}
+
+# Lambda-specific outputs (minimum profile)
+output "lambda_function_name" {
+  description = "Name of the Lambda function"
+  value       = var.compute_type == "lambda" ? aws_lambda_function.order_api[0].function_name : null
+}
+
+output "lambda_function_arn" {
+  description = "ARN of the Lambda function"
+  value       = var.compute_type == "lambda" ? aws_lambda_function.order_api[0].arn : null
+}
+
+output "lambda_invoke_arn" {
+  description = "Invoke ARN of the Lambda function"
+  value       = var.compute_type == "lambda" ? aws_lambda_function.order_api[0].invoke_arn : null
+}
+
+output "api_gateway_url" {
+  description = "API Gateway invocation URL"
+  value       = var.compute_type == "lambda" ? "https://${aws_api_gateway_rest_api.order_api[0].id}.execute-api.${var.region}.amazonaws.com/${var.environment}" : null
+}
+
+output "api_gateway_id" {
+  description = "API Gateway REST API ID"
+  value       = var.compute_type == "lambda" ? aws_api_gateway_rest_api.order_api[0].id : null
+}
+
+# Kubernetes-specific outputs (regular profile)
 output "eks_cluster_name" {
-  description = "EKS cluster name"
-  value       = aws_eks_cluster.main.name
+  description = "Name of the EKS cluster"
+  value       = var.compute_type == "kubernetes" ? aws_eks_cluster.main[0].name : null
 }
 
 output "eks_cluster_endpoint" {
-  description = "EKS cluster endpoint"
-  value       = aws_eks_cluster.main.endpoint
+  description = "Endpoint for EKS control plane"
+  value       = var.compute_type == "kubernetes" ? aws_eks_cluster.main[0].endpoint : null
 }
 
+output "eks_cluster_security_group_id" {
+  description = "Security group ID attached to the EKS cluster"
+  value       = var.compute_type == "kubernetes" ? aws_eks_cluster.main[0].vpc_config[0].cluster_security_group_id : null
+}
+
+output "eks_cluster_certificate_authority_data" {
+  description = "Base64 encoded certificate data required to communicate with the cluster"
+  value       = var.compute_type == "kubernetes" ? aws_eks_cluster.main[0].certificate_authority[0].data : null
+}
+
+# output "eks_node_group_arn" {
+#   description = "Amazon Resource Name (ARN) of the EKS Node Group"
+#   value       = var.compute_type == "kubernetes" ? aws_eks_node_group.main[0].arn : null
+# }
+
+# Database outputs (shared across profiles)
 output "database_endpoint" {
   description = "RDS instance endpoint"
   value       = aws_db_instance.postgres_main.endpoint
+}
+
+output "database_port" {
+  description = "RDS instance port"
+  value       = aws_db_instance.postgres_main.port
+}
+
+output "database_name" {
+  description = "Database name"
+  value       = aws_db_instance.postgres_main.db_name
+}
+
+output "database_username" {
+  description = "Database username"
+  value       = aws_db_instance.postgres_main.username
   sensitive   = true
 }
 
-output "database_secret_arn" {
-  description = "ARN of the database credentials in Secrets Manager"
-  value       = aws_secretsmanager_secret.db_credentials.arn
-}
+# output "database_password_ssm_parameter" {
+#   description = "SSM parameter name containing database password"
+#   value       = aws_ssm_parameter.db_password.name
+# }
 
-output "database_secret_name" {
-  description = "Name of the database secret in Secrets Manager"
-  value       = aws_secretsmanager_secret.db_credentials.name
-}
-
-output "s3_events_bucket_name" {
-  description = "S3 bucket name for event sourcing"
-  value       = aws_s3_bucket.events.bucket
-}
-
+# Messaging outputs (shared across profiles)
 output "sns_order_events_topic_arn" {
-  description = "SNS topic ARN for order events"
+  description = "ARN of the SNS topic for order events"
   value       = aws_sns_topic.order_events.arn
 }
 
-output "sqs_order_processing_queue_url" {
-  description = "SQS queue URL for order processing"
-  value       = aws_sqs_queue.order_processing.url
+# output "sqs_order_processing_queue_url" {
+#   description = "URL of the SQS queue for order processing"
+#   value       = aws_sqs_queue.order_processing.url
+# }
+
+output "sqs_order_processing_queue_arn" {
+  description = "ARN of the SQS queue for order processing"
+  value       = aws_sqs_queue.order_processing.arn
 }
 
+# output "sqs_order_processing_dlq_url" {
+#   description = "URL of the SQS dead letter queue"
+#   value       = aws_sqs_queue.order_processing_dlq.url
+# }
+
+# Storage outputs (shared across profiles)
+output "s3_events_bucket_name" {
+  description = "Name of the S3 bucket for events"
+  value       = aws_s3_bucket.events.bucket
+}
+
+output "s3_events_bucket_arn" {
+  description = "ARN of the S3 bucket for events"
+  value       = aws_s3_bucket.events.arn
+}
+
+# ECR outputs (for regular profile with Docker images)
 output "ecr_order_api_repository_url" {
-  description = "ECR repository URL for order API"
-  value       = aws_ecr_repository.order_api.repository_url
+  description = "URL of the ECR repository for order API"
+  value = var.compute_type == "kubernetes" ? aws_ecr_repository.order_api[0].repository_url : null
+}
+
+output "ecr_order_api_repository_arn" {
+  description = "ARN of the ECR repository for order API"
+  value       = var.compute_type == "kubernetes" ? aws_ecr_repository.order_api[0].arn : null
+}
+
+# IAM outputs for application use
+output "lambda_execution_role_arn" {
+  description = "ARN of the Lambda execution role"
+  value       = var.compute_type == "lambda" ? aws_iam_role.lambda_execution[0].arn : null
 }
 
 output "order_service_role_arn" {
-  description = "IAM role ARN for order service"
-  value       = aws_iam_role.order_service.arn
+  description = "ARN of the order service role (EKS service account role)"
+  value       = var.compute_type == "kubernetes" ? aws_iam_role.order_service[0].arn : null
 }
 
-output "database_initialization_status" {
-  description = "Database initialization completed"
-  value       = "Database schema initialized with 3 tables: products, inventory, orders"
-  depends_on  = [null_resource.init_database]
+# VPC outputs (only for regular profile)
+output "vpc_id" {
+  description = "ID of the VPC"
+  value       = var.compute_type == "kubernetes" ? aws_vpc.main[0].id : null
 }
 
-# Instructions for accessing database
-output "database_access_instructions" {
-  description = "How to access the database credentials"
-  value       = "Use AWS CLI: aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name}"
+output "private_subnet_ids" {
+  description = "IDs of the private subnets"
+  value       = var.compute_type == "kubernetes" ? aws_subnet.private[*].id : null
 }
 
-output "database_connection_example" {
-  description = "Example of how to connect to the database"
-  value       = "After getting credentials: PGPASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.password') psql -h $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.host') -U $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.username') -d $(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_credentials.name} --query SecretString --output text | jq -r '.dbname')"
+output "public_subnet_ids" {
+  description = "IDs of the public subnets"
+  value       = var.compute_type == "kubernetes" ? aws_subnet.public[*].id : null
 }
 
-# COST OPTIMIZATION: Add cost monitoring and cleanup information
-output "cost_profile_applied" {
-  description = "Current cost optimization profile being used"
-  value       = var.cost_profile
-}
-
-output "estimated_monthly_cost" {
-  description = "Estimated monthly cost breakdown for current configuration"
-  value = {
-    cost_profile = var.cost_profile
-    eks_cluster = "$72 (cluster) + ${var.cost_profile == "minimal" ? "$3-8 (spot instances)" : "$50+ (fargate)"}"
-    rds_database = "$12-15 (db.t4g.micro)"
-    s3_storage = "$1-3 (with lifecycle policies)"
-    messaging = var.cost_profile == "minimal" ? "$0.50 (no encryption)" : "$2-3 (with KMS)"
-    networking = var.cost_profile == "production" ? "$45+ (NAT Gateway)" : "$0-10 (VPC endpoints)"
-    total_estimated = var.cost_profile == "minimal" ? "$90-110/month" : var.cost_profile == "learning" ? "$130-150/month" : "$200+/month"
-  }
-}
-
-# output "cost_optimization_summary" {
-#   description = "Summary of cost optimizations applied"
-#   value = {
-#     nat_gateway_disabled = var.cost_profile == "production" ? false : true
-#     kms_encryption = "Review KMS usage in S3 and messaging for potential $3/month savings"
-#     spot_instances = "Consider spot instances for EKS nodes (60-90% savings)"
-#     lifecycle_policies = "Aggressive S3 cleanup (30 days events, 7 days backups)"
-#     backup_retention = "RDS backups disabled (0 days retention)"
-#     monitoring = "Performance Insights disabled, minimal CloudWatch"
-#   }
+# CloudWatch outputs
+# output "application_log_group_name" {
+#   description = "Name of the CloudWatch log group for application logs"
+#   value       = aws_cloudwatch_log_group.application.name
 # }
 
-# COST OPTIMIZATION: Conditional database initialization output
-# Comment out the database_initialization_status above and uncomment below:
-# output "database_initialization_status" {
-#   description = "Database initialization status (conditional based on cost profile)"
-#   value       = var.cost_profile == "minimal" ? "Skipped for minimal cost profile - database created but not initialized" : "Database schema initialized with 3 tables: products, inventory, orders"
-#   depends_on  = var.cost_profile == "minimal" ? [] : [null_resource.init_database]
-# }
-
-output "cleanup_instructions" {
-  description = "Instructions for cost-efficient cleanup"
-  value = {
-    manual_cleanup = "Run: terraform destroy -auto-approve"
-    cost_verification = "Verify all resources deleted in AWS Console to avoid unexpected charges"
-    s3_verification = "S3 buckets should auto-delete due to force_destroy = true"
-    recommended_schedule = "For practice: deploy -> test -> destroy within 24 hours to minimize costs"
-  }
+output "lambda_log_group_name" {
+  description = "Name of the CloudWatch log group for Lambda logs"
+  value       = var.compute_type == "lambda" ? aws_cloudwatch_log_group.lambda_logs[0].name : null
 }
 
-output "learning_next_steps" {
-  description = "Next steps for cost-efficient learning"
+# Deployment information
+output "deployment_summary" {
+  description = "Summary of deployed resources"
   value = {
-    current_profile = var.cost_profile
-    cost_optimizations_to_try = var.cost_profile == "minimal" ? [
-      "Already using minimal profile",
-      "Consider spot instances for EKS nodes",
-      "Test with AES256 instead of KMS encryption"
-    ] : [
-      "Try minimal profile: terraform apply -var='cost_profile=minimal'",
-      "Disable NAT Gateway and use VPC endpoints",
-      "Use spot instances instead of Fargate"
-    ]
-    architecture_learning = [
-      "Practice VPC endpoint usage without NAT Gateway",
-      "Test EKS with spot instances vs Fargate",
-      "Experiment with S3 lifecycle policies",
-      "Learn PostgreSQL connection via Secrets Manager"
-    ]
+    environment    = var.environment
+    profile        = var.profile
+    compute_type   = var.compute_type
+    region         = var.region
+
+    # Endpoints
+    api_url        = var.compute_type == "lambda" ? "https://${aws_api_gateway_rest_api.order_api[0].id}.execute-api.${var.region}.amazonaws.com/${var.environment}" : null
+    eks_endpoint   = var.compute_type == "kubernetes" ? aws_eks_cluster.main[0].endpoint : null
+
+    # Database
+    database_host  = aws_db_instance.postgres_main.address
+
+    # Messaging
+    sns_topic      = aws_sns_topic.order_events.arn
+    sqs_queue      = aws_sqs_queue.order_processing.url
+
+    # Storage
+    s3_bucket      = aws_s3_bucket.events.bucket
   }
 }

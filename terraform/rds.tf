@@ -35,7 +35,7 @@ resource "aws_db_instance" "postgres_main" {
   username = var.db_username
   password = random_password.db_password.result
 
-  vpc_security_group_ids = [aws_security_group.rds.id]
+  vpc_security_group_ids = var.compute_type == "kubernetes" ? [aws_security_group.rds[0].id] : null
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
   # DESTROY-FRIENDLY SETTINGS (already optimized)
@@ -63,47 +63,6 @@ resource "aws_db_instance" "postgres_main" {
     AutoStop = "7days"
   }
 }
-
-# COST OPTIMIZATION: Alternative scalable settings for different learning needs
-# Comment out the settings above and uncomment below ONLY if you need to test scaling:
-# resource "aws_db_instance" "postgres_main" {
-#   identifier = "${var.project_name}-${var.environment}-postgres"
-#
-#   engine         = "postgres"
-#   engine_version = "15.7"
-#   instance_class = var.cost_profile == "minimal" ? "db.t4g.micro" : var.cost_profile == "learning" ? "db.t4g.small" : "db.t4g.medium"  # COST SCALING: Only if testing RDS scaling
-#
-#   allocated_storage = var.cost_profile == "minimal" ? 20 : var.cost_profile == "learning" ? 50 : 100  # COST SCALING: Only if testing storage scaling
-#   storage_type      = "gp2"
-#   storage_encrypted = true
-#
-#   db_name  = "orderprocessor"
-#   username = var.db_username
-#   password = random_password.db_password.result
-#
-#   vpc_security_group_ids = [aws_security_group.rds.id]
-#   db_subnet_group_name   = aws_db_subnet_group.main.name
-#
-#   backup_retention_period   = var.cost_profile == "production" ? 7 : 0     # COST SCALING: Only backups for production testing
-#   skip_final_snapshot       = true
-#   final_snapshot_identifier = null
-#   deletion_protection       = false
-#   delete_automated_backups  = true
-#   apply_immediately         = true
-#
-#   performance_insights_enabled    = false
-#   enabled_cloudwatch_logs_exports = []
-#   auto_minor_version_upgrade      = false
-#
-#   multi_az = var.cost_profile == "production"  # COST SCALING: Only Multi-AZ for production testing
-#   publicly_accessible = false
-#
-#   tags = {
-#     Name     = "${var.project_name}-${var.environment}-postgres"
-#     Purpose  = "Practice-Learning-Scaling"
-#     AutoStop = "7days"
-#   }
-# }
 
 # Create Secrets Manager secret with immediate deletion
 resource "aws_secretsmanager_secret" "db_credentials" {
@@ -136,7 +95,8 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
 # Database initialization using secrets
 resource "null_resource" "init_database" {
   # COST OPTIMIZATION: Skip complex initialization for minimal cost
-  count = var.cost_profile == "minimal" ? 0 : 1  # SKIP for minimal - just test basic connectivity
+  # count = var.cost_profile == "minimal" ? 0 : 1
+  # vpc_id = aws_vpc.main[0].id
 
   depends_on = [
     aws_db_instance.postgres_main,
@@ -154,13 +114,3 @@ resource "null_resource" "init_database" {
     secret_version    = aws_secretsmanager_secret_version.db_credentials.version_id
   }
 }
-
-# COST OPTIMIZATION: For absolute minimal practice, comment out init entirely
-# Comment out the null_resource above and uncomment below for zero initialization cost:
-# resource "null_resource" "init_database" {
-#   count = 0  # ALWAYS SKIP: No database initialization for pure practice
-#
-#   # Empty resource - database will be created but not initialized
-#   # Use manual psql connection to test database connectivity
-#   # This saves time and complexity for pure infrastructure practice
-# }

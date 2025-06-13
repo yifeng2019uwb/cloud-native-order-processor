@@ -3,8 +3,10 @@
 
 # RDS Security Group
 resource "aws_security_group" "rds" {
+  count = local.enable_kubernetes ? 1 : 0
+
   name_prefix = "${var.project_name}-${var.environment}-rds-"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = aws_vpc.main[0].id
   description = "Security group for RDS PostgreSQL"
 
   ingress {
@@ -12,7 +14,7 @@ resource "aws_security_group" "rds" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = [aws_vpc.main.cidr_block]
+    cidr_blocks = [aws_vpc.main[0].cidr_block]
   }
 
   egress {
