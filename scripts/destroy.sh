@@ -349,7 +349,8 @@ cleanup_iam_resources() {
 
     local resource_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
 
-    # Common auto-generated role patterns
+    # Only include patterns for roles we actually created/manage
+    # DO NOT include AWSServiceRole patterns - these are managed by AWS
     local role_patterns=(
         "*${resource_prefix}*"
         "*eks-cluster-service-role*"
@@ -357,7 +358,6 @@ cleanup_iam_resources() {
         "*lambda-execution-role*"
         "*codebuild-*"
         "*codepipeline-*"
-        "*AWSServiceRole*"
     )
 
     # Get all roles and filter by patterns
@@ -365,6 +365,12 @@ cleanup_iam_resources() {
     all_roles=$(aws iam list-roles --query 'Roles[].RoleName' --output text 2>/dev/null || echo "")
 
     for role_name in $all_roles; do
+        # Always skip AWS service-linked roles (they're managed by AWS)
+        if [[ "$role_name" == *"AWSServiceRole"* ]]; then
+            log_info "Skipping AWS service-linked role: $role_name (managed by AWS)"
+            continue
+        fi
+
         # Check if role matches our patterns
         local should_delete=false
         for pattern in "${role_patterns[@]}"; do
@@ -374,11 +380,6 @@ cleanup_iam_resources() {
             fi
         done
 
-        # Skip AWS service-linked roles (they're managed by AWS)
-        if [[ "$role_name" == *"AWSServiceRole"* ]]; then
-            continue
-        fi
-
         if [[ "$should_delete" == "true" ]]; then
             cleanup_single_role "$role_name"
         fi
@@ -386,6 +387,27 @@ cleanup_iam_resources() {
 
     # Clean up orphaned policies
     cleanup_orphaned_policies
+
+    # Log remaining service-linked roles for informational purposes
+    log_remaining_service_roles
+}
+
+# Optional: Add this function to show remaining service-linked roles
+log_remaining_service_roles() {
+    log_info "Checking for remaining AWS service-linked roles..."
+
+    local service_roles
+    service_roles=$(aws iam list-roles --query 'Roles[?contains(RoleName, `AWSServiceRole`)].RoleName' --output text 2>/dev/null || echo "")
+
+    if [[ -n "$service_roles" ]]; then
+        log_info "Remaining AWS service-linked roles (these are normal and managed by AWS):"
+        for role in $service_roles; do
+            log_info "  - $role"
+        done
+        log_info "Note: These roles will be automatically cleaned up by AWS when the associated services are no longer used."
+    else
+        log_info "No AWS service-linked roles found."
+    fi
 }
 
 # Clean up a single IAM role

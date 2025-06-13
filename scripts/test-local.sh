@@ -71,18 +71,18 @@ WORKFLOW OPTIONS:
 
 EXAMPLES:
     # Daily development (cheap)
-    $0 --environment dev --all                           # Full pipeline with
+    $0 --environment dev --all         # Full pipeline
     $0 --environment dev --dev-cycle   # Deploy and test, keep infra
-    $0 --environment dev --app-only                      # Update app only
+    $0 --environment dev --app-only    # Update app only
 
     # Pre-push validation (comprehensive)
     $0 --environment dev --all         # Full validation with EKS
     $0 --environment prod --all        # Production simulation
 
     # Individual jobs
-    $0 --environment dev --build                         # Build tests only
-    $0 --environment dev --deploy                        # Deploy infra only
-    $0 --environment dev --destroy                       # Cleanup only
+    $0 --environment dev --build       # Build tests only
+    $0 --environment dev --deploy      # Deploy infra only
+    $0 --environment dev --destroy     # Cleanup only
 
 COST AWARENESS:
     - Default environmentis 'dev' for cost control
@@ -214,18 +214,6 @@ validate_arguments() {
         exit 1
     fi
 }
-
-# Show cost estimate
-# show_cost_estimate() {
-#     log_step "💰 Cost Estimate for Environment: $ENVIONMENT"
-
-#     if [[ "$KEEP_ENVIRONMENT" == "true" || "$DEV_CYCLE" == "true" ]]; then
-#         log_warning "⚠️  Environment will be kept running after tests"
-#         log_warning "⚠️  Remember to run --destroy when finished"
-#     fi
-
-#     echo
-# }
 
 # Setup test environment
 setup_test_environment() {
@@ -550,9 +538,6 @@ main() {
 
     log_info "Selected jobs: ${selected_jobs[*]}"
     echo
-
-    # Show cost estimate
-    show_cost_estimate
 
     # Setup and execute
     if ! check_prerequisites; then
