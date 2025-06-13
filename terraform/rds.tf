@@ -9,6 +9,8 @@ resource "random_password" "db_password" {
 }
 
 resource "aws_db_subnet_group" "main" {
+  count = var.compute_type == "kubernetes" ? 1 : 0
+
   name       = "${var.project_name}-${var.environment}-db-subnet-group"
   subnet_ids = aws_subnet.private[*].id
 
@@ -19,6 +21,8 @@ resource "aws_db_subnet_group" "main" {
 
 # Create RDS instance with destroy-friendly settings
 resource "aws_db_instance" "postgres_main" {
+  count = var.compute_type == "kubernetes" ? 1 : 0  # Add this line
+
   identifier = "${var.project_name}-${var.environment}-postgres"
 
   engine         = "postgres"
@@ -35,8 +39,8 @@ resource "aws_db_instance" "postgres_main" {
   username = var.db_username
   password = random_password.db_password.result
 
-  vpc_security_group_ids = var.compute_type == "kubernetes" ? [aws_security_group.rds[0].id] : null
-  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.rds[0].id]
+  db_subnet_group_name   = aws_db_subnet_group.main[0].name
 
   # DESTROY-FRIENDLY SETTINGS (already optimized)
   backup_retention_period   = 0     # ALWAYS MINIMAL: No backups for practice
@@ -84,9 +88,9 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
     username = var.db_username
     password = random_password.db_password.result
     engine   = "postgres"
-    host     = aws_db_instance.postgres_main.endpoint
-    port     = tonumber(aws_db_instance.postgres_main.port)
-    dbname   = aws_db_instance.postgres_main.db_name
+    host   = aws_db_instance.postgres_main[0].endpoint
+    port   = tonumber(aws_db_instance.postgres_main[0].port)
+    dbname = aws_db_instance.postgres_main[0].db_name
   })
 
   depends_on = [aws_db_instance.postgres_main]

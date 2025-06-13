@@ -1,6 +1,6 @@
 #!/bin/bash
 # scripts/destroy.sh
-# Infrastructure Cleanup Script
+# Infrastructure Cleanup Script with Profile Support
 # Destroys AWS infrastructure and cleans up resources
 
 set -e
@@ -21,36 +21,36 @@ ENVIRONMENT=""
 PROFILE=""
 VERBOSE=false
 DRY_RUN=false
-AUTO_APPROVE=false
-FORCE_CLEANUP=false
-FORCE=false  # ADD THIS LINE
+FORCE=false
 
 # Usage function
 show_usage() {
     cat << EOF
 $(printf "${RED}🧹 Infrastructure Destroy Script${NC}")
 
-Usage: $0 --environment {dev|prod} --profile {learning|minimum|prod} [OPTIONS]
+Usage: $0 --environment {dev|prod} --profile {minimum|regular} [OPTIONS]
 
-Destroy AWS infrastructure and cleanup resources.
+Destroy AWS infrastructure and cleanup resources based on profile.
 
 REQUIRED:
     --environment {dev|prod}           Target environment
-    --profile {learning|minimum|prod}  Resource profile
+    --profile {minimum|regular}        Resource profile
+
+PROFILES:
+    minimum    - Destroy Lambda + API Gateway infrastructure
+    regular    - Destroy EKS + Kubernetes infrastructure
 
 OPTIONS:
     -v, --verbose                     Enable verbose output
     --dry-run                         Show what would be destroyed (don't destroy)
-    --auto-approve                    Skip confirmation prompts
-    --force-cleanup                   Force cleanup of stuck resources
-    --force                           Skip all validation and destroy everything
+    --force                           Skip all confirmations and destroy everything
     -h, --help                        Show this help message
 
 EXAMPLES:
-    $0 --environment dev --profile learning                    # Destroy dev infrastructure
-    $0 --environment dev --profile learning --dry-run          # Plan destruction only
-    $0 --environment dev --profile learning --auto-approve     # Destroy without prompts
-    $0 --environment dev --profile learning --force-cleanup    # Force cleanup stuck resources
+    $0 --environment dev --profile minimum                    # Destroy Lambda infrastructure
+    $0 --environment dev --profile regular                    # Destroy EKS infrastructure
+    $0 --environment dev --profile minimum --dry-run          # Plan destruction only
+    $0 --environment dev --profile regular --force            # Force destroy without prompts
 
 ⚠️  WARNING: This will permanently destroy AWS resources and data!
 
@@ -98,18 +98,8 @@ parse_arguments() {
                 DRY_RUN=true
                 shift
                 ;;
-            --auto-approve)
-                AUTO_APPROVE=true
-                shift
-                ;;
-            --force-cleanup)
-                FORCE_CLEANUP=true
-                shift
-                ;;
             --force)
                 FORCE=true
-                FORCE_CLEANUP=true
-                AUTO_APPROVE=true
                 shift
                 ;;
             -h|--help)
@@ -127,14 +117,6 @@ parse_arguments() {
 
 # Validate arguments
 validate_arguments() {
-    # Skip validation if --force is used
-    if [[ "$FORCE" == "true" ]]; then
-        log_warning "FORCE mode: Skipping validation - will destroy EVERYTHING"
-        ENVIRONMENT=${ENVIRONMENT:-learning}
-        PROFILE=${PROFILE:-learning}
-        return 0
-    fi
-
     local errors=()
 
     # Check required arguments
@@ -146,8 +128,8 @@ validate_arguments() {
 
     if [[ -z "$PROFILE" ]]; then
         errors+=("--profile is required")
-    elif [[ "$PROFILE" != "learning" && "$PROFILE" != "minimum" && "$PROFILE" != "prod" ]]; then
-        errors+=("--profile must be 'learning', 'minimum', or 'prod'")
+    elif [[ "$PROFILE" != "minimum" && "$PROFILE" != "regular" ]]; then
+        errors+=("--profile must be 'minimum' or 'regular'")
     fi
 
     if [[ ${#errors[@]} -gt 0 ]]; then
@@ -167,21 +149,32 @@ setup_environment() {
 
     # Set base environment variables
     export ENVIRONMENT="$ENVIRONMENT"
-    export COST_PROFILE="$PROFILE"
+    export PROFILE="$PROFILE"
     export TF_VAR_environment="$ENVIRONMENT"
-    export TF_VAR_cost_profile="$PROFILE"
+    export TF_VAR_profile="$PROFILE"
+
+    # Profile-specific settings
+    case "$PROFILE" in
+        "minimum")
+            export TF_VAR_compute_type="lambda"
+            ;;
+        "regular")
+            export TF_VAR_compute_type="kubernetes"
+            ;;
+    esac
 
     # Load environment-specific configuration
-    local env_config="$PROJECT_ROOT/config/environments/${ENVIRONMENT}.env"
+    local env_config="$PROJECT_ROOT/config/environments/.env.defaults"
     if [[ -f "$env_config" ]]; then
-        log_info "Loading environment config: $env_config"
+        log_info "Loading configuration: $env_config"
         source "$env_config"
     fi
 
     if [[ "$VERBOSE" == "true" ]]; then
         log_info "Environment variables set:"
         log_info "  ENVIRONMENT: $ENVIRONMENT"
-        log_info "  COST_PROFILE: $PROFILE"
+        log_info "  PROFILE: $PROFILE"
+        log_info "  COMPUTE_TYPE: ${TF_VAR_compute_type}"
         log_info "  AWS_REGION: ${AWS_REGION:-us-west-2}"
     fi
 }
@@ -213,9 +206,44 @@ check_prerequisites() {
     log_success "Prerequisites check passed"
 }
 
+# Show destruction impact
+show_destruction_impact() {
+    log_step "💥 Destruction Impact"
+
+    case "$PROFILE" in
+        "minimum")
+            log_info "Lambda + API Gateway Profile will destroy:"
+            log_info "  🗑️ Lambda function and versions"
+            log_info "  🗑️ API Gateway REST API"
+            log_info "  🗑️ IAM roles and policies"
+            log_info "  🗑️ CloudWatch logs"
+            log_info "  🗑️ RDS database and snapshots"
+            log_info "  🗑️ SNS topics and SQS queues"
+            log_info "  🗑️ S3 buckets and contents"
+            log_success "✅ Cost after destruction: $0.00/day"
+            ;;
+        "regular")
+            log_warning "EKS + Kubernetes Profile will destroy:"
+            log_warning "  🗑️ EKS cluster and node groups"
+            log_warning "  🗑️ All Kubernetes workloads"
+            log_warning "  🗑️ Load balancers and networking"
+            log_warning "  🗑️ ECR repositories and images"
+            log_warning "  🗑️ RDS database and snapshots"
+            log_warning "  🗑️ SNS topics and SQS queues"
+            log_warning "  🗑️ S3 buckets and contents"
+            log_warning "  🗑️ All persistent volumes"
+            log_success "✅ Cost after destruction: $0.00/day"
+            ;;
+    esac
+
+    echo
+    log_warning "⚠️  ALL DATA WILL BE PERMANENTLY LOST!"
+    log_warning "⚠️  This action cannot be undone!"
+}
+
 # Confirm destruction
 confirm_destruction() {
-    if [[ "$AUTO_APPROVE" == "true" || "$DRY_RUN" == "true" ]]; then
+    if [[ "$FORCE" == "true" || "$DRY_RUN" == "true" ]]; then
         return 0
     fi
 
@@ -226,9 +254,17 @@ confirm_destruction() {
     printf "${RED}  - Environment: $ENVIRONMENT${NC}\n"
     printf "${RED}  - Profile: $PROFILE${NC}\n"
     printf "${RED}  - All AWS resources managed by Terraform${NC}\n"
-    printf "${RED}  - All data in RDS databases${NC}\n"
+    printf "${RED}  - All data in databases${NC}\n"
     printf "${RED}  - All data in S3 buckets${NC}\n"
-    printf "${RED}  - EKS cluster and all applications${NC}\n"
+
+    case "$PROFILE" in
+        "minimum")
+            printf "${RED}  - Lambda function and API Gateway${NC}\n"
+            ;;
+        "regular")
+            printf "${RED}  - EKS cluster and all applications${NC}\n"
+            ;;
+    esac
     echo
 
     read -p "Are you absolutely sure you want to continue? (type 'yes' to confirm): " confirmation
@@ -241,21 +277,92 @@ confirm_destruction() {
     log_warning "Proceeding with infrastructure destruction..."
 }
 
-# Pre-cleanup tasks
-pre_cleanup() {
-    log_step "🧹 Pre-Cleanup Tasks"
+# Profile-specific pre-cleanup
+profile_specific_cleanup() {
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "Dry-run mode: Would perform profile-specific cleanup"
+        return 0
+    fi
+
+    log_step "🧹 Profile-Specific Pre-Cleanup"
+
+    case "$PROFILE" in
+        "minimum")
+            # Lambda-specific cleanup
+            log_info "Cleaning up Lambda-specific resources..."
+
+            # Clean up Lambda layers if any
+            local function_name="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}-order-api"
+            if aws lambda get-function --function-name "$function_name" --region "${AWS_REGION:-us-west-2}" >/dev/null 2>&1; then
+                log_info "Found Lambda function: $function_name"
+                # Terraform will handle deletion
+            fi
+
+            # Clean up API Gateway custom domains if any
+            local api_name="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}-api"
+            log_info "Checking for API Gateway: $api_name"
+            ;;
+
+        "regular")
+            # Kubernetes-specific cleanup
+            log_info "Cleaning up Kubernetes-specific resources..."
+
+            # Check if kubectl is available and cluster exists
+            if command -v kubectl >/dev/null 2>&1; then
+                local cluster_name="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}-cluster"
+
+                # Try to connect to cluster
+                if aws eks update-kubeconfig --region "${AWS_REGION:-us-west-2}" --name "$cluster_name" >/dev/null 2>&1; then
+                    log_info "Connected to EKS cluster: $cluster_name"
+
+                    # Delete all resources in order-processor namespace
+                    if kubectl get namespace order-processor >/dev/null 2>&1; then
+                        log_info "Deleting Kubernetes namespace: order-processor"
+                        kubectl delete namespace order-processor --wait=false || true
+                    fi
+
+                    # Delete any LoadBalancer services to free up ELBs
+                    log_info "Cleaning up LoadBalancer services..."
+                    kubectl get services --all-namespaces -o json | \
+                    jq -r '.items[] | select(.spec.type=="LoadBalancer") | "\(.metadata.namespace) \(.metadata.name)"' | \
+                    while read -r namespace service; do
+                        if [[ -n "$namespace" && -n "$service" ]]; then
+                            kubectl delete service "$service" -n "$namespace" --wait=false || true
+                        fi
+                    done
+                else
+                    log_info "Could not connect to EKS cluster (may already be deleted)"
+                fi
+            fi
+
+            # Clean up ECR repositories
+            local ecr_repo="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}-order-api"
+            if aws ecr describe-repositories --repository-names "$ecr_repo" --region "${AWS_REGION:-us-west-2}" >/dev/null 2>&1; then
+                log_info "Cleaning up ECR repository: $ecr_repo"
+                aws ecr delete-repository --repository-name "$ecr_repo" --region "${AWS_REGION:-us-west-2}" --force || true
+            fi
+            ;;
+    esac
+
+    log_success "Profile-specific cleanup completed"
+}
+
+# Standard pre-cleanup tasks
+standard_pre_cleanup() {
+    log_step "🧹 Standard Pre-Cleanup Tasks"
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run mode: Would perform pre-cleanup tasks"
+        log_info "Dry-run mode: Would perform standard pre-cleanup tasks"
         return 0
     fi
 
     # Empty S3 buckets first (they must be empty to delete)
     log_info "Checking for S3 buckets to empty..."
 
+    local bucket_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
     local buckets
     buckets=$(aws s3api list-buckets \
-        --query "Buckets[?contains(Name, 'order-processor-${ENVIRONMENT}')].Name" \
+        --query "Buckets[?contains(Name, '${bucket_prefix}')].Name" \
         --output text 2>/dev/null || echo "")
 
     if [[ -n "$buckets" ]]; then
@@ -287,78 +394,7 @@ pre_cleanup() {
         done
     fi
 
-    # Clean up any stuck resources if force cleanup requested
-    if [[ "$FORCE_CLEANUP" == "true" ]]; then
-        log_warning "Force cleanup enabled - attempting to remove stuck resources"
-        force_cleanup_resources
-    fi
-
-    log_success "Pre-cleanup tasks completed"
-}
-
-# Force cleanup stuck resources
-force_cleanup_resources() {
-    log_info "Attempting to force cleanup stuck resources..."
-
-    # Remove stuck IAM roles
-    local roles=("order-processor-${ENVIRONMENT}-eks-cluster-role"
-                 "order-processor-${ENVIRONMENT}-fargate-pod-execution-role"
-                 "order-processor-${ENVIRONMENT}-node-group-role")
-
-    for role in "${roles[@]}"; do
-        if aws iam get-role --role-name "$role" >/dev/null 2>&1; then
-            log_info "Removing IAM role: $role"
-
-            # Detach policies first
-            aws iam list-attached-role-policies --role-name "$role" --output text 2>/dev/null | \
-            awk '{print $2}' | \
-            while read -r policy; do
-                if [[ -n "$policy" ]]; then
-                    aws iam detach-role-policy --role-name "$role" --policy-arn "$policy" 2>/dev/null || true
-                fi
-            done
-
-            # Delete inline policies
-            aws iam list-role-policies --role-name "$role" --output text 2>/dev/null | \
-            awk '{print $2}' | \
-            while read -r policy; do
-                if [[ -n "$policy" ]]; then
-                    aws iam delete-role-policy --role-name "$role" --policy-name "$policy" 2>/dev/null || true
-                fi
-            done
-
-            # Delete role
-            aws iam delete-role --role-name "$role" 2>/dev/null || true
-        fi
-    done
-
-    # Remove stuck DB subnet groups
-    local subnet_group="order-processor-${ENVIRONMENT}-db-subnet-group"
-    if aws rds describe-db-subnet-groups --db-subnet-group-name "$subnet_group" >/dev/null 2>&1; then
-        log_info "Removing DB subnet group: $subnet_group"
-        aws rds delete-db-subnet-group --db-subnet-group-name "$subnet_group" 2>/dev/null || true
-    fi
-}
-
-# Use existing destroy script if available
-use_existing_destroy_script() {
-    local existing_script="$PROJECT_ROOT/terraform/scripts/destroy-everything.sh"
-
-    if [[ -f "$existing_script" ]]; then
-        log_info "Using existing destroy script: $existing_script"
-        cd "$PROJECT_ROOT/terraform"  # Stay in terraform root directory
-        chmod +x scripts/destroy-everything.sh
-
-        if [[ "$VERBOSE" == "true" ]]; then
-            ./scripts/destroy-everything.sh
-        else
-            ./scripts/destroy-everything.sh >/dev/null 2>&1
-        fi
-
-        return $?
-    fi
-
-    return 1
+    log_success "Standard pre-cleanup tasks completed"
 }
 
 # Terraform destroy
@@ -369,18 +405,12 @@ terraform_destroy() {
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "Dry-run mode: Would run terraform destroy"
-        terraform plan -destroy -var="cost_profile=$PROFILE" -var="environment=$ENVIRONMENT"
+        terraform plan -destroy \
+            -var="profile=$PROFILE" \
+            -var="environment=$ENVIRONMENT" \
+            -var="compute_type=${TF_VAR_compute_type}"
         return 0
     fi
-
-    # Try existing destroy script first
-    if use_existing_destroy_script; then
-        log_success "Infrastructure destroyed using existing script"
-        return 0
-    fi
-
-    # Fallback to direct terraform destroy
-    log_info "Running terraform destroy..."
 
     # Initialize if needed
     if [[ ! -d ".terraform" ]]; then
@@ -389,12 +419,9 @@ terraform_destroy() {
     fi
 
     # Destroy with auto-approve
-    local destroy_args="-var=cost_profile=$PROFILE -var=environment=$ENVIRONMENT"
+    local destroy_args="-var=profile=$PROFILE -var=environment=$ENVIRONMENT -var=compute_type=${TF_VAR_compute_type} -auto-approve"
 
-    if [[ "$AUTO_APPROVE" == "true" ]]; then
-        destroy_args="$destroy_args -auto-approve"
-    fi
-
+    log_info "Running terraform destroy..."
     if terraform destroy $destroy_args; then
         log_success "Terraform destroy completed successfully"
     else
@@ -407,7 +434,6 @@ terraform_destroy() {
 cleanup_remaining_resources() {
     log_warning "Attempting to cleanup remaining resources..."
 
-    # List and remove remaining resources manually
     cd "$PROJECT_ROOT/terraform"
 
     # Get list of remaining resources
@@ -419,25 +445,25 @@ cleanup_remaining_resources() {
             log_warning "Remaining resources in state:"
             echo "$remaining_resources"
 
-            # Remove problematic resources from state
-            local problem_resources=("aws_iam_role" "aws_db_subnet_group" "aws_s3_bucket")
-
-            for resource_type in "${problem_resources[@]}"; do
-                terraform state list 2>/dev/null | grep "^${resource_type}\." | while read -r resource; do
-                    log_info "Removing $resource from state"
-                    terraform state rm "$resource" 2>/dev/null || true
-                done
+            # Try destroy again with individual resource targeting
+            log_info "Attempting targeted resource destruction..."
+            echo "$remaining_resources" | while read -r resource; do
+                if [[ -n "$resource" ]]; then
+                    log_info "Attempting to destroy: $resource"
+                    terraform destroy -target="$resource" \
+                        -var="profile=$PROFILE" \
+                        -var="environment=$ENVIRONMENT" \
+                        -var="compute_type=${TF_VAR_compute_type}" \
+                        -auto-approve || true
+                fi
             done
-
-            # Try destroy again
-            terraform destroy -auto-approve -var="cost_profile=$PROFILE" -var="environment=$ENVIRONMENT" || true
         fi
     fi
 }
 
-# Post-cleanup verification
+# Verify complete cleanup
 verify_cleanup() {
-    log_step "✅ Verifying Cleanup"
+    log_step "✅ Verifying Complete Cleanup"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "Dry-run mode: Would verify cleanup completion"
@@ -445,372 +471,101 @@ verify_cleanup() {
     fi
 
     local warnings=()
+    local resource_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
 
-    # Check for remaining IAM roles
-    local remaining_roles
-    remaining_roles=$(aws iam list-roles --query "Roles[?contains(RoleName, 'order-processor-${ENVIRONMENT}')].RoleName" --output text 2>/dev/null || echo "")
-    if [[ -n "$remaining_roles" ]]; then
-        warnings+=("IAM roles still exist: $remaining_roles")
+    # Check for remaining resources by tags
+    log_info "Checking for remaining tagged resources..."
+    local tagged_resources
+    tagged_resources=$(aws resourcegroupstaggingapi get-resources \
+        --tag-filters Key=Project,Values=order-processor \
+        --region "${AWS_REGION:-us-west-2}" \
+        --query 'ResourceTagMappingList | length' \
+        --output text 2>/dev/null || echo "0")
+
+    if [[ "$tagged_resources" -gt 0 ]]; then
+        warnings+=("$tagged_resources tagged resources still exist")
+
+        # Show details if verbose
+        if [[ "$VERBOSE" == "true" ]]; then
+            aws resourcegroupstaggingapi get-resources \
+                --tag-filters Key=Project,Values=order-processor \
+                --region "${AWS_REGION:-us-west-2}" \
+                --query 'ResourceTagMappingList[].ResourceARN' \
+                --output table 2>/dev/null || true
+        fi
     fi
 
-    # Check for remaining S3 buckets
-    local remaining_buckets
-    remaining_buckets=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'order-processor-${ENVIRONMENT}')].Name" --output text 2>/dev/null || echo "")
-    if [[ -n "$remaining_buckets" ]]; then
-        warnings+=("S3 buckets still exist: $remaining_buckets")
+    # Profile-specific checks
+    case "$PROFILE" in
+        "minimum")
+            # Check for Lambda functions
+            local lambda_functions
+            lambda_functions=$(aws lambda list-functions \
+                --query "Functions[?contains(FunctionName, '${resource_prefix}')].FunctionName" \
+                --output text 2>/dev/null || echo "")
+            if [[ -n "$lambda_functions" ]]; then
+                warnings+=("Lambda functions still exist: $lambda_functions")
+            fi
+
+            # Check for API Gateways
+            local api_gateways
+            api_gateways=$(aws apigateway get-rest-apis \
+                --query "items[?contains(name, '${resource_prefix}')].name" \
+                --output text 2>/dev/null || echo "")
+            if [[ -n "$api_gateways" ]]; then
+                warnings+=("API Gateways still exist: $api_gateways")
+            fi
+            ;;
+
+        "regular")
+            # Check for EKS clusters
+            local eks_clusters
+            eks_clusters=$(aws eks list-clusters \
+                --query "clusters[?contains(@, '${resource_prefix}')]" \
+                --output text 2>/dev/null || echo "")
+            if [[ -n "$eks_clusters" ]]; then
+                warnings+=("EKS clusters still exist: $eks_clusters")
+            fi
+
+            # Check for ECR repositories
+            local ecr_repos
+            ecr_repos=$(aws ecr describe-repositories \
+                --query "repositories[?contains(repositoryName, '${resource_prefix}')].repositoryName" \
+                --output text 2>/dev/null || echo "")
+            if [[ -n "$ecr_repos" ]]; then
+                warnings+=("ECR repositories still exist: $ecr_repos")
+            fi
+            ;;
+    esac
+
+    # Check for common resources
+    local remaining_s3
+    remaining_s3=$(aws s3api list-buckets \
+        --query "Buckets[?contains(Name, '${resource_prefix}')].Name" \
+        --output text 2>/dev/null || echo "")
+    if [[ -n "$remaining_s3" ]]; then
+        warnings+=("S3 buckets still exist: $remaining_s3")
     fi
 
-    # Check for remaining RDS instances
     local remaining_rds
-    remaining_rds=$(aws rds describe-db-instances --query "DBInstances[?contains(DBInstanceIdentifier, 'order-processor-${ENVIRONMENT}')].DBInstanceIdentifier" --output text 2>/dev/null || echo "")
+    remaining_rds=$(aws rds describe-db-instances \
+        --query "DBInstances[?contains(DBInstanceIdentifier, '${resource_prefix}')].DBInstanceIdentifier" \
+        --output text 2>/dev/null || echo "")
     if [[ -n "$remaining_rds" ]]; then
         warnings+=("RDS instances still exist: $remaining_rds")
     fi
 
-    if [[ ${#warnings[@]} -gt 0 ]]; then
+    if [[ ${#warnings[@]} -eq 0 ]]; then
+        log_success "✅ All resources appear to be cleaned up"
+        log_success "💰 Estimated ongoing cost: $0.00/day"
+    else
         log_warning "Cleanup verification found remaining resources:"
         for warning in "${warnings[@]}"; do
             log_warning "  - $warning"
         done
-        log_info "These may require manual cleanup in AWS Console"
-    else
-        log_success "All resources appear to be cleaned up"
+        log_info "Manual cleanup may be required in AWS Console"
+        log_warning "💰 Some costs may still be incurred"
     fi
-}
-
-# Nuclear cleanup - destroy everything for cost savings
-nuclear_cleanup() {
-    if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run mode: Would perform nuclear cleanup"
-        return 0
-    fi
-
-    log_step "☢️ Nuclear Cleanup - Destroying ALL Project Resources"
-    log_warning "This will destroy ALL resources with project tags to prevent costs!"
-
-    # Get all resources with project tag
-    local all_resources
-    all_resources=$(aws resourcegroupstaggingapi get-resources \
-        --tag-filters Key=Project,Values=order-processor \
-        --region "${AWS_REGION:-us-west-2}" \
-        --output json 2>/dev/null || echo '{"ResourceTagMappingList":[]}')
-
-    # Parse and delete each resource type
-    echo "$all_resources" | jq -r '.ResourceTagMappingList[].ResourceARN' | while read -r arn; do
-        if [[ -n "$arn" ]]; then
-            nuclear_delete_resource "$arn"
-        fi
-    done
-
-    # Additional cleanup for resources that might not have tags
-    nuclear_cleanup_untagged_resources
-
-    log_success "Nuclear cleanup completed"
-}
-
-# Delete individual resource by ARN
-nuclear_delete_resource() {
-    local arn="$1"
-    local resource_type=$(echo "$arn" | cut -d':' -f3)
-    local resource_id=$(echo "$arn" | rev | cut -d'/' -f1 | rev)
-
-    log_info "Deleting $resource_type: $resource_id"
-
-    case "$resource_type" in
-        "s3")
-            local bucket_name=$(echo "$arn" | rev | cut -d':' -f1 | rev)
-            log_info "Force deleting S3 bucket: $bucket_name"
-            aws s3 rm "s3://$bucket_name" --recursive 2>/dev/null || true
-            aws s3 rb "s3://$bucket_name" --force 2>/dev/null || true
-            ;;
-        "secretsmanager")
-            log_info "Force deleting secret: $resource_id"
-            aws secretsmanager delete-secret --secret-id "$resource_id" --force-delete-without-recovery 2>/dev/null || true
-            ;;
-        "rds")
-            if [[ "$arn" == *":db:"* ]]; then
-                log_info "Force deleting RDS instance: $resource_id"
-                aws rds delete-db-instance --db-instance-identifier "$resource_id" --skip-final-snapshot --delete-automated-backups 2>/dev/null || true
-            elif [[ "$arn" == *":cluster:"* ]]; then
-                log_info "Force deleting RDS cluster: $resource_id"
-                aws rds delete-db-cluster --db-cluster-identifier "$resource_id" --skip-final-snapshot 2>/dev/null || true
-            fi
-            ;;
-        "eks")
-            log_info "Force deleting EKS cluster: $resource_id"
-            # Delete nodegroups first
-            aws eks list-nodegroups --cluster-name "$resource_id" --query 'nodegroups[]' --output text 2>/dev/null | while read -r nodegroup; do
-                if [[ -n "$nodegroup" ]]; then
-                    aws eks delete-nodegroup --cluster-name "$resource_id" --nodegroup-name "$nodegroup" 2>/dev/null || true
-                fi
-            done
-            # Wait a bit then delete cluster
-            sleep 30
-            aws eks delete-cluster --name "$resource_id" 2>/dev/null || true
-            ;;
-        "ec2")
-            if [[ "$arn" == *":instance/"* ]]; then
-                log_info "Terminating EC2 instance: $resource_id"
-                aws ec2 terminate-instances --instance-ids "$resource_id" 2>/dev/null || true
-            elif [[ "$arn" == *":vpc/"* ]]; then
-                log_info "Deleting VPC: $resource_id (after dependencies)"
-                # VPC will be deleted after other resources
-            elif [[ "$arn" == *":subnet/"* ]]; then
-                log_info "Deleting subnet: $resource_id"
-                aws ec2 delete-subnet --subnet-id "$resource_id" 2>/dev/null || true
-            elif [[ "$arn" == *":security-group/"* ]]; then
-                log_info "Deleting security group: $resource_id"
-                aws ec2 delete-security-group --group-id "$resource_id" 2>/dev/null || true
-            elif [[ "$arn" == *":vpc-endpoint/"* ]]; then
-                log_info "Deleting VPC endpoint: $resource_id"
-                aws ec2 delete-vpc-endpoint --vpc-endpoint-id "$resource_id" 2>/dev/null || true
-            elif [[ "$arn" == *":natgateway/"* ]]; then
-                log_info "Deleting NAT gateway: $resource_id"
-                aws ec2 delete-nat-gateway --nat-gateway-id "$resource_id" 2>/dev/null || true
-            fi
-            ;;
-        "elasticloadbalancing")
-            log_info "Deleting load balancer: $resource_id"
-            aws elbv2 delete-load-balancer --load-balancer-arn "$arn" 2>/dev/null || true
-            ;;
-        "iam")
-            if [[ "$arn" == *":role/"* ]]; then
-                log_info "Deleting IAM role: $resource_id"
-                # Detach all policies first
-                aws iam list-attached-role-policies --role-name "$resource_id" --output text 2>/dev/null | awk '{print $2}' | while read -r policy; do
-                    if [[ -n "$policy" ]]; then
-                        aws iam detach-role-policy --role-name "$resource_id" --policy-arn "$policy" 2>/dev/null || true
-                    fi
-                done
-                # Delete inline policies
-                aws iam list-role-policies --role-name "$resource_id" --output text 2>/dev/null | awk '{print $2}' | while read -r policy; do
-                    if [[ -n "$policy" ]]; then
-                        aws iam delete-role-policy --role-name "$resource_id" --policy-name "$policy" 2>/dev/null || true
-                    fi
-                done
-                aws iam delete-role --role-name "$resource_id" 2>/dev/null || true
-            fi
-            ;;
-        "kms")
-            log_info "Scheduling KMS key deletion: $resource_id"
-            aws kms schedule-key-deletion --key-id "$resource_id" --pending-window-in-days 7 2>/dev/null || true
-            ;;
-        "sqs")
-            log_info "Deleting SQS queue: $resource_id"
-            aws sqs delete-queue --queue-url "$resource_id" 2>/dev/null || true
-            ;;
-        "sns")
-            log_info "Deleting SNS topic: $resource_id"
-            aws sns delete-topic --topic-arn "$arn" 2>/dev/null || true
-            ;;
-        "ecr")
-            log_info "Deleting ECR repository: $resource_id"
-            aws ecr delete-repository --repository-name "$resource_id" --force 2>/dev/null || true
-            ;;
-        *)
-            log_warning "Unknown resource type for deletion: $resource_type ($arn)"
-            ;;
-    esac
-}
-
-# Cleanup untagged resources that might belong to the project
-nuclear_cleanup_untagged_resources() {
-    log_info "Cleaning up potentially untagged project resources..."
-
-    # Delete any VPCs that match our naming pattern
-    aws ec2 describe-vpcs --filters "Name=tag:Project,Values=order-processor" --query 'Vpcs[].VpcId' --output text 2>/dev/null | while read -r vpc_id; do
-        if [[ -n "$vpc_id" && "$vpc_id" != "None" ]]; then
-            log_info "Deleting VPC: $vpc_id"
-
-            # Delete all instances in VPC first
-            aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc_id" --query 'Reservations[].Instances[].InstanceId' --output text 2>/dev/null | while read -r instance_id; do
-                if [[ -n "$instance_id" && "$instance_id" != "None" ]]; then
-                    aws ec2 terminate-instances --instance-ids "$instance_id" 2>/dev/null || true
-                fi
-            done
-
-            # Wait for instances to terminate
-            sleep 30
-
-            # Delete VPC (this will fail if dependencies exist, which is fine)
-            aws ec2 delete-vpc --vpc-id "$vpc_id" 2>/dev/null || true
-        fi
-    done
-
-    # Clean up any remaining Elastic IPs
-    aws ec2 describe-addresses --filters "Name=tag:Project,Values=order-processor" --query 'Addresses[].AllocationId' --output text 2>/dev/null | while read -r allocation_id; do
-        if [[ -n "$allocation_id" && "$allocation_id" != "None" ]]; then
-            log_info "Releasing Elastic IP: $allocation_id"
-            aws ec2 release-address --allocation-id "$allocation_id" 2>/dev/null || true
-        fi
-    done
-
-    # Delete any remaining IAM roles with our naming pattern
-    aws iam list-roles --query "Roles[?contains(RoleName, 'order-processor')].RoleName" --output text 2>/dev/null | while read -r role_name; do
-        if [[ -n "$role_name" && "$role_name" != "None" ]]; then
-            log_info "Force deleting IAM role: $role_name"
-            # Detach policies
-            aws iam list-attached-role-policies --role-name "$role_name" --output text 2>/dev/null | awk '{print $2}' | while read -r policy; do
-                if [[ -n "$policy" ]]; then
-                    aws iam detach-role-policy --role-name "$role_name" --policy-arn "$policy" 2>/dev/null || true
-                fi
-            done
-            aws iam delete-role --role-name "$role_name" 2>/dev/null || true
-        fi
-    done
-}
-
-# Verify complete cleanup with detailed status
-verify_complete_cleanup() {
-    log_step "🔍 Verifying Complete Cleanup"
-
-    if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run mode: Would verify complete cleanup"
-        return 0
-    fi
-
-    # Check all regions for any remaining resources
-    local regions=("us-west-2" "us-east-1" "us-west-1" "us-east-2")
-    local has_remaining_resources=false
-
-    for region in "${regions[@]}"; do
-        log_info "Checking region: $region"
-
-        # Get resources with project tag
-        local resources_json
-        resources_json=$(aws resourcegroupstaggingapi get-resources \
-            --tag-filters Key=Project,Values=order-processor \
-            --region "$region" \
-            --output json 2>/dev/null || echo '{"ResourceTagMappingList":[]}')
-
-        # Parse and display resources in a readable format
-        local resource_count
-        resource_count=$(echo "$resources_json" | jq -r '.ResourceTagMappingList | length' 2>/dev/null || echo "0")
-
-        if [[ "$resource_count" -gt 0 ]]; then
-            has_remaining_resources=true
-
-            printf "\n${YELLOW}📋 Remaining Resources in $region:${NC}\n"
-            printf "${YELLOW}%-20s %-30s %-15s %s${NC}\n" "TYPE" "ID/NAME" "STATUS" "CHARGES"
-            printf "${YELLOW}%-20s %-30s %-15s %s${NC}\n" "----" "-------" "------" "-------"
-
-            echo "$resources_json" | jq -r '.ResourceTagMappingList[] | .ResourceARN' | while read -r arn; do
-                check_resource_status "$arn"
-            done
-        else
-            printf "${GREEN}✅ No resources found in $region${NC}\n"
-        fi
-    done
-
-    if [[ "$has_remaining_resources" == "false" ]]; then
-        log_success "✅ No project resources found in any region!"
-    else
-        printf "\n${YELLOW}⚠️  Resource Summary:${NC}\n"
-        printf "${YELLOW}• KMS Keys: Scheduled for deletion (7 days) - ${GREEN}NO COST${NC}\n"
-        printf "${YELLOW}• Secrets: Scheduled for deletion (immediate) - ${GREEN}NO COST${NC}\n"
-        printf "${YELLOW}• NAT Gateway: Deleted but tag remains - ${GREEN}NO COST${NC}\n"
-        printf "${YELLOW}• VPC Endpoint: Deleted but tag remains - ${GREEN}NO COST${NC}\n"
-        printf "${YELLOW}• OIDC Provider: Minimal cost (pennies) - ${GREEN}NEARLY FREE${NC}\n"
-        printf "\n${GREEN}💰 Total ongoing cost: $0.01-$0.10 per month maximum${NC}\n"
-    fi
-
-    # Show estimated cost impact
-    printf "\n${BLUE}💰 Cost Impact Summary:${NC}\n"
-    printf "${GREEN}✅ S3 buckets: Deleted (no storage charges)${NC}\n"
-    printf "${GREEN}✅ RDS instances: Deleted (no compute charges)${NC}\n"
-    printf "${GREEN}✅ EKS clusters: Deleted (no hourly charges)${NC}\n"
-    printf "${GREEN}✅ EC2 instances: Terminated (no compute charges)${NC}\n"
-    printf "${GREEN}✅ Load Balancers: Deleted (no hourly charges)${NC}\n"
-    printf "${YELLOW}⏳ KMS keys: Scheduled deletion (free after 7 days)${NC}\n"
-    printf "${GREEN}✅ Data transfer: Charges stopped${NC}\n"
-}
-
-# Check individual resource status
-check_resource_status() {
-    local arn="$1"
-    local resource_type=$(echo "$arn" | cut -d':' -f3)
-    local resource_id=$(echo "$arn" | rev | cut -d'/' -f1 | rev)
-    local status="UNKNOWN"
-    local cost_impact="UNKNOWN"
-
-    case "$resource_type" in
-        "kms")
-            # Check KMS key status
-            local key_status
-            key_status=$(aws kms describe-key --key-id "$resource_id" --query 'KeyMetadata.KeyState' --output text 2>/dev/null || echo "UNKNOWN")
-            if [[ "$key_status" == "PendingDeletion" ]]; then
-                status="DELETING"
-                cost_impact="FREE"
-            else
-                status="ACTIVE"
-                cost_impact="LOW"
-            fi
-            printf "%-20s %-30s %-15s %s\n" "KMS Key" "${resource_id:0:30}" "$status" "$cost_impact"
-            ;;
-        "secretsmanager")
-            # Check secret status
-            local secret_status
-            secret_status=$(aws secretsmanager describe-secret --secret-id "$resource_id" --query 'DeletedDate' --output text 2>/dev/null || echo "None")
-            if [[ "$secret_status" != "None" ]]; then
-                status="DELETING"
-                cost_impact="FREE"
-            else
-                status="ACTIVE"
-                cost_impact="LOW"
-            fi
-            printf "%-20s %-30s %-15s %s\n" "Secret" "${resource_id:0:30}" "$status" "$cost_impact"
-            ;;
-        "ec2")
-            if [[ "$arn" == *":natgateway/"* ]]; then
-                # Check NAT gateway status
-                local nat_status
-                nat_status=$(aws ec2 describe-nat-gateways --nat-gateway-ids "$resource_id" --query 'NatGateways[0].State' --output text 2>/dev/null || echo "deleted")
-                if [[ "$nat_status" == "deleted" || "$nat_status" == "deleting" ]]; then
-                    status="DELETED"
-                    cost_impact="FREE"
-                else
-                    status="ACTIVE"
-                    cost_impact="HIGH"
-                fi
-                printf "%-20s %-30s %-15s %s\n" "NAT Gateway" "${resource_id:0:30}" "$status" "$cost_impact"
-            elif [[ "$arn" == *":vpc-endpoint/"* ]]; then
-                # Check VPC endpoint status
-                local vpc_endpoint_status
-                vpc_endpoint_status=$(aws ec2 describe-vpc-endpoints --vpc-endpoint-ids "$resource_id" --query 'VpcEndpoints[0].State' --output text 2>/dev/null || echo "deleted")
-                if [[ "$vpc_endpoint_status" == "deleted" || "$vpc_endpoint_status" == "deleting" ]]; then
-                    status="DELETED"
-                    cost_impact="FREE"
-                else
-                    status="ACTIVE"
-                    cost_impact="LOW"
-                fi
-                printf "%-20s %-30s %-15s %s\n" "VPC Endpoint" "${resource_id:0:30}" "$status" "$cost_impact"
-            elif [[ "$arn" == *":subnet/"* ]]; then
-                # Check subnet status
-                local subnet_status
-                subnet_status=$(aws ec2 describe-subnets --subnet-ids "$resource_id" --query 'Subnets[0].State' --output text 2>/dev/null || echo "deleted")
-                status="$subnet_status"
-                cost_impact="FREE"
-                printf "%-20s %-30s %-15s %s\n" "Subnet" "${resource_id:0:30}" "$status" "$cost_impact"
-            else
-                printf "%-20s %-30s %-15s %s\n" "EC2 ($resource_type)" "${resource_id:0:30}" "CHECK" "VARIES"
-            fi
-            ;;
-        "iam")
-            if [[ "$arn" == *":oidc-provider/"* ]]; then
-                # OIDC providers have minimal cost
-                status="ACTIVE"
-                cost_impact="MINIMAL"
-                local provider_id=$(echo "$arn" | rev | cut -d'/' -f1 | rev)
-                printf "%-20s %-30s %-15s %s\n" "OIDC Provider" "${provider_id:0:30}" "$status" "$cost_impact"
-            else
-                printf "%-20s %-30s %-15s %s\n" "IAM Resource" "${resource_id:0:30}" "CHECK" "FREE"
-            fi
-            ;;
-        *)
-            printf "%-20s %-30s %-15s %s\n" "$resource_type" "${resource_id:0:30}" "CHECK" "UNKNOWN"
-            ;;
-    esac
 }
 
 # Generate cleanup summary
@@ -820,14 +575,24 @@ generate_summary() {
     log_info "Destruction Details:"
     log_info "  Environment: $ENVIRONMENT"
     log_info "  Profile: $PROFILE"
+    log_info "  Compute Type: ${TF_VAR_compute_type}"
     log_info "  Region: ${AWS_REGION:-us-west-2}"
-    log_info "  Force cleanup: $FORCE_CLEANUP"
 
     if [[ "$DRY_RUN" == "false" ]]; then
         log_success "✅ Complete infrastructure destruction completed!"
-        log_success "✅ Nuclear cleanup performed to prevent any charges!"
-        log_info "All AWS resources have been aggressively cleaned up"
+
+        case "$PROFILE" in
+            "minimum")
+                log_success "✅ Lambda + API Gateway infrastructure destroyed!"
+                ;;
+            "regular")
+                log_success "✅ EKS + Kubernetes infrastructure destroyed!"
+                ;;
+        esac
+
+        log_info "All AWS resources have been cleaned up"
         log_info "Check AWS Console and billing dashboard to verify"
+        log_success "💰 Expected cost reduction: ~$0.50-20/day depending on profile"
     else
         log_success "✅ Destruction plan validated!"
         log_info "Remove --dry-run flag to destroy all infrastructure"
@@ -853,16 +618,12 @@ main() {
     # Execute destruction steps
     setup_environment
     check_prerequisites
+    show_destruction_impact
     confirm_destruction
-    pre_cleanup
+    profile_specific_cleanup
+    standard_pre_cleanup
     terraform_destroy
-
-    # Add nuclear cleanup for complete resource removal
-    if [[ "$FORCE_CLEANUP" == "true" ]]; then
-        nuclear_cleanup
-    fi
-
-    verify_complete_cleanup
+    verify_cleanup
     generate_summary
 
     # Return to original directory

@@ -1,7 +1,7 @@
 #!/bin/bash
 # scripts/deploy-app.sh
-# Application Deployment Script
-# Deploys Docker images and Kubernetes applications to AWS EKS
+# Application Deployment Script with Profile Support
+# Deploys to Lambda (minimum profile) or EKS (regular profile)
 
 set -e
 
@@ -28,31 +28,34 @@ show_usage() {
     cat << EOF
 $(printf "${BLUE}📦 Application Deployment Script${NC}")
 
-Usage: $0 --environment {dev|prod} --profile {learning|minimum|prod} [OPTIONS]
+Usage: $0 --environment {dev|prod} --profile {minimum|regular} [OPTIONS]
 
-Deploy application (Docker + Kubernetes) to AWS EKS infrastructure.
+Deploy application to AWS infrastructure based on profile.
 
 REQUIRED:
     --environment {dev|prod}           Target environment
-    --profile {learning|minimum|prod}  Resource profile
+    --profile {minimum|regular}        Resource profile
+
+PROFILES:
+    minimum    - Deploy to Lambda + API Gateway
+    regular    - Deploy to EKS + Kubernetes
 
 OPTIONS:
     -v, --verbose                      Enable verbose output
     --dry-run                         Show what would happen (don't deploy)
-    --skip-build                      Skip Docker build, use existing images
+    --skip-build                      Skip build step, use existing package
     -h, --help                        Show this help message
 
 EXAMPLES:
-    $0 --environment dev --profile learning        # Deploy app to dev environment
-    $0 --environment prod --profile prod           # Deploy app to prod environment
-    $0 --environment dev --profile learning --dry-run  # Plan only, don't deploy
-    $0 --environment dev --profile learning --skip-build  # Deploy without rebuilding
+    $0 --environment dev --profile minimum        # Deploy to Lambda
+    $0 --environment dev --profile regular        # Deploy to EKS
+    $0 --environment dev --profile minimum --dry-run  # Plan only
+    $0 --environment dev --profile regular --skip-build  # Deploy without rebuilding
 
 PREREQUISITES:
     - Infrastructure must be deployed first (./scripts/deploy.sh)
-    - Docker must be installed and running
-    - AWS CLI configured with appropriate permissions
-    - kubectl configured for target EKS cluster
+    - For minimum profile: Python packaging tools
+    - For regular profile: Docker and kubectl
 
 EOF
 }
@@ -128,8 +131,8 @@ validate_arguments() {
 
     if [[ -z "$PROFILE" ]]; then
         errors+=("--profile is required")
-    elif [[ "$PROFILE" != "learning" && "$PROFILE" != "minimum" && "$PROFILE" != "prod" ]]; then
-        errors+=("--profile must be 'learning', 'minimum', or 'prod'")
+    elif [[ "$PROFILE" != "minimum" && "$PROFILE" != "regular" ]]; then
+        errors+=("--profile must be 'minimum' or 'regular'")
     fi
 
     if [[ ${#errors[@]} -gt 0 ]]; then
@@ -149,55 +152,70 @@ setup_environment() {
 
     # Set base environment variables
     export ENVIRONMENT="$ENVIRONMENT"
-    export COST_PROFILE="$PROFILE"
+    export PROFILE="$PROFILE"
     export AWS_DEFAULT_REGION="${AWS_REGION:-us-west-2}"
 
     # Load environment-specific configuration
-    local env_config="$PROJECT_ROOT/config/environments/${ENVIRONMENT}.env"
+    local env_config="$PROJECT_ROOT/config/environments/.env.defaults"
     if [[ -f "$env_config" ]]; then
-        log_info "Loading environment config: $env_config"
+        log_info "Loading configuration: $env_config"
         source "$env_config"
-    fi
-
-    # Load profile-specific configuration
-    local profile_config="$PROJECT_ROOT/config/profiles/${PROFILE}.env"
-    if [[ -f "$profile_config" ]]; then
-        log_info "Loading profile config: $profile_config"
-        source "$profile_config"
     fi
 
     if [[ "$VERBOSE" == "true" ]]; then
         log_info "Environment variables set:"
         log_info "  ENVIRONMENT: $ENVIRONMENT"
-        log_info "  COST_PROFILE: $PROFILE"
+        log_info "  PROFILE: $PROFILE"
         log_info "  AWS_REGION: ${AWS_REGION:-us-west-2}"
     fi
 }
 
-# Check prerequisites
+# Check prerequisites based on profile
 check_prerequisites() {
     log_step "🔍 Checking Prerequisites"
 
     local missing_tools=()
     local errors=()
 
-    # Check required tools
-    local tools=("docker" "aws" "kubectl")
-    for tool in "${tools[@]}"; do
+    # Common tools
+    local common_tools=("aws" "jq")
+    for tool in "${common_tools[@]}"; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             missing_tools+=("$tool")
         fi
     done
 
+    # Profile-specific tools
+    case "$PROFILE" in
+        "minimum")
+            # Lambda deployment needs Python and ZIP
+            local lambda_tools=("python3" "pip" "zip")
+            for tool in "${lambda_tools[@]}"; do
+                if ! command -v "$tool" >/dev/null 2>&1; then
+                    missing_tools+=("$tool")
+                fi
+            done
+            ;;
+        "regular")
+            # Kubernetes deployment needs Docker and kubectl
+            local k8s_tools=("docker" "kubectl")
+            for tool in "${k8s_tools[@]}"; do
+                if ! command -v "$tool" >/dev/null 2>&1; then
+                    missing_tools+=("$tool")
+                fi
+            done
+
+            # Check Docker daemon for regular profile
+            if command -v docker >/dev/null 2>&1; then
+                if ! docker info >/dev/null 2>&1; then
+                    errors+=("Docker is installed but not running")
+                fi
+            fi
+            ;;
+    esac
+
     if [[ ${#missing_tools[@]} -gt 0 ]]; then
         errors+=("Missing required tools: ${missing_tools[*]}")
-    fi
-
-    # Check Docker daemon
-    if command -v docker >/dev/null 2>&1; then
-        if ! docker info >/dev/null 2>&1; then
-            errors+=("Docker daemon is not running")
-        fi
     fi
 
     # Check AWS credentials
@@ -211,18 +229,25 @@ check_prerequisites() {
         errors+=("Infrastructure not deployed. Run ./scripts/deploy.sh first")
     fi
 
-    # Try to get EKS cluster info
-    local cluster_name=""
-    if terraform output eks_cluster_name >/dev/null 2>&1; then
-        cluster_name=$(terraform output -raw eks_cluster_name 2>/dev/null || echo "")
-    fi
-
-    if [[ -z "$cluster_name" ]]; then
-        errors+=("EKS cluster not found in terraform outputs")
-    else
-        export EKS_CLUSTER_NAME="$cluster_name"
-        log_info "Found EKS cluster: $cluster_name"
-    fi
+    # Get infrastructure outputs based on profile
+    case "$PROFILE" in
+        "minimum")
+            if ! terraform output lambda_function_name >/dev/null 2>&1; then
+                errors+=("Lambda function not found in terraform outputs. Check infrastructure deployment.")
+            else
+                export LAMBDA_FUNCTION_NAME=$(terraform output -raw lambda_function_name 2>/dev/null || echo "")
+                log_info "Found Lambda function: $LAMBDA_FUNCTION_NAME"
+            fi
+            ;;
+        "regular")
+            if ! terraform output eks_cluster_name >/dev/null 2>&1; then
+                errors+=("EKS cluster not found in terraform outputs. Check infrastructure deployment.")
+            else
+                export EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name 2>/dev/null || echo "")
+                log_info "Found EKS cluster: $EKS_CLUSTER_NAME"
+            fi
+            ;;
+    esac
 
     cd "$PROJECT_ROOT"
 
@@ -237,38 +262,85 @@ check_prerequisites() {
     log_success "Prerequisites check passed"
 }
 
-# Build and push Docker images
-build_and_push_images() {
+# Build and package application for Lambda
+build_lambda_package() {
+    if [[ "$SKIP_BUILD" == "true" ]]; then
+        log_info "Skipping Lambda package build (--skip-build specified)"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "Dry-run mode: Would build Lambda package"
+        return 0
+    fi
+
+    log_step "📦 Building Lambda Package"
+
+    local build_dir="$PROJECT_ROOT/.lambda-build"
+    local package_dir="$build_dir/package"
+    local source_dir="$PROJECT_ROOT/services/order-service"
+
+    # Clean and create build directory
+    rm -rf "$build_dir"
+    mkdir -p "$package_dir"
+
+    # Install dependencies
+    log_info "Installing Python dependencies..."
+    cd "$source_dir"
+
+    # Install requirements to package directory
+    pip install -r requirements.txt -t "$package_dir" --quiet
+
+    # Install common package if it exists
+    if [[ -f "$PROJECT_ROOT/services/common/setup.py" ]]; then
+        log_info "Installing common package..."
+        pip install -e "$PROJECT_ROOT/services/common" -t "$package_dir" --quiet
+    fi
+
+    # Copy source code
+    log_info "Copying application source..."
+    cp -r src/* "$package_dir/"
+
+    # Create lambda_handler.py if it doesn't exist
+    if [[ ! -f "$package_dir/lambda_handler.py" ]]; then
+        log_info "Creating Lambda handler..."
+        cat > "$package_dir/lambda_handler.py" << 'EOF'
+from mangum import Mangum
+from app import app
+
+# Configure Mangum for Lambda
+handler = Mangum(app, lifespan="off")
+EOF
+    fi
+
+    # Install Mangum for Lambda compatibility
+    pip install mangum -t "$package_dir" --quiet
+
+    # Create deployment package
+    log_info "Creating deployment package..."
+    cd "$package_dir"
+    zip -r "../lambda-deployment.zip" . --quiet
+
+    # Store package path for deployment
+    export LAMBDA_PACKAGE_PATH="$build_dir/lambda-deployment.zip"
+
+    cd "$PROJECT_ROOT"
+    log_success "Lambda package built: $LAMBDA_PACKAGE_PATH"
+}
+
+# Build Docker image for Kubernetes
+build_docker_image() {
     if [[ "$SKIP_BUILD" == "true" ]]; then
         log_info "Skipping Docker build (--skip-build specified)"
         return 0
     fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run mode: Would build and push Docker images"
+        log_info "Dry-run mode: Would build and push Docker image"
         return 0
     fi
 
-    log_step "🐳 Building and Pushing Docker Images"
-
-    # Check if ECR build script exists
-    if [[ -f "$PROJECT_ROOT/scripts/ecr_build_push.sh" ]]; then
-        log_info "Using existing ECR build script..."
-        cd "$PROJECT_ROOT"
-        chmod +x scripts/ecr_build_push.sh
-
-        if [[ "$VERBOSE" == "true" ]]; then
-            ./scripts/ecr_build_push.sh
-        else
-            ./scripts/ecr_build_push.sh > /dev/null 2>&1
-        fi
-
-        log_success "Docker images built and pushed to ECR"
-        return 0
-    fi
-
-    # Fallback: Manual Docker build and push
-    log_info "Using manual Docker build process..."
+    log_step "🐳 Building and Pushing Docker Image"
 
     # Login to ECR
     log_info "Logging into Amazon ECR..."
@@ -276,26 +348,40 @@ build_and_push_images() {
         docker login --username AWS --password-stdin \
         "$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${AWS_REGION:-us-west-2}.amazonaws.com"
 
-    # Build and push order-service image
+    # Build and push using existing script if available
+    if [[ -f "$PROJECT_ROOT/scripts/quick_build.sh" ]]; then
+        log_info "Using existing Docker build script..."
+        cd "$PROJECT_ROOT"
+        chmod +x scripts/quick_build.sh
+
+        if [[ "$VERBOSE" == "true" ]]; then
+            ./scripts/quick_build.sh
+        else
+            ./scripts/quick_build.sh > /dev/null 2>&1
+        fi
+
+        log_success "Docker image built and pushed to ECR"
+        return 0
+    fi
+
+    # Fallback: Manual Docker build
+    log_info "Building Docker image manually..."
+
     local ecr_registry="$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${AWS_REGION:-us-west-2}.amazonaws.com"
     local image_name="order-processor-order-api"
     local image_tag="${ENVIRONMENT}-$(date +%Y%m%d-%H%M%S)"
 
     if [[ -f "$PROJECT_ROOT/docker/order-service/Dockerfile.simple" ]]; then
-        log_info "Building order-service Docker image..."
         cd "$PROJECT_ROOT"
 
         docker build -f docker/order-service/Dockerfile.simple \
             -t "$ecr_registry/$image_name:$image_tag" \
             -t "$ecr_registry/$image_name:latest" .
 
-        log_info "Pushing image to ECR..."
         docker push "$ecr_registry/$image_name:$image_tag"
         docker push "$ecr_registry/$image_name:latest"
 
-        # Store image URI for Kubernetes deployment
         export IMAGE_URI="$ecr_registry/$image_name:$image_tag"
-
         log_success "Docker image built and pushed: $IMAGE_URI"
     else
         log_error "Dockerfile not found: docker/order-service/Dockerfile.simple"
@@ -303,28 +389,59 @@ build_and_push_images() {
     fi
 }
 
-# Update EKS kubeconfig
-update_kubeconfig() {
+# Deploy to Lambda
+deploy_to_lambda() {
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run mode: Would update kubeconfig for EKS cluster"
+        log_info "Dry-run mode: Would deploy application to Lambda"
         return 0
     fi
 
-    log_step "☸️ Updating Kubernetes Configuration"
+    log_step "🚀 Deploying Application to Lambda"
 
-    log_info "Updating kubeconfig for EKS cluster: $EKS_CLUSTER_NAME"
-    aws eks update-kubeconfig \
-        --region "${AWS_REGION:-us-west-2}" \
-        --name "$EKS_CLUSTER_NAME"
-
-    # Test kubectl connectivity
-    log_info "Testing kubectl connectivity..."
-    if kubectl get nodes >/dev/null 2>&1; then
-        log_success "kubectl connected to EKS cluster"
-    else
-        log_error "Failed to connect to EKS cluster"
+    if [[ -z "$LAMBDA_PACKAGE_PATH" ]]; then
+        log_error "Lambda package not found. Build may have failed."
         exit 1
     fi
+
+    log_info "Updating Lambda function: $LAMBDA_FUNCTION_NAME"
+
+    # Update function code
+    aws lambda update-function-code \
+        --function-name "$LAMBDA_FUNCTION_NAME" \
+        --zip-file "fileb://$LAMBDA_PACKAGE_PATH" \
+        --region "${AWS_REGION:-us-west-2}" \
+        --output table
+
+    # Wait for update to complete
+    log_info "Waiting for Lambda function to be updated..."
+    aws lambda wait function-updated \
+        --function-name "$LAMBDA_FUNCTION_NAME" \
+        --region "${AWS_REGION:-us-west-2}"
+
+    # Test function
+    log_info "Testing Lambda function..."
+    local test_payload='{"httpMethod": "GET", "path": "/health", "headers": {}}'
+
+    if aws lambda invoke \
+        --function-name "$LAMBDA_FUNCTION_NAME" \
+        --payload "$test_payload" \
+        --region "${AWS_REGION:-us-west-2}" \
+        /tmp/lambda-response.json >/dev/null 2>&1; then
+        log_success "Lambda function test successful"
+    else
+        log_warning "Lambda function test failed (may be normal if /health endpoint doesn't exist)"
+    fi
+
+    # Get API Gateway URL
+    cd "$PROJECT_ROOT/terraform"
+    if terraform output api_gateway_url >/dev/null 2>&1; then
+        local api_url=$(terraform output -raw api_gateway_url)
+        export SERVICE_URL="$api_url"
+        log_info "Service URL: $SERVICE_URL"
+    fi
+    cd "$PROJECT_ROOT"
+
+    log_success "Application deployed to Lambda successfully"
 }
 
 # Deploy to Kubernetes
@@ -334,7 +451,21 @@ deploy_to_kubernetes() {
         return 0
     fi
 
-    log_step "🚀 Deploying Application to Kubernetes"
+    log_step "☸️ Deploying Application to Kubernetes"
+
+    # Update EKS kubeconfig
+    log_info "Updating kubeconfig for EKS cluster: $EKS_CLUSTER_NAME"
+    aws eks update-kubeconfig \
+        --region "${AWS_REGION:-us-west-2}" \
+        --name "$EKS_CLUSTER_NAME"
+
+    # Test kubectl connectivity
+    if kubectl get nodes >/dev/null 2>&1; then
+        log_success "kubectl connected to EKS cluster"
+    else
+        log_error "Failed to connect to EKS cluster"
+        exit 1
+    fi
 
     # Check if dedicated EKS deployment script exists
     if [[ -f "$PROJECT_ROOT/kubernetes/scripts/deploy-to-eks.sh" ]]; then
@@ -374,7 +505,19 @@ deploy_to_kubernetes() {
         log_warning "Deployment readiness check timed out or failed"
     }
 
-    log_success "Application deployed to Kubernetes"
+    # Get service URL if available
+    local service_url=""
+    service_url=$(kubectl get service order-service -n order-processor -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+
+    if [[ -n "$service_url" ]]; then
+        export SERVICE_URL="http://$service_url"
+        log_info "Service URL: $SERVICE_URL"
+    else
+        log_info "Service URL not yet available (LoadBalancer provisioning)"
+    fi
+
+    cd "$PROJECT_ROOT"
+    log_success "Application deployed to Kubernetes successfully"
 }
 
 # Verify deployment
@@ -386,30 +529,43 @@ verify_deployment() {
 
     log_step "✅ Verifying Application Deployment"
 
-    # Check pod status
-    log_info "Checking pod status..."
-    kubectl get pods -n order-processor 2>/dev/null || {
-        log_warning "Could not get pod status"
-        return 0
-    }
+    case "$PROFILE" in
+        "minimum")
+            # Verify Lambda deployment
+            log_info "Checking Lambda function status..."
+            local function_state=$(aws lambda get-function \
+                --function-name "$LAMBDA_FUNCTION_NAME" \
+                --region "${AWS_REGION:-us-west-2}" \
+                --query 'Configuration.State' \
+                --output text 2>/dev/null || echo "UNKNOWN")
 
-    # Check service status
-    log_info "Checking service status..."
-    kubectl get services -n order-processor 2>/dev/null || {
-        log_warning "Could not get service status"
-        return 0
-    }
+            if [[ "$function_state" == "Active" ]]; then
+                log_success "Lambda function is active"
+            else
+                log_warning "Lambda function state: $function_state"
+            fi
 
-    # Get service endpoints if available
-    local service_url=""
-    service_url=$(kubectl get service order-service -n order-processor -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+            if [[ -n "$SERVICE_URL" ]]; then
+                log_info "API Gateway URL: $SERVICE_URL"
+            fi
+            ;;
+        "regular")
+            # Verify Kubernetes deployment
+            log_info "Checking pod status..."
+            kubectl get pods -n order-processor 2>/dev/null || {
+                log_warning "Could not get pod status"
+            }
 
-    if [[ -n "$service_url" ]]; then
-        log_info "Service URL: http://$service_url"
-        export SERVICE_URL="http://$service_url"
-    else
-        log_info "Service URL not yet available (LoadBalancer provisioning)"
-    fi
+            log_info "Checking service status..."
+            kubectl get services -n order-processor 2>/dev/null || {
+                log_warning "Could not get service status"
+            }
+
+            if [[ -n "$SERVICE_URL" ]]; then
+                log_info "Kubernetes Service URL: $SERVICE_URL"
+            fi
+            ;;
+    esac
 
     log_success "Application deployment verification completed"
 }
@@ -421,16 +577,35 @@ generate_summary() {
     log_info "Deployment Details:"
     log_info "  Environment: $ENVIRONMENT"
     log_info "  Profile: $PROFILE"
-    log_info "  EKS Cluster: ${EKS_CLUSTER_NAME:-unknown}"
-    log_info "  Docker Image: ${IMAGE_URI:-existing}"
-    log_info "  Service URL: ${SERVICE_URL:-pending}"
+
+    case "$PROFILE" in
+        "minimum")
+            log_info "  Deployment Type: Lambda + API Gateway"
+            log_info "  Lambda Function: ${LAMBDA_FUNCTION_NAME:-unknown}"
+            log_info "  Service URL: ${SERVICE_URL:-pending}"
+            log_info "  Package: ${LAMBDA_PACKAGE_PATH:-unknown}"
+            ;;
+        "regular")
+            log_info "  Deployment Type: EKS + Kubernetes"
+            log_info "  EKS Cluster: ${EKS_CLUSTER_NAME:-unknown}"
+            log_info "  Docker Image: ${IMAGE_URI:-existing}"
+            log_info "  Service URL: ${SERVICE_URL:-pending}"
+            ;;
+    esac
 
     if [[ "$DRY_RUN" == "false" ]]; then
         log_success "✅ Application deployment completed successfully!"
         log_info "Next steps:"
-        log_info "  1. Run integration tests: ./scripts/test-integration.sh --environment $ENVIRONMENT"
-        log_info "  2. Monitor deployment: kubectl get pods -n order-processor"
-        log_info "  3. When done, cleanup: ./scripts/destroy.sh --environment $ENVIRONMENT --profile $PROFILE"
+        log_info "  1. Run integration tests: ./scripts/test-integration.sh --environment $ENVIRONMENT --profile $PROFILE"
+        case "$PROFILE" in
+            "minimum")
+                log_info "  2. Test via API Gateway: curl $SERVICE_URL/health"
+                ;;
+            "regular")
+                log_info "  2. Monitor pods: kubectl get pods -n order-processor"
+                ;;
+        esac
+        log_info "  3. When done, cleanup: ./scripts/destroy.sh --environment $ENVIRONMENT --profile $PROFILE --force"
     else
         log_success "✅ Application deployment plan validated!"
         log_info "Remove --dry-run flag to deploy application"
@@ -456,9 +631,23 @@ main() {
     # Execute deployment steps
     setup_environment
     check_prerequisites
-    build_and_push_images
-    update_kubeconfig
-    deploy_to_kubernetes
+
+    # Profile-specific deployment
+    case "$PROFILE" in
+        "minimum")
+            build_lambda_package
+            deploy_to_lambda
+            ;;
+        "regular")
+            build_docker_image
+            deploy_to_kubernetes
+            ;;
+        *)
+            log_error "Unknown profile: $PROFILE"
+            exit 1
+            ;;
+    esac
+
     verify_deployment
     generate_summary
 

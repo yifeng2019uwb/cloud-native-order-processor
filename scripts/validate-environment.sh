@@ -1,61 +1,62 @@
 #!/bin/bash
 # File: scripts/validate-environment.sh
-# Overall environment validation
-# Comprehensive validation orchestrator
-# Project structure checks (directories and files)
-# Terraform setup validation (init, validate, workspace)
-# AWS setup verification (permissions, state bucket)
-# Configuration validation with YAML syntax checking
-# Command-line interface with help and options
+# Simplified environment validation
+# Basic validation for dev/prod environments with minimum/regular profiles
 
 set -euo pipefail
 
 # Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-SHARED_DIR="${SCRIPT_DIR}/shared"
 
-# Source shared utilities
-# shellcheck source=shared/logging-utils.sh
-source "${SHARED_DIR}/logging-utils.sh"
-# shellcheck source=shared/environment-loader.sh
-source "${SHARED_DIR}/environment-loader.sh"
-# shellcheck source=shared/aws-utils.sh
-source "${SHARED_DIR}/aws-utils.sh"
-# shellcheck source=shared/error-handler.sh
-source "${SHARED_DIR}/error-handler.sh"
-# shellcheck source=shared/prerequisites-checker.sh
-source "${SHARED_DIR}/prerequisites-checker.sh"
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# Script configuration
-SCRIPT_NAME="validate-environment"
-VERSION="1.0.0"
+# Default values
+ENVIRONMENT=""
+VERBOSE=false
+
+# Logging functions
+log_info() {
+    printf "${BLUE}[INFO]${NC} %s\n" "$1"
+}
+
+log_success() {
+    printf "${GREEN}[SUCCESS]${NC} %s\n" "$1"
+}
+
+log_warning() {
+    printf "${YELLOW}[WARNING]${NC} %s\n" "$1"
+}
+
+log_error() {
+    printf "${RED}[ERROR]${NC} %s\n" "$1"
+}
+
+log_section() {
+    printf "\n${BLUE}=== %s ===${NC}\n" "$1"
+}
 
 # Usage information
 show_usage() {
     cat << EOF
 Usage: ${0} [OPTIONS]
 
-Overall environment validation for cloud-native order processor
+Simplified environment validation for cloud-native order processor
 
 OPTIONS:
-    -e, --environment ENV    Target environment (local, dev, staging, ci)
-    -s, --skip-optional     Skip optional tool checks
+    -e, --environment ENV    Target environment (dev|prod)
     -v, --verbose           Enable verbose output
-    -d, --debug             Enable debug mode
     -h, --help              Show this help message
 
 EXAMPLES:
-    ${0}                    # Auto-detect environment and validate
-    ${0} --environment dev  # Validate development environment
-    ${0} --verbose          # Validate with verbose output
-    ${0} --skip-optional    # Skip optional tools check
-
-ENVIRONMENT VARIABLES:
-    ENVIRONMENT             Target environment (auto-detected if not set)
-    DEBUG_MODE              Enable debug mode (true/false)
-    TEST_VERBOSE            Enable verbose testing (true/false)
-    SKIP_PREREQUISITES_CHECK Skip prerequisites check (true/false)
+    ${0} --environment dev     # Validate development environment
+    ${0} --environment prod    # Validate production environment
+    ${0} --verbose             # Auto-detect environment with verbose output
 
 EOF
 }
@@ -68,18 +69,8 @@ parse_arguments() {
                 ENVIRONMENT="$2"
                 shift 2
                 ;;
-            -s|--skip-optional)
-                SKIP_OPTIONAL="true"
-                shift
-                ;;
             -v|--verbose)
-                TEST_VERBOSE="true"
-                LOG_LEVEL="INFO"
-                shift
-                ;;
-            -d|--debug)
-                DEBUG_MODE="true"
-                LOG_LEVEL="DEBUG"
+                VERBOSE=true
                 shift
                 ;;
             -h|--help)
@@ -95,9 +86,63 @@ parse_arguments() {
     done
 }
 
+# Auto-detect environment if not provided
+detect_environment() {
+    if [[ -n "${ENVIRONMENT}" ]]; then
+        return 0
+    fi
+
+    # Simple detection logic
+    if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+        ENVIRONMENT="prod"
+    else
+        ENVIRONMENT="dev"
+    fi
+
+    log_info "Auto-detected environment: ${ENVIRONMENT}"
+}
+
+# Validate environment
+validate_environment() {
+    if [[ "${ENVIRONMENT}" != "dev" && "${ENVIRONMENT}" != "prod" ]]; then
+        log_error "Environment must be 'dev' or 'prod', got: ${ENVIRONMENT}"
+        return 1
+    fi
+
+    log_success "Environment '${ENVIRONMENT}' is valid"
+    return 0
+}
+
+# Check required tools
+check_tools() {
+    log_section "Checking Required Tools"
+
+    local missing_tools=()
+    local tools=("terraform" "aws" "docker" "jq" "git")
+
+    for tool in "${tools[@]}"; do
+        if command -v "${tool}" >/dev/null 2>&1; then
+            if [[ "${VERBOSE}" == "true" ]]; then
+                log_success "${tool} is available"
+            fi
+        else
+            missing_tools+=("${tool}")
+        fi
+    done
+
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        log_error "Missing required tools: ${missing_tools[*]}"
+        log_info "Install missing tools and try again"
+        return 1
+    fi
+
+    log_success "All required tools are available"
+    return 0
+}
+
 # Validate project structure
 validate_project_structure() {
-    log_subsection "Project Structure Validation"
+    log_section "Validating Project Structure"
 
     local required_dirs=(
         "terraform"
@@ -112,9 +157,10 @@ validate_project_structure() {
     for dir in "${required_dirs[@]}"; do
         local full_path="${PROJECT_ROOT}/${dir}"
         if [[ -d "${full_path}" ]]; then
-            log_debug "✓ Directory exists: ${dir}"
+            if [[ "${VERBOSE}" == "true" ]]; then
+                log_success "Directory exists: ${dir}"
+            fi
         else
-            log_warn "✗ Directory missing: ${dir}"
             missing_dirs+=("${dir}")
         fi
     done
@@ -122,7 +168,6 @@ validate_project_structure() {
     local required_files=(
         "terraform/main.tf"
         "config/shared-config.yaml"
-        "config/environments/.env.defaults"
         ".github/workflows/ci-cd.yaml"
         "README.md"
     )
@@ -132,31 +177,68 @@ validate_project_structure() {
     for file in "${required_files[@]}"; do
         local full_path="${PROJECT_ROOT}/${file}"
         if [[ -f "${full_path}" ]]; then
-            log_debug "✓ File exists: ${file}"
+            if [[ "${VERBOSE}" == "true" ]]; then
+                log_success "File exists: ${file}"
+            fi
         else
-            log_warn "✗ File missing: ${file}"
             missing_files+=("${file}")
         fi
     done
 
-    if [[ ${#missing_dirs[@]} -eq 0 && ${#missing_files[@]} -eq 0 ]]; then
-        log_success "Project structure validation passed"
-        return 0
-    else
-        log_warning "Project structure validation completed with warnings"
-        if [[ ${#missing_dirs[@]} -gt 0 ]]; then
-            log_warn "Missing directories: ${missing_dirs[*]}"
-        fi
-        if [[ ${#missing_files[@]} -gt 0 ]]; then
-            log_warn "Missing files: ${missing_files[*]}"
-        fi
-        return 2  # Warning, not error
+    if [[ ${#missing_dirs[@]} -gt 0 ]]; then
+        log_error "Missing directories: ${missing_dirs[*]}"
+        return 1
     fi
+
+    if [[ ${#missing_files[@]} -gt 0 ]]; then
+        log_error "Missing files: ${missing_files[*]}"
+        return 1
+    fi
+
+    log_success "Project structure is valid"
+    return 0
 }
 
-# Validate Terraform setup
-validate_terraform_setup() {
-    log_subsection "Terraform Setup Validation"
+# Check AWS credentials
+check_aws_credentials() {
+    log_section "Checking AWS Credentials"
+
+    if ! aws sts get-caller-identity >/dev/null 2>&1; then
+        log_error "AWS credentials not configured or invalid"
+        log_info "Please run 'aws configure' or set AWS environment variables"
+        return 1
+    fi
+
+    if [[ "${VERBOSE}" == "true" ]]; then
+        local account_id
+        account_id=$(aws sts get-caller-identity --query Account --output text)
+        log_info "AWS Account ID: ${account_id}"
+    fi
+
+    log_success "AWS credentials are valid"
+    return 0
+}
+
+# Check AWS region
+check_aws_region() {
+    local region="${AWS_REGION:-us-west-2}"
+
+    if ! aws ec2 describe-regions --region-names "${region}" >/dev/null 2>&1; then
+        log_error "AWS region '${region}' is not available"
+        return 1
+    fi
+
+    if [[ "${VERBOSE}" == "true" ]]; then
+        log_info "AWS Region: ${region}"
+    fi
+
+    log_success "AWS region is valid"
+    return 0
+}
+
+# Validate Terraform
+validate_terraform() {
+    log_section "Validating Terraform"
 
     local terraform_dir="${PROJECT_ROOT}/terraform"
 
@@ -167,251 +249,120 @@ validate_terraform_setup() {
 
     pushd "${terraform_dir}" >/dev/null
 
-    # Check if Terraform is initialized
-    if [[ ! -d ".terraform" ]]; then
-        log_warn "Terraform not initialized"
-        log_info "Run 'terraform init' in the terraform directory"
-    else
-        log_success "Terraform is initialized"
-    fi
-
-    # Validate Terraform configuration
-    if terraform validate >/dev/null 2>&1; then
-        log_success "Terraform configuration is valid"
-    else
+    # Check if Terraform configuration is valid
+    if ! terraform validate >/dev/null 2>&1; then
         log_error "Terraform configuration validation failed"
-        log_error "Run 'terraform validate' for details"
+        log_info "Run 'terraform validate' in terraform directory for details"
         popd >/dev/null
         return 1
     fi
 
-    # Check if workspace exists
-    local workspace="${TERRAFORM_WORKSPACE:-${ENVIRONMENT}}"
-    if terraform workspace list | grep -q "${workspace}"; then
-        log_success "Terraform workspace '${workspace}' exists"
+    # Check if initialized (optional)
+    if [[ -d ".terraform" ]]; then
+        if [[ "${VERBOSE}" == "true" ]]; then
+            log_success "Terraform is initialized"
+        fi
     else
-        log_warn "Terraform workspace '${workspace}' does not exist"
-        log_info "It will be created during deployment"
+        log_warning "Terraform not initialized (will be done during deployment)"
     fi
 
     popd >/dev/null
+    log_success "Terraform configuration is valid"
     return 0
 }
 
-# Validate AWS setup
-validate_aws_setup() {
-    log_subsection "AWS Setup Validation"
+# Check configuration files
+check_configuration() {
+    log_section "Checking Configuration Files"
 
-    # Check AWS credentials (already done in prerequisites)
-    if ! check_aws_credentials; then
-        return 1
-    fi
+    local config_files=()
 
-    # Check AWS region availability
-    local region
-    region=$(get_aws_region)
-
-    if ! check_aws_region_availability "${region}"; then
-        log_error "AWS region '${region}' is not available"
-        return 1
-    fi
-
-    # Check Terraform state bucket
-    local bucket_name="${RESOURCE_PREFIX}-${TERRAFORM_BACKEND_BUCKET_SUFFIX}"
-
-    if check_s3_bucket_exists "${bucket_name}"; then
-        log_success "Terraform state bucket exists: ${bucket_name}"
-    else
-        log_warn "Terraform state bucket does not exist: ${bucket_name}"
-        log_info "It will be created during deployment"
-    fi
-
-    # Check permissions by listing some basic AWS resources
-    log_debug "Checking AWS permissions..."
-
-    if aws ec2 describe-regions --region "${region}" >/dev/null 2>&1; then
-        log_debug "✓ EC2 permissions available"
-    else
-        log_warn "Limited EC2 permissions detected"
-    fi
-
-    if aws iam get-user >/dev/null 2>&1 || aws sts get-caller-identity >/dev/null 2>&1; then
-        log_debug "✓ IAM permissions available"
-    else
-        log_warn "Limited IAM permissions detected"
-    fi
-
-    log_success "AWS setup validation completed"
-    return 0
-}
-
-# Validate configuration
-validate_configuration() {
-    log_subsection "Configuration Validation"
-
-    # Environment configuration already loaded and validated
-    log_success "Environment configuration is valid"
-
-    # Check shared configuration file
-    local shared_config="${CONFIG_DIR}/shared-config.yaml"
-
-    if [[ ! -f "${shared_config}" ]]; then
-        log_error "Shared configuration file not found: ${shared_config}"
-        return 1
-    fi
-
-    # Validate YAML syntax
-    if command -v python3 >/dev/null 2>&1; then
-        if python3 -c "import yaml; yaml.safe_load(open('${shared_config}'))" 2>/dev/null; then
-            log_success "Shared configuration YAML is valid"
-        else
-            log_error "Shared configuration YAML syntax error"
-            return 1
-        fi
-    else
-        log_debug "Python not available, skipping YAML syntax validation"
-    fi
-
-    # Environment-specific validations
+    # Check for environment-specific config
     case "${ENVIRONMENT}" in
-        "staging")
-            if [[ "${STAGING_CONFIGURED:-false}" == "false" ]]; then
-                log_warning "Staging environment is not configured yet"
-                log_info "This is expected for single AWS account setup"
-                return 2  # Warning, not error
+        "dev")
+            config_files+=("config/environments/.env.defaults")
+            if [[ -f "config/environments/.env.dev" ]]; then
+                config_files+=("config/environments/.env.dev")
             fi
             ;;
-        "ci")
-            if [[ -z "${GITHUB_ACTIONS:-}" ]]; then
-                log_warn "CI environment specified but not running in GitHub Actions"
-            fi
+        "prod")
+            config_files+=("config/environments/.env.defaults")
+            # Prod uses CI environment in GitHub Actions
             ;;
     esac
 
+    for config_file in "${config_files[@]}"; do
+        if [[ -f "${PROJECT_ROOT}/${config_file}" ]]; then
+            if [[ "${VERBOSE}" == "true" ]]; then
+                log_success "Config file exists: ${config_file}"
+            fi
+        else
+            log_error "Missing config file: ${config_file}"
+            return 1
+        fi
+    done
+
+    log_success "Configuration files are valid"
     return 0
 }
 
 # Main validation function
 main() {
-    local skip_optional="${SKIP_OPTIONAL:-false}"
     local exit_code=0
 
-    # Initialize logging
-    init_logging
+    log_section "Environment Validation"
 
-    # Setup error handling
-    setup_error_handling
+    # Parse arguments
+    parse_arguments "$@"
 
-    log_section "Environment Validation - ${SCRIPT_NAME} v${VERSION}"
+    # Detect environment if not provided
+    detect_environment
 
-    # Load and validate environment configuration
-    if ! load_environment_config "${ENVIRONMENT:-}"; then
-        log_error "Failed to load environment configuration"
-        exit 1
+    # Validate environment
+    if ! validate_environment; then
+        exit_code=1
     fi
 
-    if ! validate_environment_config; then
-        case $? in
-            1)
-                log_error "Environment configuration validation failed"
-                exit 1
-                ;;
-            2)
-                log_warn "Environment configuration validation completed with warnings"
-                exit_code=2
-                ;;
-        esac
-    fi
-
-    # Print environment summary
-    print_environment_summary
+    log_info "Validating environment: ${ENVIRONMENT}"
 
     # Run validation checks
-    log_info "Starting comprehensive environment validation..."
-
-    # 1. Prerequisites check
-    if [[ "${SKIP_PREREQUISITES_CHECK:-false}" != "true" ]]; then
-        if ! check_all_prerequisites "${skip_optional}"; then
-            log_error "Prerequisites check failed"
-            exit_code=1
-        fi
-    else
-        log_info "Skipping prerequisites check (SKIP_PREREQUISITES_CHECK=true)"
+    if ! check_tools; then
+        exit_code=1
     fi
 
-    # 2. Project structure validation
     if ! validate_project_structure; then
-        case $? in
-            1)
-                log_error "Project structure validation failed"
-                exit_code=1
-                ;;
-            2)
-                if [[ ${exit_code} -eq 0 ]]; then
-                    exit_code=2
-                fi
-                ;;
-        esac
-    fi
-
-    # 3. Terraform setup validation
-    if ! validate_terraform_setup; then
-        log_error "Terraform setup validation failed"
         exit_code=1
     fi
 
-    # 4. AWS setup validation
-    if ! validate_aws_setup; then
-        log_error "AWS setup validation failed"
+    if ! check_aws_credentials; then
         exit_code=1
     fi
 
-    # 5. Configuration validation
-    if ! validate_configuration; then
-        case $? in
-            1)
-                log_error "Configuration validation failed"
-                exit_code=1
-                ;;
-            2)
-                if [[ ${exit_code} -eq 0 ]]; then
-                    exit_code=2
-                fi
-                ;;
-        esac
+    if ! check_aws_region; then
+        exit_code=1
+    fi
+
+    if ! validate_terraform; then
+        exit_code=1
+    fi
+
+    if ! check_configuration; then
+        exit_code=1
     fi
 
     # Final summary
     log_section "Validation Summary"
 
-    case ${exit_code} in
-        0)
-            log_success "All validations passed successfully"
-            log_info "Environment '${ENVIRONMENT}' is ready for infrastructure testing"
-            ;;
-        1)
-            log_failure "Validation failed"
-            log_error "Please fix the issues above before proceeding"
-            ;;
-        2)
-            log_warning "Validation completed with warnings"
-            log_info "Environment '${ENVIRONMENT}' should work but may have limitations"
-            ;;
-    esac
+    if [[ ${exit_code} -eq 0 ]]; then
+        log_success "All validations passed successfully"
+        log_info "Environment '${ENVIRONMENT}' is ready for deployment"
+    else
+        log_error "Validation failed"
+        log_info "Please fix the issues above before proceeding"
+    fi
 
     exit ${exit_code}
 }
 
-# Set default values
-SKIP_OPTIONAL="${SKIP_OPTIONAL:-false}"
-DEBUG_MODE="${DEBUG_MODE:-false}"
-TEST_VERBOSE="${TEST_VERBOSE:-false}"
-
-# Parse command line arguments
-parse_arguments "$@"
-
-# Export environment variables
-export DEBUG_MODE TEST_VERBOSE SKIP_OPTIONAL
-
 # Run main function
-main
+main "$@"
