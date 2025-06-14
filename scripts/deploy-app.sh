@@ -1,7 +1,7 @@
 #!/bin/bash
 # scripts/deploy-app.sh
-# Application Deployment Script with Profile Support
-# Deploys to Lambda (minimum profile) or EKS (regular profile)
+# Application Deployment Script
+# Deploys to Lambda or EKS
 
 set -e
 
@@ -18,7 +18,6 @@ NC='\033[0m' # No Color
 
 # Default values
 ENVIRONMENT=""
-PROFILE=""
 VERBOSE=false
 DRY_RUN=false
 SKIP_BUILD=false
@@ -28,17 +27,12 @@ show_usage() {
     cat << EOF
 $(printf "${BLUE}📦 Application Deployment Script${NC}")
 
-Usage: $0 --environment {dev|prod} --profile {minimum|regular} [OPTIONS]
+Usage: $0 --environment {dev|prod} [OPTIONS]
 
-Deploy application to AWS infrastructure based on profile.
+Deploy application to AWS infrastructure based on evn.
 
 REQUIRED:
     --environment {dev|prod}           Target environment
-    --profile {minimum|regular}        Resource profile
-
-PROFILES:
-    minimum    - Deploy to Lambda + API Gateway
-    regular    - Deploy to EKS + Kubernetes
 
 OPTIONS:
     -v, --verbose                      Enable verbose output
@@ -47,15 +41,15 @@ OPTIONS:
     -h, --help                        Show this help message
 
 EXAMPLES:
-    $0 --environment dev --profile minimum        # Deploy to Lambda
-    $0 --environment dev --profile regular        # Deploy to EKS
-    $0 --environment dev --profile minimum --dry-run  # Plan only
-    $0 --environment dev --profile regular --skip-build  # Deploy without rebuilding
+    $0 --environment dev                # Deploy to Lambda
+    $0 --environment prod               # Deploy to EKS
+    $0 --environment dev --dry-run      # Plan only
+    $0 --environment dev --skip-build   # Deploy without rebuilding
 
 PREREQUISITES:
     - Infrastructure must be deployed first (./scripts/deploy.sh)
-    - For minimum profile: Python packaging tools
-    - For regular profile: Docker and kubectl
+    - For dev: Python packaging tools
+    - For prod: Docker and kubectl
 
 EOF
 }
@@ -87,10 +81,6 @@ parse_arguments() {
         case $1 in
             --environment)
                 ENVIRONMENT="$2"
-                shift 2
-                ;;
-            --profile)
-                PROFILE="$2"
                 shift 2
                 ;;
             -v|--verbose)
@@ -129,12 +119,6 @@ validate_arguments() {
         errors+=("--environment must be 'dev' or 'prod'")
     fi
 
-    if [[ -z "$PROFILE" ]]; then
-        errors+=("--profile is required")
-    elif [[ "$PROFILE" != "minimum" && "$PROFILE" != "regular" ]]; then
-        errors+=("--profile must be 'minimum' or 'regular'")
-    fi
-
     if [[ ${#errors[@]} -gt 0 ]]; then
         log_error "Validation failed:"
         for error in "${errors[@]}"; do
@@ -152,7 +136,6 @@ setup_environment() {
 
     # Set base environment variables
     export ENVIRONMENT="$ENVIRONMENT"
-    export PROFILE="$PROFILE"
     export AWS_DEFAULT_REGION="${AWS_REGION:-us-west-2}"
 
     # Load environment-specific configuration
@@ -165,12 +148,11 @@ setup_environment() {
     if [[ "$VERBOSE" == "true" ]]; then
         log_info "Environment variables set:"
         log_info "  ENVIRONMENT: $ENVIRONMENT"
-        log_info "  PROFILE: $PROFILE"
         log_info "  AWS_REGION: ${AWS_REGION:-us-west-2}"
     fi
 }
 
-# Check prerequisites based on profile
+# Check prerequisites based on env
 check_prerequisites() {
     log_step "🔍 Checking Prerequisites"
 
@@ -185,9 +167,9 @@ check_prerequisites() {
         fi
     done
 
-    # Profile-specific tools
-    case "$PROFILE" in
-        "minimum")
+    # ENVIRONMENT-specific tools
+    case "$ENVIRONMENT" in
+        "dev")
             # Lambda deployment needs Python and ZIP
             local lambda_tools=("python3" "pip" "zip")
             for tool in "${lambda_tools[@]}"; do
@@ -196,7 +178,7 @@ check_prerequisites() {
                 fi
             done
             ;;
-        "regular")
+        "prod")
             # Kubernetes deployment needs Docker and kubectl
             local k8s_tools=("docker" "kubectl")
             for tool in "${k8s_tools[@]}"; do
@@ -205,7 +187,7 @@ check_prerequisites() {
                 fi
             done
 
-            # Check Docker daemon for regular profile
+            # Check Docker daemon for prod
             if command -v docker >/dev/null 2>&1; then
                 if ! docker info >/dev/null 2>&1; then
                     errors+=("Docker is installed but not running")
@@ -229,9 +211,9 @@ check_prerequisites() {
         errors+=("Infrastructure not deployed. Run ./scripts/deploy.sh first")
     fi
 
-    # Get infrastructure outputs based on profile
-    case "$PROFILE" in
-        "minimum")
+    # Get infrastructure outputs based on ENVIRONMENT
+    case "$ENVIRONMENT" in
+        "dev")
             if ! terraform output lambda_function_name >/dev/null 2>&1; then
                 errors+=("Lambda function not found in terraform outputs. Check infrastructure deployment.")
             else
@@ -239,7 +221,7 @@ check_prerequisites() {
                 log_info "Found Lambda function: $LAMBDA_FUNCTION_NAME"
             fi
             ;;
-        "regular")
+        "prod")
             if ! terraform output eks_cluster_name >/dev/null 2>&1; then
                 errors+=("EKS cluster not found in terraform outputs. Check infrastructure deployment.")
             else
@@ -529,8 +511,8 @@ verify_deployment() {
 
     log_step "✅ Verifying Application Deployment"
 
-    case "$PROFILE" in
-        "minimum")
+    case "$ENVIRONMENT" in
+        "dev")
             # Verify Lambda deployment
             log_info "Checking Lambda function status..."
             local function_state=$(aws lambda get-function \
@@ -549,7 +531,7 @@ verify_deployment() {
                 log_info "API Gateway URL: $SERVICE_URL"
             fi
             ;;
-        "regular")
+        "prod")
             # Verify Kubernetes deployment
             log_info "Checking pod status..."
             kubectl get pods -n order-processor 2>/dev/null || {
@@ -576,16 +558,15 @@ generate_summary() {
 
     log_info "Deployment Details:"
     log_info "  Environment: $ENVIRONMENT"
-    log_info "  Profile: $PROFILE"
 
-    case "$PROFILE" in
-        "minimum")
+    case "$ENVIRONMENT" in
+        "dev")
             log_info "  Deployment Type: Lambda + API Gateway"
             log_info "  Lambda Function: ${LAMBDA_FUNCTION_NAME:-unknown}"
             log_info "  Service URL: ${SERVICE_URL:-pending}"
             log_info "  Package: ${LAMBDA_PACKAGE_PATH:-unknown}"
             ;;
-        "regular")
+        "prod")
             log_info "  Deployment Type: EKS + Kubernetes"
             log_info "  EKS Cluster: ${EKS_CLUSTER_NAME:-unknown}"
             log_info "  Docker Image: ${IMAGE_URI:-existing}"
@@ -596,16 +577,16 @@ generate_summary() {
     if [[ "$DRY_RUN" == "false" ]]; then
         log_success "✅ Application deployment completed successfully!"
         log_info "Next steps:"
-        log_info "  1. Run integration tests: ./scripts/test-integration.sh --environment $ENVIRONMENT --profile $PROFILE"
-        case "$PROFILE" in
-            "minimum")
+        log_info "  1. Run integration tests: ./scripts/test-integration.sh --environment $ENVIRONMENT"
+        case "$ENVIRONMENT" in
+            "dev")
                 log_info "  2. Test via API Gateway: curl $SERVICE_URL/health"
                 ;;
-            "regular")
+            "prod")
                 log_info "  2. Monitor pods: kubectl get pods -n order-processor"
                 ;;
         esac
-        log_info "  3. When done, cleanup: ./scripts/destroy.sh --environment $ENVIRONMENT --profile $PROFILE --force"
+        log_info "  3. When done, cleanup: ./scripts/destroy.sh --environment $ENVIRONMENT --force"
     else
         log_success "✅ Application deployment plan validated!"
         log_info "Remove --dry-run flag to deploy application"
@@ -625,25 +606,25 @@ main() {
     printf "${BLUE}📦 Application Deployment Script${NC}\n"
     printf "${BLUE}================================${NC}\n"
     echo
-    log_info "Deploying application to: $ENVIRONMENT environment with $PROFILE profile"
+    log_info "Deploying application to: $ENVIRONMENT environment"
     echo
 
     # Execute deployment steps
     setup_environment
     check_prerequisites
 
-    # Profile-specific deployment
-    case "$PROFILE" in
-        "minimum")
+    # ENVIRONMENT-specific deployment
+    case "$ENVIRONMENT" in
+        "dev")
             build_lambda_package
             deploy_to_lambda
             ;;
-        "regular")
+        "prod")
             build_docker_image
             deploy_to_kubernetes
             ;;
         *)
-            log_error "Unknown profile: $PROFILE"
+            log_error "Unknown environment: $ENVIRONMENT"
             exit 1
             ;;
     esac
