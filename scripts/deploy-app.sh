@@ -246,6 +246,7 @@ check_prerequisites() {
 
 # Build and package application for Lambda
 build_lambda_package() {
+
     if [[ "$SKIP_BUILD" == "true" ]]; then
         log_info "Skipping Lambda package build (--skip-build specified)"
         return 0
@@ -271,7 +272,11 @@ build_lambda_package() {
     cd "$source_dir"
 
     # Install requirements to package directory
-    pip install -r requirements.txt -t "$package_dir" --quiet
+    pip install --only-binary=all -r requirements.txt -t "$package_dir" --quiet
+
+    # Install mangum for Lambda compatibility
+    pip install mangum -t "$package_dir" --quiet
+
 
     # Install common package if it exists
     if [[ -f "$PROJECT_ROOT/services/common/setup.py" ]]; then
