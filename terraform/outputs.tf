@@ -1,5 +1,4 @@
 # terraform/outputs.tf
-# Essential outputs for both Lambda and Kubernetes deployments
 
 # ====================
 # BASIC INFO
@@ -19,13 +18,24 @@ output "lambda_function_name" {
   value       = local.enable_lambda ? aws_lambda_function.order_api[0].function_name : null
 }
 
+# MODIFY THIS: Update to emphasize HTTPS
 output "api_gateway_url" {
-  description = "API Gateway URL"
+  description = "HTTPS API Gateway URL"
   value       = local.enable_lambda ? "https://${aws_api_gateway_rest_api.order_api[0].id}.execute-api.${var.region}.amazonaws.com/${var.environment}" : null
 }
 
+# ADD THIS: Simple security info
+output "api_gateway_security_info" {
+  description = "API Gateway security configuration"
+  value = local.enable_lambda ? {
+    tls_version = "1.2+"
+    protocol    = "HTTPS"
+    endpoint_type = "REGIONAL"
+  } : null
+}
+
 # ====================
-# KUBERNETES OUTPUTS (prod)
+# KUBERNETES OUTPUTS (prod) - Keep as is
 # ====================
 
 output "eks_cluster_name" {
@@ -44,7 +54,7 @@ output "ecr_repository_url" {
 }
 
 # ====================
-# SHARED RESOURCES
+# SHARED RESOURCES - Keep all as is
 # ====================
 
 output "database_endpoint" {
@@ -72,7 +82,7 @@ output "s3_events_bucket" {
   value       = aws_s3_bucket.events.bucket
 }
 
-# Add to outputs.tf temporarily
+# Keep your existing debug output
 output "debug_resource_prefix" {
   value = local.resource_prefix
 }

@@ -1,5 +1,4 @@
 # terraform/variables.tf
-# Essential variables for profile-aware infrastructure
 
 # ====================
 # REQUIRED VARIABLES
@@ -41,4 +40,14 @@ variable "db_username" {
   type        = string
   default     = "orderuser"
   sensitive   = true
+}
+
+# ====================
+# SIMPLE TLS ADDITION (just this one new variable)
+# ====================
+
+variable "enable_api_https_only" {
+  description = "Force HTTPS-only for API Gateway (TLS 1.2+)"
+  type        = bool
+  default     = true
 }

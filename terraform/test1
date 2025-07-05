@@ -1,0 +1,152 @@
+        res.add(Arrays.asList(nums[i], nums[left], nums[right]));
+
+        Arrays.copyOfRange(intervals, 0, left)
+
+Math.floorDiv(num, wight);
+
+return Math.floorDiv(num, wight); - Example with valueDiff = 3 (weight = 4):
+Values: ..., -8, -7, -6, -5, -4, -3, -2, -1,  0,  1,  2,  3,  4,  5,  6,  7,  8, ...
+Buckets: ..., -2, -2, -2, -2, -1, -1, -1, -1,  0,  0,  0,  0,  1,  1,  1,  1,  2, 
+
+
+Arrays.binarySearch()
+java// IMPORTANT: Array must be sorted first!
+int[] arr = {1, 3, 5, 7, 9, 11, 13};
+
+// Basic search
+int index = Arrays.binarySearch(arr, 7);     // returns 3
+int index = Arrays.binarySearch(arr, 6);     // returns -4 (insertion point)
+
+// Range search
+int index = Arrays.binarySearch(arr, 2, 5, 7); // search arr[2] to arr[4], returns 3
+
+// What negative return means:
+// If element not found, returns -(insertion_point + 1)
+int index = Arrays.binarySearch(arr, 6);     // returns -4
+int insertionPoint = -(index + 1); 
+
+Arrays.equals()
+javaint[] arr1 = {1, 2, 3};
+int[] arr2 = {1, 2, 3};
+int[] arr3 = {1, 2, 4};
+
+// Compare arrays (content-wise, not reference)
+Arrays.equals(arr1, arr2);  // true (same content)
+Arrays.equals(arr1, arr3);  // false (different content)
+arr1 == arr2;               // false (different objects)
+
+// 2D arrays
+int[][] matrix1 = {{1,2}, {3,4}};
+int[][] matrix2 = {{1,2}, {3,4}};
+Arrays.equals(matrix1, matrix2);     // false! (compares references of inner arrays)
+Arrays.deepEquals(matrix1, matrix2); // true! (compares content recursively)
+
+// Useful in problems like:
+// "Check if two arrays are equal after sorting"
+Arrays.sort(nums1);
+Arrays.sort(nums2);
+return Arrays.equals(nums1, nums2);
+
+Interview tip: Arrays.binarySearch() is great for "find target in sorted array" problems!
+
+
+[2, 3, 4,5, 1], target = 1
+mid = 4 > target;
+
+
+[4,5,6,7,0,1,2]
+mid = 7, target, case 2;
+target < 7;
+right >= target ==> left= 4, right = 6;
+
+mid = 1(5) 
+
+
+String spaceStr = " ".repeat(space); 
+
+    private Map<String, ArrayList<Pair<Integer, String>>> map; 
+
+
+res.addFirst(curCity);
+
+==================================
+TreeMap Deep Dive 🌳
+What is TreeMap?
+java// TreeMap = Red-Black Tree implementation of Map interface
+TreeMap<Integer, String> map = new TreeMap<>();
+
+Key Features:
+├── Sorted by keys (natural order or custom comparator)
+├── O(log n) for get, put, remove operations
+├── O(log n) for navigation operations (higher, lower, etc.)
+└── Implements NavigableMap interface
+
+Core Operations:
+javaTreeMap<Integer, String> map = new TreeMap<>();
+
+// Basic operations
+map.put(5, "five");
+map.put(2, "two");
+map.put(8, "eight");
+map.put(1, "one");
+
+// Keys are automatically sorted: {1=one, 2=two, 5=five, 8=eight}
+System.out.println(map); // {1=one, 2=two, 5=five, 8=eight}
+
+// Navigation operations (KEY for interviews!)
+map.lowerKey(5);     // 2 (largest key < 5)
+map.higherKey(5);    // 8 (smallest key > 5)
+map.floorKey(4);     // 2 (largest key <= 4)
+map.ceilingKey(4);   // 5 (smallest key >= 4)
+
+// Range operations
+map.subMap(2, 6);    // {2=two, 5=five} (from 2 inclusive to 6 exclusive)
+map.headMap(5);      // {1=one, 2=two} (all keys < 5)
+map.tailMap(5);      // {5=five, 8=eight} (all keys >= 5)
+
+Common Interview Patterns:
+1. Range Queries:
+java// Find all elements in range [start, end]
+TreeMap<Integer, Integer> map = new TreeMap<>();
+NavigableMap<Integer, Integer> range = map.subMap(start, true, end, true);
+
+2. Closest Element Search:
+java// Find closest smaller/larger element
+Integer smaller = map.lowerKey(target); // why not floorKey <= target;
+Integer larger = map.higherKey(target); // ceilingKey() >= target
+
+3. Sliding Window with Ordering:
+java// Maintain sorted order in sliding window
+TreeMap<Integer, Integer> window = new TreeMap<>();
+// Add/remove elements while maintaining order
+
+
+TreeMap vs Other Data Structures:
+OperationTreeMapHashMapLinkedHashMapGet/PutO(log n)O(1)O(1)OrderSorted by keyNo orderInsertion orderNavigationO(log n)Not supportedNot supportedRange queriesO(log n)Not supportedNot supported
+When to Use TreeMap:
+✅ Need sorted order by keys
+✅ Need range queries (elements between X and Y)
+✅ Need navigation (find next/previous element)
+✅ Need floor/ceiling operations
+
+❌ Only need basic get/put operations (use HashMap)
+❌ Need insertion order (use LinkedHashMap)
+❌ Performance is critical and no ordering needed
+
+common Gotchas:
+java// 1. Custom objects need Comparable or Comparator
+TreeMap<Person, String> map = new TreeMap<>(); // Won't compile!
+
+// Fix: Provide comparator
+TreeMap<Person, String> map = new TreeMap<>((p1, p2) -> p1.age - p2.age);
+
+// 2. Null keys not allowed
+map.put(null, "value"); // Throws NullPointerException
+
+// 3. Navigation on empty map returns null
+TreeMap<Integer, String> empty = new TreeMap<>();
+Integer key = empty.lowerKey(5); // Returns null (not exception)
+
+
+
+        
