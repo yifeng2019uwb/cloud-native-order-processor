@@ -1,5 +1,5 @@
 import pytest
-from httpx import AsyncClient
+# from httpx import AsyncClient
 from unittest.mock import AsyncMock, patch
 
 from app import app, shutdown_event
