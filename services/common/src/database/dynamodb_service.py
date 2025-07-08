@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 import uuid
 
-from .dynamodb_service import DynamoDBConnection
+from .dynamodb_connection import DynamoDBConnection
 from ..models.order import Order, OrderCreate, OrderItem, OrderStatus
 from ..models.inventory import InventoryItem, InventoryUpdate
 

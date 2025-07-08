@@ -1,13 +1,10 @@
-# Common dependencies for all services - DynamoDB version
+
+# Updated common/requirements.txt - add bcrypt for password hashing
 pydantic==2.5.0
-boto3==1.29.7          # For DynamoDB
+boto3==1.29.7
 python-dotenv==1.0.0
 pyyaml==6.0.1
 email-validator==2.1.0
-
-# Remove PostgreSQL dependency
-# asyncpg==0.29.0  # Not needed for DynamoDB
-
-# Add for Lambda compatibility (if using Lambda)
-mangum==0.17.0      # For FastAPI + Lambda
-fastapi==0.104.1    # Web framework
+fastapi==0.104.1
+bcrypt==4.0.1
+mangum==0.17.0
