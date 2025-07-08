@@ -6,7 +6,7 @@ import os
 from unittest.mock import patch, AsyncMock, MagicMock
 import asyncpg
 
-from database.connection import DatabaseManager, get_db, db_manager
+from services.common.database.dynamodb_connection import DatabaseManager, get_db, db_manager
 
 
 class TestDatabaseManager:
@@ -284,7 +284,7 @@ class TestGlobalDatabaseManager:
 
     def test_global_db_manager_singleton_behavior(self):
         """Test that importing db_manager returns the same instance."""
-        from database.connection import db_manager as db_manager2
+        from services.common.database.dynamodb_connection import db_manager as db_manager2
 
         assert db_manager is db_manager2
 

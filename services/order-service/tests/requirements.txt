@@ -1,10 +1,10 @@
-# requirements.txt - Complete version for your project
+# requirements.txt - Complete with all missing dependencies
 
 # Web framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 
-# HTTP client for testing
+# HTTP client for testing (YOU WERE MISSING THIS!)
 httpx==0.25.2
 
 # Testing framework
@@ -16,7 +16,6 @@ pytest-mock==3.12.0
 # Database
 asyncpg==0.29.0
 sqlalchemy==2.0.23
-alembic==1.12.1
 
 # Data validation
 pydantic==2.5.0
@@ -30,7 +29,7 @@ pyyaml==6.0.1
 boto3==1.29.7
 moto==4.2.14
 
-# Additional useful packages
-python-multipart==0.0.6  # For form data
-python-jose[cryptography]==3.3.0  # For JWT tokens
-passlib[bcrypt]==1.7.4  # For password hashing
+# Additional common dependencies
+requests==2.31.0
+python-multipart==0.0.6
+aiofiles==23.2.1

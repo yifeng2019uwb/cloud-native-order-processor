@@ -1,10 +1,10 @@
-from .connection import DatabaseManager, get_db
-from .queries import OrderQueries, ProductQueries, InventoryQueries
+# services/common/database/__init__.py
+from .dynamodb_service import DynamoDBManager, get_dynamodb
+from .dynamodb_service import OrderService, InventoryService
 
 __all__ = [
-    "DatabaseManager",
-    "get_db",
-    "OrderQueries",
-    "ProductQueries",
-    "InventoryQueries",
+    "DynamoDBManager",
+    "get_dynamodb",
+    "OrderService",
+    "InventoryService",
 ]
