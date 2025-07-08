@@ -283,13 +283,13 @@ run_build_tests() {
         fi
     fi
 
-    # Build order service
-    log_substep "Building order-service"
+    # Build user service
+    log_substep "Building user-service"
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run: Would build order-service"
+        log_info "Dry-run: Would build user-service"
     else
-        if ! ./build.sh --build-only order-service; then
-            log_error "Order service build failed"
+        if ! ./build.sh --build-only user-service; then
+            log_error "User service build failed"
             return 1
         fi
     fi

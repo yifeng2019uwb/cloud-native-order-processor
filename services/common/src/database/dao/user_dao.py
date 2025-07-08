@@ -4,17 +4,18 @@ from datetime import datetime
 import logging
 from boto3.dynamodb.conditions import Key
 
+from .base_dao import BaseDAO
 from ..config.dynamodb_connection import DynamoDBConnection
 from ...models.user import User, UserCreate
 
 logger = logging.getLogger(__name__)
 
 
-class UserDAO:
+class UserDAO(BaseDAO):
     """Data Access Object for user operations using DynamoDB single table"""
 
-    def __init__(self, db_connection: DynamoDBConnection):
-        self.db = db_connection
+    def _get_entity_type(self) -> str:
+        return "USER"
 
     def _hash_password(self, password: str) -> str:
         """Hash password with bcrypt"""
@@ -28,8 +29,6 @@ class UserDAO:
     async def create_user(self, user_create: UserCreate) -> User:
         """Create a new user"""
         try:
-            now = datetime.utcnow()
-
             # Check if user already exists
             existing_user = await self.get_user_by_email(user_create.email)
             if existing_user:
@@ -40,26 +39,30 @@ class UserDAO:
 
             # Create user item for DynamoDB single table
             user_item = {
-                'PK': f"USER#{user_create.email}",
+                'PK': self._create_primary_key(user_create.email),
                 'SK': 'PROFILE',
                 'email': user_create.email,
                 'password_hash': password_hash,
                 'name': user_create.name,
                 'phone': user_create.phone,
-                'entity_type': 'USER',
-                'created_at': now.isoformat(),
-                'updated_at': now.isoformat()
+                'entity_type': self._get_entity_type()
             }
 
+            # Add timestamps
+            self._add_timestamps(user_item, is_create=True)
+
+            # Validate required fields
+            self._validate_required_fields(user_item, ['email', 'name', 'password_hash'])
+
             # Use orders table (single table design)
-            response = self.db.orders_table.put_item(Item=user_item)
+            created_item = self._safe_put_item(self.db.orders_table, user_item)
 
             return User(
                 email=user_create.email,
                 name=user_create.name,
                 phone=user_create.phone,
-                created_at=now,
-                updated_at=now
+                created_at=datetime.fromisoformat(created_item['created_at']),
+                updated_at=datetime.fromisoformat(created_item['updated_at'])
             )
 
         except Exception as e:
@@ -69,14 +72,12 @@ class UserDAO:
     async def get_user_by_email(self, email: str) -> Optional[User]:
         """Get user by email"""
         try:
-            response = self.db.orders_table.get_item(
-                Key={
-                    'PK': f"USER#{email}",
-                    'SK': 'PROFILE'
-                }
-            )
+            key = {
+                'PK': self._create_primary_key(email),
+                'SK': 'PROFILE'
+            }
 
-            item = response.get('Item')
+            item = self._safe_get_item(self.db.orders_table, key)
             if not item:
                 return None
 
@@ -95,14 +96,12 @@ class UserDAO:
     async def authenticate_user(self, email: str, password: str) -> Optional[User]:
         """Authenticate user with email and password"""
         try:
-            response = self.db.orders_table.get_item(
-                Key={
-                    'PK': f"USER#{email}",
-                    'SK': 'PROFILE'
-                }
-            )
+            key = {
+                'PK': self._create_primary_key(email),
+                'SK': 'PROFILE'
+            }
 
-            item = response.get('Item')
+            item = self._safe_get_item(self.db.orders_table, key)
             if not item:
                 return None
 
@@ -125,29 +124,31 @@ class UserDAO:
     async def update_user(self, email: str, name: Optional[str] = None, phone: Optional[str] = None) -> Optional[User]:
         """Update user profile"""
         try:
-            update_expression = "SET updated_at = :updated_at"
-            expression_values = {':updated_at': datetime.utcnow().isoformat()}
-
+            updates = {}
             if name is not None:
-                update_expression += ", #name = :name"
-                expression_values[':name'] = name
-
+                updates['name'] = name
             if phone is not None:
-                update_expression += ", phone = :phone"
-                expression_values[':phone'] = phone
+                updates['phone'] = phone
 
-            response = self.db.orders_table.update_item(
-                Key={
-                    'PK': f"USER#{email}",
-                    'SK': 'PROFILE'
-                },
-                UpdateExpression=update_expression,
-                ExpressionAttributeNames={'#name': 'name'} if name is not None else None,
-                ExpressionAttributeValues=expression_values,
-                ReturnValues='ALL_NEW'
+            if not updates:
+                # No updates provided, just return current user
+                return await self.get_user_by_email(email)
+
+            key = {
+                'PK': self._create_primary_key(email),
+                'SK': 'PROFILE'
+            }
+
+            update_expression, expression_values, expression_names = self._build_update_expression(updates)
+
+            item = self._safe_update_item(
+                self.db.orders_table,
+                key,
+                update_expression,
+                expression_values,
+                expression_names
             )
 
-            item = response.get('Attributes')
             if not item:
                 return None
 
