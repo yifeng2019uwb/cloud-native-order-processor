@@ -1,17 +1,16 @@
-# messaging.tf - Basic SNS + SQS
+# terraform/messaging.tf
+# Simple SNS + SQS setup
 
-# SNS Topic
+# SNS topic for order events
 resource "aws_sns_topic" "order_events" {
   name = "${local.resource_prefix}-order-events"
-
   tags = local.common_tags
 }
 
-# SQS Queue
+# SQS queue for order processing
 resource "aws_sqs_queue" "order_processing" {
   name                      = "${local.resource_prefix}-order-processing"
   message_retention_seconds = 345600  # 4 days
-  receive_wait_time_seconds = 10
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.order_dlq.arn
@@ -21,10 +20,9 @@ resource "aws_sqs_queue" "order_processing" {
   tags = local.common_tags
 }
 
-# Dead Letter Queue
+# Dead letter queue
 resource "aws_sqs_queue" "order_dlq" {
   name = "${local.resource_prefix}-order-dlq"
-
   tags = local.common_tags
 }
 
@@ -35,7 +33,7 @@ resource "aws_sns_topic_subscription" "order_events_to_sqs" {
   endpoint  = aws_sqs_queue.order_processing.arn
 }
 
-# SQS policy
+# SQS policy to allow SNS to send messages
 resource "aws_sqs_queue_policy" "order_processing" {
   queue_url = aws_sqs_queue.order_processing.id
 

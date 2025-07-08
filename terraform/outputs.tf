@@ -1,51 +1,21 @@
 # terraform/outputs.tf
+# Simple outputs for personal project
 
-# ====================
-# BASIC INFO
-# ====================
-
-output "environment" {
-  description = "Environment name"
-  value       = var.environment
+# Lambda (dev environment)
+output "api_url" {
+  description = "API Gateway URL"
+  value       = local.enable_lambda ? "https://${aws_api_gateway_rest_api.order_api[0].id}.execute-api.${var.region}.amazonaws.com/${var.environment}" : null
 }
-
-# ====================
-# LAMBDA OUTPUTS (dev)
-# ====================
 
 output "lambda_function_name" {
   description = "Lambda function name"
   value       = local.enable_lambda ? aws_lambda_function.order_api[0].function_name : null
 }
 
-# MODIFY THIS: Update to emphasize HTTPS
-output "api_gateway_url" {
-  description = "HTTPS API Gateway URL"
-  value       = local.enable_lambda ? "https://${aws_api_gateway_rest_api.order_api[0].id}.execute-api.${var.region}.amazonaws.com/${var.environment}" : null
-}
-
-# ADD THIS: Simple security info
-output "api_gateway_security_info" {
-  description = "API Gateway security configuration"
-  value = local.enable_lambda ? {
-    tls_version = "1.2+"
-    protocol    = "HTTPS"
-    endpoint_type = "REGIONAL"
-  } : null
-}
-
-# ====================
-# KUBERNETES OUTPUTS (prod) - Keep as is
-# ====================
-
+# Kubernetes (prod environment)
 output "eks_cluster_name" {
   description = "EKS cluster name"
   value       = local.enable_kubernetes ? aws_eks_cluster.main[0].name : null
-}
-
-output "eks_cluster_endpoint" {
-  description = "EKS cluster endpoint"
-  value       = local.enable_kubernetes ? aws_eks_cluster.main[0].endpoint : null
 }
 
 output "ecr_repository_url" {
@@ -53,18 +23,16 @@ output "ecr_repository_url" {
   value       = local.enable_kubernetes ? aws_ecr_repository.order_api[0].repository_url : null
 }
 
-# ====================
-# SHARED RESOURCES - Keep all as is
-# ====================
-
-output "database_endpoint" {
-  description = "Database endpoint"
-  value       = aws_db_instance.postgres_main.endpoint
+# Database
+output "dynamodb_orders_table" {
+  description = "DynamoDB orders table name"
+  value       = aws_dynamodb_table.orders.name
 }
 
-output "database_port" {
-  description = "Database port"
-  value       = aws_db_instance.postgres_main.port
+# Messaging
+output "sqs_queue_url" {
+  description = "SQS queue URL"
+  value       = aws_sqs_queue.order_processing.url
 }
 
 output "sns_topic_arn" {
@@ -72,17 +40,21 @@ output "sns_topic_arn" {
   value       = aws_sns_topic.order_events.arn
 }
 
-output "sqs_queue_url" {
-  description = "SQS queue URL"
-  value       = aws_sqs_queue.order_processing.url
-}
-
-output "s3_events_bucket" {
-  description = "S3 events bucket name"
+# Storage
+output "s3_bucket" {
+  description = "S3 events bucket"
   value       = aws_s3_bucket.events.bucket
 }
 
-# Keep your existing debug output
-output "debug_resource_prefix" {
-  value = local.resource_prefix
+# Quick connection info
+output "connection_info" {
+  description = "Connection info for FastAPI app"
+  value = {
+    api_endpoint     = local.enable_lambda ? "https://${aws_api_gateway_rest_api.order_api[0].id}.execute-api.${var.region}.amazonaws.com/${var.environment}" : "TBD after EKS setup"
+    orders_table     = aws_dynamodb_table.orders.name
+    inventory_table  = aws_dynamodb_table.inventory.name
+    queue_url        = aws_sqs_queue.order_processing.url
+    topic_arn        = aws_sns_topic.order_events.arn
+    s3_bucket        = aws_s3_bucket.events.bucket
+  }
 }

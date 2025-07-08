@@ -1,18 +1,18 @@
-# locals.tf - Essential conditional logic only
+# terraform/locals.tf
+# Simple logic for personal project
 
 locals {
-  # Basic feature flags
-  enable_kubernetes = var.environment == "prod"
+  # Feature flags
   enable_lambda     = var.environment == "dev"
+  enable_kubernetes = var.environment == "prod"
 
-  # Networking
+  # Infrastructure
   create_vpc = local.enable_kubernetes
-  create_nat = local.enable_kubernetes
 
-  # Resource naming
-  resource_prefix = var.resource_prefix != "" ? var.resource_prefix : "${var.project_name}-${var.environment}"
+  # Naming
+  resource_prefix = "${var.project_name}-${var.environment}"
 
-  # Common tags
+  # Tags
   common_tags = {
     Environment = var.environment
     Project     = var.project_name

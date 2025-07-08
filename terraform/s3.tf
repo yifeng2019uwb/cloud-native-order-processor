@@ -1,4 +1,5 @@
-# s3.tf - Basic S3 buckets
+# terraform/s3.tf
+# Simple S3 buckets
 
 resource "random_string" "bucket_suffix" {
   length  = 8
@@ -11,9 +12,7 @@ resource "aws_s3_bucket" "events" {
   bucket        = "${local.resource_prefix}-events-${random_string.bucket_suffix.result}"
   force_destroy = true
 
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-events"
-  })
+  tags = local.common_tags
 }
 
 # Backups bucket
@@ -21,9 +20,7 @@ resource "aws_s3_bucket" "backups" {
   bucket        = "${local.resource_prefix}-backups-${random_string.bucket_suffix.result}"
   force_destroy = true
 
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-backups"
-  })
+  tags = local.common_tags
 }
 
 # Block public access
@@ -63,20 +60,5 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "backups" {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
     }
-  }
-}
-
-# Versioning disabled
-resource "aws_s3_bucket_versioning" "events" {
-  bucket = aws_s3_bucket.events.id
-  versioning_configuration {
-    status = "Disabled"
-  }
-}
-
-resource "aws_s3_bucket_versioning" "backups" {
-  bucket = aws_s3_bucket.backups.id
-  versioning_configuration {
-    status = "Disabled"
   }
 }

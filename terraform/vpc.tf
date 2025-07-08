@@ -55,7 +55,7 @@ resource "aws_internet_gateway" "main" {
 
 # NAT Gateway (regular profile only)
 resource "aws_eip" "nat" {
-  count = local.create_nat ? 1 : 0
+  count = local.enable_kubernetes ? 1 : 0
 
   domain = "vpc"
 
@@ -67,7 +67,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "main" {
-  count = local.create_nat ? 1 : 0
+  count = local.enable_kubernetes ? 1 : 0
 
   allocation_id = aws_eip.nat[0].id
   subnet_id     = aws_subnet.public[0].id
@@ -102,7 +102,7 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main[0].id
 
   dynamic "route" {
-    for_each = local.create_nat ? [1] : []
+    for_each = local.enable_kubernetes ? [1] : []
     content {
       cidr_block     = "0.0.0.0/0"
       nat_gateway_id = aws_nat_gateway.main[0].id

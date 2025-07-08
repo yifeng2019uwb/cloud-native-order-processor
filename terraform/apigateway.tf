@@ -1,25 +1,21 @@
 # terraform/apigateway.tf
-# Simple API Gateway (TLS is enforced by default on API Gateway)
+# Simple API Gateway setup
 
-# API Gateway REST API (HTTPS enforced by default)
+# API Gateway REST API
 resource "aws_api_gateway_rest_api" "order_api" {
   count = local.enable_lambda ? 1 : 0
 
-  name        = "${var.resource_prefix}-api"
-  description = "Order Processor API for ${var.environment} environment"
+  name        = "${local.resource_prefix}-api"
+  description = "Order Processor API"
 
   endpoint_configuration {
     types = ["REGIONAL"]
   }
 
-  tags = {
-    Name        = "${var.resource_prefix}-api"
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  tags = local.common_tags
 }
 
-# Proxy resource
+# Proxy resource for all paths
 resource "aws_api_gateway_resource" "proxy" {
   count = local.enable_lambda ? 1 : 0
 
@@ -28,7 +24,7 @@ resource "aws_api_gateway_resource" "proxy" {
   path_part   = "{proxy+}"
 }
 
-# Proxy method
+# ANY method for proxy
 resource "aws_api_gateway_method" "proxy" {
   count = local.enable_lambda ? 1 : 0
 
@@ -51,7 +47,7 @@ resource "aws_api_gateway_integration" "lambda_proxy" {
   uri                     = aws_lambda_function.order_api[0].invoke_arn
 }
 
-# Root method
+# Root method (for health checks)
 resource "aws_api_gateway_method" "proxy_root" {
   count = local.enable_lambda ? 1 : 0
 
@@ -80,24 +76,16 @@ resource "aws_api_gateway_deployment" "order_api" {
 
   rest_api_id = aws_api_gateway_rest_api.order_api[0].id
 
-  triggers = {
-    redeployment = sha1(jsonencode([
-      aws_api_gateway_rest_api.order_api[0].body,
-      aws_api_gateway_method.proxy[0].id,
-      aws_api_gateway_integration.lambda_proxy[0].id,
-    ]))
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
   depends_on = [
     aws_api_gateway_method.proxy,
     aws_api_gateway_integration.lambda_proxy,
     aws_api_gateway_method.proxy_root,
     aws_api_gateway_integration.lambda_root
   ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Stage
@@ -109,7 +97,7 @@ resource "aws_api_gateway_stage" "order_api" {
   stage_name    = var.environment
 }
 
-# Lambda permission
+# Lambda permission for API Gateway
 resource "aws_lambda_permission" "api_gateway" {
   count = local.enable_lambda ? 1 : 0
 

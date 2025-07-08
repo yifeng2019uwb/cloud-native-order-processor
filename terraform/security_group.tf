@@ -1,17 +1,18 @@
-# security_group.tf - Basic security groups only
+# terraform/security_group.tf
+# Simple security groups - only what's needed
 
-# RDS Security Group (only when VPC exists)
-resource "aws_security_group" "rds" {
-  count = local.create_vpc ? 1 : 0
+# Security group for EKS pods (prod environment)
+resource "aws_security_group" "eks_pods" {
+  count = local.enable_kubernetes ? 1 : 0
 
-  name_prefix = "${local.resource_prefix}-rds-"
+  name_prefix = "${local.resource_prefix}-eks-pods-"
   vpc_id      = aws_vpc.main[0].id
-  description = "Security group for RDS PostgreSQL"
+  description = "Security group for EKS pods"
 
   ingress {
-    description = "PostgreSQL from VPC"
-    from_port   = 5432
-    to_port     = 5432
+    description = "All traffic from VPC"
+    from_port   = 0
+    to_port     = 65535
     protocol    = "tcp"
     cidr_blocks = [aws_vpc.main[0].cidr_block]
   }
