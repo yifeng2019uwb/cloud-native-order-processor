@@ -26,6 +26,12 @@ logger.info(f"App dir: {app_dir}")
 logger.info(f"Looking for app.py at: {os.path.join(app_dir, 'app.py')}")
 logger.info(f"App.py exists: {os.path.exists(os.path.join(app_dir, 'app.py'))}")
 
+# Log environment variables for debugging
+logger.info(f"Environment variables:")
+logger.info(f"ORDERS_TABLE: {os.environ.get('ORDERS_TABLE')}")
+logger.info(f"INVENTORY_TABLE: {os.environ.get('INVENTORY_TABLE')}")
+logger.info(f"USERS_TABLE: {os.environ.get('USERS_TABLE')}")
+
 try:
     # Import your FastAPI app
     from app import app
@@ -40,6 +46,19 @@ except ImportError as e:
     async def fallback():
         return {"error": "Failed to import main app", "message": str(e)}
 
+    @app.get("/health")
+    async def health():
+        return {
+            "status": "healthy",
+            "service": "Order Processor API",
+            "environment": os.environ.get('ENVIRONMENT', 'dev'),
+            "tables": {
+                "orders": os.environ.get('ORDERS_TABLE'),
+                "inventory": os.environ.get('INVENTORY_TABLE'),
+                "users": os.environ.get('USERS_TABLE')
+            }
+        }
+
 # Import mangum and wrap the FastAPI app
 try:
     from mangum import Mangum
@@ -52,15 +71,23 @@ except ImportError as e:
     def handler(event, context):
         return {
             'statusCode': 500,
+            'headers': {
+                'Content-Type': 'application/json'
+            },
             'body': '{"error": "mangum not available"}'
         }
 
-# Optional: Add some Lambda-specific configuration
 def lambda_handler(event, context):
     """
     AWS Lambda entry point
+    This is the function that Lambda calls (specified in Terraform as lambda_handler.lambda_handler)
     """
     logger.info(f"Lambda invoked with event: {event}")
+
+    # Log the available environment variables
+    logger.info(f"Available tables: ORDERS={os.environ.get('ORDERS_TABLE')}, "
+                f"INVENTORY={os.environ.get('INVENTORY_TABLE')}, "
+                f"USERS={os.environ.get('USERS_TABLE')}")
 
     # You can add Lambda-specific logic here if needed
     # For example, setting environment-specific configurations

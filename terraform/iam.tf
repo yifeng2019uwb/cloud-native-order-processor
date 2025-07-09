@@ -1,5 +1,5 @@
 # terraform/iam.tf
-# Simple IAM roles - no over-engineering
+# Simple IAM roles
 
 # ====================
 # LAMBDA ROLES (dev environment)
@@ -58,7 +58,9 @@ resource "aws_iam_role_policy" "lambda_policy" {
         Resource = [
           aws_dynamodb_table.orders.arn,
           "${aws_dynamodb_table.orders.arn}/index/*",
-          aws_dynamodb_table.inventory.arn
+          aws_dynamodb_table.inventory.arn,
+          aws_dynamodb_table.users.arn,
+          "${aws_dynamodb_table.users.arn}/index/*"
         ]
       },
       {

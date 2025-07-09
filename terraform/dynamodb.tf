@@ -47,3 +47,29 @@ resource "aws_dynamodb_table" "inventory" {
 
   tags = local.common_tags
 }
+
+# User table (new - dedicated for user authentication)
+resource "aws_dynamodb_table" "users" {
+  name         = "${local.resource_prefix}-users"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  # For querying users by email
+  attribute {
+    name = "email"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "EmailIndex"
+    hash_key        = "email"
+    projection_type = "ALL"
+  }
+
+  tags = local.common_tags
+}

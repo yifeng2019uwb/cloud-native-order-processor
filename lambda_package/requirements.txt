@@ -1,37 +1,5 @@
-# Lambda package dependencies
-# Core Lambda requirements
-fastapi
-mangum
-uvicorn
-
-# AWS SDK
+# lambda_package/requirements.txt
+fastapi==0.104.1
+mangum==0.17.0
 boto3
-
-# Database
-asyncpg
-sqlalchemy[asyncio]
-
-# Pydantic with email validation
-pydantic[email]
-
-# Additional common dependencies your FastAPI app might need
-python-multipart
-python-jose[cryptography]
-passlib[bcrypt]
-httpx
-aiofiles
-
-# Minimal Lambda package dependencies for testing
-fastapi
-mangum
-boto3
-asyncpg
-
-# Add these back when needed:
-# pydantic[email]
-# sqlalchemy[asyncio]
-# python-multipart
-# python-jose[cryptography]
-# passlib[bcrypt]
-# httpx
-# aiofiles
+pydantic

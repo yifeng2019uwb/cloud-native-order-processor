@@ -98,3 +98,8 @@ venv.bak/
 .DS_Store
 Thumbs.db
 EOF
+
+# Lambda Package Dependencies (IMPORTANT!)
+lambda_package/**/
+!lambda_package/lambda_handler.py
+!lambda_package/requirements.txt
