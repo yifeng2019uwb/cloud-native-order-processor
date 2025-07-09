@@ -3,10 +3,15 @@ from typing import Optional
 from datetime import datetime
 import logging
 from boto3.dynamodb.conditions import Key
+import sys
+import os
 
-from .base_dao import BaseDAO
-from ..config.dynamodb_connection import DynamoDBConnection
-from ...models.user import User, UserCreate
+# Add the src directory to Python path for editor recognition
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from database.dao.base_dao import BaseDAO
+from ..dynamodb_connection import DynamoDBConnection
+from models.user import User, UserCreate
 
 logger = logging.getLogger(__name__)
 

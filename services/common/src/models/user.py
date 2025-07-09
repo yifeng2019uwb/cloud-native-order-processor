@@ -49,9 +49,9 @@ class UserCreate(BaseModel):
         return v
 
 
-# class UserLogin(BaseModel):
-#     email: EmailStr
-#     password: str
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
 
 
 class User(BaseModel):
@@ -72,6 +72,6 @@ class UserResponse(BaseModel):
     updated_at: datetime
 
 
-# class TokenResponse(BaseModel):
-#     access_token: str
-#     token_type: str = "bearer"
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"

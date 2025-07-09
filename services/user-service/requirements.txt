@@ -1,3 +1,6 @@
 fastapi==0.104.1
 pydantic==2.4.2
 boto3==1.29.7          # For DynamoDB
+python-jose[cryptography]==3.5.0  # For JWT
+uvicorn==0.35.0        # ASGI server
+python-multipart       # For form data
