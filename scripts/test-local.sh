@@ -294,6 +294,8 @@ run_build_tests() {
         fi
     fi
 
+    pytest tests/ --cov=src --cov-report=html --cov-report=xml --cov-report=term
+
     cd "$PROJECT_ROOT"
     log_success "Build tests completed successfully"
     return 0
