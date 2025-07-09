@@ -1,3 +1,14 @@
+"""
+FastAPI Application Entry Point - User Authentication Service
+Path: cloud-native-order-processor/services/user-service/src/main.py
+
+This is the API layer entry point. It should only handle:
+- API routing and middleware
+- Exception handling
+- Service configuration
+- Environment variables loaded from services/.env
+- NOT database layer models or operations
+"""
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -6,15 +17,29 @@ import logging
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
-# Add common package to path
+# Add common package to path for database layer access
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "common", "src"))
 
-# Set environment variables for DynamoDB (for development and Lambda compatibility)
-os.environ['ORDERS_TABLE'] = os.getenv('ORDERS_TABLE', 'test-orders-table')
-os.environ['INVENTORY_TABLE'] = os.getenv('INVENTORY_TABLE', 'test-inventory-table')
-os.environ['USERS_TABLE'] = os.getenv('USERS_TABLE', 'test-users-table')  # Added for new registration
-os.environ['REGION'] = os.getenv('AWS_REGION', 'us-west-2')
+# Load environment variables from services/.env
+try:
+    from dotenv import load_dotenv
+
+    # Find the services root directory (go up from user-service/src to services/)
+    services_root = Path(__file__).parent.parent.parent
+    env_file = services_root / ".env"
+
+    if env_file.exists():
+        load_dotenv(env_file)
+        logger = logging.getLogger(__name__)
+        logger.info(f"✅ Environment loaded from: {env_file}")
+    else:
+        print(f"⚠️ Environment file not found at: {env_file}")
+        print("Continuing with system environment variables...")
+
+except ImportError:
+    print("⚠️ python-dotenv not installed. Using system environment variables only.")
 
 # Configure logging
 logging.basicConfig(
@@ -55,12 +80,12 @@ try:
     app.add_exception_handler(RequestValidationError, secure_validation_exception_handler)
     app.add_exception_handler(Exception, secure_general_exception_handler)
 
-    logger.info("Secure exception handlers registered successfully")
+    logger.info("✅ Secure exception handlers registered successfully")
 except ImportError as e:
-    logger.warning(f"Could not import secure exception handlers: {e}")
+    logger.warning(f"⚠️ Could not import secure exception handlers: {e}")
     logger.info("Using fallback global exception handler")
 
-    # Fallback global exception handler (your existing one)
+    # Fallback global exception handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request, exc):
         logger.error(f"Global exception: {exc}")
@@ -69,46 +94,54 @@ except ImportError as e:
             content={"detail": "Internal server error"}
         )
 
-# Import and include new registration router
+# Import and include API routers (FIXED IMPORTS - no 'src.' prefix)
 try:
-    from src.routes.auth.register import router as register_router
+    from routes.auth.register_simple import router as register_router
     app.include_router(register_router, prefix="/auth", tags=["authentication"])
-    logger.info("New registration routes loaded successfully")
+    logger.info("✅ Simple registration routes loaded successfully")
 except ImportError as e:
-    logger.error(f"Failed to import new registration routes: {e}")
-    logger.info("Continuing without new registration endpoint...")
+    logger.error(f"❌ Failed to import simple registration routes: {e}")
+    logger.info("Continuing without registration endpoint...")
 
-# Import and include existing auth routers (keep your existing functionality)
+# Future: Add other auth routers when created
 try:
-    from src.routes.auth import router as auth_router
+    from routes.auth.login import router as login_router
+    app.include_router(login_router, prefix="/auth", tags=["authentication"])
+    logger.info("✅ Login routes loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Login routes not available yet: {e}")
+
+try:
+    from routes.auth.logout import router as logout_router
+    app.include_router(logout_router, prefix="/auth", tags=["authentication"])
+    logger.info("✅ Logout routes loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Logout routes not available yet: {e}")
+
+try:
+    from routes.auth.profile import router as profile_router
+    app.include_router(profile_router, prefix="/auth", tags=["authentication"])
+    logger.info("✅ Profile routes loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Profile routes not available yet: {e}")
+
+# Import existing auth router if available (legacy support)
+try:
+    from routes.auth import router as auth_router
     app.include_router(auth_router)
-    logger.info("Existing auth routes loaded successfully")
+    logger.info("✅ Existing auth routes loaded successfully")
 except ImportError as e:
-    logger.error(f"Failed to import existing auth routes: {e}")
-    logger.info("No existing auth routes found - this is normal for new setup")
+    logger.info("ℹ️ No existing auth routes found - using new modular structure")
 
-# Debug: Test imports for troubleshooting
-print("🔍 Testing imports...")
+# Debug: Test imports for troubleshooting (API layer only)
+logger.info("🔍 Testing API imports...")
 try:
-    # Test new registration import
-    from src.routes.auth.register import router
-    print("✅ New registration router imported successfully")
+    from routes.auth.register import router
+    logger.info("✅ Registration router imported successfully")
 except Exception as e:
-    print(f"❌ New registration router import failed: {e}")
+    logger.error(f"❌ Registration router import failed: {e}")
 
-try:
-    # Test existing auth import
-    import src.routes.auth
-    print("✅ Existing routes.auth imported successfully")
-except Exception as e:
-    print(f"❌ Existing routes.auth import failed: {e}")
-
-try:
-    # Test database dependencies
-    from src.routes.auth.dependencies import get_user_dao, get_db_connection
-    print("✅ Database dependencies imported successfully")
-except Exception as e:
-    print(f"❌ Database dependencies import failed: {e}")
+# No database dependency testing in main.py - that belongs in route handlers
 
 # Root endpoint
 @app.get("/")
@@ -126,23 +159,22 @@ async def root():
             "register": "/auth/register",
             "register_health": "/auth/register/health",
             "login": "/auth/login",
+            "logout": "/auth/logout",
             "profile": "/auth/me"
         },
         "environment": {
-            "users_table": os.getenv('USERS_TABLE'),
-            "orders_table": os.getenv('ORDERS_TABLE'),
-            "inventory_table": os.getenv('INVENTORY_TABLE'),
-            "region": os.getenv('REGION')
+            "service": "user-authentication",
+            "environment": os.getenv("ENVIRONMENT", "development"),
+            "jwt_configured": bool(os.getenv('JWT_SECRET'))
         }
     }
 
 
-# Main health check
+# Main health check (API layer only - NO database calls)
 @app.get("/health")
 async def main_health_check():
-    """Main application health check"""
+    """Main application health check - API layer only, no database access"""
     try:
-        # Enhanced health check with database connectivity
         health_status = {
             "status": "healthy",
             "service": "user-auth-service",
@@ -150,27 +182,12 @@ async def main_health_check():
             "timestamp": datetime.utcnow().isoformat(),
             "environment": os.getenv("ENVIRONMENT", "development"),
             "checks": {
-                "database": "checking...",
-                "jwt": "ok",
-                "tables": {
-                    "users": os.getenv('USERS_TABLE'),
-                    "orders": os.getenv('ORDERS_TABLE'),
-                    "inventory": os.getenv('INVENTORY_TABLE')
-                }
+                "api": "ok",
+                "jwt": "ok" if os.getenv('JWT_SECRET') else "using_default"
             }
         }
 
-        # Test database connectivity
-        try:
-            from src.routes.auth.dependencies import get_db_connection
-            db_connection = await get_db_connection()
-            health_status["checks"]["database"] = "ok"
-            logger.debug("Database connectivity check passed")
-        except Exception as db_error:
-            health_status["checks"]["database"] = f"error: {str(db_error)}"
-            health_status["status"] = "degraded"
-            logger.warning(f"Database connectivity check failed: {db_error}")
-
+        # NO database connectivity check here - that should be in individual route health checks
         return health_status
 
     except Exception as e:
@@ -181,29 +198,33 @@ async def main_health_check():
 # Enhanced startup event
 @app.on_event("startup")
 async def startup_event():
-    """Startup event handler"""
+    """Startup event handler - API service initialization"""
     logger.info("🚀 User Authentication Service starting up...")
     logger.info(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
     logger.info(f"JWT Secret configured: {'Yes' if os.getenv('JWT_SECRET') else 'No (using default)'}")
 
-    # Log table configurations
-    logger.info("📊 Database Tables Configuration:")
-    logger.info(f"  Users Table: {os.getenv('USERS_TABLE')}")
-    logger.info(f"  Orders Table: {os.getenv('ORDERS_TABLE')}")
-    logger.info(f"  Inventory Table: {os.getenv('INVENTORY_TABLE')}")
-    logger.info(f"  Region: {os.getenv('REGION')}")
+    # Log environment configuration (API service level only)
+    logger.info("📊 API Service Configuration:")
+    logger.info(f"  Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    logger.info(f"  Services Root: {Path(__file__).parent.parent.parent}")
+    logger.info(f"  JWT Secret: {'Configured' if os.getenv('JWT_SECRET') else 'Using default'}")
+    logger.info(f"  Service: user-authentication")
+    logger.info("  Database: Accessed via DAO layer in common package")
 
-    # Test critical imports
+    # Test API router availability (not database)
     try:
-        from src.routes.auth.dependencies import get_user_dao
-        logger.info("✅ Registration dependencies loaded successfully")
+        # Just test if we can import the router - no functional testing
+        import routes.auth.register
+        logger.info("✅ API routes loaded successfully")
     except ImportError as e:
-        logger.warning(f"⚠️ Registration dependencies not available: {e}")
+        logger.warning(f"⚠️ Some API routes not available: {e}")
 
     logger.info("🎯 Available endpoints:")
     logger.info("  GET  /health - Main health check")
-    logger.info("  POST /auth/register - User registration (new)")
-    logger.info("  GET  /auth/register/health - Registration service health")
+    logger.info("  POST /auth/register - User registration")
+    logger.info("  POST /auth/login - User login (coming soon)")
+    logger.info("  POST /auth/logout - User logout (coming soon)")
+    logger.info("  GET  /auth/me - User profile (coming soon)")
     logger.info("  GET  /docs - API documentation")
 
 
@@ -226,6 +247,7 @@ if __name__ == "__main__":
     logger.info("  - Auto-reload enabled")
     logger.info("  - CORS configured for development")
     logger.info("  - Detailed logging enabled")
+    logger.info("  - API layer only (database accessed via DAO)")
 
     uvicorn.run(
         "main:app",

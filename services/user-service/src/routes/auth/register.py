@@ -1,88 +1,96 @@
-"""
-User Registration API Endpoint
-Path: /cloud-native-order-processor/services/user-service/src/routes/auth/register.py
-"""
-import sys
-import os
-# from typing import Union
-
-# Add common package to path
-common_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common", "src")
-sys.path.insert(0, common_path)
-
-
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 import logging
 from datetime import datetime
+"""
+User Registration API Endpoint
+Path: cloud-native-order-processor/services/user-service/src/routes/auth/register.py
+"""
+import sys
+import os
+from typing import Union
+import importlib.util
 
-# Import models from common package
-from models.user import UserCreate, UserResponse
-from models.auth import TokenResponse
+# Calculate paths
+user_service_path = os.path.dirname(__file__)  # routes/auth/
+models_path = os.path.join(user_service_path, "..", "..")  # back to src/
+common_path = os.path.join(user_service_path, "..", "..", "..", "..", "common", "src")
+
+# Add user-service models path for API models
+sys.path.insert(0, models_path)
+
+# Import API layer models (from user-service)
+from models.register_models import (
+    UserRegistrationRequest,
+    UserRegistrationResponse,
+    RegistrationSuccessResponse,
+    RegistrationErrorResponse
+)
+from models.shared_models import ErrorResponse
+
+# Remove user-service path to avoid conflicts
+sys.path.remove(models_path)
+
+# Add common path for DAO models
+sys.path.insert(0, common_path)
+
+# Import DAO layer models using direct file loading to avoid conflicts
+spec = importlib.util.spec_from_file_location(
+    "common_user_models",
+    os.path.join(common_path, "models", "user.py")
+)
+common_user_models = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(common_user_models)
+
+# Extract the classes we need from common package
+UserCreate = common_user_models.UserCreate
+User = common_user_models.User
 
 # Import database dependencies
-from database.dao.user_dao import UserDAO
 from .dependencies import get_user_dao
 
-# Import exceptions (we'll create these)
-# from exceptions.internal_exceptions import (
-#     raise_user_exists,
-#     raise_database_error,
-#     raise_validation_error
-# )
+# Import exceptions
+from exceptions.internal_exceptions import (
+    raise_user_exists,
+    raise_database_error,
+    raise_validation_error
+)
 
 logger = logging.getLogger(__name__)
 
-# Router for registration endpoint
+# Router for registration endpoints
 router = APIRouter(tags=["registration"])
 
 
 @router.post(
     "/register",
-    response_model=UserResponse,
+    response_model=Union[RegistrationSuccessResponse, RegistrationErrorResponse],
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {
             "description": "User successfully registered",
-            "model": UserResponse
+            "model": RegistrationSuccessResponse
         },
         409: {
-            "description": "User already exists"
+            "description": "User already exists",
+            "model": RegistrationErrorResponse
         },
         422: {
-            "description": "Invalid input data"
+            "description": "Invalid input data",
+            "model": ErrorResponse
         },
         503: {
-            "description": "Service unavailable"
+            "description": "Service unavailable",
+            "model": ErrorResponse
         }
     }
 )
 async def register_user(
-    user_data: UserCreate,
+    user_data: UserRegistrationRequest,
     request: Request,
-    user_dao: UserDAO = Depends(get_user_dao)
-) -> UserResponse:
+    user_dao = Depends(get_user_dao)
+) -> RegistrationSuccessResponse:
     """
-    Register a new user account
-
-    This endpoint creates a new user account with the provided information.
-    All input data is validated according to business rules:
-
-    - **Email**: Must be valid email format and unique
-    - **Password**: 8-128 characters with complexity requirements
-    - **Name**: 2-100 characters, letters/spaces/hyphens/apostrophes only
-    - **Phone**: Optional, 10-20 characters if provided
-
-    **Security Features:**
-    - Password is hashed before storage
-    - Input validation prevents malicious data
-    - Rate limiting applied (handled by middleware)
-    - No sensitive information in error messages
-
-    **Returns:**
-    - **201**: User successfully created with user information
-    - **409**: User already exists (generic message for security)
-    - **422**: Invalid input data
-    - **503**: Database or service unavailable
+    Register a new user account with comprehensive validation and security
     """
     try:
         # Log registration attempt (without sensitive data)
@@ -95,43 +103,52 @@ async def register_user(
             }
         )
 
-        # Check if user already exists
-        existing_user = await user_dao.get_user_by_email(user_data.email)
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="User already exists"
-            )
+        # Check if user already exists by email
+        existing_user_by_email = await user_dao.get_user_by_email(user_data.email)
+        if existing_user_by_email:
+            raise_user_exists(user_data.email, existing_user_by_email.email)
 
-        # Additional business validation (if needed)
-        # await _validate_business_rules(user_data, request)
+        # Transform API model to DAO model
+        user_create = UserCreate(
+            email=user_data.email,
+            password=user_data.password,  # Will be hashed in DAO
+            name=f"{user_data.first_name} {user_data.last_name}",  # Combine names for common model
+            phone=user_data.phone
+        )
 
-        # Create the user
-        created_user = await user_dao.create_user(user_data)
+        # Create the user via DAO
+        try:
+            created_user = await user_dao.create_user(user_create)
+        except Exception as db_error:
+            raise_database_error("user_creation", "users_table", db_error)
 
         # Log successful registration
         logger.info(
             f"User registered successfully: {user_data.email}",
             extra={
                 "email": user_data.email,
-                "user_id": created_user.user_id if hasattr(created_user, 'user_id') else None,
                 "timestamp": datetime.utcnow().isoformat()
             }
         )
 
-        # Return success response with user data
-        return UserResponse(
-            email=created_user.email,
-            name=created_user.name,
-            phone=created_user.phone,
-            created_at=created_user.created_at,
-            updated_at=created_user.updated_at
+        # Transform DAO response back to API response model
+        return RegistrationSuccessResponse(
+            message="Account created successfully",
+            user=UserRegistrationResponse(
+                username=user_data.username,  # From original request
+                email=created_user.email,
+                first_name=user_data.first_name,  # From original request
+                last_name=user_data.last_name,   # From original request
+                phone=created_user.phone,
+                date_of_birth=user_data.date_of_birth,  # From original request
+                marketing_emails_consent=user_data.marketing_emails_consent,  # From original request
+                created_at=created_user.created_at,
+                updated_at=created_user.updated_at
+            )
         )
 
     except Exception as e:
         # All exceptions are handled by the secure exception handlers
-        # This allows internal exceptions to be logged with full context
-        # while clients receive only safe, standardized responses
         logger.error(
             f"Registration failed for {user_data.email}: {str(e)}",
             extra={
@@ -143,75 +160,13 @@ async def register_user(
         raise
 
 
-async def _validate_business_rules(user_data: UserRegistrationRequest, request: Request) -> None:
-    """
-    Additional business rule validation beyond Pydantic model validation
-
-    Args:
-        user_data: Validated user registration data
-        request: FastAPI request object for context
-
-    Raises:
-        InternalValidationError: If business rules are violated
-    """
-    # Example: Check for suspicious patterns
-    suspicious_patterns = [
-        "test@test.com",
-        "admin@",
-        "root@",
-        "noreply@",
-        "no-reply@"
-    ]
-
-    if any(pattern in user_data.email.lower() for pattern in suspicious_patterns):
-        logger.warning(
-            f"Suspicious email pattern detected: {user_data.email}",
-            extra={
-                "email": user_data.email,
-                "ip_address": request.client.host if request.client else "unknown",
-                "user_agent": request.headers.get("user-agent", "unknown")
-            }
-        )
-        # Continue with registration but flag for review
-        # In production, you might want to require additional verification
-
-    # Example: Validate phone number country code if provided
-    if user_data.phone and user_data.phone.startswith('+'):
-        # Extract country code and validate against allowed list
-        # This is just an example - implement based on your requirements
-        pass
-
-    # Example: Check name for potential abuse (updated for first_name/last_name)
-    blocked_names = ["admin", "root", "test", "null", "undefined"]
-    if (any(blocked in user_data.first_name.lower() for blocked in blocked_names) or
-        any(blocked in user_data.last_name.lower() for blocked in blocked_names)):
-        raise_validation_error(
-            field="name",
-            value=f"{user_data.first_name} {user_data.last_name}",
-            rule="blocked_name_validation",
-            details=f"Name '{user_data.first_name} {user_data.last_name}' contains blocked terms"
-        )
-
-    logger.debug(f"Business rules validation passed for {user_data.email}")
-
-
 # Health check specific to registration service
-@router.get(
-    "/register/health",
-    response_model=dict,
-    tags=["health"]
-)
-async def registration_health_check() -> dict:
-    """
-    Health check endpoint for registration service
-
-    Returns basic service status and available endpoints.
-    Used by load balancers and monitoring systems.
-    """
+@router.get("/register/health", status_code=status.HTTP_200_OK)
+async def registration_health_check():
+    """Health check for registration service"""
     return {
         "service": "user-registration",
         "status": "healthy",
-        "version": "1.0.0",
         "endpoints": [
             "POST /auth/register",
             "GET /auth/register/health"
