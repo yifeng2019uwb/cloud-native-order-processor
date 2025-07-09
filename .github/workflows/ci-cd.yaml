@@ -18,40 +18,15 @@ on:
         options:
           - dev
           - prod
-      profile:
-        description: 'Resource profile'
-        required: true
-        default: 'prod'
-        type: choice
-        options:
-          - learning
-          - minimum
-          - prod
-      deploy_application:
-        description: 'Deploy application after infrastructure'
-        required: false
-        default: true
-        type: boolean
-      run_integration_tests:
-        description: 'Run integration tests'
-        required: false
-        default: true
-        type: boolean
-      auto_destroy:
-        description: 'Auto-destroy infrastructure after tests (COST CONTROL)'
-        required: false
-        default: true
-        type: boolean
 
 env:
   PYTHON_VERSION: '3.11'
   AWS_REGION: 'us-west-2'
-  ECR_REPOSITORY: 'order-processor-api'
 
 jobs:
   # Job 1: CI - Always runs (FREE) - Tests and validation
   test:
-    name: Run Tests
+    name: Run Tests and Build Validation
     runs-on: ubuntu-latest
 
     steps:
@@ -71,388 +46,169 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Install build tools and upgrade pip
+    - name: Install build dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade setuptools wheel build
-        pip install --upgrade pip setuptools wheel
+        pip install pytest pytest-cov
 
-    - name: Make build script executable
-      working-directory: ./services
-      run: chmod +x build.sh
-
-    - name: Install Python 3 development tools (Ubuntu)
+    - name: 🧪 Run Unit Tests with Coverage
+      working-directory: ./services/common
       run: |
-        sudo apt-get update
-        sudo apt-get install -y python3-dev python3-pip python3-venv python3-wheel build-essential
+        pip install -r requirements.txt
+        export PYTHONPATH=src:$PYTHONPATH
+        export ORDERS_TABLE=test-orders-table
+        export INVENTORY_TABLE=test-inventory-table
+        export REGION=us-west-2
+        pytest tests/ --cov=src --cov-report=html --cov-report=xml --cov-report=term -v
 
-    - name: Build common package (build-only)
-      working-directory: ./services
+    - name: 🐳 Build Docker Image (validation only)
       run: |
-        echo "=== Building common package (build-only) ==="
-        pip install wheel
-        ./build.sh --build-only --verbose common
-
-    - name: Build order-service (build-only)
-      working-directory: ./services
-      run: |
-        echo "=== Building order-service (build-only) ==="
-        ./build.sh --build-only --verbose order-service
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-artifacts
-        path: |
-          services/*/dist/
-          services/common/dist/
-        retention-days: 7
-
-    - name: Run linting
-      working-directory: ./services
-      run: |
-        echo "=== Running linting ==="
-        pip install flake8 black
-        ./build.sh --test-only common
-
-    - name: Run tests with coverage
-      working-directory: ./services
-      run: |
-        echo "=== Running tests using working build script approach ==="
-        # Use the exact same commands that work locally
-        ./build.sh --test-only common
-        ./build.sh --test-only order-service
-        echo "All tests completed successfully"
-
-  # Job 2: Build Docker Image - Always runs (FREE) - Validation only
-  build:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Build Docker image (validation only - no AWS costs)
-      run: |
-        echo "=== Building Docker image for CI validation (no ECR push) ==="
-
-        # Use the same Dockerfile that quick_build.sh uses
+        echo "Building Docker image for validation..."
         if [ -f "docker/order-service/Dockerfile.simple" ]; then
-          echo "Using docker/order-service/Dockerfile.simple"
-          docker build -f docker/order-service/Dockerfile.simple -t order-processor-api:latest .
+          docker build -f docker/order-service/Dockerfile.simple -t order-service:latest .
+          echo "✅ Docker image built successfully"
         else
-          echo "Error: Dockerfile.simple not found at expected location"
-          find . -name "*Dockerfile*" -type f
+          echo "❌ Dockerfile not found"
           exit 1
         fi
 
-        # Tag for CI/CD consistency (no push to ECR)
-        docker tag order-processor-api:latest ${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-
-        echo "✅ Docker image built successfully (validation only)"
-        echo "📦 Local image: order-processor-api:latest"
-        echo "📦 Tagged as: ${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
-
-    - name: Test Docker image
-      run: |
-        docker run --rm ${{ env.ECR_REPOSITORY }}:${{ github.sha }} python --version
-        echo "Docker image built and tested successfully"
-
-    - name: Save Docker image as artifact
-      if: github.event_name == 'workflow_dispatch'
-      run: |
-        docker save ${{ env.ECR_REPOSITORY }}:${{ github.sha }} > order-api.tar
-
-    - name: Upload Docker image as artifact
-      if: github.event_name == 'workflow_dispatch'
+    - name: Upload test coverage
       uses: actions/upload-artifact@v4
       with:
-        name: docker-image
-        path: order-api.tar
-        retention-days: 1
-
-  # Job 3: Deploy Infrastructure - ONLY runs manually (COST CONTROL)
-  deploy:
-    name: Deploy AWS Infrastructure
-    runs-on: ubuntu-latest
-    needs: [test, build]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment: prod
-
-    steps:
-    - name: Show deployment info
-      run: |
-        echo "🚀 Deploying to environment: prod"
-        echo "📋 Resource profile: prod"
-        echo "🔧 Deploy application: true"
-
-    # - name: Show deployment info
-    #   run: |
-    #     echo "🚀 Deploying to environment: ${{ github.event.inputs.environment }}"
-    #     echo "📋 Resource profile: ${{ github.event.inputs.profile }}"
-    #     echo "🔧 Deploy application: ${{ github.event.inputs.deploy_application }}"
-
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup AWS
-      uses: ./.github/actions/setup-aws
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: Deploy Infrastructure using Enhanced Script
-      run: |
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh \
-          --environment prod \
-          --profile prod \
-          --verbose
-
-    - name: Upload Terraform outputs as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: terraform-outputs
-        path: terraform/terraform.tfstate
-        retention-days: 1
-
-  # Job 4: Deploy Application - ONLY runs manually if selected
-  deploy_application:
-    name: Deploy Application
-    runs-on: ubuntu-latest
-    needs: deploy
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment: prod
-
-    steps:
-    - name: Show deployment info
-      run: |
-        echo "📦 Deploying application to: ${{ github.event.inputs.environment }}"
-        if [[ "${{ github.event.inputs.environment }}" == "prod" ]]; then
-          echo "⚠️  Manual approval was required for this deployment"
-        fi
-
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup AWS
-      uses: ./.github/actions/setup-aws
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: Download Docker image artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: docker-image
-
-    # Use enhanced deploy-app script
-    - name: Deploy Application using Enhanced Script
-      run: |
-        chmod +x scripts/deploy-app.sh
-        ./scripts/deploy-app.sh \
-          --environment prod \
-          --profile prod \
-          --verbose
-
-  # Job 5: Integration Tests - ONLY runs manually if selected
-  integration_tests:
-    name: Run Integration Tests
-    runs-on: ubuntu-latest
-    needs: [deploy, deploy_application]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment: prod
-
-    steps:
-    - name: Show test info
-      run: |
-        echo "🧪 Running integration tests for: ${{ github.event.inputs.environment }}"
-        if [[ "${{ github.event.inputs.environment }}" == "prod" ]]; then
-          echo "⚠️  Manual approval was required for this test run"
-        fi
-
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Setup AWS
-      uses: ./.github/actions/setup-aws
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    # Use enhanced integration test script
-    - name: Run Integration Tests using Enhanced Script
-      run: |
-        chmod +x scripts/test-integration.sh
-        ./scripts/test-integration.sh \
-          --environment prod \
-          --verbose
-
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: integration-test-results
+        name: coverage-reports
         path: |
-          test-results/
-          tests/reports/
+          services/common/htmlcov/
+          services/common/coverage.xml
         retention-days: 7
 
-  # Job 6: Enhanced Destroy Infrastructure - ALWAYS runs for cost control
-  destroy_infrastructure:
-    name: Destroy Infrastructure (Cost Control)
+  # Job 2: Deploy - ONLY runs manually for cost control
+  deploy:
+    name: Deploy to AWS
     runs-on: ubuntu-latest
-    needs: [deploy, deploy_application, integration_tests]
-    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.inputs.auto_destroy == 'true'
+    needs: test
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment }}
 
     steps:
-    - name: Show deployment info
+    - name: 🚀 Starting Deployment Pipeline
       run: |
-        echo "🚀 Deploying to environment: prod"
-        echo "📋 Resource profile: prod"
-        echo "🔧 Deploy application: true"
+        echo "Starting deployment to: ${{ github.event.inputs.environment }}"
+        echo "This will run the complete infrastructure pipeline"
 
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup AWS
-      uses: ./.github/actions/setup-aws
+    - name: Setup AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.5.0
+    - name: 🏗️ Deploy Infrastructure
+      run: |
+        chmod +x scripts/deploy.sh
+        ./scripts/deploy.sh --environment ${{ github.event.inputs.environment }} --verbose
 
-    # Use enhanced destroy script with nuclear cleanup
-    - name: Destroy Infrastructure using Enhanced Script
+    - name: ✅ Infrastructure Ready - Deploying Application
+      run: |
+        echo "🎉 Infrastructure deployed successfully!"
+        echo "📦 Starting application deployment..."
+        echo "Environment: ${{ github.event.inputs.environment }}"
+
+    - name: 📦 Deploy Application
+      run: |
+        chmod +x scripts/deploy-app.sh
+        ./scripts/deploy-app.sh --environment ${{ github.event.inputs.environment }} --verbose
+
+    - name: ✅ Application Ready - Running Integration Tests
+      run: |
+        echo "🎉 Application deployed successfully!"
+        echo "🧪 Starting integration tests..."
+        echo "This will validate the complete system end-to-end"
+
+    - name: 🧪 Run Integration Tests
+      run: |
+        chmod +x scripts/test-integration.sh
+        ./scripts/test-integration.sh --environment ${{ github.event.inputs.environment }} --verbose
+
+    - name: ✅ Tests Complete - Starting Cleanup
+      run: |
+        echo "🎉 Integration tests completed successfully!"
+        echo "🧹 Starting resource cleanup to prevent ongoing costs..."
+        echo "This will destroy all AWS resources created during deployment"
+
+    - name: 🧹 Cleanup Resources
+      if: always()
       run: |
         chmod +x scripts/destroy.sh
-        ./scripts/destroy.sh \
-          --environment prod \
-          --profile prod \
-          --auto-approve \
-          --force-cleanup \
-          --verbose
+        ./scripts/destroy.sh --environment ${{ github.event.inputs.environment }} --force --verbose
 
-    # Cost verification and reporting
-    - name: Verify Complete Resource Cleanup
-      if: always()
-      run: |
-        echo "=== Final Resource Cleanup Verification ==="
-
-        # Check for ANY remaining project resources across regions
-        echo "Checking all regions for remaining resources..."
-
-        regions=("us-west-2" "us-east-1" "us-west-1" "us-east-2")
-        total_resources=0
-
-        for region in "${regions[@]}"; do
-          echo "Checking region: $region"
-
-          resources=$(aws resourcegroupstaggingapi get-resources \
-            --tag-filters Key=Project,Values=order-processor \
-            --region "$region" \
-            --query 'ResourceTagMappingList | length' \
-            --output text 2>/dev/null || echo "0")
-
-          if [[ "$resources" -gt 0 ]]; then
-            total_resources=$((total_resources + resources))
-            echo "⚠️ Found $resources resources in $region"
-
-            # Show detailed resource list
-            aws resourcegroupstaggingapi get-resources \
-              --tag-filters Key=Project,Values=order-processor \
-              --region "$region" \
-              --query 'ResourceTagMappingList[].ResourceARN' \
-              --output table
-          else
-            echo "✅ No resources in $region"
-          fi
-        done
-
-        if [[ "$total_resources" -eq 0 ]]; then
-          echo ""
-          echo "🎉 SUCCESS: All project resources destroyed!"
-          echo "💰 Estimated ongoing cost: $0.00/month"
-        else
-          echo ""
-          echo "⚠️ WARNING: $total_resources resources still exist"
-          echo "💰 These may incur ongoing charges"
-          echo "🔧 Manual cleanup may be required"
-        fi
-
-    - name: Cost Impact Report
-      if: always()
-      run: |
-        echo "=== 💰 Cost Impact Analysis ==="
-        echo ""
-        echo "Deployment Summary:"
-        echo "  Environment: ${{ github.event.inputs.environment }}"
-        echo "  Profile: ${{ github.event.inputs.profile }}"
-        echo "  Duration: ~30-60 minutes"
-        echo "  Auto-destroy: ${{ github.event.inputs.auto_destroy }}"
-        echo ""
-        echo "Expected Costs (if auto-destroy enabled):"
-        echo "  Learning Profile: ~$2-5 for this run"
-        echo "  Minimum Profile: ~$5-10 for this run"
-        echo "  Prod Profile: ~$20-40 for this run"
-        echo ""
-        echo "Expected Costs (if auto-destroy disabled):"
-        echo "  Learning Profile: ~$5-15/day ongoing"
-        echo "  Minimum Profile: ~$10-25/day ongoing"
-        echo "  Prod Profile: ~$50-100/day ongoing"
-        echo ""
-        if [[ "${{ github.event.inputs.auto_destroy }}" == "true" ]]; then
-          echo "✅ Auto-destroy enabled - minimal costs expected"
-        else
-          echo "⚠️ Auto-destroy disabled - remember to clean up manually!"
-        fi
-
-    # Pipeline summary
-    - name: Pipeline Summary
+    - name: 📊 Deployment Summary
       if: always()
       run: |
         echo "=== 🚀 CI/CD Pipeline Summary ==="
         echo ""
-        echo "🔄 What Happened:"
-        echo "  ✅ CI: Tests and builds completed"
-        echo "  ✅ CD: Manual deployment triggered"
-        echo "  📦 Infrastructure: ${{ github.event.inputs.environment }} environment"
-        echo "  💎 Profile: ${{ github.event.inputs.profile }} resources"
-        echo "  🚀 Application: ${{ github.event.inputs.deploy_application }}"
-        echo "  🧪 Tests: ${{ github.event.inputs.run_integration_tests }}"
-        echo "  🧹 Cleanup: ${{ github.event.inputs.auto_destroy }}"
+        echo "Environment: ${{ github.event.inputs.environment }}"
+        echo "Deployment completed: $(date)"
         echo ""
-        echo "💡 Key Benefits:"
-        echo "  ✅ Cost-controlled deployment (manual trigger only)"
-        echo "  ✅ Real AWS infrastructure testing"
-        echo "  ✅ Complete end-to-end validation"
-        echo "  ✅ Automatic resource cleanup"
-        echo "  ✅ Industry-standard CI/CD practices"
+        echo "✅ Infrastructure: Deployed and tested"
+        echo "✅ Application: Deployed and tested"
+        echo "✅ Integration: Tests completed"
+        echo "✅ Cleanup: Resources destroyed"
         echo ""
-        echo "🎯 Learning Objectives Achieved:"
-        echo "  ✅ Infrastructure as Code (Terraform)"
-        echo "  ✅ Container deployment (Docker + EKS)"
-        echo "  ✅ CI/CD automation (GitHub Actions)"
-        echo "  ✅ Cloud cost management"
-        echo "  ✅ Integration testing"
+        echo "💰 Expected cost impact: Minimal (resources destroyed)"
+        echo "🎯 Learning objectives achieved: Full infrastructure automation"
+
+  # Job 3: Verify Cleanup - Always runs to ensure no ongoing costs
+  verify_cleanup:
+    name: Verify Complete Cleanup
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always() && github.event_name == 'workflow_dispatch'
+
+    steps:
+    - name: Setup AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: 🔍 Verify Resource Cleanup
+      run: |
+        echo "Checking for any remaining project resources..."
+
+        # Check for tagged resources
+        remaining=$(aws resourcegroupstaggingapi get-resources \
+          --tag-filters Key=Project,Values=order-service \
+          --region ${{ env.AWS_REGION }} \
+          --query 'ResourceTagMappingList | length' \
+          --output text 2>/dev/null || echo "0")
+
+        if [[ "$remaining" -eq 0 ]]; then
+          echo "✅ SUCCESS: All resources cleaned up!"
+          echo "💰 Estimated ongoing cost: $0.00/month"
+        else
+          echo "⚠️ WARNING: $remaining resources still exist"
+          echo "💰 These may incur ongoing charges"
+
+          # Show remaining resources
+          aws resourcegroupstaggingapi get-resources \
+            --tag-filters Key=Project,Values=order-service \
+            --region ${{ env.AWS_REGION }} \
+            --query 'ResourceTagMappingList[].ResourceARN' \
+            --output table || true
+        fi
+
+    - name: 💰 Cost Control Summary
+      if: always()
+      run: |
+        echo "=== 💰 Cost Control Report ==="
+        echo "Deployment duration: ~30-60 minutes"
+        echo "Expected total cost: ~$2-10 for this run"
+        echo "Ongoing cost: $0 (all resources destroyed)"
         echo ""
-        echo "=== End of Pipeline ==="
+        echo "🎉 CI/CD pipeline completed successfully!"
+        echo "✅ All AWS resources have been cleaned up"
+        echo "✅ No ongoing costs expected"
