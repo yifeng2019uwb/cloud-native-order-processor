@@ -452,26 +452,6 @@ cleanup_single_role() {
         fi
     done
 
-    # Remove role from instance profiles
-    local instance_profiles
-    instance_profiles=$(aws iam list-instance-profiles-for-role \
-        --role-name "$role_name" \
-        --query 'InstanceProfiles[].InstanceProfileName' \
-        --output text 2>/dev/null || echo "")
-
-    for profile_name in $instance_profiles; do
-        if [[ -n "$profile_name" ]]; then
-            log_info "  Removing from instance profile: $profile_name"
-            aws iam remove-role-from-instance-profile \
-                --instance-profile-name "$profile_name" \
-                --role-name "$role_name" 2>/dev/null || true
-
-            # Delete the instance profile if it's empty
-            aws iam delete-instance-profile \
-                --instance-profile-name "$profile_name" 2>/dev/null || true
-        fi
-    done
-
     # Finally delete the role
     log_info "  Deleting role: $role_name"
     aws iam delete-role --role-name "$role_name" 2>/dev/null || true
