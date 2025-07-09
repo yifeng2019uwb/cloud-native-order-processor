@@ -4,7 +4,5 @@ from .dynamodb_service import OrderService, InventoryService
 
 __all__ = [
     "DynamoDBManager",
-    "get_dynamodb",
-    "OrderService",
-    "InventoryService",
+    "get_dynamodb"
 ]
