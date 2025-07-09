@@ -119,7 +119,7 @@ except ImportError as e:
     logger.warning(f"⚠️ Logout routes not available yet: {e}")
 
 try:
-    from routes.auth.profile import router as profile_router
+    from routes.auth.profile_simple import router as profile_router
     app.include_router(profile_router, prefix="/auth", tags=["authentication"])
     logger.info("✅ Profile routes loaded successfully")
 except ImportError as e:
