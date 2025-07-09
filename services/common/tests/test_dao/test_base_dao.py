@@ -3,7 +3,9 @@ from unittest.mock import Mock, patch
 from datetime import datetime
 import sys
 import os
-from database.dao.base_dao import BaseDAO
+# Add the common directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from src.database.dao.base_dao import BaseDAO
 
 
 class TestBaseDAO:
