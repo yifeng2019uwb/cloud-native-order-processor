@@ -105,7 +105,7 @@ except ImportError as e:
 
 # Future: Add other auth routers when created
 try:
-    from routes.auth.login import router as login_router
+    from routes.auth.login_simple import router as login_router
     app.include_router(login_router, prefix="/auth", tags=["authentication"])
     logger.info("✅ Login routes loaded successfully")
 except ImportError as e:

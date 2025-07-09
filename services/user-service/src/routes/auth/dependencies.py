@@ -6,7 +6,7 @@ import sys
 import os
 
 # Add common package to path
-common_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "common", "src")
+common_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common", "src")
 sys.path.insert(0, common_path)
 
 from fastapi import Depends, HTTPException, status
@@ -18,42 +18,17 @@ from database.dynamodb_connection import get_dynamodb
 logger = logging.getLogger(__name__)
 
 
-async def get_db_connection():
+async def get_user_dao():
     """
-    Get database connection dependency
-
-    Returns:
-        DynamoDB connection instance
-
-    Raises:
-        HTTPException: If database is unavailable
+    Get UserDAO instance dependency - properly handles async generator
     """
     try:
-        connection = get_dynamodb()
-        logger.debug("Database connection established")
-        return connection
-    except Exception as e:
-        logger.error(f"Database connection failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database service unavailable"
-        )
-
-
-async def get_user_dao(db_connection=Depends(get_db_connection)) -> UserDAO:
-    """
-    Get UserDAO instance dependency
-
-    Args:
-        db_connection: Database connection from dependency
-
-    Returns:
-        UserDAO instance for user operations
-    """
-    try:
-        dao = UserDAO(db_connection)
-        logger.debug("UserDAO instance created")
-        return dao
+        # get_dynamodb() is an async generator, so we need to iterate it
+        async for db_connection in get_dynamodb():
+            dao = UserDAO(db_connection)
+            logger.debug("UserDAO instance created")
+            yield dao
+            break  # We only need one connection
     except Exception as e:
         logger.error(f"Failed to create UserDAO: {str(e)}")
         raise HTTPException(
@@ -63,8 +38,6 @@ async def get_user_dao(db_connection=Depends(get_db_connection)) -> UserDAO:
 
 
 # Placeholder for future token-related dependencies
-# These will be implemented when we create login.py and profile.py
-
 async def verify_token_dependency():
     """
     Placeholder for token verification dependency
