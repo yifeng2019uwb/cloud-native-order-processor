@@ -1,0 +1,36 @@
+services:
+  user-service:
+    build:
+      context: ../
+      dockerfile: docker/user-service/Dockerfile
+    container_name: order-processor-user-service
+    ports:
+      - "8000:8000"
+    environment:
+      - ORDERS_TABLE=${ORDERS_TABLE}
+      - INVENTORY_TABLE=${INVENTORY_TABLE}  
+      - USERS_TABLE=${USERS_TABLE}
+      - AWS_REGION=${AWS_REGION}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JWT_EXPIRATION_HOURS=${JWT_EXPIRATION_HOURS}
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+    volumes:
+      - ~/.aws:/root/.aws:ro
+    env_file:
+      - ../.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - order-processor-network
+
+networks:
+  order-processor-network:
+    name: order-processor-network
+    driver: bridge

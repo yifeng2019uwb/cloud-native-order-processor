@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Environment files (handled separately)
+.env.local
+.env.*.local
+
+# Dependencies (will be installed in container)
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.Python
+**/pip-log.txt
+**/pip-delete-this-directory.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+**/test_*
+**/*_test.py
+**/tests/
+**/coverage/
+
+# Build artifacts
+**/build/
+**/dist/
+**/*.egg-info
