@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import type { LoginRequest } from '@/types';
 
@@ -7,9 +8,10 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
+  const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuth();
   const [formData, setFormData] = useState<LoginRequest>({
-    email: '',
+    username: '',
     password: ''
   });
   const [formErrors, setFormErrors] = useState<Partial<LoginRequest>>({});
@@ -17,18 +19,20 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
   const validateForm = (): boolean => {
     const errors: Partial<LoginRequest> = {};
 
-    // Email validation
-    if (!formData.email) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Please enter a valid email address';
+    // Username validation (matching backend: 3-30 characters, alphanumeric and underscores)
+    if (!formData.username) {
+      errors.username = 'Username is required';
+    } else if (formData.username.length < 3 || formData.username.length > 30) {
+      errors.username = 'Username must be 3-30 characters';
+    } else if (!/^[a-zA-Z0-9][a-zA-Z0-9_]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$/.test(formData.username)) {
+      errors.username = 'Username can only contain letters, numbers, and underscores. Cannot start/end with underscore.';
+    } else if (formData.username.includes('__')) {
+      errors.username = 'Username cannot contain consecutive underscores';
     }
 
-    // Password validation
+    // Password validation (matching backend: minimum 1 character)
     if (!formData.password) {
       errors.password = 'Password is required';
-    } else if (formData.password.length < 12) {
-      errors.password = 'Password must be at least 6 characters';
     }
 
     setFormErrors(errors);
@@ -57,6 +61,14 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
     // Clear field error when user starts typing
     if (formErrors[name as keyof LoginRequest]) {
       setFormErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const handleSwitchToRegister = () => {
+    if (onSwitchToRegister) {
+      onSwitchToRegister();
+    } else {
+      navigate('/register');
     }
   };
 
@@ -90,26 +102,26 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
           )}
 
           <div className="rounded-md shadow-sm -space-y-px">
-            {/* Email Field */}
+            {/* Username Field */}
             <div>
-              <label htmlFor="email" className="sr-only">Email address</label>
+              <label htmlFor="username" className="sr-only">Username</label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
                 required
                 className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
-                  formErrors.email
+                  formErrors.username
                     ? 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500'
                     : 'border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-indigo-500 focus:border-indigo-500'
                 } rounded-t-md focus:outline-none focus:z-10 sm:text-sm`}
-                placeholder="Email address"
-                value={formData.email}
+                placeholder="Username"
+                value={formData.username}
                 onChange={handleChange}
               />
-              {formErrors.email && (
-                <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+              {formErrors.username && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.username}</p>
               )}
             </div>
 
@@ -155,21 +167,19 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
             </button>
           </div>
 
-          {/* Switch to Register */}
-          {onSwitchToRegister && (
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
-                <button
-                  type="button"
-                  onClick={onSwitchToRegister}
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  Sign up here
-                </button>
-              </p>
-            </div>
-          )}
+          {/* Switch to Register - Always show */}
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <button
+                type="button"
+                onClick={handleSwitchToRegister}
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                Sign up here
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     </div>

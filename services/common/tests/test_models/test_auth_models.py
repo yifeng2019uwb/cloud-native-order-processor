@@ -12,7 +12,7 @@ class TestLoginRequest:
             "email": "test@example.com",
             "password": "ValidPass123!"
         }
-        login = LoginRequest(**login_data)
+        login = LoginRequest(login_data)
         assert login.email == "test@example.com"
         assert login.password == "ValidPass123!"
 

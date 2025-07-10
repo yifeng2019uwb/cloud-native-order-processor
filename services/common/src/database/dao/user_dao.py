@@ -10,17 +10,13 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from database.dao.base_dao import BaseDAO
-from ..dynamodb_connection import DynamoDBConnection
-from models.user import User, UserCreate
+from models.user import User, UserCreate, UserLogin
 
 logger = logging.getLogger(__name__)
 
 
 class UserDAO(BaseDAO):
-    """Data Access Object for user operations using DynamoDB single table"""
-
-    def _get_entity_type(self) -> str:
-        return "USER"
+    """Data Access Object for user operations"""
 
     def _hash_password(self, password: str) -> str:
         """Hash password with bcrypt"""
@@ -34,35 +30,38 @@ class UserDAO(BaseDAO):
     async def create_user(self, user_create: UserCreate) -> User:
         """Create a new user"""
         try:
-            # Check if user already exists
-            existing_user = await self.get_user_by_email(user_create.email)
-            if existing_user:
+            # Check if username already exists
+            existing_user_by_username = await self.get_user_by_username(user_create.username)
+            if existing_user_by_username:
+                raise ValueError(f"User with username {user_create.username} already exists")
+
+            # Check if email already exists
+            existing_user_by_email = await self.get_user_by_email(user_create.email)
+            if existing_user_by_email:
                 raise ValueError(f"User with email {user_create.email} already exists")
 
             # Hash password
             password_hash = self._hash_password(user_create.password)
 
-            # Create user item for DynamoDB single table
+            # Create user item
+            now = datetime.utcnow().isoformat()
             user_item = {
-                'PK': self._create_primary_key(user_create.email),
+                'PK': user_create.username,
                 'SK': 'PROFILE',
+                'username': user_create.username,
                 'email': user_create.email,
                 'password_hash': password_hash,
                 'name': user_create.name,
                 'phone': user_create.phone,
-                'entity_type': self._get_entity_type()
+                'created_at': now,
+                'updated_at': now
             }
 
-            # Add timestamps
-            self._add_timestamps(user_item, is_create=True)
-
-            # Validate required fields
-            self._validate_required_fields(user_item, ['email', 'name', 'password_hash'])
-
-            # Use orders table (single table design)
-            created_item = self._safe_put_item(self.db.orders_table, user_item)
+            # Save to users table
+            created_item = self._safe_put_item(self.db.users_table, user_item)
 
             return User(
+                username=user_create.username,
                 email=user_create.email,
                 name=user_create.name,
                 phone=user_create.phone,
@@ -74,19 +73,20 @@ class UserDAO(BaseDAO):
             logger.error(f"Failed to create user: {e}")
             raise
 
-    async def get_user_by_email(self, email: str) -> Optional[User]:
-        """Get user by email"""
+    async def get_user_by_username(self, username: str) -> Optional[User]:
+        """Get user by username (Primary Key lookup)"""
         try:
             key = {
-                'PK': self._create_primary_key(email),
+                'PK': username,
                 'SK': 'PROFILE'
             }
 
-            item = self._safe_get_item(self.db.orders_table, key)
+            item = self._safe_get_item(self.db.users_table, key)
             if not item:
                 return None
 
             return User(
+                username=item['username'],
                 email=item['email'],
                 name=item['name'],
                 phone=item.get('phone'),
@@ -95,18 +95,60 @@ class UserDAO(BaseDAO):
             )
 
         except Exception as e:
-            logger.error(f"Failed to get user {email}: {e}")
+            logger.error(f"Failed to get user by username {username}: {e}")
             raise
 
-    async def authenticate_user(self, email: str, password: str) -> Optional[User]:
-        """Authenticate user with email and password"""
+    async def get_user_by_email(self, email: str) -> Optional[User]:
+        """Get user by email (GSI lookup)"""
         try:
+            items = self._safe_query(
+                self.db.users_table,
+                Key('email').eq(email),
+                index_name='EmailIndex'
+            )
+
+            if not items:
+                return None
+
+            # Should only be one user per email
+            item = items[0]
+
+            return User(
+                username=item['username'],
+                email=item['email'],
+                name=item['name'],
+                phone=item.get('phone'),
+                created_at=datetime.fromisoformat(item['created_at']),
+                updated_at=datetime.fromisoformat(item['updated_at'])
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to get user by email {email}: {e}")
+            raise
+
+    async def authenticate_user(self, identifier: str, password: str) -> Optional[User]:
+        """Authenticate user with username/email and password"""
+        try:
+            # Determine if identifier is email or username
+            user = None
+
+            if '@' in identifier:
+                # Identifier looks like email
+                user = await self.get_user_by_email(identifier)
+            else:
+                # Identifier looks like username
+                user = await self.get_user_by_username(identifier)
+
+            if not user:
+                return None
+
+            # Get the full user record with password hash for verification
             key = {
-                'PK': self._create_primary_key(email),
+                'PK': user.username,
                 'SK': 'PROFILE'
             }
 
-            item = self._safe_get_item(self.db.orders_table, key)
+            item = self._safe_get_item(self.db.users_table, key)
             if not item:
                 return None
 
@@ -114,22 +156,23 @@ class UserDAO(BaseDAO):
             if not self._verify_password(password, item['password_hash']):
                 return None
 
-            return User(
-                email=item['email'],
-                name=item['name'],
-                phone=item.get('phone'),
-                created_at=datetime.fromisoformat(item['created_at']),
-                updated_at=datetime.fromisoformat(item['updated_at'])
-            )
+            return user
 
         except Exception as e:
-            logger.error(f"Failed to authenticate user {email}: {e}")
+            logger.error(f"Failed to authenticate user {identifier}: {e}")
             raise
 
-    async def update_user(self, email: str, name: Optional[str] = None, phone: Optional[str] = None) -> Optional[User]:
+    async def update_user(self, username: str, email: Optional[str] = None,
+                         name: Optional[str] = None, phone: Optional[str] = None) -> Optional[User]:
         """Update user profile"""
         try:
             updates = {}
+            if email is not None:
+                # Check if new email already exists (for another user)
+                existing_user = await self.get_user_by_email(email)
+                if existing_user and existing_user.username != username:
+                    raise ValueError(f"Email {email} is already in use by another user")
+                updates['email'] = email
             if name is not None:
                 updates['name'] = name
             if phone is not None:
@@ -137,27 +180,39 @@ class UserDAO(BaseDAO):
 
             if not updates:
                 # No updates provided, just return current user
-                return await self.get_user_by_email(email)
+                return await self.get_user_by_username(username)
+
+            # Build update expression
+            set_clauses = []
+            expression_values = {}
+
+            for field, value in updates.items():
+                set_clauses.append(f"{field} = :{field}")
+                expression_values[f":{field}"] = value
+
+            # Always update timestamp
+            set_clauses.append("updated_at = :updated_at")
+            expression_values[":updated_at"] = datetime.utcnow().isoformat()
+
+            update_expression = "SET " + ", ".join(set_clauses)
 
             key = {
-                'PK': self._create_primary_key(email),
+                'PK': username,
                 'SK': 'PROFILE'
             }
 
-            update_expression, expression_values, expression_names = self._build_update_expression(updates)
-
             item = self._safe_update_item(
-                self.db.orders_table,
+                self.db.users_table,
                 key,
                 update_expression,
-                expression_values,
-                expression_names
+                expression_values
             )
 
             if not item:
                 return None
 
             return User(
+                username=item['username'],
                 email=item['email'],
                 name=item['name'],
                 phone=item.get('phone'),
@@ -166,5 +221,24 @@ class UserDAO(BaseDAO):
             )
 
         except Exception as e:
-            logger.error(f"Failed to update user {email}: {e}")
+            logger.error(f"Failed to update user {username}: {e}")
+            raise
+
+    async def delete_user(self, username: str) -> bool:
+        """Delete user by username"""
+        try:
+            key = {
+                'PK': username,
+                'SK': 'PROFILE'
+            }
+
+            success = self._safe_delete_item(self.db.users_table, key)
+
+            if success:
+                logger.info(f"User deleted successfully: {username}")
+
+            return success
+
+        except Exception as e:
+            logger.error(f"Failed to delete user {username}: {e}")
             raise

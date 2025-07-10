@@ -81,7 +81,7 @@ class UserProfileResponse(BaseModel):
 class UserProfileUpdateRequest(BaseModel):
     """Request model for PUT /auth/me - Updateable fields only"""
 
-    # Note: username is NOT updateable (should remain stable identifier)
+    username: str = Field(..., description="Username to identify user (cannot be changed)")
 
     first_name: Optional[str] = Field(
         None,

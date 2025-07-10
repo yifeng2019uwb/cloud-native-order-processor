@@ -5,10 +5,35 @@ import re
 
 
 class UserCreate(BaseModel):
+    username: str  # ✅ Added username field
     email: EmailStr
     password: str
     name: str
     phone: Optional[str] = None
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v):
+        """Validate username format and constraints"""
+        if not v or not v.strip():
+            raise ValueError("Username cannot be empty")
+
+        # Remove whitespace and convert to lowercase for consistency
+        v = v.strip().lower()
+
+        # Length validation
+        if len(v) < 3 or len(v) > 30:
+            raise ValueError("Username must be 3-30 characters long")
+
+        # Format validation: only alphanumeric and underscores, cannot start/end with underscore
+        if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9_]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$', v):
+            raise ValueError("Username can only contain letters, numbers, and underscores. Cannot start/end with underscore.")
+
+        # No consecutive underscores
+        if '__' in v:
+            raise ValueError("Username cannot contain consecutive underscores")
+
+        return v
 
     @field_validator("password")
     @classmethod
@@ -50,21 +75,29 @@ class UserCreate(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    # ✅ Support login with either username or email
+    identifier: str  # Can be username or email
     password: str
+
+    @field_validator("identifier")
+    @classmethod
+    def validate_identifier(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Username or email cannot be empty")
+        return v.strip()
 
 
 class User(BaseModel):
+    username: str  # ✅ Added username field
     email: str
     name: str
     phone: Optional[str] = None
-    # TODO: encrypt ssn at rest
-    # ssn: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
 
 class UserResponse(BaseModel):
+    username: str  # ✅ Added username field
     email: str
     name: str
     phone: Optional[str] = None

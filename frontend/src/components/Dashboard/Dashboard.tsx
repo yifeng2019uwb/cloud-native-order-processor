@@ -35,7 +35,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">
-                Welcome, {user.name}!
+                Welcome, {user.first_name} {user.last_name}!
               </span>
               <button
                 onClick={handleLogout}
@@ -69,10 +69,19 @@ const Dashboard: React.FC = () => {
               <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                 <div>
                   <dt className="text-sm font-medium text-gray-500">
+                    Username
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {user.username}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">
                     Full Name
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
-                    {user.name}
+                    {user.first_name} {user.last_name}
                   </dd>
                 </div>
 
@@ -96,10 +105,48 @@ const Dashboard: React.FC = () => {
 
                 <div>
                   <dt className="text-sm font-medium text-gray-500">
+                    Date of Birth
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {user.date_of_birth
+                      ? new Date(user.date_of_birth).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                      : 'Not provided'
+                    }
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Marketing Emails
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {user.marketing_emails_consent ? 'Subscribed' : 'Not subscribed'}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">
                     Member Since
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
                     {new Date(user.created_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Last Updated
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {new Date(user.updated_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'

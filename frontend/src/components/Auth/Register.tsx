@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import type { RegisterRequest } from '@/types';
 
@@ -11,6 +12,7 @@ interface RegisterFormData extends RegisterRequest {
 }
 
 const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
+  const navigate = useNavigate();
   const { register, isLoading, error, clearError } = useAuth();
   const [formData, setFormData] = useState<RegisterFormData>({
     username: '',
@@ -18,14 +20,17 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
     password: '',
     confirmPassword: '',
     first_name: '',
-    last_name: ''
+    last_name: '',
+    phone: '',
+    date_of_birth: '',
+    marketing_emails_consent: false
   });
   const [formErrors, setFormErrors] = useState<Partial<RegisterFormData>>({});
 
   const validateForm = (): boolean => {
     const errors: Partial<RegisterFormData> = {};
 
-    // Username validation
+    // Username validation (matching backend)
     if (!formData.username) {
       errors.username = 'Username is required';
     } else if (formData.username.length < 3 || formData.username.length > 30) {
@@ -43,33 +48,65 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
       errors.email = 'Please enter a valid email address';
     }
 
-    // First name validation
+    // First name validation (matching backend)
     if (!formData.first_name) {
       errors.first_name = 'First name is required';
+    } else if (formData.first_name.length > 50) {
+      errors.first_name = 'First name must be 50 characters or less';
     } else if (!/^[a-zA-Z]+$/.test(formData.first_name)) {
       errors.first_name = 'First name can only contain letters';
     }
 
-    // Last name validation
+    // Last name validation (matching backend)
     if (!formData.last_name) {
       errors.last_name = 'Last name is required';
+    } else if (formData.last_name.length > 50) {
+      errors.last_name = 'Last name must be 50 characters or less';
     } else if (!/^[a-zA-Z]+$/.test(formData.last_name)) {
       errors.last_name = 'Last name can only contain letters';
     }
 
-    // Password validation
+    // Password validation (matching backend: 8-128 characters)
     if (!formData.password) {
       errors.password = 'Password is required';
-    } else if (formData.password.length < 12 || formData.password.length > 20) {
-      errors.password = 'Password must be 12-20 characters';
-    } else if (!/(?=.*[a-z])/.test(formData.password)) {
-      errors.password = 'Password must contain at least one lowercase letter';
-    } else if (!/(?=.*[A-Z])/.test(formData.password)) {
-      errors.password = 'Password must contain at least one uppercase letter';
-    } else if (!/(?=.*\d)/.test(formData.password)) {
-      errors.password = 'Password must contain at least one number';
-    } else if (!/(?=.*[!@#$%^&*()\-_=+])/.test(formData.password)) {
-      errors.password = 'Password must contain at least one special character (!@#$%^&*()-_=+)';
+    } else if (formData.password.length < 8 || formData.password.length > 128) {
+      errors.password = 'Password must be 8-128 characters';
+    }
+
+    // Phone validation (optional, but if provided must match backend rules)
+    if (formData.phone && formData.phone.trim()) {
+      const digitsOnly = formData.phone.replace(/\D/g, '');
+      if (digitsOnly.length < 10) {
+        errors.phone = 'Phone number must contain at least 10 digits';
+      } else if (digitsOnly.length > 15) {
+        errors.phone = 'Phone number must contain no more than 15 digits';
+      }
+    }
+
+    // Date of birth validation (optional, but if provided must be valid)
+    if (formData.date_of_birth && formData.date_of_birth.trim()) {
+      const birthDate = new Date(formData.date_of_birth);
+      const today = new Date();
+
+      if (isNaN(birthDate.getTime())) {
+        errors.date_of_birth = 'Please enter a valid date';
+      } else if (birthDate > today) {
+        errors.date_of_birth = 'Date of birth cannot be in the future';
+      } else {
+        // Check minimum age (13 years for COPPA compliance)
+        const thirteenYearsAgo = new Date();
+        thirteenYearsAgo.setFullYear(today.getFullYear() - 13);
+        if (birthDate > thirteenYearsAgo) {
+          errors.date_of_birth = 'Must be at least 13 years old to register';
+        }
+
+        // Check maximum reasonable age (120 years)
+        const maxAge = new Date();
+        maxAge.setFullYear(today.getFullYear() - 120);
+        if (birthDate < maxAge) {
+          errors.date_of_birth = 'Invalid date of birth';
+        }
+      }
     }
 
     // Confirm password validation
@@ -93,19 +130,49 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
 
     try {
       const { confirmPassword, ...registerData } = formData;
-      await register(registerData);
+
+      // Clean up optional fields - only send if they have values
+      const cleanedData: RegisterRequest = {
+        username: registerData.username,
+        email: registerData.email,
+        password: registerData.password,
+        first_name: registerData.first_name,
+        last_name: registerData.last_name,
+        marketing_emails_consent: registerData.marketing_emails_consent
+      };
+
+      // Only include optional fields if they have values
+      if (registerData.phone && registerData.phone.trim()) {
+        cleanedData.phone = registerData.phone.trim();
+      }
+
+      if (registerData.date_of_birth && registerData.date_of_birth.trim()) {
+        cleanedData.date_of_birth = registerData.date_of_birth;
+      }
+
+      await register(cleanedData);
     } catch (error) {
       // Error is handled by the useAuth hook
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    const fieldValue = type === 'checkbox' ? checked : value;
+
+    setFormData(prev => ({ ...prev, [name]: fieldValue }));
 
     // Clear field error when user starts typing
     if (formErrors[name as keyof RegisterFormData]) {
       setFormErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const handleSwitchToLogin = () => {
+    if (onSwitchToLogin) {
+      onSwitchToLogin();
+    } else {
+      navigate('/login');
     }
   };
 
@@ -143,13 +210,14 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">
-                  First Name
+                  First Name *
                 </label>
                 <input
                   id="first_name"
                   name="first_name"
                   type="text"
                   required
+                  maxLength={50}
                   className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
                     formErrors.first_name
                       ? 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500'
@@ -166,13 +234,14 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
 
               <div>
                 <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">
-                  Last Name
+                  Last Name *
                 </label>
                 <input
                   id="last_name"
                   name="last_name"
                   type="text"
                   required
+                  maxLength={50}
                   className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
                     formErrors.last_name
                       ? 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500'
@@ -191,19 +260,21 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
             {/* Username Field */}
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Username
+                Username *
               </label>
               <input
                 id="username"
                 name="username"
                 type="text"
                 required
+                minLength={3}
+                maxLength={30}
                 className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
                   formErrors.username
                     ? 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500'
                     : 'border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-indigo-500 focus:border-indigo-500'
                 } rounded-md focus:outline-none sm:text-sm`}
-                placeholder="Username"
+                placeholder="Username (3-30 characters)"
                 value={formData.username}
                 onChange={handleChange}
               />
@@ -215,7 +286,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address
+                Email Address *
               </label>
               <input
                 id="email"
@@ -237,10 +308,56 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
               )}
             </div>
 
+            {/* Optional Fields */}
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                Phone Number (Optional)
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                minLength={10}
+                maxLength={20}
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  formErrors.phone
+                    ? 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500'
+                    : 'border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-indigo-500 focus:border-indigo-500'
+                } rounded-md focus:outline-none sm:text-sm`}
+                placeholder="+1-555-123-4567"
+                value={formData.phone}
+                onChange={handleChange}
+              />
+              {formErrors.phone && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700">
+                Date of Birth (Optional)
+              </label>
+              <input
+                id="date_of_birth"
+                name="date_of_birth"
+                type="date"
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  formErrors.date_of_birth
+                    ? 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500'
+                    : 'border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-indigo-500 focus:border-indigo-500'
+                } rounded-md focus:outline-none sm:text-sm`}
+                value={formData.date_of_birth}
+                onChange={handleChange}
+              />
+              {formErrors.date_of_birth && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.date_of_birth}</p>
+              )}
+            </div>
+
             {/* Password Fields */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+                Password *
               </label>
               <input
                 id="password"
@@ -248,12 +365,14 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                 type="password"
                 autoComplete="new-password"
                 required
+                minLength={8}
+                maxLength={128}
                 className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
                   formErrors.password
                     ? 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500'
                     : 'border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-indigo-500 focus:border-indigo-500'
                 } rounded-md focus:outline-none sm:text-sm`}
-                placeholder="Password"
+                placeholder="Password (8-128 characters)"
                 value={formData.password}
                 onChange={handleChange}
               />
@@ -264,7 +383,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm Password
+                Confirm Password *
               </label>
               <input
                 id="confirmPassword"
@@ -284,6 +403,21 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
               {formErrors.confirmPassword && (
                 <p className="mt-1 text-sm text-red-600">{formErrors.confirmPassword}</p>
               )}
+            </div>
+
+            {/* Marketing Consent */}
+            <div className="flex items-center">
+              <input
+                id="marketing_emails_consent"
+                name="marketing_emails_consent"
+                type="checkbox"
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                checked={formData.marketing_emails_consent}
+                onChange={handleChange}
+              />
+              <label htmlFor="marketing_emails_consent" className="ml-2 block text-sm text-gray-900">
+                I consent to receive marketing emails
+              </label>
             </div>
           </div>
 
@@ -305,21 +439,19 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
             </button>
           </div>
 
-          {/* Switch to Login */}
-          {onSwitchToLogin && (
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={onSwitchToLogin}
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  Sign in here
-                </button>
-              </p>
-            </div>
-          )}
+          {/* Switch to Login - Always show */}
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={handleSwitchToLogin}
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                Sign in here
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     </div>
