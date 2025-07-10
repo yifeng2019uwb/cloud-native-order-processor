@@ -11,7 +11,7 @@ class UserLoginRequest(BaseModel):
 
     username: str = Field(
         ...,
-        min_length=3,
+        min_length=6,
         max_length=30,
         strip_whitespace=True,
         description="Username for login",
@@ -20,8 +20,8 @@ class UserLoginRequest(BaseModel):
 
     password: str = Field(
         ...,
-        min_length=1,
-        max_length=128,
+        min_length=12,
+        max_length=20,
         description="User password",
         example="SecurePassword123!"
     )

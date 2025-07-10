@@ -71,7 +71,7 @@ class UserProfileResponse(BaseModel):
                 "last_name": "Doe",
                 "phone": "+1-555-123-4567",
                 "date_of_birth": "1990-05-15",
-                "marketing_emails_consent": false,
+                "marketing_emails_consent": False,
                 "created_at": "2025-07-09T10:30:00Z",
                 "updated_at": "2025-07-09T10:30:00Z"
             }
@@ -106,8 +106,6 @@ class UserProfileUpdateRequest(BaseModel):
 
     phone: Optional[str] = Field(
         None,
-        min_length=10,
-        max_length=20,
         description="Updated phone number (optional)"
     )
 
@@ -184,7 +182,7 @@ class UserProfileUpdateRequest(BaseModel):
                 "email": "john.smith@example.com",
                 "phone": "+1-555-987-6543",
                 "date_of_birth": "1990-05-15",
-                "marketing_emails_consent": true
+                "marketing_emails_consent": True
             }
         }
 
@@ -214,7 +212,7 @@ class ProfileUpdateSuccessResponse(SuccessResponse):
                     "last_name": "Smith",
                     "phone": "+1-555-987-6543",
                     "date_of_birth": "1990-05-15",
-                    "marketing_emails_consent": true,
+                    "marketing_emails_consent": True,
                     "created_at": "2025-07-09T10:30:00Z",
                     "updated_at": "2025-07-09T12:45:00Z"
                 },

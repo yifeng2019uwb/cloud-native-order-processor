@@ -43,7 +43,7 @@ class UserDAO(BaseDAO):
             # Hash password
             password_hash = self._hash_password(user_create.password)
 
-            # Create user item
+            # Create user item with first_name/last_name fields
             now = datetime.utcnow().isoformat()
             user_item = {
                 'PK': user_create.username,
@@ -51,7 +51,8 @@ class UserDAO(BaseDAO):
                 'username': user_create.username,
                 'email': user_create.email,
                 'password_hash': password_hash,
-                'name': user_create.name,
+                'first_name': user_create.first_name,  # FIXED: Split field
+                'last_name': user_create.last_name,    # FIXED: Split field
                 'phone': user_create.phone,
                 'created_at': now,
                 'updated_at': now
@@ -63,7 +64,8 @@ class UserDAO(BaseDAO):
             return User(
                 username=user_create.username,
                 email=user_create.email,
-                name=user_create.name,
+                first_name=user_create.first_name,  # FIXED: Split field
+                last_name=user_create.last_name,    # FIXED: Split field
                 phone=user_create.phone,
                 created_at=datetime.fromisoformat(created_item['created_at']),
                 updated_at=datetime.fromisoformat(created_item['updated_at'])
@@ -88,7 +90,8 @@ class UserDAO(BaseDAO):
             return User(
                 username=item['username'],
                 email=item['email'],
-                name=item['name'],
+                first_name=item.get('first_name', ''),  # FIXED: Split field with fallback
+                last_name=item.get('last_name', ''),    # FIXED: Split field with fallback
                 phone=item.get('phone'),
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
@@ -116,7 +119,8 @@ class UserDAO(BaseDAO):
             return User(
                 username=item['username'],
                 email=item['email'],
-                name=item['name'],
+                first_name=item.get('first_name', ''),  # FIXED: Split field with fallback
+                last_name=item.get('last_name', ''),    # FIXED: Split field with fallback
                 phone=item.get('phone'),
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
@@ -126,18 +130,18 @@ class UserDAO(BaseDAO):
             logger.error(f"Failed to get user by email {email}: {e}")
             raise
 
-    async def authenticate_user(self, identifier: str, password: str) -> Optional[User]:
+    async def authenticate_user(self, username: str, password: str) -> Optional[User]:
         """Authenticate user with username/email and password"""
         try:
             # Determine if identifier is email or username
             user = None
 
-            if '@' in identifier:
+            if '@' in username:
                 # Identifier looks like email
-                user = await self.get_user_by_email(identifier)
+                user = await self.get_user_by_email(username)
             else:
                 # Identifier looks like username
-                user = await self.get_user_by_username(identifier)
+                user = await self.get_user_by_username(username)
 
             if not user:
                 return None
@@ -159,11 +163,12 @@ class UserDAO(BaseDAO):
             return user
 
         except Exception as e:
-            logger.error(f"Failed to authenticate user {identifier}: {e}")
+            logger.error(f"Failed to authenticate user {username}: {e}")
             raise
 
     async def update_user(self, username: str, email: Optional[str] = None,
-                         name: Optional[str] = None, phone: Optional[str] = None) -> Optional[User]:
+                         first_name: Optional[str] = None, last_name: Optional[str] = None,  # FIXED: Split parameters
+                         phone: Optional[str] = None) -> Optional[User]:
         """Update user profile"""
         try:
             updates = {}
@@ -173,8 +178,10 @@ class UserDAO(BaseDAO):
                 if existing_user and existing_user.username != username:
                     raise ValueError(f"Email {email} is already in use by another user")
                 updates['email'] = email
-            if name is not None:
-                updates['name'] = name
+            if first_name is not None:  # FIXED: Split field
+                updates['first_name'] = first_name
+            if last_name is not None:   # FIXED: Split field
+                updates['last_name'] = last_name
             if phone is not None:
                 updates['phone'] = phone
 
@@ -214,7 +221,8 @@ class UserDAO(BaseDAO):
             return User(
                 username=item['username'],
                 email=item['email'],
-                name=item['name'],
+                first_name=item.get('first_name', ''),  # FIXED: Split field with fallback
+                last_name=item.get('last_name', ''),    # FIXED: Split field with fallback
                 phone=item.get('phone'),
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])

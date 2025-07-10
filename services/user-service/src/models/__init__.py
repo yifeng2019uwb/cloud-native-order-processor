@@ -3,7 +3,7 @@ Pydantic models package for user authentication service
 Path: cloud-native-order-processor/services/user-service/src/models/__init__.py
 """
 
-# Import shared models for easy access
+# Import shared models
 from .shared_models import (
     BaseResponse,
     SuccessResponse,
@@ -21,6 +21,28 @@ from .register_models import (
     RegistrationErrorResponse
 )
 
+# Import login models
+from .login_models import (
+    UserLoginRequest,
+    LoginSuccessResponse,
+    LoginErrorResponse
+)
+
+# Import logout models
+from .logout_models import (
+    LogoutRequest,
+    LogoutSuccessResponse,
+    LogoutErrorResponse
+)
+
+# Import profile models
+from .profile_models import (
+    UserProfileResponse,
+    UserProfileUpdateRequest,
+    ProfileUpdateSuccessResponse,
+    ProfileUpdateErrorResponse
+)
+
 __all__ = [
     # Shared models
     "BaseResponse",
@@ -34,7 +56,7 @@ __all__ = [
     "UserRegistrationRequest",
     "UserRegistrationResponse",
     "RegistrationSuccessResponse",
-    "RegistrationErrorResponse"
+    "RegistrationErrorResponse",
 
     # Login models
     "UserLoginRequest",
@@ -46,9 +68,9 @@ __all__ = [
     "LogoutSuccessResponse",
     "LogoutErrorResponse",
 
+    # Profile models
     "UserProfileResponse",
     "UserProfileUpdateRequest",
     "ProfileUpdateSuccessResponse",
     "ProfileUpdateErrorResponse"
-
 ]

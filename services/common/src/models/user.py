@@ -5,10 +5,11 @@ import re
 
 
 class UserCreate(BaseModel):
-    username: str  # ✅ Added username field
+    username: str
     email: EmailStr
     password: str
-    name: str
+    first_name: str
+    last_name: str
     phone: Optional[str] = None
 
     @field_validator("username")
@@ -22,8 +23,8 @@ class UserCreate(BaseModel):
         v = v.strip().lower()
 
         # Length validation
-        if len(v) < 3 or len(v) > 30:
-            raise ValueError("Username must be 3-30 characters long")
+        if len(v) < 6 or len(v) > 30:
+            raise ValueError("Username must be 6-30 characters long")
 
         # Format validation: only alphanumeric and underscores, cannot start/end with underscore
         if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9_]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$', v):
@@ -55,11 +56,18 @@ class UserCreate(BaseModel):
 
         return v
 
-    @field_validator("name")
+    @field_validator("first_name")
     @classmethod
-    def validate_name(cls, v):
+    def validate_first_name(cls, v):
         if not v or not v.strip():
-            raise ValueError("Name cannot be empty")
+            raise ValueError("First name cannot be empty")
+        return v.strip()
+
+    @field_validator("last_name")
+    @classmethod
+    def validate_last_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Last name cannot be empty")
         return v.strip()
 
     @field_validator("phone")
@@ -75,34 +83,45 @@ class UserCreate(BaseModel):
 
 
 class UserLogin(BaseModel):
-    # ✅ Support login with either username or email
-    identifier: str  # Can be username or email
+    username: str
     password: str
 
-    @field_validator("identifier")
+    @field_validator("username")
     @classmethod
-    def validate_identifier(cls, v):
+    def validate_username(cls, v):
         if not v or not v.strip():
             raise ValueError("Username or email cannot be empty")
         return v.strip()
 
 
 class User(BaseModel):
-    username: str  # ✅ Added username field
+    username: str
     email: str
-    name: str
+    first_name: str
+    last_name: str
     phone: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+    @property
+    def name(self) -> str:
+        """Computed full name for backward compatibility"""
+        return f"{self.first_name} {self.last_name}".strip()
 
 
 class UserResponse(BaseModel):
-    username: str  # ✅ Added username field
+    username: str
     email: str
-    name: str
+    first_name: str
+    last_name: str
     phone: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+    @property
+    def name(self) -> str:
+        """Computed full name for backward compatibility"""
+        return f"{self.first_name} {self.last_name}".strip()
 
 
 class TokenResponse(BaseModel):

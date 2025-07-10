@@ -16,10 +16,10 @@ class UserRegistrationRequest(BaseModel):
     # Required Fields
     username: str = Field(
         ...,
-        min_length=3,
+        min_length=6,
         max_length=30,
         strip_whitespace=True,
-        description="Unique username (3-30 characters, alphanumeric and underscores only)",
+        description="Unique username (6-30 characters, alphanumeric and underscores only)",  # UPDATED
         example="john_doe123"
     )
 
@@ -31,9 +31,9 @@ class UserRegistrationRequest(BaseModel):
 
     password: str = Field(
         ...,
-        min_length=8,
-        max_length=128,
-        description="User password (8-128 characters)",
+        min_length=12,
+        max_length=20,
+        description="User password (12-20 characters with complexity requirements)",  # UPDATED
         example="SecurePassword123!"
     )
 
@@ -58,9 +58,7 @@ class UserRegistrationRequest(BaseModel):
     # Optional Fields
     phone: Optional[str] = Field(
         None,
-        min_length=10,
-        max_length=20,
-        description="Phone number (international format, 10-20 characters, optional)",
+        description="Phone number (10-15 digits, optional)",  # UPDATED: removed length constraint
         example="+1-555-123-4567"
     )
 
@@ -91,6 +89,23 @@ class UserRegistrationRequest(BaseModel):
 
         return v.lower()  # Store usernames in lowercase for consistency
 
+    @validator('password')  # ADDED: Password complexity validation
+    def validate_password_complexity(cls, v):
+        """Validate password complexity requirements"""
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one number")
+
+        if not re.search(r"[!@#$%^&*()\-_=+]", v):
+            raise ValueError("Password must contain at least one special character (!@#$%^&*()-_=+)")
+
+        return v
+
     @validator('first_name')
     def validate_first_name_format(cls, v):
         """Validate first name contains only letters"""
@@ -110,7 +125,6 @@ class UserRegistrationRequest(BaseModel):
         """
         Validate phone number format if provided
         - Must contain 10-15 digits after removing non-digit characters
-        - Can include international formatting (+, -, spaces, parentheses)
         """
         if v is None:
             return v

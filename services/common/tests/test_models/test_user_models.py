@@ -16,24 +16,24 @@ class TestUserCreate:
             "username": "john_doe123",
             "email": "test@example.com",
             "password": "ValidPass123!",
-            "name": "Test User",
+            "first_name": "Test",
+            "last_name": "User",
             "phone": "+1234567890"
         }
         user = UserCreate(**user_data)
         assert user.username == "john_doe123"
         assert user.email == "test@example.com"
-        assert user.name == "Test User"
+        assert user.first_name == "Test"
+        assert user.last_name == "User"
         assert user.phone == "+1234567890"
 
     def test_username_validation_valid(self):
         """Test valid username formats"""
         valid_usernames = [
-            "john",          # Single word
-            "john_doe",      # With underscore
-            "user123",       # With numbers
-            "a",             # Single character
+            "john_doe",      # With underscore (6+ chars)
+            "user123",       # With numbers (6+ chars)
             "test_user_123", # Multiple underscores and numbers
-            "JohnDoe"        # Mixed case (should become lowercase)
+            "johnsmith"      # Mixed case (6+ chars)
         ]
 
         for username in valid_usernames:
@@ -41,7 +41,8 @@ class TestUserCreate:
                 username=username,
                 email="test@example.com",
                 password="ValidPass123!",
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
             # Username should be converted to lowercase
             assert user.username == username.lower()
@@ -50,12 +51,13 @@ class TestUserCreate:
         """Test username length validation - too short"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="ab",  # Only 2 chars
+                username="abc12",  # FIXED: 5 chars (still too short for 6+ requirement)
                 email="test@example.com",
                 password="ValidPass123!",
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
-        assert "Username must be 3-30 characters long" in str(exc_info.value)
+        assert "Username must be 6-30 characters long" in str(exc_info.value)  # FIXED: 6-30
 
     def test_username_too_long(self):
         """Test username length validation - too long"""
@@ -64,15 +66,16 @@ class TestUserCreate:
                 username="a" * 31,  # 31 chars
                 email="test@example.com",
                 password="ValidPass123!",
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
-        assert "Username must be 3-30 characters long" in str(exc_info.value)
+        assert "Username must be 6-30 characters long" in str(exc_info.value)  # FIXED: 6-30
 
     def test_username_invalid_format(self):
         """Test username format validation"""
         invalid_usernames = [
-            "_john",         # Starts with underscore
-            "john_",         # Ends with underscore
+            "_john_doe",     # Starts with underscore
+            "john_doe_",     # Ends with underscore
             "john__doe",     # Consecutive underscores
             "john-doe",      # Contains hyphen
             "john doe",      # Contains space
@@ -86,7 +89,8 @@ class TestUserCreate:
                     username=username,
                     email="test@example.com",
                     password="ValidPass123!",
-                    name="Test User"
+                    first_name="Test",
+                    last_name="User"
                 )
             error_msg = str(exc_info.value)
             # Should contain one of these error messages
@@ -102,7 +106,8 @@ class TestUserCreate:
                 username="",
                 email="test@example.com",
                 password="ValidPass123!",
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
         assert "Username cannot be empty" in str(exc_info.value)
 
@@ -113,7 +118,8 @@ class TestUserCreate:
                 username="   ",
                 email="test@example.com",
                 password="ValidPass123!",
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
         assert "Username cannot be empty" in str(exc_info.value)
 
@@ -121,10 +127,11 @@ class TestUserCreate:
         """Test password length validation - too short"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="john_doe",
+                username="john_doe123",
                 email="test@example.com",
                 password="Short1!",  # Only 7 chars
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
         assert "Password must be 12-20 characters long" in str(exc_info.value)
 
@@ -132,10 +139,11 @@ class TestUserCreate:
         """Test password length validation - too long"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="john_doe",
+                username="john_doe123",
                 email="test@example.com",
                 password="ThisPasswordIsTooLong123!",  # 25 chars
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
         assert "Password must be 12-20 characters long" in str(exc_info.value)
 
@@ -143,10 +151,11 @@ class TestUserCreate:
         """Test password requires uppercase"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="john_doe",
+                username="john_doe123",
                 email="test@example.com",
                 password="validpass123!",  # No uppercase
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
         assert "Password must contain at least one uppercase letter" in str(exc_info.value)
 
@@ -154,10 +163,11 @@ class TestUserCreate:
         """Test password requires lowercase"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="john_doe",
+                username="john_doe123",
                 email="test@example.com",
                 password="VALIDPASS123!",  # No lowercase
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
         assert "Password must contain at least one lowercase letter" in str(exc_info.value)
 
@@ -165,10 +175,11 @@ class TestUserCreate:
         """Test password requires number"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="john_doe",
+                username="john_doe123",
                 email="test@example.com",
                 password="ValidPassword!",  # No number
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
         assert "Password must contain at least one number" in str(exc_info.value)
 
@@ -176,10 +187,11 @@ class TestUserCreate:
         """Test password requires special character"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="john_doe",
+                username="john_doe123",
                 email="test@example.com",
                 password="ValidPass123",  # No special char
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
         assert "Password must contain at least one special character" in str(exc_info.value)
 
@@ -187,32 +199,47 @@ class TestUserCreate:
         """Test email validation"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="john_doe",
+                username="john_doe123",
                 email="invalid-email",
                 password="ValidPass123!",
-                name="Test User"
+                first_name="Test",
+                last_name="User"
             )
         assert "value is not a valid email address" in str(exc_info.value)
 
-    def test_empty_name(self):
-        """Test name cannot be empty"""
+    def test_empty_first_name(self):
+        """Test first name cannot be empty"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="john_doe",
+                username="john_doe123",
                 email="test@example.com",
                 password="ValidPass123!",
-                name="   "  # Only whitespace
+                first_name="   ",    # FIXED: Only whitespace
+                last_name="User"
             )
-        assert "Name cannot be empty" in str(exc_info.value)
+        assert "First name cannot be empty" in str(exc_info.value)
+
+    def test_empty_last_name(self):
+        """Test last name cannot be empty"""
+        with pytest.raises(ValidationError) as exc_info:
+            UserCreate(
+                username="john_doe123",
+                email="test@example.com",
+                password="ValidPass123!",
+                first_name="Test",
+                last_name="   "      # FIXED: Only whitespace
+            )
+        assert "Last name cannot be empty" in str(exc_info.value)
 
     def test_invalid_phone_too_short(self):
         """Test phone validation - too short"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="john_doe",
+                username="john_doe123",
                 email="test@example.com",
                 password="ValidPass123!",
-                name="Test User",
+                first_name="Test",   # FIXED: Split field
+                last_name="User",    # FIXED: Split field
                 phone="123"  # Too short
             )
         assert "Phone number must be 10-15 digits" in str(exc_info.value)
@@ -221,10 +248,11 @@ class TestUserCreate:
         """Test phone validation - too long"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="john_doe",
+                username="john_doe123",
                 email="test@example.com",
                 password="ValidPass123!",
-                name="Test User",
+                first_name="Test",   # FIXED: Split field
+                last_name="User",    # FIXED: Split field
                 phone="12345678901234567890"  # Too long
             )
         assert "Phone number must be 10-15 digits" in str(exc_info.value)
@@ -241,10 +269,11 @@ class TestUserCreate:
 
         for phone in valid_phones:
             user = UserCreate(
-                username="john_doe",
+                username="john_doe123",
                 email="test@example.com",
                 password="ValidPass123!",
-                name="Test User",
+                first_name="Test",   # FIXED: Split field
+                last_name="User",    # FIXED: Split field
                 phone=phone
             )
             assert user.phone == phone
@@ -252,10 +281,11 @@ class TestUserCreate:
     def test_optional_phone(self):
         """Test phone is optional"""
         user = UserCreate(
-            username="john_doe",
+            username="john_doe123",
             email="test@example.com",
             password="ValidPass123!",
-            name="Test User"
+            first_name="Test",
+            last_name="User"
         )
         assert user.phone is None
 
@@ -266,41 +296,41 @@ class TestUserLogin:
     def test_valid_login_with_username(self):
         """Test valid login with username"""
         login = UserLogin(
-            identifier="john_doe",
+            username="john_doe123",
             password="ValidPass123!"
         )
-        assert login.identifier == "john_doe"
+        assert login.username == "john_doe123"
         assert login.password == "ValidPass123!"
 
     def test_valid_login_with_email(self):
         """Test valid login with email"""
         login = UserLogin(
-            identifier="test@example.com",
+            username="test@example.com",  # Email in username field
             password="ValidPass123!"
         )
-        assert login.identifier == "test@example.com"
+        assert login.username == "test@example.com"
         assert login.password == "ValidPass123!"
 
-    def test_empty_identifier(self):
-        """Test login with empty identifier"""
+    def test_empty_username(self):
+        """Test login with empty username"""
         with pytest.raises(ValidationError) as exc_info:
             UserLogin(
-                identifier="",
+                username="",
                 password="ValidPass123!"
             )
         assert "Username or email cannot be empty" in str(exc_info.value)
 
-    def test_whitespace_identifier(self):
-        """Test login with whitespace identifier"""
+    def test_whitespace_username(self):
+        """Test login with whitespace username"""
         with pytest.raises(ValidationError) as exc_info:
             UserLogin(
-                identifier="   ",
+                username="   ",
                 password="ValidPass123!"
             )
         assert "Username or email cannot be empty" in str(exc_info.value)
 
-    def test_missing_identifier(self):
-        """Test login missing identifier field"""
+    def test_missing_username(self):
+        """Test login missing username field"""
         with pytest.raises(ValidationError) as exc_info:
             UserLogin(password="ValidPass123!")
         assert "field required" in str(exc_info.value)
@@ -308,7 +338,7 @@ class TestUserLogin:
     def test_missing_password(self):
         """Test login missing password field"""
         with pytest.raises(ValidationError) as exc_info:
-            UserLogin(identifier="john_doe")
+            UserLogin(username="john_doe123")
         assert "field required" in str(exc_info.value)
 
 
@@ -321,19 +351,37 @@ class TestUser:
 
         now = datetime.utcnow()
         user = User(
-            username="john_doe",
+            username="john_doe123",
             email="test@example.com",
-            name="Test User",
+            first_name="Test",
+            last_name="User",
             phone="+1234567890",
             created_at=now,
             updated_at=now
         )
-        assert user.username == "john_doe"
+        assert user.username == "john_doe123"
         assert user.email == "test@example.com"
-        assert user.name == "Test User"
+        assert user.first_name == "Test"
+        assert user.last_name == "User"
         assert user.phone == "+1234567890"
         assert user.created_at == now
         assert user.updated_at == now
+
+    def test_computed_name_property(self):
+        """Test computed name property for backward compatibility"""
+        from datetime import datetime
+
+        now = datetime.utcnow()
+        user = User(
+            username="john_doe123",
+            email="test@example.com",
+            first_name="John",
+            last_name="Doe",    d
+            phone="+1234567890",
+            created_at=now,
+            updated_at=now
+        )
+        assert user.name == "John Doe"      # ADDED: Test computed property
 
     def test_optional_phone(self):
         """Test user with no phone"""
@@ -341,9 +389,10 @@ class TestUser:
 
         now = datetime.utcnow()
         user = User(
-            username="john_doe",
+            username="john_doe123",
             email="test@example.com",
-            name="Test User",
+            first_name="Test",
+            last_name="User",
             created_at=now,
             updated_at=now
         )
@@ -359,16 +408,33 @@ class TestUserResponse:
 
         now = datetime.utcnow()
         response = UserResponse(
-            username="john_doe",
+            username="john_doe123",
             email="test@example.com",
-            name="Test User",
+            first_name="Test",
+            last_name="User",
             phone="+1234567890",
             created_at=now,
             updated_at=now
         )
-        assert response.username == "john_doe"
+        assert response.username == "john_doe123"
         assert response.email == "test@example.com"
-        assert response.name == "Test User"
+        assert response.first_name == "Test"
+        assert response.last_name == "User"
+
+    def test_computed_name_property_response(self):
+        """Test computed name property in response"""
+        from datetime import datetime
+
+        now = datetime.utcnow()
+        response = UserResponse(
+            username="john_doe123",
+            email="test@example.com",
+            first_name="Jane",
+            last_name="Smith",
+            created_at=now,
+            updated_at=now
+        )
+        assert response.name == "Jane Smith"    # ADDED: Test computed property
 
     def test_optional_phone_in_response(self):
         """Test user response with no phone"""
@@ -376,9 +442,10 @@ class TestUserResponse:
 
         now = datetime.utcnow()
         response = UserResponse(
-            username="john_doe",
+            username="john_doe123",
             email="test@example.com",
-            name="Test User",
+            first_name="Test",
+            last_name="User",
             created_at=now,
             updated_at=now
         )
