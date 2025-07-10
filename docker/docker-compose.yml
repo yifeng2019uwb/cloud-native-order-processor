@@ -1,39 +1,43 @@
 services:
+  frontend:
+    build:
+      context: ../
+      dockerfile: docker/frontend/Dockerfile
+    container_name: order-processor-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - user-service
+    networks:
+      - order-processor-network
+
   user-service:
     build:
       context: ../
       dockerfile: docker/user-service/Dockerfile
     container_name: order-processor-user-service
     ports:
-      - "8001:8000"  # External port for multi-service setup
+      - "8001:8000"
     environment:
-      # Database Tables (your working values)
       - ORDERS_TABLE=order-processor-dev-orders
       - INVENTORY_TABLE=order-processor-dev-inventory
       - USERS_TABLE=order-processor-dev-users
-      
-      # AWS Configuration
       - AWS_REGION=us-west-2
-      
-      # JWT Configuration
       - JWT_SECRET=your-development-jwt-secret-key-here
       - JWT_ALGORITHM=HS256
       - JWT_EXPIRATION_HOURS=24
-      
-      # Service Configuration (K8s-ready)
       - SERVICE_NAME=user-service
       - SERVICE_PORT=8000
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
     volumes:
-      - ~/.aws:/root/.aws:ro  # AWS credentials
+      - ~/.aws:/root/.aws:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
     networks:
       - order-processor-network
 
