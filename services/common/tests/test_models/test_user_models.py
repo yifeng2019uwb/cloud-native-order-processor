@@ -146,7 +146,7 @@ class TestUserCreate:
     def test_password_boundary_lengths(self):
         """Test password boundary lengths"""
         # Test minimum length (12 chars)
-        min_password = "ValidPass1!"  # Exactly 12 chars
+        min_password = "ValidPass12!"  # Exactly 12 chars
         user = UserCreate(
             username="john_doe123",
             email="test@example.com",
@@ -385,13 +385,13 @@ class TestUserLogin:
         """Test login missing username field"""
         with pytest.raises(ValidationError) as exc_info:
             UserLogin(password="ValidPass123!")
-        assert "field required" in str(exc_info.value)
+        assert "Field required" in str(exc_info.value)
 
     def test_missing_password(self):
         """Test login missing password field"""
         with pytest.raises(ValidationError) as exc_info:
             UserLogin(username="john_doe123")
-        assert "field required" in str(exc_info.value)
+        assert "Field required" in str(exc_info.value)
 
 
 class TestUser:
