@@ -94,54 +94,30 @@ except ImportError as e:
             content={"detail": "Internal server error"}
         )
 
-# Import and include API routers (FIXED IMPORTS - no 'src.' prefix)
+# FIXED: Import and include API routers with correct paths
 try:
-    from routes.auth.register_simple import router as register_router
+    from routes.auth.register import router as register_router
     app.include_router(register_router, prefix="/auth", tags=["authentication"])
-    logger.info("✅ Simple registration routes loaded successfully")
+    logger.info("✅ Registration routes loaded successfully")
 except ImportError as e:
-    logger.error(f"❌ Failed to import simple registration routes: {e}")
+    logger.error(f"❌ Failed to import registration routes: {e}")
     logger.info("Continuing without registration endpoint...")
 
-# Future: Add other auth routers when created
 try:
-    from routes.auth.login_simple import router as login_router
+    from routes.auth.login import router as login_router
     app.include_router(login_router, prefix="/auth", tags=["authentication"])
     logger.info("✅ Login routes loaded successfully")
 except ImportError as e:
-    logger.warning(f"⚠️ Login routes not available yet: {e}")
+    logger.warning(f"⚠️ Login routes not available: {e}")
 
 try:
-    from routes.auth.logout import router as logout_router
-    app.include_router(logout_router, prefix="/auth", tags=["authentication"])
-    logger.info("✅ Logout routes loaded successfully")
-except ImportError as e:
-    logger.warning(f"⚠️ Logout routes not available yet: {e}")
-
-try:
-    from routes.auth.profile_simple import router as profile_router
+    from routes.auth.profile import router as profile_router
     app.include_router(profile_router, prefix="/auth", tags=["authentication"])
     logger.info("✅ Profile routes loaded successfully")
 except ImportError as e:
-    logger.warning(f"⚠️ Profile routes not available yet: {e}")
+    logger.warning(f"⚠️ Profile routes not available: {e}")
 
-# Import existing auth router if available (legacy support)
-try:
-    from routes.auth import router as auth_router
-    app.include_router(auth_router)
-    logger.info("✅ Existing auth routes loaded successfully")
-except ImportError as e:
-    logger.info("ℹ️ No existing auth routes found - using new modular structure")
-
-# Debug: Test imports for troubleshooting (API layer only)
-logger.info("🔍 Testing API imports...")
-try:
-    from routes.auth.register import router
-    logger.info("✅ Registration router imported successfully")
-except Exception as e:
-    logger.error(f"❌ Registration router import failed: {e}")
-
-# No database dependency testing in main.py - that belongs in route handlers
+# NOTE: Logout router not implemented yet - simple JWT logout doesn't need server-side logic
 
 # Root endpoint
 @app.get("/")
@@ -155,11 +131,9 @@ async def root():
         "endpoints": {
             "docs": "/docs",
             "health": "/health",
-            "auth_health": "/auth/health",
+            "auth_health": "/auth/register/health",
             "register": "/auth/register",
-            "register_health": "/auth/register/health",
             "login": "/auth/login",
-            "logout": "/auth/logout",
             "profile": "/auth/me"
         },
         "environment": {
@@ -222,9 +196,9 @@ async def startup_event():
     logger.info("🎯 Available endpoints:")
     logger.info("  GET  /health - Main health check")
     logger.info("  POST /auth/register - User registration")
-    logger.info("  POST /auth/login - User login (coming soon)")
-    logger.info("  POST /auth/logout - User logout (coming soon)")
-    logger.info("  GET  /auth/me - User profile (coming soon)")
+    logger.info("  POST /auth/login - User login")
+    logger.info("  GET  /auth/me - User profile")
+    logger.info("  PUT  /auth/me - Update profile")
     logger.info("  GET  /docs - API documentation")
 
 
