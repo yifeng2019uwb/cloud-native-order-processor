@@ -33,7 +33,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
     // Username validation (matching backend)
     if (!formData.username) {
       errors.username = 'Username is required';
-    } else if (formData.username.length < 3 || formData.username.length > 30) {
+    } else if (formData.username.length < 6 || formData.username.length > 30) {
       errors.username = 'Username must be 3-30 characters';
     } else if (!/^[a-zA-Z0-9][a-zA-Z0-9_]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$/.test(formData.username)) {
       errors.username = 'Username can only contain letters, numbers, and underscores. Cannot start/end with underscore.';
@@ -69,8 +69,8 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
     // Password validation (matching backend: 8-128 characters)
     if (!formData.password) {
       errors.password = 'Password is required';
-    } else if (formData.password.length < 8 || formData.password.length > 128) {
-      errors.password = 'Password must be 8-128 characters';
+    } else if (formData.password.length < 12 || formData.password.length > 20) {
+      errors.password = 'Password must be 12-20 characters';
     }
 
     // Phone validation (optional, but if provided must match backend rules)

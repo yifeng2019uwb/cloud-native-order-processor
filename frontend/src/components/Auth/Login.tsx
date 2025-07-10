@@ -22,7 +22,7 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
     // Username validation (matching backend: 3-30 characters, alphanumeric and underscores)
     if (!formData.username) {
       errors.username = 'Username is required';
-    } else if (formData.username.length < 3 || formData.username.length > 30) {
+    } else if (formData.username.length < 6 || formData.username.length > 30) {
       errors.username = 'Username must be 3-30 characters';
     } else if (!/^[a-zA-Z0-9][a-zA-Z0-9_]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$/.test(formData.username)) {
       errors.username = 'Username can only contain letters, numbers, and underscores. Cannot start/end with underscore.';
@@ -33,7 +33,10 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
     // Password validation (matching backend: minimum 1 character)
     if (!formData.password) {
       errors.password = 'Password is required';
+    } else if (formData.password.length < 12 || formData.password.length > 20) {
+      errors.password = 'Password must be 12-20 characters';
     }
+
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
