@@ -1,18 +1,21 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="order-processor-common",
+    name="common",
     version="1.0.0",
     description="Common models and utilities for Order Processor services",
-    packages=find_packages(),
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     python_requires=">=3.11",
     install_requires=[
         "pydantic==2.5.0",
-        "asyncpg==0.29.0",
         "boto3==1.29.7",
         "python-dotenv==1.0.0",
         "pyyaml==6.0.1",
         "email-validator==2.1.0",
+        "fastapi==0.104.1",
+        "bcrypt==4.0.1",
+        "mangum==0.17.0",
     ],
     extras_require={
         "dev": [

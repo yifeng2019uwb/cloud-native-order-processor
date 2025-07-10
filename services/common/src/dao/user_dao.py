@@ -9,8 +9,8 @@ import os
 # Add the src directory to Python path for editor recognition
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from database.dao.base_dao import BaseDAO
-from models.user import User, UserCreate, UserLogin
+from dao.base_dao import BaseDAO
+from entities.user import User, UserCreate, UserLogin
 
 logger = logging.getLogger(__name__)
 

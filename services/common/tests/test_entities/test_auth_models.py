@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from models.auth import LoginRequest, TokenResponse
+from entities.auth import LoginRequest, TokenResponse
 
 
 class TestLoginRequest:

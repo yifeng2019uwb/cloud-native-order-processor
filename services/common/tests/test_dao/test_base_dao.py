@@ -5,7 +5,7 @@ import os
 
 # Add the common directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from src.database.dao.base_dao import BaseDAO
+from dao.base_dao import BaseDAO
 
 
 class TestBaseDAO:
