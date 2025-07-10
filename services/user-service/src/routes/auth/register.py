@@ -10,6 +10,10 @@ import sys
 import os
 
 # Simple path setup - Add common package to path
+# sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common", "src"))
+# Add local src directory for user-service models
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+# Add common package for shared models
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common", "src"))
 
 # Import user-service API models (same directory structure)

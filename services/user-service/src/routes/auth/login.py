@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 
 # Simple path setup - Add common package to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common", "src"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common", "src"))
 
 # Import user-service API models
 from models.login_models import (

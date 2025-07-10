@@ -9,18 +9,20 @@ This is the API layer entry point. It should only handle:
 - Environment variables loaded from services/.env
 - NOT database layer models or operations
 """
+import os
+import sys
+# Add local models path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+# Add common models path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "common", "src"))
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 import logging
-import os
-import sys
 from datetime import datetime
 from pathlib import Path
-
-# Add common package to path for database layer access
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "common", "src"))
 
 # Load environment variables from services/.env
 try:

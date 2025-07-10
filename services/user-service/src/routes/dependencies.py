@@ -6,7 +6,7 @@ import os
 from typing import Optional
 
 # Add common package to path
-common_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "common", "src")
+common_path = os.path.join(os.path.dirname(__file__), "..","..","..","common","src")
 sys.path.insert(0, common_path)
 
 from fastapi import Depends, HTTPException, status
