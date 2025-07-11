@@ -5,10 +5,8 @@ from datetime import datetime
 import sys
 import os
 
-# Add the common directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.dao.user_dao import UserDAO
-from entities.user import UserCreate, User, UserLogin
+from src.entities.user import UserCreate, User, UserLogin
 
 
 class TestUserDAO:
