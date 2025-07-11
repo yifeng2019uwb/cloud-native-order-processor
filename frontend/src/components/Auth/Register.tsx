@@ -151,8 +151,16 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
       }
 
       await register(cleanedData);
-    } catch (error) {
-      // Error is handled by the useAuth hook
+    } catch (error: any) {
+      // Handle validation errors from backend
+      if (error?.validation_errors) {
+        const backendErrors: Partial<RegisterFormData> = {};
+        error.validation_errors.forEach((err: { field: string; message: string }) => {
+          backendErrors[err.field as keyof RegisterFormData] = err.message;
+        });
+        setFormErrors(backendErrors);
+      }
+      // Other errors are handled by the useAuth hook
     }
   };
 

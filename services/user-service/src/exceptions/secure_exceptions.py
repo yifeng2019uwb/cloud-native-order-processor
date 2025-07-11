@@ -5,7 +5,7 @@ Path: cloud-native-order-processor/services/user-service/src/exceptions/secure_e
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from typing import Dict, Any
+from typing import Dict, Any, List
 import logging
 from datetime import datetime
 import traceback
@@ -20,24 +20,41 @@ class StandardErrorResponse:
     """Standard error responses that are safe to send to clients"""
 
     @staticmethod
-    def validation_error() -> Dict[str, Any]:
-        """Generic validation error response"""
-        return {
-            "success": False,
-            "error": "INVALID_INPUT",
-            "message": "The provided information is invalid. Please check your input and try again.",
-            "timestamp": datetime.utcnow().isoformat()
-        }
+    def validation_error(validation_errors: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Validation error response with optional field-specific errors"""
+        if validation_errors:
+            return {
+                "success": False,
+                "error": "VALIDATION_ERROR",
+                "message": "Please correct the following errors:",
+                "validation_errors": validation_errors,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        else:
+            return {
+                "success": False,
+                "error": "INVALID_INPUT",
+                "message": "The provided information is invalid. Please check your input and try again.",
+                "timestamp": datetime.utcnow().isoformat()
+            }
 
     @staticmethod
-    def user_exists_error() -> Dict[str, Any]:
-        """Generic user exists response (secure - doesn't reveal which field exists)"""
-        return {
-            "success": False,
-            "error": "REGISTRATION_FAILED",
-            "message": "Unable to create account. Please try again or contact support.",
-            "timestamp": datetime.utcnow().isoformat()
-        }
+    def user_exists_error(field: str = None) -> Dict[str, Any]:
+        """User exists error response - can be specific about which field exists"""
+        if field:
+            return {
+                "success": False,
+                "error": "USER_EXISTS",
+                "message": f"{field.capitalize()} already exists. Please choose a different {field}.",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        else:
+            return {
+                "success": False,
+                "error": "REGISTRATION_FAILED",
+                "message": "Unable to create account. Please try again or contact support.",
+                "timestamp": datetime.utcnow().isoformat()
+            }
 
     @staticmethod
     def authentication_failed() -> Dict[str, Any]:
@@ -150,7 +167,7 @@ async def secure_internal_exception_handler(request: Request, exc: InternalAuthE
 
 async def secure_validation_exception_handler(request: Request, exc: RequestValidationError):
     """
-    Handle Pydantic validation errors securely
+    Handle Pydantic validation errors with specific field-level error messages
     """
     # Log detailed validation errors for debugging
     error_id = str(uuid.uuid4())
@@ -165,10 +182,52 @@ async def secure_validation_exception_handler(request: Request, exc: RequestVali
         }
     )
 
-    # Return generic validation error to client (don't expose field details)
+    # Convert Pydantic errors to user-friendly format
+    validation_errors = []
+    for error in exc.errors():
+        field = error["loc"][-1] if error["loc"] else "unknown"
+        message = error["msg"]
+
+        # Map common Pydantic error messages to user-friendly ones
+        if "ensure this value has at least" in message:
+            if "username" in field.lower():
+                message = "Username must be at least 6 characters"
+            elif "password" in field.lower():
+                message = "Password must be at least 12 characters"
+            elif "first_name" in field.lower() or "last_name" in field.lower():
+                message = f"{field.replace('_', ' ').title()} must be at least 1 character"
+        elif "ensure this value has at most" in message:
+            if "username" in field.lower():
+                message = "Username must be no more than 30 characters"
+            elif "password" in field.lower():
+                message = "Password must be no more than 20 characters"
+        elif "value is not a valid email address" in message:
+            message = "Please enter a valid email address"
+        elif "ensure this value matches" in message:
+            if "username" in field.lower():
+                message = "Username can only contain letters, numbers, and underscores. Cannot start/end with underscore."
+            elif "password" in field.lower():
+                message = "Password must contain uppercase, lowercase, numbers, and special characters"
+        elif "ensure this value contains" in message:
+            if "password" in field.lower():
+                if "uppercase" in message:
+                    message = "Password must contain at least one uppercase letter"
+                elif "lowercase" in message:
+                    message = "Password must contain at least one lowercase letter"
+                elif "number" in message:
+                    message = "Password must contain at least one number"
+                elif "special character" in message:
+                    message = "Password must contain at least one special character (!@#$%^&*()-_=+)"
+
+        validation_errors.append({
+            "field": field,
+            "message": message
+        })
+
+    # Return specific validation errors to client
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=StandardErrorResponse.validation_error()
+        content=StandardErrorResponse.validation_error(validation_errors)
     )
 
 
