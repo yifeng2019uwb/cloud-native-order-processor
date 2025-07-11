@@ -7,7 +7,7 @@ import os
 
 # Add the common directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from dao.user_dao import UserDAO
+from src.dao.user_dao import UserDAO
 from entities.user import UserCreate, User, UserLogin
 
 
