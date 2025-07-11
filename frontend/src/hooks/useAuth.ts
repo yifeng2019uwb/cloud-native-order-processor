@@ -92,7 +92,7 @@ const useAuthState = () => {
       const response: AuthResponse = await apiService.login(credentials);
       console.log('Registration response:', response);
 
-      if (response.status === 'success') {
+      if (response.success === true) {
         authUtils.saveAuthData(response.access_token, response.user);
 
         setState({
@@ -121,7 +121,7 @@ const useAuthState = () => {
     try {
       const response: AuthResponse = await apiService.register(userData);
 
-      if (response.status === 'success' && response.access_token) {
+      if (response.success === true && response.access_token) {
         authUtils.saveAuthData(response.access_token, response.user);
 
         setState({

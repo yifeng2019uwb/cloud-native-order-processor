@@ -19,12 +19,12 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/auth': {
-        target: 'http://localhost:8001',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false
       },
       '/health': {
-        target: 'http://localhost:8001',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false
       }
