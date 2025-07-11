@@ -1,6 +1,7 @@
 import pytest
 from datetime import datetime, timedelta
-from src.entities.asset import AssetCreate, Asset, AssetUpdate, AssetResponse, AssetListResponse
+from decimal import Decimal
+from common.entities.asset import AssetCreate, Asset, AssetUpdate, AssetResponse, AssetListResponse
 from pydantic import ValidationError
 
 
@@ -10,14 +11,14 @@ def test_asset_create_valid():
         name="Bitcoin",
         description="Digital currency",
         category="major",
-        amount=10.12345678,
-        price_usd=45000.50
+        amount=Decimal("10.12345678"),
+        price_usd=Decimal("45000.50")
     )
     assert asset.asset_id == "BTC"
     assert asset.name == "Bitcoin"
     assert asset.category == "major"
-    assert asset.amount == 10.12345678
-    assert asset.price_usd == 45000.50
+    assert asset.amount == Decimal("10.12345678")
+    assert asset.price_usd == Decimal("45000.50")
 
 
 def test_asset_create_invalid_asset_id():
@@ -27,8 +28,8 @@ def test_asset_create_invalid_asset_id():
             name="Bitcoin",
             description="Digital currency",
             category="major",
-            amount=10,
-            price_usd=1000
+            amount=Decimal("10"),
+            price_usd=Decimal("1000")
         )
 
 
@@ -39,8 +40,8 @@ def test_asset_create_invalid_category():
             name="Ethereum",
             description="Smart contracts",
             category="invalid",
-            amount=10,
-            price_usd=1000
+            amount=Decimal("10"),
+            price_usd=Decimal("1000")
         )
 
 
@@ -51,8 +52,8 @@ def test_asset_create_negative_amount():
             name="Ethereum",
             description="Smart contracts",
             category="major",
-            amount=-1,
-            price_usd=1000
+            amount=Decimal("-1"),
+            price_usd=Decimal("1000")
         )
 
 
@@ -63,8 +64,8 @@ def test_asset_create_negative_price():
             name="Ethereum",
             description="Smart contracts",
             category="major",
-            amount=1,
-            price_usd=-1000
+            amount=Decimal("1"),
+            price_usd=Decimal("-1000")
         )
 
 
@@ -77,8 +78,8 @@ def test_asset_model_price_active_relationship():
             name="Bitcoin",
             description="Digital currency",
             category="major",
-            amount=10,
-            price_usd=0,
+            amount=Decimal("10"),
+            price_usd=Decimal("0"),
             is_active=True,
             created_at=now,
             updated_at=now
@@ -89,8 +90,8 @@ def test_asset_model_price_active_relationship():
         name="Bitcoin",
         description="Digital currency",
         category="major",
-        amount=10,
-        price_usd=0,
+        amount=Decimal("10"),
+        price_usd=Decimal("0"),
         is_active=False,
         created_at=now,
         updated_at=now
@@ -99,14 +100,14 @@ def test_asset_model_price_active_relationship():
 
 
 def test_asset_update_partial():
-    update = AssetUpdate(description="Updated desc", amount=5.5)
+    update = AssetUpdate(description="Updated desc", amount=Decimal("5.5"))
     assert update.description == "Updated desc"
-    assert update.amount == 5.5
+    assert update.amount == Decimal("5.5")
 
 
 def test_asset_update_invalid_amount():
     with pytest.raises(ValueError):
-        AssetUpdate(amount=-10)
+        AssetUpdate(amount=Decimal("-10"))
 
 
 def test_asset_response_model():
@@ -116,15 +117,15 @@ def test_asset_response_model():
         name="Ethereum",
         description="Smart contracts",
         category="altcoin",
-        amount=100.0,
-        price_usd=2000.0,
+        amount=Decimal("100.0"),
+        price_usd=Decimal("2000.0"),
         is_active=True,
         created_at=now,
         updated_at=now
     )
     assert resp.asset_id == "ETH"
     assert resp.is_active is True
-    assert resp.price_usd == 2000.0
+    assert resp.price_usd == Decimal("2000.0")
 
 
 def test_asset_list_response():
@@ -135,8 +136,8 @@ def test_asset_list_response():
             name="Bitcoin",
             description="Digital currency",
             category="major",
-            amount=10.0,
-            price_usd=45000.0,
+            amount=Decimal("10.0"),
+            price_usd=Decimal("45000.0"),
             is_active=True,
             created_at=now,
             updated_at=now
@@ -146,8 +147,8 @@ def test_asset_list_response():
             name="Ethereum",
             description="Smart contracts",
             category="altcoin",
-            amount=100.0,
-            price_usd=2000.0,
+            amount=Decimal("100.0"),
+            price_usd=Decimal("2000.0"),
             is_active=False,
             created_at=now,
             updated_at=now
@@ -172,9 +173,9 @@ def test_asset_update_category_validation():
 def test_asset_update_price_active_relationship():
     # Should raise if both price_usd==0 and is_active==True
     with pytest.raises(ValueError):
-        AssetUpdate(price_usd=0, is_active=True)
+        AssetUpdate(price_usd=Decimal("0"), is_active=True)
     # Should not raise if is_active is False
-    update = AssetUpdate(price_usd=0, is_active=False)
+    update = AssetUpdate(price_usd=Decimal("0"), is_active=False)
     assert update.is_active is False
 
 
@@ -189,9 +190,9 @@ def test_asset_update_empty_description():
 
 
 def test_asset_update_rounding():
-    update = AssetUpdate(amount=1.123456789, price_usd=123.456)
-    assert update.amount == round(1.123456789, 8)
-    assert update.price_usd == round(123.456, 2)
+    update = AssetUpdate(amount=Decimal("1.123456789"), price_usd=Decimal("123.456"))
+    assert update.amount == Decimal("1.12345679")  # Rounded to 8 decimals
+    assert update.price_usd == Decimal("123.46")   # Rounded to 2 decimals
 
 
 # Add only these essential tests to cover missing lines (replace all the previous ones)
@@ -204,8 +205,8 @@ def test_asset_create_asset_id_whitespace():
             name="Bitcoin",
             description="Digital currency",
             category="major",
-            amount=10,
-            price_usd=1000
+            amount=Decimal("10"),
+            price_usd=Decimal("1000")
         )
 
 def test_asset_create_name_whitespace():
@@ -216,8 +217,8 @@ def test_asset_create_name_whitespace():
             name="   ",
             description="Digital currency",
             category="major",
-            amount=10,
-            price_usd=1000
+            amount=Decimal("10"),
+            price_usd=Decimal("1000")
         )
 
 def test_asset_create_name_invalid_chars():
@@ -228,8 +229,8 @@ def test_asset_create_name_invalid_chars():
             name="Bitcoin@#$",
             description="Digital currency",
             category="major",
-            amount=10,
-            price_usd=1000
+            amount=Decimal("10"),
+            price_usd=Decimal("1000")
         )
 
 def test_asset_create_description_long():
@@ -240,8 +241,8 @@ def test_asset_create_description_long():
             name="Bitcoin",
             description="a" * 1001,
             category="major",
-            amount=10,
-            price_usd=1000
+            amount=Decimal("10"),
+            price_usd=Decimal("1000")
         )
 
 def test_asset_create_description_empty_strip():
@@ -251,8 +252,8 @@ def test_asset_create_description_empty_strip():
         name="Bitcoin",
         description="   ",
         category="major",
-        amount=10,
-        price_usd=1000
+        amount=Decimal("10"),
+        price_usd=Decimal("1000")
     )
     assert asset.description == ""
 
@@ -268,13 +269,13 @@ def test_asset_update_description_empty_strip():
 
 def test_asset_update_amount_rounding():
     """Test AssetUpdate amount rounding to 8 decimals"""
-    update = AssetUpdate(amount=1.123456789)
-    assert update.amount == 1.12345679
+    update = AssetUpdate(amount=Decimal("1.123456789"))
+    assert update.amount == Decimal("1.12345679")
 
 def test_asset_update_price_rounding():
     """Test AssetUpdate price rounding to 2 decimals"""
-    update = AssetUpdate(price_usd=123.999)
-    assert update.price_usd == 124.00
+    update = AssetUpdate(price_usd=Decimal("123.999"))
+    assert update.price_usd == Decimal("124.00")
 
 def test_asset_update_category_none():
     """Test AssetUpdate category can be None"""
@@ -288,8 +289,8 @@ def test_asset_create_name_title_case():
         name="bitcoin",
         description="Digital currency",
         category="major",
-        amount=10,
-        price_usd=1000
+        amount=Decimal("10"),
+        price_usd=Decimal("1000")
     )
     assert asset.name == "Bitcoin"
 
@@ -300,8 +301,8 @@ def test_asset_create_asset_id_lowercase():
         name="Bitcoin",
         description="Digital currency",
         category="major",
-        amount=10,
-        price_usd=1000
+        amount=Decimal("10"),
+        price_usd=Decimal("1000")
     )
     assert asset.asset_id == "BTC"
 
@@ -313,6 +314,6 @@ def test_asset_create_asset_id_regex_fail():
             name="Test Asset",
             description="Test description",
             category="major",
-            amount=10.0,
-            price_usd=100.0
+            amount=Decimal("10.0"),
+            price_usd=Decimal("100.0")
         )

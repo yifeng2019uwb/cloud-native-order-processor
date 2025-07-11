@@ -8,8 +8,8 @@ from decimal import Decimal
 # Add the common directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from src.dao.asset_dao import AssetDAO
-from src.entities.asset import AssetCreate, Asset, AssetUpdate
+from common.dao.asset_dao import AssetDAO
+from common.entities.asset import AssetCreate, Asset, AssetUpdate
 
 
 class TestAssetDAO:
@@ -35,8 +35,8 @@ class TestAssetDAO:
             name="Bitcoin",
             description="Digital currency",
             category="major",
-            amount=10.5,
-            price_usd=45000.0
+            amount=Decimal("10.5"),
+            price_usd=Decimal("45000.0")
         )
 
     @pytest.fixture
@@ -47,8 +47,8 @@ class TestAssetDAO:
             name="Test Asset",
             description="Test asset with zero price",
             category="stablecoin",
-            amount=100.0,
-            price_usd=0.0
+            amount=Decimal("100.0"),
+            price_usd=Decimal("0.0")
         )
 
     @pytest.fixture
@@ -59,8 +59,8 @@ class TestAssetDAO:
             name="Bitcoin",
             description="Digital currency",
             category="major",
-            amount=10.5,
-            price_usd=45000.0,
+            amount=Decimal("10.5"),
+            price_usd=Decimal("45000.0"),
             is_active=True,
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC)
@@ -76,8 +76,8 @@ class TestAssetDAO:
             'name': 'Bitcoin',
             'description': 'Digital currency',
             'category': 'major',
-            'amount': 10.5,
-            'price_usd': 45000.0,
+            'amount': Decimal("10.5"),
+            'price_usd': Decimal("45000.0"),
             'is_active': True,
             'created_at': now,
             'updated_at': now
@@ -116,8 +116,8 @@ class TestAssetDAO:
         assert result.name == "Bitcoin"
         assert result.description == "Digital currency"
         assert result.category == "major"
-        assert result.amount == 10.5
-        assert result.price_usd == 45000.0
+        assert result.amount == Decimal("10.5")
+        assert result.price_usd == Decimal("45000.0")
         assert result.is_active is True
         assert isinstance(result.created_at, datetime)
         assert isinstance(result.updated_at, datetime)
@@ -195,8 +195,8 @@ class TestAssetDAO:
         assert result.name == 'Bitcoin'
         assert result.description == 'Digital currency'
         assert result.category == 'major'
-        assert result.amount == 10.5
-        assert result.price_usd == 45000.0
+        assert result.amount == Decimal("10.5")
+        assert result.price_usd == Decimal("45000.0")
         assert result.is_active is True
 
         # Verify database was called correctly
@@ -945,8 +945,8 @@ class TestAssetDAO:
                 name="Bitcoin",
                 description="Digital currency",
                 category="major",
-                amount=1.5,
-                price_usd=45000.5,
+                amount=Decimal("1.5"),
+                price_usd=Decimal("45000.5"),
                 is_active=True,
                 created_at=now,
                 updated_at=now
@@ -956,8 +956,8 @@ class TestAssetDAO:
                 name="Ethereum",
                 description="Smart contracts",
                 category="altcoin",
-                amount=10.25,
-                price_usd=3000.33,
+                amount=Decimal("10.25"),
+                price_usd=Decimal("3000.33"),
                 is_active=True,
                 created_at=now,
                 updated_at=now
@@ -968,9 +968,9 @@ class TestAssetDAO:
         # Get stats
         result = await asset_dao.get_asset_stats()
 
-        # Calculate expected total value
+        # Calculate expected total value using Decimal for precision
         # (1.5 * 45000.5) + (10.25 * 3000.33) = 67500.75 + 30753.3825 = 98254.1325
-        expected_value = round(1.5 * 45000.5 + 10.25 * 3000.33, 2)
+        expected_value = Decimal("98254.13")
 
         assert result['total_inventory_value_usd'] == expected_value
 
@@ -1092,7 +1092,7 @@ class TestAssetDAO:
         mock_db_connection.inventory_table.put_item.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
 
         # Patch datetime to control the timestamp
-        with patch('src.dao.asset_dao.datetime') as mock_datetime:
+        with patch('common.dao.asset_dao.datetime') as mock_datetime:
             fixed_time = datetime(2023, 1, 1, 12, 0, 0, tzinfo=UTC)
             mock_datetime.now.return_value = fixed_time
             mock_datetime.fromisoformat = datetime.fromisoformat  # Keep original method
@@ -1184,16 +1184,16 @@ class TestAssetDAO:
             name="Minimal Asset",
             description="",
             category="stablecoin",
-            amount=0.00000001,  # Smallest possible amount
-            price_usd=0.01  # Smallest price
+            amount=Decimal("0.00000001"),  # Smallest possible amount
+            price_usd=Decimal("0.01")  # Smallest price
         )
 
         # Mock successful database operations
         mock_db_connection.inventory_table.put_item.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
 
         result = await asset_dao.create_asset(small_asset)
-        assert result.amount == 0.00000001
-        assert result.price_usd == 0.01
+        assert result.amount == Decimal("0.00000001")
+        assert result.price_usd == Decimal("0.01")
 
         # Test with very large values
         large_asset = AssetCreate(
@@ -1201,13 +1201,13 @@ class TestAssetDAO:
             name="Maximum Asset",
             description="A" * 1000,  # Maximum description length
             category="major",
-            amount=999999999.99999999,  # Very large amount
-            price_usd=999999.99  # Very large price
+            amount=Decimal("999999999.99999999"),  # Very large amount
+            price_usd=Decimal("999999.99")  # Very large price
         )
 
         result = await asset_dao.create_asset(large_asset)
-        assert result.amount == 999999999.99999999
-        assert result.price_usd == 999999.99
+        assert result.amount == Decimal("999999999.99999999")
+        assert result.price_usd == Decimal("999999.99")
         assert len(result.description) == 1000
 
 
