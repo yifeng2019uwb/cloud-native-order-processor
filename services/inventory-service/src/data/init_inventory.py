@@ -5,6 +5,7 @@ Path: services/inventory-service/src/data/init_inventory.py
 import logging
 from typing import List
 from datetime import datetime
+from decimal import Decimal
 
 from common.dao.asset_dao import AssetDAO
 from common.entities.asset import AssetCreate
@@ -21,24 +22,24 @@ SAMPLE_ASSETS = [
         "name": "Bitcoin",
         "description": "Bitcoin is a decentralized digital currency that can be transferred on the peer-to-peer bitcoin network without the need for intermediaries.",
         "category": "major",
-        "amount": 1000.0,
-        "price_usd": 45000.00
+        "amount": Decimal("1000.0"),
+        "price_usd": Decimal("45000.00")
     },
     {
         "asset_id": "ETH",
         "name": "Ethereum",
         "description": "Ethereum is a decentralized, open-source blockchain with smart contract functionality.",
         "category": "major",
-        "amount": 5000.0,
-        "price_usd": 3000.00
+        "amount": Decimal("5000.0"),
+        "price_usd": Decimal("3000.00")
     },
     {
         "asset_id": "BNB",
         "name": "Binance Coin",
         "description": "Binance Coin is the cryptocurrency coin that powers the Binance ecosystem.",
         "category": "major",
-        "amount": 2000.0,
-        "price_usd": 350.00
+        "amount": Decimal("2000.0"),
+        "price_usd": Decimal("350.00")
     },
 
     # Altcoins
@@ -47,40 +48,40 @@ SAMPLE_ASSETS = [
         "name": "Cardano",
         "description": "Cardano is a proof-of-stake blockchain platform founded on peer-reviewed research.",
         "category": "altcoin",
-        "amount": 10000.0,
-        "price_usd": 0.50
+        "amount": Decimal("10000.0"),
+        "price_usd": Decimal("0.50")
     },
     {
         "asset_id": "DOT",
         "name": "Polkadot",
         "description": "Polkadot is a multi-chain interchange and translation architecture which enables customized side-chains.",
         "category": "altcoin",
-        "amount": 8000.0,
-        "price_usd": 7.25
+        "amount": Decimal("8000.0"),
+        "price_usd": Decimal("7.25")
     },
     {
         "asset_id": "LINK",
         "name": "Chainlink",
         "description": "Chainlink is a decentralized oracle network that bridges the gap between smart contracts and real-world data.",
         "category": "altcoin",
-        "amount": 15000.0,
-        "price_usd": 15.50
+        "amount": Decimal("15000.0"),
+        "price_usd": Decimal("15.50")
     },
     {
         "asset_id": "MATIC",
         "name": "Polygon",
         "description": "Polygon is a decentralized platform that provides tools for developers to build scalable dApps.",
         "category": "altcoin",
-        "amount": 25000.0,
-        "price_usd": 1.20
+        "amount": Decimal("25000.0"),
+        "price_usd": Decimal("1.20")
     },
     {
         "asset_id": "AVAX",
         "name": "Avalanche",
         "description": "Avalanche is a layer one blockchain that functions as a platform for decentralized applications.",
         "category": "altcoin",
-        "amount": 3000.0,
-        "price_usd": 35.00
+        "amount": Decimal("3000.0"),
+        "price_usd": Decimal("35.00")
     },
 
     # Stablecoins
@@ -89,24 +90,24 @@ SAMPLE_ASSETS = [
         "name": "Tether",
         "description": "Tether is a blockchain-based cryptocurrency whose tokens are backed by an equivalent amount of traditional fiat currencies.",
         "category": "stablecoin",
-        "amount": 100000.0,
-        "price_usd": 1.00
+        "amount": Decimal("100000.0"),
+        "price_usd": Decimal("1.00")
     },
     {
         "asset_id": "USDC",
         "name": "USD Coin",
         "description": "USD Coin is a digital stablecoin that is pegged to the United States dollar.",
         "category": "stablecoin",
-        "amount": 75000.0,
-        "price_usd": 1.00
+        "amount": Decimal("75000.0"),
+        "price_usd": Decimal("1.00")
     },
     {
         "asset_id": "DAI",
         "name": "Dai",
         "description": "Dai is a stablecoin cryptocurrency which aims to keep its value as close to one United States dollar.",
         "category": "stablecoin",
-        "amount": 50000.0,
-        "price_usd": 1.00
+        "amount": Decimal("50000.0"),
+        "price_usd": Decimal("1.00")
     },
 
     # Inactive asset for testing
@@ -115,8 +116,8 @@ SAMPLE_ASSETS = [
         "name": "Dead Coin",
         "description": "An inactive cryptocurrency for testing purposes.",
         "category": "altcoin",
-        "amount": 0.0,
-        "price_usd": 0.00  # This will make it inactive automatically
+        "amount": Decimal("0.0"),
+        "price_usd": Decimal("0.00")  # This will make it inactive automatically
     }
 ]
 

@@ -66,6 +66,26 @@ async def readiness_check():
         )
 
 
+@router.get("/health/live", status_code=status.HTTP_200_OK)
+async def liveness_check():
+    """
+    Liveness check endpoint for Kubernetes liveness probe
+
+    This checks if the service is alive and responding.
+    No database calls - just basic service health.
+    """
+    return {
+        "status": "alive",
+        "service": "inventory-service",
+        "version": "1.0.0",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "checks": {
+            "api": "ok",
+            "service": "alive"
+        }
+    }
+
+
 @router.get("/health/db", status_code=status.HTTP_200_OK)
 async def database_health_check(asset_dao: AssetDAO = Depends(lambda: AssetDAO(None))):
     """

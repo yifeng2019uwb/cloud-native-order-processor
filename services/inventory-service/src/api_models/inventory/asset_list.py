@@ -62,10 +62,7 @@ class AssetListResponse(BaseModel):
         description="Summary of filters that were applied"
     )
 
-    available_categories: list[str] = Field(
-        ...,
-        description="All available categories for future filtering"
-    )
+    # available_categories field removed - category filtering not exposed via API
 
     class Config:
         json_schema_extra = {
@@ -95,7 +92,7 @@ class AssetListResponse(BaseModel):
                     "active_only": True,
                     "limit": None
                 },
-                "available_categories": ["major", "altcoin", "stablecoin"]
+                # "available_categories": ["major", "altcoin", "stablecoin"]  # Removed
             }
         }
 
@@ -137,7 +134,7 @@ def build_asset_list_response(
     assets: list,
     request_params: AssetListRequest,
     total_count: int,
-    available_categories: list[str]
+    available_categories: list[str] = None  # Made optional for backward compatibility
 ) -> AssetListResponse:
     """Build AssetListResponse from DAO results and request parameters"""
 
@@ -159,8 +156,8 @@ def build_asset_list_response(
         total_count=total_count,
         filtered_count=len(asset_responses),
         active_count=active_count,
-        filters_applied=filters_applied,
-        available_categories=available_categories
+        filters_applied=filters_applied
+        # available_categories field removed
     )
 
 

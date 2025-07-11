@@ -91,9 +91,6 @@ async def list_assets(
         else:
             total_count = len(all_assets)
 
-        # Get available categories from all assets for metadata
-        all_categories = list(set(asset.category for asset in all_assets))
-
         logger.info(f"Retrieved {len(assets)} assets (total: {total_count})")
 
         # Build response using helper function
@@ -101,7 +98,7 @@ async def list_assets(
             assets=assets,
             request_params=request_params,
             total_count=total_count,
-            available_categories=sorted(all_categories)
+            available_categories=[]  # Remove category exposure
         )
 
     except Exception as e:

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional
 from datetime import datetime
+from decimal import Decimal
 import re
 
 
@@ -39,18 +40,18 @@ class AssetCreate(BaseModel):
         example="major"
     )
 
-    amount: float = Field(
+    amount: Decimal = Field(
         ...,
         ge=0,
         description="Available inventory amount",
-        example=500.25
+        example=Decimal("500.25")
     )
 
-    price_usd: float = Field(
+    price_usd: Decimal = Field(
         ...,
         ge=0,
         description="Current USD price",
-        example=45000.50
+        example=Decimal("45000.50")
     )
 
     @field_validator("asset_id")
@@ -172,12 +173,12 @@ class Asset(BaseModel):
         description="Asset category (major/altcoin/stablecoin)"
     )
 
-    amount: float = Field(
+    amount: Decimal = Field(
         ...,
         description="Available inventory amount"
     )
 
-    price_usd: float = Field(
+    price_usd: Decimal = Field(
         ...,
         description="Current USD price"
     )
@@ -247,12 +248,12 @@ class AssetResponse(BaseModel):
         description="Asset category"
     )
 
-    amount: float = Field(
+    amount: Decimal = Field(
         ...,
         description="Available inventory amount"
     )
 
-    price_usd: float = Field(
+    price_usd: Decimal = Field(
         ...,
         description="Current USD price"
     )
@@ -307,13 +308,13 @@ class AssetUpdate(BaseModel):
         description="Updated asset category"
     )
 
-    amount: Optional[float] = Field(
+    amount: Optional[Decimal] = Field(
         None,
         ge=0,
         description="Updated inventory amount"
     )
 
-    price_usd: Optional[float] = Field(
+    price_usd: Optional[Decimal] = Field(
         None,
         ge=0,
         description="Updated USD price"

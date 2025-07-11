@@ -126,8 +126,3 @@ class UserResponse(BaseModel):
     def name(self) -> str:
         """Computed full name for backward compatibility"""
         return f"{self.first_name} {self.last_name}".strip()
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
