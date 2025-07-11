@@ -9,8 +9,8 @@ import os
 # Add the src directory to Python path for editor recognition
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from dao.base_dao import BaseDAO
-from entities.user import User, UserCreate, UserLogin
+from .base_dao import BaseDAO
+from ..entities.user import User, UserCreate, UserLogin
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +46,7 @@ class UserDAO(BaseDAO):
             # Create user item with first_name/last_name fields
             now = datetime.utcnow().isoformat()
             user_item = {
-                'PK': user_create.username,
-                'SK': 'PROFILE',
+                'user_id': user_create.username,  # Primary key
                 'username': user_create.username,
                 'email': user_create.email,
                 'password_hash': password_hash,
@@ -79,8 +78,7 @@ class UserDAO(BaseDAO):
         """Get user by username (Primary Key lookup)"""
         try:
             key = {
-                'PK': username,
-                'SK': 'PROFILE'
+                'user_id': username  # Use single key, not composite
             }
 
             item = self._safe_get_item(self.db.users_table, key)
@@ -148,8 +146,7 @@ class UserDAO(BaseDAO):
 
             # Get the full user record with password hash for verification
             key = {
-                'PK': user.username,
-                'SK': 'PROFILE'
+                'user_id': user.username
             }
 
             item = self._safe_get_item(self.db.users_table, key)
@@ -204,8 +201,7 @@ class UserDAO(BaseDAO):
             update_expression = "SET " + ", ".join(set_clauses)
 
             key = {
-                'PK': username,
-                'SK': 'PROFILE'
+                'user_id': username
             }
 
             item = self._safe_update_item(
@@ -236,8 +232,7 @@ class UserDAO(BaseDAO):
         """Delete user by username"""
         try:
             key = {
-                'PK': username,
-                'SK': 'PROFILE'
+                'user_id': username
             }
 
             success = self._safe_delete_item(self.db.users_table, key)

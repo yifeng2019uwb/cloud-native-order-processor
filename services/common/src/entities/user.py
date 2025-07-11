@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
-from datetime import datetime
+from datetime import date, datetime
 import re
 
 
@@ -11,6 +11,8 @@ class UserCreate(BaseModel):
     first_name: str
     last_name: str
     phone: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    marketing_emails_consent: bool = False
 
     @field_validator("username")
     @classmethod
@@ -100,6 +102,8 @@ class User(BaseModel):
     first_name: str
     last_name: str
     phone: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    marketing_emails_consent: bool = False
     created_at: datetime
     updated_at: datetime
 

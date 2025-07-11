@@ -4,8 +4,8 @@ setup(
     name="common",
     version="1.0.0",
     description="Common models and utilities for Order Processor services",
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    packages=["common"],
+    package_dir={"common": "src"},
     python_requires=">=3.11",
     install_requires=[
         "pydantic==2.5.0",
