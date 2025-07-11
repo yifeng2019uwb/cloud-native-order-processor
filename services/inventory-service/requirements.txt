@@ -1,0 +1,29 @@
+# Inventory Service Requirements
+# Path: services/inventory-service/requirements.txt
+
+# FastAPI and ASGI server
+fastapi==0.104.1
+uvicorn==0.35.0
+
+# Pydantic for data validation
+pydantic==2.5.0
+
+# AWS SDK for DynamoDB
+boto3==1.29.7
+
+# Environment variables
+python-dotenv==1.0.0
+
+# YAML configuration support
+pyyaml==6.0.1
+
+# Email validation (inherited from common)
+email-validator==2.1.0
+
+# AWS Lambda handler (for future serverless deployment)
+mangum==0.17.0
+
+# Test dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
