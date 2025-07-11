@@ -10,6 +10,11 @@ services:
       - user-service
     networks:
       - order-processor-network
+    # Auto-rebuild on changes
+    volumes:
+      - ../frontend:/app/frontend:ro
+    environment:
+      - NODE_ENV=development
 
   user-service:
     build:
@@ -32,6 +37,8 @@ services:
       - LOG_LEVEL=INFO
     volumes:
       - ~/.aws:/root/.aws:ro
+      # Auto-reload for development
+      - ../services:/app/services:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

@@ -17,11 +17,13 @@ COPY services/common/requirements.txt ./common/
 RUN pip install --no-cache-dir -r ./user-service/requirements.txt
 RUN pip install --no-cache-dir -r ./common/requirements.txt
 
+# Copy common package source code (including setup.py) before installing
+COPY services/common ./common
+
 # Install common package in editable mode
 RUN pip install -e ./common
 
-# Copy source code
-COPY services/common ./common
+# Copy user service source code
 COPY services/user-service/src ./user-service/src
 
 # Set Python path to find common package

@@ -156,7 +156,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
       if (error?.validation_errors) {
         const backendErrors: Partial<RegisterFormData> = {};
         error.validation_errors.forEach((err: { field: string; message: string }) => {
-          backendErrors[err.field as keyof RegisterFormData] = err.message;
+          (backendErrors as any)[err.field as keyof RegisterFormData] = err.message;
         });
         setFormErrors(backendErrors);
       }
