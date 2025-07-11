@@ -10,7 +10,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from .base_dao import BaseDAO
-from entities.user import User, UserCreate, UserLogin
+from src.entities.user import User, UserCreate, UserLogin
 
 logger = logging.getLogger(__name__)
 
