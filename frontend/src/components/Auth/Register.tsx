@@ -207,7 +207,9 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm">{error}</p>
+                  <p className="text-sm font-medium text-red-800">
+                    {error}
+                  </p>
                 </div>
               </div>
             </div>

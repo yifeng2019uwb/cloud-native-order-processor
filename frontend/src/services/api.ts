@@ -69,7 +69,20 @@ class ApiService {
 
   private formatError(error: AxiosError): ApiErrorResponse {
     if (error.response?.data) {
-      return error.response.data as ApiErrorResponse;
+      const responseData = error.response.data as any;
+
+      // Handle FastAPI HTTPException format where error is in 'detail' field
+      if (responseData.detail && typeof responseData.detail === 'object') {
+        return responseData.detail as ApiErrorResponse;
+      }
+
+      // Handle direct error response format
+      if (responseData.success === false) {
+        return responseData as ApiErrorResponse;
+      }
+
+      // Fallback to direct data
+      return responseData as ApiErrorResponse;
     }
 
     return {

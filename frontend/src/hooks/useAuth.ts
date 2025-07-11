@@ -135,12 +135,29 @@ const useAuthState = () => {
         throw new Error('Invalid registration response');
       }
     } catch (error: unknown) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Registration failed'
-      }));
-      throw error;
+      console.log('Registration error:', error);
+
+      // Handle different types of errors
+      if (error && typeof error === 'object' && 'validation_errors' in error) {
+        // Validation errors are handled by the component
+        setState(prev => ({ ...prev, isLoading: false }));
+        throw error; // Re-throw for component to handle
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        // API error with message
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: (error as { message: string }).message
+        }));
+        throw error;
+      } else {
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Registration failed'
+        }));
+        throw error;
+      }
     }
   }, []);
 
