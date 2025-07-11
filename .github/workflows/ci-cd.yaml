@@ -33,6 +33,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # Main frontend build step for CI/CD
+    - name: Build and Test Frontend
+      run: scripts/build-test-frontend.sh -v
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
