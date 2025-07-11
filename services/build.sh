@@ -149,7 +149,7 @@ install_dependencies() {
     # Install service-specific dependencies
     if [[ -f "requirements.txt" ]]; then
         print_status "Installing service requirements"
-        "$pip_cmd" install -r requirements.txt
+        "$pip_cmd" install --upgrade -r requirements.txt
     else
         print_status "No requirements.txt found for $service_name"
     fi
@@ -164,7 +164,7 @@ install_dependencies() {
 
     if [[ -n "$test_requirements" && -f "$test_requirements" ]]; then
         print_status "Installing test dependencies from $test_requirements"
-        "$pip_cmd" install -r "$test_requirements"
+        "$pip_cmd" install --upgrade -r "$test_requirements"
     else
         print_status "Installing basic test dependencies"
         "$pip_cmd" install pytest pytest-asyncio pytest-mock pytest-cov

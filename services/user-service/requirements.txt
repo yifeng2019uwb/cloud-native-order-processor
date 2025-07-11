@@ -1,5 +1,5 @@
 fastapi==0.104.1
-pydantic==2.4.2
+pydantic==2.5.0
 boto3==1.29.7          # For DynamoDB
 python-jose[cryptography]==3.5.0  # For JWT
 PyJWT==2.8.0            # Additional JWT library
