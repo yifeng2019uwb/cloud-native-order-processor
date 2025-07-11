@@ -5,29 +5,24 @@ Path: cloud-native-order-processor/services/user-service/src/routes/auth/login.p
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Union
-import sys
-import os
 import logging
 from datetime import datetime, timezone
 
-# Simple path setup - Add common package to path
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common", "src"))
-
 # Import user-service API models
-from models.login_models import (
+from api_models.auth.login import (
     UserLoginRequest,
     LoginSuccessResponse,
     LoginErrorResponse
 )
-from models.shared_models import ErrorResponse
-from models.user_models import UserBaseInfo
+from api_models.shared.common import ErrorResponse
+from api_models.shared.common import UserBaseInfo
 
 # Import common DAO models
-from models.user import User
+from common.entities.user import User
 
 # Import dependencies
 from .dependencies import get_user_dao
-from .token_utils import create_access_token
+from controllers.token_utilis import create_access_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["authentication"])
@@ -71,7 +66,7 @@ async def login_user(
         logger.info(f"User authenticated successfully: {login_data.username}")
 
         # Create JWT token using username (primary key)
-        token_data = create_access_token(user.username, user.name)
+        token_data = create_access_token(user.username)
 
         # Use proper response model with all required fields
         return LoginSuccessResponse(

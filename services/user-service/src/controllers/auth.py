@@ -1,20 +1,14 @@
-# Move this to the very top, before any other imports
-import sys
-import os
-common_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "common", "src")
-sys.path.insert(0, common_path)
-
-# Now the rest of your imports
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 from jose import jwt
 from datetime import datetime, timedelta
 import logging
+import os
 
-from models.user import UserCreate, UserResponse, UserLogin, TokenResponse
-from database.dao.user_dao import UserDAO
-from database.dynamodb_connection import get_dynamodb
+from common.entities.user import UserCreate, UserResponse, UserLogin, TokenResponse
+from common.dao.user_dao import UserDAO
+from common.database.dynamodb_connection import get_dynamodb
 logger = logging.getLogger(__name__)
 
 print("🔍 AUTH.PY FILE IS BEING LOADED")

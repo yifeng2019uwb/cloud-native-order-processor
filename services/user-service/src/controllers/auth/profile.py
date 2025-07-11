@@ -6,27 +6,25 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Union
 import logging
 from datetime import datetime, timezone
-import sys
-import os
 
-# Simple path setup - Add common package to path
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common", "src"))
+
+
 
 # Import user-service API models
-from models.profile_models import (
+from api_models.auth.profile import (
     UserProfileResponse,
     UserProfileUpdateRequest,
     ProfileUpdateSuccessResponse,
     ProfileUpdateErrorResponse
 )
-from models.shared_models import ErrorResponse
+from api_models.shared.common import ErrorResponse
 
 # Import common DAO models
-from models.user import User
+from common.entities.user import User
 
 # Import dependencies
 from .dependencies import get_user_dao
-from .token_utils import verify_access_token
+from controllers.token_utilis import verify_access_token
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 logger = logging.getLogger(__name__)

@@ -4,17 +4,15 @@ Path: cloud-native-order-processor/services/user-service/src/models/__init__.py
 """
 
 # Import shared models
-from .shared_models import (
-    BaseResponse,
+from .shared.common import (
     SuccessResponse,
     ErrorResponse,
-    ValidationErrorResponse,
     TokenResponse,
     UserBaseInfo
 )
 
 # Import registration models
-from .register_models import (
+from .auth.registration import (
     UserRegistrationRequest,
     UserRegistrationResponse,
     RegistrationSuccessResponse,
@@ -22,21 +20,21 @@ from .register_models import (
 )
 
 # Import login models
-from .login_models import (
+from .auth.login import (
     UserLoginRequest,
     LoginSuccessResponse,
     LoginErrorResponse
 )
 
 # Import logout models
-from .logout_models import (
+from .auth.logout import (
     LogoutRequest,
     LogoutSuccessResponse,
     LogoutErrorResponse
 )
 
 # Import profile models
-from .profile_models import (
+from .auth.profile import (
     UserProfileResponse,
     UserProfileUpdateRequest,
     ProfileUpdateSuccessResponse,
@@ -45,10 +43,8 @@ from .profile_models import (
 
 __all__ = [
     # Shared models
-    "BaseResponse",
     "SuccessResponse",
     "ErrorResponse",
-    "ValidationErrorResponse",
     "TokenResponse",
     "UserBaseInfo",
 

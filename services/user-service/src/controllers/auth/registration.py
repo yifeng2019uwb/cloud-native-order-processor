@@ -6,27 +6,21 @@ from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import Union
 import logging
 from datetime import datetime, timezone
-import sys
-import os
 
-# Simple path setup - Add common package to path
-# sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common", "src"))
-# Add local src directory for user-service models
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-# Add common package for shared models
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "common", "src"))
+
+
 
 # Import user-service API models (same directory structure)
-from models.register_models import (
+from api_models.auth.registration import (
     UserRegistrationRequest,
     UserRegistrationResponse,
     RegistrationSuccessResponse,
     RegistrationErrorResponse
 )
-from models.shared_models import ErrorResponse
+from api_models.shared.common import ErrorResponse
 
 # Import common DAO models - simple imports
-from models.user import UserCreate, User
+from common.entities.user import UserCreate, User
 
 # Import dependencies and exceptions
 from .dependencies import get_user_dao
@@ -96,7 +90,8 @@ async def register_user(
             username=user_data.username,
             email=user_data.email,
             password=user_data.password,           # Will be hashed in DAO
-            name=f"{user_data.first_name} {user_data.last_name}",  # Combine for common model
+            first_name=user_data.first_name,
+            last_name=user_data.last_name,
             phone=user_data.phone
         )
 

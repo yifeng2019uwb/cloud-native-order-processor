@@ -3,7 +3,7 @@ Pydantic models specific to user login API
 Path: cloud-native-order-processor/services/user-service/src/models/login_models.py
 """
 from pydantic import BaseModel, Field
-from .shared_models import SuccessResponse, ErrorResponse, TokenResponse, UserBaseInfo
+from ..shared.common import SuccessResponse, ErrorResponse, TokenResponse, UserBaseInfo
 
 
 class UserLoginRequest(BaseModel):

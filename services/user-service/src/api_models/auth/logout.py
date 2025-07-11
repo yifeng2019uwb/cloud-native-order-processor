@@ -3,7 +3,7 @@ Pydantic models specific to user logout API (Simple JWT stateless approach)
 Path: cloud-native-order-processor/services/user-service/src/models/logout_models.py
 """
 from pydantic import BaseModel, Field
-from .shared_models import SuccessResponse, ErrorResponse
+from ..shared.common import SuccessResponse, ErrorResponse
 
 
 class LogoutRequest(BaseModel):

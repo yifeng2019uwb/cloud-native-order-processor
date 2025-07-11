@@ -2,7 +2,7 @@
 JWT Token utilities for user authentication
 """
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import jwt, JWTError
 import logging
@@ -15,36 +15,43 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
 
-def create_access_token(email: str, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(username: str, expires_delta: Optional[timedelta] = None) -> dict:
     """
     Create JWT access token for authenticated user
 
     Args:
-        email: User's email address
+        username: User's username
         expires_delta: Optional custom expiration time
 
     Returns:
-        JWT token string
+        Dict with token information
     """
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
+        expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
 
     payload = {
-        "sub": email,  # Subject (user identifier)
-        "exp": expire,  # Expiration time
-        "iat": datetime.utcnow(),  # Issued at
+        "sub": username,
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
         "type": "access_token"
     }
 
     try:
         token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-        logger.info(f"Access token created for user: {email}")
-        return token
+        logger.info(f"Access token created for user: {username}")
+
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "expires_in": JWT_EXPIRATION_HOURS * 3600,  # Convert hours to seconds
+            "expires_at": expire.isoformat()
+        }
     except Exception as e:
-        logger.error(f"Error creating access token: {e}")
+        logger.error(f"Error creating access token: {username}")
         raise
+
 
 
 def verify_access_token(token: str) -> Optional[str]:
@@ -125,7 +132,7 @@ def is_token_expired(token: str) -> bool:
             return True
 
         exp_datetime = datetime.fromtimestamp(exp_timestamp)
-        return datetime.utcnow() > exp_datetime
+        return datetime.now(datetime.UTC) > exp_datetime
 
     except Exception:
         return True

@@ -7,7 +7,7 @@ from typing import Optional
 from datetime import date
 import re
 
-from .shared_models import UserBaseInfo, SuccessResponse, ErrorResponse
+from ..shared.common import UserBaseInfo, SuccessResponse, ErrorResponse
 
 
 class UserRegistrationRequest(BaseModel):

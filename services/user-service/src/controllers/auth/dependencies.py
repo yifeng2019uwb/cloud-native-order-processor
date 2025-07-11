@@ -1,23 +1,17 @@
 """
 FastAPI dependencies for authentication
 """
-import sys
-import os
 from typing import Optional
-
-# Add common package to path
-common_path = os.path.join(os.path.dirname(__file__), "..","..","..","common","src")
-sys.path.insert(0, common_path)
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError
 import logging
 
-from models.user import UserResponse
-from database.dao.user_dao import UserDAO
-from database.dynamodb_connection import get_dynamodb
-from .token_utils import verify_access_token
+from common.entities.user import UserResponse
+from common.dao.user_dao import UserDAO
+from common.database.dynamodb_connection import dynamodb_manager
+from controllers.token_utilis import verify_access_token
 
 logger = logging.getLogger(__name__)
 
@@ -42,17 +36,9 @@ async def get_db_connection():
         )
 
 
-async def get_user_dao(db_connection=Depends(get_db_connection)) -> UserDAO:
-    """
-    Get UserDAO instance dependency
-
-    Args:
-        db_connection: Database connection from dependency
-
-    Returns:
-        UserDAO instance
-    """
-    return UserDAO(db_connection)
+async def get_user_dao():
+    async with dynamodb_manager.get_connection() as db_connection:
+        yield UserDAO(db_connection)
 
 
 async def verify_token_dependency(

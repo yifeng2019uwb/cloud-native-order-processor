@@ -9,13 +9,8 @@ This is the API layer entry point. It should only handle:
 - Environment variables loaded from services/.env
 - NOT database layer models or operations
 """
-import os
 import sys
-# Add local models path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
-# Add common models path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "common", "src"))
-
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -98,7 +93,7 @@ except ImportError as e:
 
 # FIXED: Import and include API routers with correct paths
 try:
-    from routes.auth.register import router as register_router
+    from controllers.auth.registration import router as register_router
     app.include_router(register_router, prefix="/auth", tags=["authentication"])
     logger.info("✅ Registration routes loaded successfully")
 except ImportError as e:
@@ -106,14 +101,14 @@ except ImportError as e:
     logger.info("Continuing without registration endpoint...")
 
 try:
-    from routes.auth.login import router as login_router
+    from controllers.auth.login import router as login_router
     app.include_router(login_router, prefix="/auth", tags=["authentication"])
     logger.info("✅ Login routes loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Login routes not available: {e}")
 
 try:
-    from routes.auth.profile import router as profile_router
+    from controllers.auth.profile import router as profile_router
     app.include_router(profile_router, prefix="/auth", tags=["authentication"])
     logger.info("✅ Profile routes loaded successfully")
 except ImportError as e:
@@ -190,7 +185,7 @@ async def startup_event():
     # Test API router availability (not database)
     try:
         # Just test if we can import the router - no functional testing
-        import routes.auth.register
+        import controllers.auth.registration
         logger.info("✅ API routes loaded successfully")
     except ImportError as e:
         logger.warning(f"⚠️ Some API routes not available: {e}")

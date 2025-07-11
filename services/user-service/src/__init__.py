@@ -1,1 +1,1 @@
-PYTHONPATH=src python
+# Common package for Order Processor services
