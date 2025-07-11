@@ -99,8 +99,7 @@ class TestUserDAO:
         # Verify database was called with users_table
         mock_db_connection.users_table.put_item.assert_called_once()
         call_args = mock_db_connection.users_table.put_item.call_args[1]['Item']
-        assert call_args['PK'] == sample_user_create.username
-        assert call_args['SK'] == 'PROFILE'
+        assert call_args['user_id'] == sample_user_create.username
         assert call_args['username'] == sample_user_create.username
         assert call_args['email'] == sample_user_create.email
         assert call_args['first_name'] == sample_user_create.first_name
@@ -161,10 +160,7 @@ class TestUserDAO:
 
         # Verify database was called correctly
         mock_db_connection.users_table.get_item.assert_called_once_with(
-            Key={
-                'PK': 'john_doe123',
-                'SK': 'PROFILE'
-            }
+            Key={'user_id': 'john_doe123'}
         )
 
     @pytest.mark.asyncio
@@ -422,7 +418,7 @@ class TestUserDAO:
     async def test_delete_user_success(self, user_dao, mock_db_connection):
         """Test successful user deletion"""
         # Mock successful deletion
-        mock_db_connection.users_table.delete_item.return_value = {'Attributes': {'PK': 'john_doe123'}}
+        mock_db_connection.users_table.delete_item.return_value = {'Attributes': {'user_id': 'john_doe123'}}
 
         # Delete user
         result = await user_dao.delete_user('john_doe123')
@@ -432,7 +428,7 @@ class TestUserDAO:
 
         # Verify database was called correctly
         mock_db_connection.users_table.delete_item.assert_called_once_with(
-            Key={'PK': 'john_doe123', 'SK': 'PROFILE'},
+            Key={'user_id': 'john_doe123'},
             ReturnValues='ALL_OLD'
         )
 
