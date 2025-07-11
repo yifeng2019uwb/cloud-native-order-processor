@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 const Dashboard: React.FC = () => {
@@ -163,7 +164,16 @@ const Dashboard: React.FC = () => {
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Quick Actions
               </h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Link
+                  to="/inventory"
+                  className="border border-gray-200 rounded-lg p-4 text-center hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                >
+                  <div className="text-2xl text-indigo-600 mb-2">📊</div>
+                  <h4 className="text-sm font-medium text-gray-900">Inventory</h4>
+                  <p className="text-xs text-gray-500 mt-1">Browse available assets</p>
+                </Link>
+
                 <div className="border border-gray-200 rounded-lg p-4 text-center">
                   <div className="text-2xl text-gray-400 mb-2">📦</div>
                   <h4 className="text-sm font-medium text-gray-900">Orders</h4>

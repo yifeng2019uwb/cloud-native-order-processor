@@ -27,6 +27,11 @@ export default defineConfig({
         target: process.env.NODE_ENV === 'production' ? 'http://user-service:8000' : 'http://localhost:8000',
         changeOrigin: true,
         secure: false
+      },
+      '/inventory': {
+        target: process.env.NODE_ENV === 'production' ? 'http://inventory-service:8001' : 'http://localhost:8001',
+        changeOrigin: true,
+        secure: false
       }
     }
   },

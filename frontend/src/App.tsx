@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import Login from '@/components/Auth/Login';
 import Register from '@/components/Auth/Register';
 import Dashboard from '@/components/Dashboard/Dashboard';
+import InventoryPage from '@/components/Inventory/InventoryPage';
 
 // Protected Route Wrapper
 interface ProtectedRouteProps {
@@ -126,6 +127,10 @@ const AppRoutes: React.FC = () => {
           </PublicRoute>
         }
       />
+      <Route
+        path="/inventory"
+        element={<InventoryPage />}
+      />
 
       {/* Protected Routes */}
       <Route
@@ -138,8 +143,8 @@ const AppRoutes: React.FC = () => {
       />
 
       {/* Default Redirects */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/inventory" replace />} />
+      <Route path="*" element={<Navigate to="/inventory" replace />} />
     </Routes>
   );
 };

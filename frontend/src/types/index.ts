@@ -15,3 +15,15 @@ export type {
     ApiErrorResponse,
     ApiResult
   } from './api';
+
+  // Inventory types
+  export type {
+    Asset,
+    AssetDetail,
+    AssetListRequest,
+    AssetListResponse,
+    AssetDetailResponse,
+    InventoryApiError,
+    InventoryApiSuccess,
+    InventoryApiResponse
+  } from './inventory';
