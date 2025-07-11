@@ -51,20 +51,25 @@ async def verify_token_dependency(
         credentials: HTTP authorization credentials
 
     Returns:
-        User email from verified token
+        User username from verified token
 
     Raises:
         HTTPException: If token is invalid or expired
     """
     try:
-        email = verify_access_token(credentials.credentials)
-        if email is None:
+        logger.info(f"🔍 DEBUG: Verifying token: {credentials.credentials[:20]}...")
+
+        username = verify_access_token(credentials.credentials)
+        logger.info(f"🔍 DEBUG: Token verification returned username: '{username}'")
+
+        if username is None:
+            logger.error("❌ DEBUG: Token verification returned None")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return email
+        return username
     except JWTError as e:
         logger.warning(f"Token verification failed: {e}")
         raise HTTPException(
@@ -82,14 +87,14 @@ async def verify_token_dependency(
 
 
 async def get_current_user(
-    email: str = Depends(verify_token_dependency),
+    username: str = Depends(verify_token_dependency),
     user_dao: UserDAO = Depends(get_user_dao)
 ) -> UserResponse:
     """
     Get current authenticated user from token
 
     Args:
-        email: User email from verified token
+        username: User username from verified token
         user_dao: UserDAO instance
 
     Returns:
@@ -99,18 +104,23 @@ async def get_current_user(
         HTTPException: If user not found or database error
     """
     try:
-        user = await user_dao.get_user_by_email(email)
+        logger.info(f"🔍 DEBUG: get_current_user called with username: '{username}'")
+
+        user = await user_dao.get_user_by_username(username)
+        logger.info(f"🔍 DEBUG: user_dao.get_user_by_username returned: {user}")
 
         if user is None:
-            logger.warning(f"User not found for email: {email}")
+            logger.warning(f"❌ DEBUG: User not found for username: '{username}'")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found"
             )
 
         return UserResponse(
+            username=user.username,
             email=user.email,
-            name=user.name,
+            first_name=user.first_name,
+            last_name=user.last_name,
             phone=user.phone,
             created_at=user.created_at,
             updated_at=user.updated_at

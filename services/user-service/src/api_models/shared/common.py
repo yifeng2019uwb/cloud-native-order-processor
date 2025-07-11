@@ -53,35 +53,6 @@ class SuccessResponse(BaseResponse):
         }
 
 
-    """Validation error response with field-specific details"""
-
-    error: str = Field(
-        default="VALIDATION_ERROR",
-        description="Validation error code"
-    )
-
-    validation_errors: Optional[list] = Field(
-        None,
-        description="List of validation errors (generic, safe for client)"
-    )
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success": False,
-                "error": "VALIDATION_ERROR",
-                "message": "The provided data is invalid",
-                "validation_errors": [
-                    {
-                        "field": "email",
-                        "message": "Please enter a valid email address"
-                    }
-                ],
-                "timestamp": "2025-07-09T10:30:00Z"
-            }
-        }
-
-
 class TokenResponse(BaseModel):
     """JWT token response model"""
 

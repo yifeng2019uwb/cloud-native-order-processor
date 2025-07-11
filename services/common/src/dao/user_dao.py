@@ -77,12 +77,19 @@ class UserDAO(BaseDAO):
     async def get_user_by_username(self, username: str) -> Optional[User]:
         """Get user by username (Primary Key lookup)"""
         try:
+            logger.info(f"🔍 DEBUG: Looking up user by username: '{username}'")
+
             key = {
                 'user_id': username  # Use single key, not composite
             }
 
+            logger.info(f"🔍 DEBUG: Using key: {key}")
+
             item = self._safe_get_item(self.db.users_table, key)
+            logger.info(f"🔍 DEBUG: Database returned item: {item}")
+
             if not item:
+                logger.warning(f"❌ DEBUG: No user found for username: '{username}'")
                 return None
 
             return User(

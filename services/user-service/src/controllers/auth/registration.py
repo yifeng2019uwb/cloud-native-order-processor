@@ -1,5 +1,5 @@
 """
-User Registration API Endpoint
+User Register API Endpoint
 Path: cloud-native-order-processor/services/user-service/src/routes/auth/register.py
 """
 from fastapi import APIRouter, HTTPException, Depends, status, Request
@@ -29,9 +29,10 @@ from exceptions.internal_exceptions import (
     raise_database_error,
     raise_validation_error
 )
+from controllers.token_utilis import create_access_token
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["registration"])
+router = APIRouter(tags=["register"])
 
 
 @router.post(
@@ -64,9 +65,9 @@ async def register_user(
 ) -> RegistrationSuccessResponse:
     """Register a new user account with comprehensive validation and security"""
     try:
-        # Log registration attempt (without sensitive data)
+        # Log register attempt (without sensitive data)
         logger.info(
-            f"Registration attempt from {request.client.host if request.client else 'unknown'}",
+            f"Register attempt from {request.client.host if request.client else 'unknown'}",
             extra={
                 "username": user_data.username,
                 "email": user_data.email,
@@ -101,7 +102,7 @@ async def register_user(
         except Exception as db_error:
             raise_database_error("user_creation", "users_table", db_error)
 
-        # Log successful registration
+        # Log successful register
         logger.info(
             f"User registered successfully: {user_data.username} ({user_data.email})",
             extra={
@@ -111,9 +112,15 @@ async def register_user(
             }
         )
 
-        # Build response from created user data ONLY (what's actually stored)
+        # Create JWT token for the newly registered user
+        token_data = create_access_token(created_user.username)
+
+        # Build response with token and user data
         return RegistrationSuccessResponse(
             message="Account created successfully",
+            access_token=token_data["access_token"],
+            token_type=token_data["token_type"],
+            expires_in=token_data["expires_in"],
             user=UserRegistrationResponse(
                 username=created_user.username,
                 email=created_user.email,
@@ -130,7 +137,7 @@ async def register_user(
     except Exception as e:
         # All exceptions are handled by the secure exception handlers
         logger.error(
-            f"Registration failed for {user_data.username} ({user_data.email}): {str(e)}",
+            f"Register failed for {user_data.username} ({user_data.email}): {str(e)}",
             extra={
                 "username": user_data.username,
                 "email": user_data.email,
@@ -142,10 +149,10 @@ async def register_user(
 
 
 @router.get("/register/health", status_code=status.HTTP_200_OK)
-async def registration_health_check():
-    """Health check for registration service"""
+async def register_health_check():
+    """Health check for register service"""
     return {
-        "service": "user-registration",
+        "service": "user-register",
         "status": "healthy",
         "endpoints": [
             "POST /auth/register",

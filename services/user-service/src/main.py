@@ -114,7 +114,12 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️ Profile routes not available: {e}")
 
-# NOTE: Logout router not implemented yet - simple JWT logout doesn't need server-side logic
+try:
+    from controllers.auth.logout import router as logout_router
+    app.include_router(logout_router, prefix="/auth", tags=["authentication"])
+    logger.info("✅ Logout routes loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Logout routes not available: {e}")
 
 # Root endpoint
 @app.get("/")
@@ -131,7 +136,8 @@ async def root():
             "auth_health": "/auth/register/health",
             "register": "/auth/register",
             "login": "/auth/login",
-            "profile": "/auth/me"
+            "profile": "/auth/me",
+            "logout": "/auth/logout"
         },
         "environment": {
             "service": "user-authentication",
@@ -196,6 +202,7 @@ async def startup_event():
     logger.info("  POST /auth/login - User login")
     logger.info("  GET  /auth/me - User profile")
     logger.info("  PUT  /auth/me - Update profile")
+    logger.info("  POST /auth/logout - User logout")
     logger.info("  GET  /docs - API documentation")
 
 

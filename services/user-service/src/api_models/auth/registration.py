@@ -204,11 +204,26 @@ class UserRegistrationResponse(UserBaseInfo):
 
 
 class RegistrationSuccessResponse(SuccessResponse):
-    """Success response wrapper for registration"""
+    """Success response wrapper for registration with access token"""
 
     message: str = Field(
         default="Account created successfully",
         description="Registration success message"
+    )
+
+    access_token: str = Field(
+        ...,
+        description="JWT access token"
+    )
+
+    token_type: str = Field(
+        default="bearer",
+        description="Token type (always 'bearer')"
+    )
+
+    expires_in: int = Field(
+        ...,
+        description="Token expiration time in seconds"
     )
 
     user: UserRegistrationResponse = Field(
@@ -221,6 +236,9 @@ class RegistrationSuccessResponse(SuccessResponse):
             "example": {
                 "success": True,
                 "message": "Account created successfully",
+                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "token_type": "bearer",
+                "expires_in": 86400,
                 "user": {
                     "username": "john_doe123",
                     "email": "john.doe@example.com",
