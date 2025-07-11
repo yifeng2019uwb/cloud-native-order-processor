@@ -4,8 +4,6 @@ import type {
   Asset,
   AssetDetail,
   AssetListRequest,
-  AssetListResponse,
-  AssetDetailResponse,
   InventoryApiError
 } from '@/types';
 

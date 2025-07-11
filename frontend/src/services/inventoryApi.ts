@@ -1,12 +1,9 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import type {
-  Asset,
-  AssetDetail,
   AssetListRequest,
   AssetListResponse,
   AssetDetailResponse,
-  InventoryApiError,
-  InventoryApiResponse
+  InventoryApiError
 } from '@/types';
 
 class InventoryApiService {

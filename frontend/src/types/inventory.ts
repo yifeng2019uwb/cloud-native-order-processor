@@ -37,7 +37,7 @@ export interface AssetDetailResponse {
   category: string;
   price_usd: number;
   is_active: boolean;
-  availability_status: string;
+  availability_status: 'available' | 'limited' | 'out_of_stock' | 'unavailable';
 }
 
 // Error responses

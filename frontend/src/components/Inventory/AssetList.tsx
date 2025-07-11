@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useInventory } from '@/hooks/useInventory';
-import AssetCard from './AssetCard';
 import type { Asset, AssetListRequest } from '@/types';
 
 interface AssetListProps {
