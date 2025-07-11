@@ -19,12 +19,12 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/auth': {
-        target: 'http://localhost:8000',
+        target: process.env.NODE_ENV === 'production' ? 'http://user-service:8000' : 'http://localhost:8000',
         changeOrigin: true,
         secure: false
       },
       '/health': {
-        target: 'http://localhost:8000',
+        target: process.env.NODE_ENV === 'production' ? 'http://user-service:8000' : 'http://localhost:8000',
         changeOrigin: true,
         secure: false
       }

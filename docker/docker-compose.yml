@@ -17,7 +17,7 @@ services:
       dockerfile: docker/user-service/Dockerfile
     container_name: order-processor-user-service
     ports:
-      - "8001:8000"
+      - "8000:8000"
     environment:
       - ORDERS_TABLE=order-processor-dev-orders
       - INVENTORY_TABLE=order-processor-dev-inventory

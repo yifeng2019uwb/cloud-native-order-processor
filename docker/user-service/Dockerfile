@@ -17,6 +17,9 @@ COPY services/common/requirements.txt ./common/
 RUN pip install --no-cache-dir -r ./user-service/requirements.txt
 RUN pip install --no-cache-dir -r ./common/requirements.txt
 
+# Install common package in editable mode
+RUN pip install -e ./common
+
 # Copy source code
 COPY services/common ./common
 COPY services/user-service/src ./user-service/src
