@@ -86,10 +86,12 @@ jobs:
         retention-days: 7
 
     - name: Build and Test Common Service
-      run: ./services/build.sh --coverage 0 common
+      working-directory: ./services
+      run: ./build.sh --coverage 0 common
 
     - name: Build and Test User Service
-      run: ./services/build.sh --coverage 0 user-service
+      working-directory: ./services
+      run: ./build.sh --coverage 0 user-service
 
   # Job 2: Deploy - ONLY runs manually for cost control
   deploy:

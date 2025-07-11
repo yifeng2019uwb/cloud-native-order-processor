@@ -42,6 +42,7 @@ dist/
 .nox/
 .venv
 .docker/.venv
+.lambda-build
 
 .DS_Store
 
