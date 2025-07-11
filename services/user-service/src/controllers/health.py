@@ -1,6 +1,6 @@
 """
-Health check controller for inventory service
-Path: services/inventory-service/src/controllers/health.py
+Health check controller for user authentication service
+Path: services/user-service/src/controllers/health.py
 """
 from fastapi import APIRouter, Depends, status, HTTPException
 import logging
@@ -8,21 +8,32 @@ from datetime import datetime, timezone
 import os
 
 # Import common DAO for database health check
-from common.dao.asset_dao import AssetDAO
+from common.dao.user_dao import UserDAO
 from common.database.dynamodb_connection import get_dynamodb, dynamodb_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["health"])
 
 
-# Keep only basic health check (no database calls)
-@router.get("/health")
-async def health_check():
+@router.get("/health", status_code=status.HTTP_200_OK)
+async def basic_health_check():
+    """
+    Basic health check endpoint for Kubernetes liveness probe
+
+    This is a lightweight check that only verifies the service is running.
+    Does NOT check database connectivity to avoid probe failures during DB maintenance.
+    """
     return {
         "status": "healthy",
-        "service": "inventory-service",
+        "service": "user-auth-service",
         "version": "1.0.0",
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "checks": {
+            "api": "ok",
+            "service": "running",
+            "jwt": "ok" if os.getenv('JWT_SECRET') else "using_default"
+        }
     }
 
 
@@ -46,12 +57,13 @@ async def readiness_check():
 
         return {
             "status": "ready",
-            "service": "inventory-service",
+            "service": "user-auth-service",
             "version": "1.0.0",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "checks": {
                 "api": "ok",
                 "database": "ok",
+                "jwt": "ok" if os.getenv('JWT_SECRET') else "using_default",
                 "service": "ready"
             }
         }
@@ -67,7 +79,7 @@ async def readiness_check():
 
 
 @router.get("/health/db", status_code=status.HTTP_200_OK)
-async def database_health_check(asset_dao: AssetDAO = Depends(lambda: AssetDAO(None))):
+async def database_health_check(user_dao: UserDAO = Depends(lambda: UserDAO(None))):
     """
     Database connectivity health check
 
@@ -85,7 +97,7 @@ async def database_health_check(asset_dao: AssetDAO = Depends(lambda: AssetDAO(N
 
         return {
             "status": "healthy",
-            "service": "inventory-service-database",
+            "service": "user-auth-service-database",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "database": db_status
         }
@@ -129,30 +141,31 @@ async def detailed_database_check() -> dict:
     try:
         # Test DynamoDB connection
         async with dynamodb_manager.get_connection() as db_connection:
-            asset_dao = AssetDAO(db_connection)
+            user_dao = UserDAO(db_connection)
 
-            # Test basic query operation
-            assets = await asset_dao.get_all_assets(active_only=True)
-            asset_count = len(assets)
-
-            # Test individual asset lookup (if assets exist)
-            sample_asset = None
-            if assets:
-                sample_asset = await asset_dao.get_asset_by_id(assets[0].asset_id)
+            # Test basic table accessibility (lightweight)
+            try:
+                # Simple table scan to check connectivity (limit 1 for performance)
+                response = user_dao.db.users_table.scan(Limit=1)
+                user_count = response.get('Count', 0)
+                user_operation = "ok"
+            except Exception as e:
+                logger.warning(f"User table scan test failed: {e}")
+                user_count = 0
+                user_operation = "failed"
 
             return {
                 "status": "healthy",
                 "connection": "ok",
                 "operations": {
-                    "list_assets": "ok",
-                    "get_asset": "ok" if sample_asset else "no_data"
+                    "user_query": user_operation
                 },
                 "statistics": {
-                    "total_assets": asset_count,
-                    "sample_asset_id": assets[0].asset_id if assets else None
+                    "sample_users_found": user_count,
+                    "table_accessible": "users_table"
                 },
                 "tables": {
-                    "inventory_table": "accessible"
+                    "users_table": "accessible"
                 },
                 "last_check": datetime.now(timezone.utc).isoformat()
             }

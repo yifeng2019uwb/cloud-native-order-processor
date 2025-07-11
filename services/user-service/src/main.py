@@ -121,6 +121,13 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️ Logout routes not available: {e}")
 
+try:
+    from controllers.health import router as health_router
+    app.include_router(health_router, tags=["health"])
+    logger.info("✅ Health routes loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Health routes not available: {e}")
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -133,6 +140,8 @@ async def root():
         "endpoints": {
             "docs": "/docs",
             "health": "/health",
+            "health_ready": "/health/ready",
+            "health_db": "/health/db",
             "auth_health": "/auth/register/health",
             "register": "/auth/register",
             "login": "/auth/login",
@@ -147,29 +156,7 @@ async def root():
     }
 
 
-# Main health check (API layer only - NO database calls)
-@app.get("/health")
-async def main_health_check():
-    """Main application health check - API layer only, no database access"""
-    try:
-        health_status = {
-            "status": "healthy",
-            "service": "user-auth-service",
-            "version": "1.0.0",
-            "timestamp": datetime.utcnow().isoformat(),
-            "environment": os.getenv("ENVIRONMENT", "development"),
-            "checks": {
-                "api": "ok",
-                "jwt": "ok" if os.getenv('JWT_SECRET') else "using_default"
-            }
-        }
 
-        # NO database connectivity check here - that should be in individual route health checks
-        return health_status
-
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=503, detail="Service unhealthy")
 
 
 # Enhanced startup event
@@ -197,7 +184,9 @@ async def startup_event():
         logger.warning(f"⚠️ Some API routes not available: {e}")
 
     logger.info("🎯 Available endpoints:")
-    logger.info("  GET  /health - Main health check")
+    logger.info("  GET  /health - Basic health check (liveness probe)")
+    logger.info("  GET  /health/ready - Readiness probe")
+    logger.info("  GET  /health/db - Database health check")
     logger.info("  POST /auth/register - User registration")
     logger.info("  POST /auth/login - User login")
     logger.info("  GET  /auth/me - User profile")

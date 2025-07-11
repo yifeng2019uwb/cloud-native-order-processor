@@ -91,13 +91,13 @@ except ImportError as e:
         )
 
 # Import and include API routers
-try:
-    from controllers.assets import router as assets_router
-    app.include_router(assets_router, tags=["inventory"])
-    logger.info("✅ Assets routes loaded successfully")
-except ImportError as e:
-    logger.error(f"❌ Failed to import assets routes: {e}")
-    logger.info("Continuing without assets endpoint...")
+# try:
+#     from controllers.assets import router as assets_router
+#     app.include_router(assets_router, tags=["inventory"])
+#     logger.info("✅ Assets routes loaded successfully")
+# except ImportError as e:
+#     logger.error(f"❌ Failed to import assets routes: {e}")
+#     logger.info("Continuing without assets endpoint...")
 
 try:
     from controllers.health import router as health_router
@@ -198,17 +198,17 @@ async def startup_event():
     except ImportError as e:
         logger.warning(f"⚠️ Some API routes not available: {e}")
 
-    # Initialize inventory data
-    try:
-        from data.init_inventory import startup_inventory_initialization
-        logger.info("🎯 Initializing inventory data...")
-        init_result = await startup_inventory_initialization()
-        logger.info(f"📦 Data initialization: {init_result['status']}")
-    except ImportError as e:
-        logger.warning(f"⚠️ Could not import data initialization: {e}")
-    except Exception as e:
-        logger.error(f"❌ Data initialization failed: {e}")
-        # Don't fail startup if data init fails - service can still run
+    # Initialize inventory data - temporarily disabled
+    # try:
+    #     from data.init_inventory import startup_inventory_initialization
+    #     logger.info("🎯 Initializing inventory data...")
+    #     init_result = await startup_inventory_initialization()
+    #     logger.info(f"📦 Data initialization: {init_result['status']}")
+    # except ImportError as e:
+    #     logger.warning(f"⚠️ Could not import data initialization: {e}")
+    # except Exception as e:
+    #     logger.error(f"❌ Data initialization failed: {e}")
+    #     # Don't fail startup if data init fails - service can still run
 
     logger.info("🎯 Available endpoints:")
     logger.info("  GET  / - Service information")
