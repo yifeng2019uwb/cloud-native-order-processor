@@ -1,6 +1,7 @@
 import pytest
 from datetime import datetime, timedelta
 from src.entities.asset import AssetCreate, Asset, AssetUpdate, AssetResponse, AssetListResponse
+from pydantic import ValidationError
 
 
 def test_asset_create_valid():
@@ -191,3 +192,127 @@ def test_asset_update_rounding():
     update = AssetUpdate(amount=1.123456789, price_usd=123.456)
     assert update.amount == round(1.123456789, 8)
     assert update.price_usd == round(123.456, 2)
+
+
+# Add only these essential tests to cover missing lines (replace all the previous ones)
+
+def test_asset_create_asset_id_whitespace():
+    """Test AssetCreate with whitespace-only asset_id"""
+    with pytest.raises(ValidationError, match="Asset ID cannot be empty"):
+        AssetCreate(
+            asset_id="   ",
+            name="Bitcoin",
+            description="Digital currency",
+            category="major",
+            amount=10,
+            price_usd=1000
+        )
+
+def test_asset_create_name_whitespace():
+    """Test AssetCreate with whitespace-only name"""
+    with pytest.raises(ValidationError, match="Asset name cannot be empty"):
+        AssetCreate(
+            asset_id="BTC",
+            name="   ",
+            description="Digital currency",
+            category="major",
+            amount=10,
+            price_usd=1000
+        )
+
+def test_asset_create_name_invalid_chars():
+    """Test AssetCreate with invalid characters in name"""
+    with pytest.raises(ValidationError, match="Asset name contains invalid characters"):
+        AssetCreate(
+            asset_id="BTC",
+            name="Bitcoin@#$",
+            description="Digital currency",
+            category="major",
+            amount=10,
+            price_usd=1000
+        )
+
+def test_asset_create_description_long():
+    """Test AssetCreate with description exceeding max length"""
+    with pytest.raises(ValidationError, match="String should have at most 1000 characters"):
+        AssetCreate(
+            asset_id="BTC",
+            name="Bitcoin",
+            description="a" * 1001,
+            category="major",
+            amount=10,
+            price_usd=1000
+        )
+
+def test_asset_create_description_empty_strip():
+    """Test AssetCreate description becomes empty after stripping"""
+    asset = AssetCreate(
+        asset_id="BTC",
+        name="Bitcoin",
+        description="   ",
+        category="major",
+        amount=10,
+        price_usd=1000
+    )
+    assert asset.description == ""
+
+def test_asset_update_description_strip():
+    """Test AssetUpdate description strips whitespace"""
+    update = AssetUpdate(description="  test  ")
+    assert update.description == "test"
+
+def test_asset_update_description_empty_strip():
+    """Test AssetUpdate description becomes empty after stripping"""
+    update = AssetUpdate(description="   ")
+    assert update.description == ""
+
+def test_asset_update_amount_rounding():
+    """Test AssetUpdate amount rounding to 8 decimals"""
+    update = AssetUpdate(amount=1.123456789)
+    assert update.amount == 1.12345679
+
+def test_asset_update_price_rounding():
+    """Test AssetUpdate price rounding to 2 decimals"""
+    update = AssetUpdate(price_usd=123.999)
+    assert update.price_usd == 124.00
+
+def test_asset_update_category_none():
+    """Test AssetUpdate category can be None"""
+    update = AssetUpdate(category=None)
+    assert update.category is None
+
+def test_asset_create_name_title_case():
+    """Test AssetCreate name converts to title case"""
+    asset = AssetCreate(
+        asset_id="BTC",
+        name="bitcoin",
+        description="Digital currency",
+        category="major",
+        amount=10,
+        price_usd=1000
+    )
+    assert asset.name == "Bitcoin"
+
+def test_asset_create_asset_id_lowercase():
+    """Test AssetCreate asset_id converts to uppercase"""
+    asset = AssetCreate(
+        asset_id="btc",
+        name="Bitcoin",
+        description="Digital currency",
+        category="major",
+        amount=10,
+        price_usd=1000
+    )
+    assert asset.asset_id == "BTC"
+
+def test_asset_create_asset_id_regex_fail():
+    """Test AssetCreate asset_id regex validation failure - covers line 68"""
+    with pytest.raises(ValidationError, match="Asset ID must be 3-6 uppercase letters/numbers only"):
+        AssetCreate(
+            asset_id="AB@",  # Contains @ symbol - triggers regex validation failure on line 68
+            name="Test Asset",
+            description="Test description",
+            category="major",
+            amount=10.0,
+            price_usd=100.0
+        )

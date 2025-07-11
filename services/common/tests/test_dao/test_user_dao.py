@@ -441,3 +441,226 @@ class TestUserDAO:
 
         # Should return False
         assert result is False
+
+
+    @pytest.mark.asyncio
+    async def test_create_user_database_exception(self, user_dao, sample_user_create, mock_db_connection):
+        """Test create user with database exception during put_item"""
+        # Mock that user doesn't exist
+        user_dao.get_user_by_username = AsyncMock(return_value=None)
+        user_dao.get_user_by_email = AsyncMock(return_value=None)
+
+        # Mock database exception during put_item (lines 105-107)
+        mock_db_connection.users_table.put_item.side_effect = Exception("Database connection failed")
+
+        # Should raise exception and be caught/logged
+        with pytest.raises(Exception) as exc_info:
+            await user_dao.create_user(sample_user_create)
+
+        assert "Database connection failed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_get_user_by_email_database_exception(self, user_dao, mock_db_connection):
+        """Test get user by email with database exception during query"""
+        # Mock database exception during query (lines 134-136)
+        mock_db_connection.users_table.query.side_effect = Exception("Query failed")
+
+        # Should raise exception and be caught/logged
+        with pytest.raises(Exception) as exc_info:
+            await user_dao.get_user_by_email("test@example.com")
+
+        assert "Query failed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_authenticate_user_get_user_by_username_exception(self, user_dao):
+        """Test authenticate user when get_user_by_username raises exception"""
+        # Mock get_user_by_username to raise exception (line 161)
+        user_dao.get_user_by_username = AsyncMock(side_effect=Exception("User lookup failed"))
+
+        # Should raise exception and be caught/logged
+        with pytest.raises(Exception) as exc_info:
+            await user_dao.authenticate_user("test_user", "password")
+
+        assert "User lookup failed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_authenticate_user_get_user_by_email_exception(self, user_dao):
+        """Test authenticate user when get_user_by_email raises exception"""
+        # Mock get_user_by_email to raise exception (lines 169-171)
+        user_dao.get_user_by_email = AsyncMock(side_effect=Exception("Email lookup failed"))
+
+        # Should raise exception and be caught/logged
+        with pytest.raises(Exception) as exc_info:
+            await user_dao.authenticate_user("test@example.com", "password")
+
+        assert "Email lookup failed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_authenticate_user_database_get_item_exception(self, user_dao, mock_db_connection):
+        """Test authenticate user when database get_item raises exception"""
+        # Mock user lookup success
+        mock_user = User(
+            username='john_doe123',
+            email='test@example.com',
+            first_name='Test',
+            last_name='User',
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        user_dao.get_user_by_username = AsyncMock(return_value=mock_user)
+
+        # Mock database exception during get_item for password hash retrieval (line 222)
+        mock_db_connection.users_table.get_item.side_effect = Exception("Failed to get password hash")
+
+        # Should raise exception and be caught/logged
+        with pytest.raises(Exception) as exc_info:
+            await user_dao.authenticate_user("john_doe123", "password")
+
+        assert "Failed to get password hash" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_update_user_database_exception(self, user_dao, mock_db_connection):
+        """Test update user with database exception during update_item"""
+        # Mock that email is not taken by another user
+        user_dao.get_user_by_email = AsyncMock(return_value=None)
+
+        # Mock database exception during update_item (lines 252-254)
+        mock_db_connection.users_table.update_item.side_effect = Exception("Update failed")
+
+        # Should raise exception and be caught/logged
+        with pytest.raises(Exception) as exc_info:
+            await user_dao.update_user('john_doe123', email='new@example.com')
+
+        assert "Update failed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_authenticate_user_password_hash_retrieval_returns_none(self, user_dao, mock_db_connection):
+        """Test authenticate user when password hash retrieval returns no item"""
+        # Mock user lookup success
+        mock_user = User(
+            username='john_doe123',
+            email='test@example.com',
+            first_name='Test',
+            last_name='User',
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        user_dao.get_user_by_username = AsyncMock(return_value=mock_user)
+
+        # Mock database returning no item (user record missing during auth)
+        mock_db_connection.users_table.get_item.return_value = {}
+
+        # Should return None (authentication failed)
+        result = await user_dao.authenticate_user("john_doe123", "password")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_user_by_username_with_missing_name_fields(self, user_dao, mock_db_connection):
+        """Test getting user with missing first_name/last_name fields (backward compatibility)"""
+        # Mock database response with missing name fields
+        mock_item = {
+            'username': 'old_user',
+            'email': 'old@example.com',
+            'phone': '+1234567890',
+            'created_at': '2023-01-01T00:00:00',
+            'updated_at': '2023-01-01T00:00:00'
+            # Missing first_name and last_name fields
+        }
+        mock_db_connection.users_table.get_item.return_value = {'Item': mock_item}
+
+        # Get user
+        result = await user_dao.get_user_by_username('old_user')
+
+        # Verify result with defaults
+        assert isinstance(result, User)
+        assert result.username == 'old_user'
+        assert result.first_name == ''  # Default for missing first_name
+        assert result.last_name == ''   # Default for missing last_name
+
+    @pytest.mark.asyncio
+    async def test_get_user_by_email_with_missing_name_fields(self, user_dao, mock_db_connection):
+        """Test getting user by email with missing first_name/last_name fields"""
+        # Mock database response for GSI query with missing name fields
+        mock_items = [{
+            'username': 'old_user',
+            'email': 'old@example.com',
+            'phone': '+1234567890',
+            'created_at': '2023-01-01T00:00:00',
+            'updated_at': '2023-01-01T00:00:00'
+            # Missing first_name and last_name fields
+        }]
+        mock_db_connection.users_table.query.return_value = {'Items': mock_items}
+
+        # Get user
+        result = await user_dao.get_user_by_email('old@example.com')
+
+        # Verify result with defaults
+        assert isinstance(result, User)
+        assert result.username == 'old_user'
+        assert result.first_name == ''  # Default for missing first_name
+        assert result.last_name == ''   # Default for missing last_name
+
+    @pytest.mark.asyncio
+    async def test_update_user_with_same_email_for_same_user(self, user_dao, mock_db_connection):
+        """Test updating user with the same email they already have"""
+        # Mock that email belongs to the same user (should be allowed)
+        existing_user = User(
+            username='john_doe123',
+            email='current@example.com',
+            first_name='John',
+            last_name='Doe',
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        user_dao.get_user_by_email = AsyncMock(return_value=existing_user)
+
+        # Mock successful database update
+        updated_item = {
+            'username': 'john_doe123',
+            'email': 'current@example.com',  # Same email
+            'first_name': 'John',
+            'last_name': 'Doe',
+            'phone': '+9876543210',  # Updated phone
+            'created_at': '2023-01-01T00:00:00',
+            'updated_at': '2023-01-02T00:00:00'
+        }
+        mock_db_connection.users_table.update_item.return_value = {'Attributes': updated_item}
+
+        # Update user with same email should work
+        result = await user_dao.update_user(
+            'john_doe123',
+            email='current@example.com',  # Same email
+            phone='+9876543210'
+        )
+
+        # Should succeed
+        assert isinstance(result, User)
+        assert result.email == 'current@example.com'
+        assert result.phone == '+9876543210'
+
+    @pytest.mark.asyncio
+    async def test_delete_user_database_exception(self, user_dao, mock_db_connection):
+        """Test delete user with database exception"""
+        # Mock database exception during delete
+        mock_db_connection.users_table.delete_item.side_effect = Exception("Delete failed")
+
+        # Should raise exception
+        with pytest.raises(Exception) as exc_info:
+            await user_dao.delete_user('john_doe123')
+
+        assert "Delete failed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_update_user_returns_none_from_database(self, user_dao, mock_db_connection):
+        """Test update user when database update returns None"""
+        # Mock that email is not taken
+        user_dao.get_user_by_email = AsyncMock(return_value=None)
+
+        # Mock database returning None (update failed)
+        mock_db_connection.users_table.update_item.return_value = {}
+
+        # Update user
+        result = await user_dao.update_user('nonexistent_user', email='new@example.com')
+
+        # Should return None
+        assert result is None
