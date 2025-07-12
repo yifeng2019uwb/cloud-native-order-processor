@@ -20,11 +20,11 @@ services:
     stdin_open: true
     tty: true
 
-  user-service:
+  user_service:
     build:
       context: ../
       dockerfile: docker/user_service/Dockerfile
-    container_name: order-processor-user-service
+    container_name: order-processor-user_service
     ports:
       - "8000:8000"
     environment:
@@ -35,7 +35,7 @@ services:
       - JWT_SECRET=your-development-jwt-secret-key-here
       - JWT_ALGORITHM=HS256
       - JWT_EXPIRATION_HOURS=24
-      - SERVICE_NAME=user-service
+      - SERVICE_NAME=user_service
       - SERVICE_PORT=8000
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
@@ -52,11 +52,11 @@ services:
     networks:
       - order-processor-network
 
-  inventory-service:
+  inventory_service:
     build:
       context: ../
       dockerfile: docker/inventory_service/Dockerfile
-    container_name: order-processor-inventory-service
+    container_name: order-processor-inventory_service
     ports:
       - "8001:8001"
     environment:
@@ -64,7 +64,7 @@ services:
       - INVENTORY_TABLE=order-processor-dev-inventory
       - USERS_TABLE=order-processor-dev-users
       - AWS_REGION=us-west-2
-      - SERVICE_NAME=inventory-service
+      - SERVICE_NAME=inventory_service
       - SERVICE_PORT=8001
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO

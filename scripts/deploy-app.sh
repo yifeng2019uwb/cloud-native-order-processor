@@ -261,7 +261,7 @@ build_lambda_package() {
 
     local build_dir="$PROJECT_ROOT/.lambda-build"
     local package_dir="$build_dir/package"
-    local source_dir="$PROJECT_ROOT/services/user-service"
+    local source_dir="$PROJECT_ROOT/services/user_service"
 
     # Clean and create build directory
     rm -rf "$build_dir"

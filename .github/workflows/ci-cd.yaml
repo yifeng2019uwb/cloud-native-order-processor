@@ -91,7 +91,7 @@ jobs:
 
     - name: Build and Test User Service
       working-directory: ./services
-      run: ./build.sh --coverage 0 user-service
+      run: ./build.sh --coverage 0 user_service
 
   # Job 2: Deploy - ONLY runs manually for cost control
   deploy:

@@ -80,7 +80,7 @@ services:
       database_required: true
       messaging_required: true
 
-    - name: "inventory-service"
+    - name: "inventory_service"
       port: 8001
       health_endpoint: "/health"
       database_required: true

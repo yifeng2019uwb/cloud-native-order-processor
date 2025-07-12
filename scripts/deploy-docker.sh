@@ -34,12 +34,12 @@ sleep 10
 # Check if services are healthy
 echo "🏥 Checking service health..."
 
-# Check user-service health
+# Check user_service health
 if curl -f http://localhost:8000/health > /dev/null 2>&1; then
     echo "✅ User service is healthy"
 else
     echo "❌ User service health check failed"
-    docker-compose logs user-service
+    docker-compose logs user_service
     exit 1
 fi
 

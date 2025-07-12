@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Service Management Script for Cloud Native Order Processor
-# Usage: ./manage-services.sh [start|stop|restart|status] [all|frontend|user-service|inventory-service]
+# Usage: ./manage-services.sh [start|stop|restart|status] [all|frontend|user_service|inventory_service]
 
 set -e
 
@@ -23,13 +23,13 @@ INVENTORY_SERVICE_PORT=8001
 # Log files
 LOG_DIR="logs"
 FRONTEND_LOG="$LOG_DIR/frontend.log"
-USER_SERVICE_LOG="$LOG_DIR/user-service.log"
-INVENTORY_SERVICE_LOG="$LOG_DIR/inventory-service.log"
+USER_SERVICE_LOG="$LOG_DIR/user_service.log"
+INVENTORY_SERVICE_LOG="$LOG_DIR/inventory_service.log"
 
 # PID files
 FRONTEND_PID="$LOG_DIR/frontend.pid"
-USER_SERVICE_PID="$LOG_DIR/user-service.pid"
-INVENTORY_SERVICE_PID="$LOG_DIR/inventory-service.pid"
+USER_SERVICE_PID="$LOG_DIR/user_service.pid"
+INVENTORY_SERVICE_PID="$LOG_DIR/inventory_service.pid"
 
 # Create logs directory if it doesn't exist
 mkdir -p "$LOG_DIR"
@@ -181,8 +181,8 @@ start_inventory_service() {
     }
 
     # Activate virtual environment
-    if [ -d ".venv-inventory-service" ]; then
-        source .venv-inventory-service/bin/activate
+    if [ -d ".venv-inventory_service" ]; then
+        source .venv-inventory_service/bin/activate
     elif [ -d ".venv" ]; then
         source .venv/bin/activate
     else
@@ -293,11 +293,11 @@ restart_service() {
             stop_frontend
             start_frontend
             ;;
-        "user-service")
+        "user_service")
             stop_user_service
             start_user_service
             ;;
-        "inventory-service")
+        "inventory_service")
             stop_inventory_service
             start_inventory_service
             ;;
@@ -352,14 +352,14 @@ show_logs() {
                 print_error "Frontend log file not found"
             fi
             ;;
-        "user-service")
+        "user_service")
             if [ -f "$USER_SERVICE_LOG" ]; then
                 tail -f "$USER_SERVICE_LOG"
             else
                 print_error "User service log file not found"
             fi
             ;;
-        "inventory-service")
+        "inventory_service")
             if [ -f "$INVENTORY_SERVICE_LOG" ]; then
                 tail -f "$INVENTORY_SERVICE_LOG"
             else
@@ -388,17 +388,17 @@ show_help() {
     echo "  help      Show this help message"
     echo ""
     echo "Services:"
-    echo "  all              All services (frontend, user-service, inventory-service)"
+    echo "  all              All services (frontend, user_service, inventory_service)"
     echo "  frontend         React frontend application"
-    echo "  user-service     FastAPI user authentication service"
-    echo "  inventory-service FastAPI inventory management service"
+    echo "  user_service     FastAPI user authentication service"
+    echo "  inventory_service FastAPI inventory management service"
     echo ""
     echo "Examples:"
     echo "  $0 start all                    # Start all services"
     echo "  $0 stop frontend                # Stop frontend only"
-    echo "  $0 restart user-service         # Restart user service"
+    echo "  $0 restart user_service         # Restart user service"
     echo "  $0 status                       # Show status of all services"
-    echo "  $0 logs inventory-service       # Show inventory service logs"
+    echo "  $0 logs inventory_service       # Show inventory service logs"
     echo ""
     echo "Log files are stored in: $LOG_DIR"
 }
@@ -413,10 +413,10 @@ case "${1:-help}" in
             "frontend")
                 start_frontend
                 ;;
-            "user-service")
+            "user_service")
                 start_user_service
                 ;;
-            "inventory-service")
+            "inventory_service")
                 start_inventory_service
                 ;;
             *)
@@ -434,10 +434,10 @@ case "${1:-help}" in
             "frontend")
                 stop_frontend
                 ;;
-            "user-service")
+            "user_service")
                 stop_user_service
                 ;;
-            "inventory-service")
+            "inventory_service")
                 stop_inventory_service
                 ;;
             *)

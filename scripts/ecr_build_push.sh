@@ -114,7 +114,7 @@ build_and_push_service "frontend" "docker/frontend/Dockerfile" "docker/frontend"
 # Uncomment and modify these as you implement other services
 
 # print_status "=== Building Inventory Service ==="
-# build_and_push_service "inventory-service" "docker/inventory-service/Dockerfile" "."
+# build_and_push_service "inventory_service" "docker/inventory_service/Dockerfile" "."
 
 # print_status "=== Building Payment Service ==="
 # build_and_push_service "payment-service" "docker/payment-service/Dockerfile" "."
