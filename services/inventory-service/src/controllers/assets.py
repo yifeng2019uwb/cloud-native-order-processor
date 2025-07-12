@@ -22,6 +22,13 @@ from api_models.inventory.asset_list import (
 from common.dao.asset_dao import AssetDAO
 from common.database.dynamodb_connection import get_dynamodb
 
+# Import metrics
+try:
+    from metrics import record_asset_retrieval, record_asset_detail_view, update_asset_counts
+    METRICS_AVAILABLE = True
+except ImportError:
+    METRICS_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -93,6 +100,11 @@ async def list_assets(
 
         logger.info(f"Retrieved {len(assets)} assets (total: {total_count})")
 
+        # Record metrics if available
+        if METRICS_AVAILABLE:
+            record_asset_retrieval(category="all", active_only=active_only)
+            update_asset_counts(total=total_count, active=len(all_assets))
+
         # Build response using helper function
         return build_asset_list_response(
             assets=assets,
@@ -147,6 +159,10 @@ async def get_asset_by_id(
             )
 
         logger.info(f"Asset found: {asset.name} ({asset.asset_id})")
+
+        # Record metrics if available
+        if METRICS_AVAILABLE:
+            record_asset_detail_view(asset_id=asset_id)
 
         # Convert to detailed response model
         return asset_to_detail_response(asset)

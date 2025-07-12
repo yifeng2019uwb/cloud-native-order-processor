@@ -63,6 +63,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add metrics middleware
+try:
+    from metrics import metrics_middleware
+    app.middleware("http")(metrics_middleware)
+    logger.info("✅ Metrics middleware loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Metrics middleware not available: {e}")
+
 # Import and register secure exception handlers
 try:
     from exceptions.secure_exceptions import (
@@ -105,6 +113,23 @@ try:
     logger.info("✅ Health routes loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Health routes not available: {e}")
+
+# Add metrics endpoint
+try:
+    from metrics import get_metrics
+    from fastapi.responses import Response
+
+    @app.get("/metrics")
+    async def metrics():
+        """Prometheus metrics endpoint"""
+        return Response(
+            content=get_metrics(),
+            media_type="text/plain"
+        )
+
+    logger.info("✅ Metrics endpoint loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Metrics endpoint not available: {e}")
 
 # Root endpoint
 @app.get("/")

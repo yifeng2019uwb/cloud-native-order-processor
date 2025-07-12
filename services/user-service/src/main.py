@@ -1,23 +1,26 @@
 """
 FastAPI Application Entry Point - User Authentication Service
-Path: cloud-native-order-processor/services/user-service/src/main.py
+Path: services/user-service/src/main.py
 
-This is the API layer entry point. It should only handle:
+This is the API layer entry point. It handles:
 - API routing and middleware
 - Exception handling
 - Service configuration
 - Environment variables loaded from services/.env
-- NOT database layer models or operations
+- CloudWatch logging for Lambda deployment
 """
 import sys
 import os
-from fastapi import FastAPI, HTTPException
+import logging
+import json
+import time
+import uuid
+from datetime import datetime
+from pathlib import Path
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-import logging
-from datetime import datetime
-from pathlib import Path
 
 # Load environment variables from services/.env
 try:
@@ -29,8 +32,7 @@ try:
 
     if env_file.exists():
         load_dotenv(env_file)
-        logger = logging.getLogger(__name__)
-        logger.info(f"✅ Environment loaded from: {env_file}")
+        print(f"✅ Environment loaded from: {env_file}")
     else:
         print(f"⚠️ Environment file not found at: {env_file}")
         print("Continuing with system environment variables...")
@@ -38,17 +40,20 @@ try:
 except ImportError:
     print("⚠️ python-dotenv not installed. Using system environment variables only.")
 
-# Configure logging
+# Configure logging for CloudWatch
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Detect if running in Lambda
+IS_LAMBDA = "AWS_LAMBDA_FUNCTION_NAME" in os.environ
 
 # Create FastAPI app
 app = FastAPI(
     title="User Authentication Service",
-    description="A cloud-native user authentication service with JWT",
+    description="A cloud-native user authentication service",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -63,18 +68,91 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def logging_middleware(request: Request, call_next):
+    """Universal logging middleware that works in Lambda and K8s"""
+
+    # Generate request ID for tracing
+    request_id = str(uuid.uuid4())
+    start_time = time.time()
+
+    # Log request start
+    log_entry = {
+        "event": "request_start",
+        "request_id": request_id,
+        "method": request.method,
+        "path": request.url.path,
+        "query_params": str(request.query_params) if request.query_params else None,
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "user-service",
+        "environment": "lambda" if IS_LAMBDA else "k8s"
+    }
+
+    # In Lambda, use print() for CloudWatch; in K8s, use logger
+    if IS_LAMBDA:
+        print(json.dumps(log_entry))  # CloudWatch captures print() statements
+    else:
+        logger.info(json.dumps(log_entry))
+
+    try:
+        # Process the request
+        response = await call_next(request)
+
+        # Calculate duration
+        duration = time.time() - start_time
+
+        # Log successful completion
+        completion_entry = {
+            "event": "request_complete",
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_seconds": round(duration, 3),
+            "timestamp": datetime.utcnow().isoformat(),
+            "service": "user-service",
+            "environment": "lambda" if IS_LAMBDA else "k8s"
+        }
+
+        if IS_LAMBDA:
+            print(json.dumps(completion_entry))
+        else:
+            logger.info(json.dumps(completion_entry))
+
+        return response
+
+    except Exception as e:
+        # Log errors
+        error_entry = {
+            "event": "request_error",
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "error": str(e),
+            "duration_seconds": round(time.time() - start_time, 3),
+            "timestamp": datetime.utcnow().isoformat(),
+            "service": "user-service",
+            "environment": "lambda" if IS_LAMBDA else "k8s"
+        }
+
+        if IS_LAMBDA:
+            print(json.dumps(error_entry))
+        else:
+            logger.error(json.dumps(error_entry))
+
+        raise  # Re-raise the exception
+
 # Import and register secure exception handlers
 try:
-    from exceptions.internal_exceptions import InternalAuthError
     from exceptions.secure_exceptions import (
-        secure_internal_exception_handler,
         secure_validation_exception_handler,
-        secure_general_exception_handler
+        secure_general_exception_handler,
+        secure_http_exception_handler
     )
 
     # Register secure exception handlers
-    app.add_exception_handler(InternalAuthError, secure_internal_exception_handler)
     app.add_exception_handler(RequestValidationError, secure_validation_exception_handler)
+    app.add_exception_handler(HTTPException, secure_http_exception_handler)
     app.add_exception_handler(Exception, secure_general_exception_handler)
 
     logger.info("✅ Secure exception handlers registered successfully")
@@ -91,32 +169,31 @@ except ImportError as e:
             content={"detail": "Internal server error"}
         )
 
-# FIXED: Import and include API routers with correct paths
-try:
-    from controllers.auth.registration import router as register_router
-    app.include_router(register_router, prefix="/auth", tags=["authentication"])
-    logger.info("✅ Registration routes loaded successfully")
-except ImportError as e:
-    logger.error(f"❌ Failed to import registration routes: {e}")
-    logger.info("Continuing without registration endpoint...")
-
+# Import and include API routers
 try:
     from controllers.auth.login import router as login_router
-    app.include_router(login_router, prefix="/auth", tags=["authentication"])
+    app.include_router(login_router, tags=["authentication"])
     logger.info("✅ Login routes loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Login routes not available: {e}")
 
 try:
+    from controllers.auth.register import router as register_router
+    app.include_router(register_router, tags=["authentication"])
+    logger.info("✅ Registration routes loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Registration routes not available: {e}")
+
+try:
     from controllers.auth.profile import router as profile_router
-    app.include_router(profile_router, prefix="/auth", tags=["authentication"])
+    app.include_router(profile_router, tags=["authentication"])
     logger.info("✅ Profile routes loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Profile routes not available: {e}")
 
 try:
     from controllers.auth.logout import router as logout_router
-    app.include_router(logout_router, prefix="/auth", tags=["authentication"])
+    app.include_router(logout_router, tags=["authentication"])
     logger.info("✅ Logout routes loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Logout routes not available: {e}")
@@ -140,24 +217,37 @@ async def root():
         "endpoints": {
             "docs": "/docs",
             "health": "/health",
-            "health_ready": "/health/ready",
-            "health_db": "/health/db",
-            "auth_health": "/auth/register/health",
             "register": "/auth/register",
             "login": "/auth/login",
             "profile": "/auth/me",
             "logout": "/auth/logout"
         },
         "environment": {
-            "service": "user-authentication",
+            "service": "user-service",
             "environment": os.getenv("ENVIRONMENT", "development"),
-            "jwt_configured": bool(os.getenv('JWT_SECRET'))
+            "lambda": IS_LAMBDA
         }
     }
 
+# Add a simple endpoint to test logging
+@app.get("/test-logging")
+async def test_logging():
+    """Endpoint to test CloudWatch logging"""
+    logger.info("Test logging endpoint called")
 
+    if IS_LAMBDA:
+        print(json.dumps({
+            "event": "test_endpoint",
+            "message": "This is a test log from Lambda",
+            "timestamp": datetime.utcnow().isoformat(),
+            "service": "user-service"
+        }))
 
-
+    return {
+        "message": "Logging test completed",
+        "environment": "lambda" if IS_LAMBDA else "k8s",
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 # Enhanced startup event
 @app.on_event("startup")
@@ -165,24 +255,43 @@ async def startup_event():
     """Startup event handler - API service initialization"""
     logger.info("🚀 User Authentication Service starting up...")
     logger.info(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
-    logger.info(f"JWT Secret configured: {'Yes' if os.getenv('JWT_SECRET') else 'No (using default)'}")
+    logger.info(f"Lambda Environment: {IS_LAMBDA}")
 
-    # Log environment configuration (API service level only)
+    # Log environment configuration
     logger.info("📊 API Service Configuration:")
     logger.info(f"  Environment: {os.getenv('ENVIRONMENT', 'development')}")
     logger.info(f"  Services Root: {Path(__file__).parent.parent.parent}")
-    logger.info(f"  JWT Secret: {'Configured' if os.getenv('JWT_SECRET') else 'Using default'}")
+    logger.info(f"  JWT Secret configured: {'Yes' if os.getenv('JWT_SECRET') else 'No'}")
     logger.info(f"  Service: user-authentication")
-    logger.info("  Database: Accessed via DAO layer in common package")
+    logger.info(f"  Database: Accessed via DAO layer in common package")
 
-    # Test API router availability (not database)
+    # Check required environment variables
+    required_env_vars = {
+        "USERS_TABLE": os.getenv("USERS_TABLE"),
+        "ORDERS_TABLE": os.getenv("ORDERS_TABLE"),
+        "INVENTORY_TABLE": os.getenv("INVENTORY_TABLE"),
+        "JWT_SECRET": os.getenv("JWT_SECRET")
+    }
+
+    logger.info("🔧 Environment Variables:")
+    for var_name, var_value in required_env_vars.items():
+        if var_value:
+            logger.info(f"  {var_name}: ✅ Configured")
+        else:
+            logger.warning(f"  {var_name}: ❌ Missing")
+
+    # Test API router availability
     try:
-        # Just test if we can import the router - no functional testing
-        import controllers.auth.registration
+        import controllers.auth.login
+        import controllers.auth.register
+        import controllers.auth.profile
+        import controllers.auth.logout
+        import controllers.health
         logger.info("✅ API routes loaded successfully")
     except ImportError as e:
         logger.warning(f"⚠️ Some API routes not available: {e}")
 
+    # Log available endpoints
     logger.info("🎯 Available endpoints:")
     logger.info("  GET  /health - Basic health check (liveness probe)")
     logger.info("  GET  /health/ready - Readiness probe")
@@ -194,13 +303,13 @@ async def startup_event():
     logger.info("  POST /auth/logout - User logout")
     logger.info("  GET  /docs - API documentation")
 
+    logger.info("✅ User Authentication Service startup complete!")
 
 # Shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
     """Shutdown event handler"""
     logger.info("👋 User Authentication Service shutting down...")
-
 
 # For local development
 if __name__ == "__main__":
@@ -214,7 +323,7 @@ if __name__ == "__main__":
     logger.info("  - Auto-reload enabled")
     logger.info("  - CORS configured for development")
     logger.info("  - Detailed logging enabled")
-    logger.info("  - API layer only (database accessed via DAO)")
+    logger.info("  - CloudWatch logging middleware active")
 
     uvicorn.run(
         "main:app",
