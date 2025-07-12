@@ -14,8 +14,8 @@ NC='\033[0m' # No Color
 
 # Configuration
 FRONTEND_DIR="frontend"
-USER_SERVICE_DIR="services/user-service"
-INVENTORY_SERVICE_DIR="services/inventory-service"
+USER_SERVICE_DIR="services/user_service"
+INVENTORY_SERVICE_DIR="services/inventory_service"
 FRONTEND_PORT=3000
 USER_SERVICE_PORT=8000
 INVENTORY_SERVICE_PORT=8001

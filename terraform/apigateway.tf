@@ -105,7 +105,7 @@ resource "aws_api_gateway_deployment" "order_api" {
   }
 }
 
-# CloudWatch log group for API Gateway
+# CloudWatch log group for API Gateway (simplified)
 resource "aws_cloudwatch_log_group" "api_gateway" {
   count = local.enable_lambda ? 1 : 0
 
@@ -114,6 +114,8 @@ resource "aws_cloudwatch_log_group" "api_gateway" {
 
   tags = local.common_tags
 }
+
+
 
 # IAM role for API Gateway logging
 resource "aws_iam_role" "api_gateway_logging" {
@@ -172,7 +174,7 @@ resource "aws_api_gateway_stage" "order_api" {
   rest_api_id   = aws_api_gateway_rest_api.order_api[0].id
   stage_name    = var.environment
 
-  # Enable CloudWatch logging
+  # Enable CloudWatch access logging
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gateway[0].arn
     format = jsonencode({

@@ -100,12 +100,12 @@ build-order-service: ## Build order-service
 test-order-service: ## Test order-service
 	@$(MAKE) test SERVICE=order-service
 
-build-inventory-service: ## Build inventory-service
-	@$(MAKE) build SERVICE=inventory-service
+build-inventory_service: ## Build inventory_service
+	@$(MAKE) build SERVICE=inventory_service
 
-test-inventory-service: ## Test inventory-service (not implemented)
-	@echo "$(YELLOW)Tests not implemented for inventory-service$(NC)"
-	@$(MAKE) build SERVICE=inventory-service
+test-inventory_service: ## Test inventory_service (not implemented)
+	@echo "$(YELLOW)Tests not implemented for inventory_service$(NC)"
+	@$(MAKE) build SERVICE=inventory_service
 
 build-notification-service: ## Build notification-service
 	@$(MAKE) build SERVICE=notification-service
@@ -127,7 +127,7 @@ build-all: ## Build all services (build-only mode)
 	@$(MAKE) build-common
 	@$(MAKE) build-order-service
 	@echo "$(GREEN)All implemented services built successfully!$(NC)"
-	@echo "$(YELLOW)Note: inventory-service, notification-service, payment-service not implemented yet$(NC)"
+	@echo "$(YELLOW)Note: inventory_service, notification_service, payment_service not implemented yet$(NC)"
 
 test-all: ## Test all services (where tests work)
 	@echo "$(BLUE)Testing implemented services...$(NC)"
@@ -266,7 +266,7 @@ status: ## Show project status
 	@echo "$(YELLOW)⚠ Services with fixture issues:$(NC)"
 	@echo "  - common (5 test fixture errors)"
 	@echo "$(YELLOW)⚠ Services not implemented:$(NC)"
-	@echo "  - inventory-service"
-	@echo "  - notification-service"
-	@echo "  - payment-service"
+	@echo "  - inventory_service"
+	@echo "  - notification_service"
+	@echo "  - payment_service"
 	@echo "$(BLUE)Current build mode: Build-only (no tests)$(NC)"

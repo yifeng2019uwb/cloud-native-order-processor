@@ -1,0 +1,11 @@
+# Integration Test Requirements
+# Simple dependencies for enterprise-grade testing
+
+# HTTP requests
+requests>=2.25.0
+
+# YAML configuration
+PyYAML>=6.0
+
+# Optional: For better JSON handling
+# No additional dependencies needed for basic functionality

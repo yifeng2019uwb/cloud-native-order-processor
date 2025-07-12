@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Integration Test Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background-color: #f0f0f0; padding: 20px; border-radius: 5px; }
+        .summary { margin: 20px 0; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 3px; }
+        .pass { background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .fail { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        .stats { display: flex; gap: 20px; }
+        .stat { text-align: center; padding: 10px; background-color: #e9ecef; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Integration Test Report</h1>
+        <p>Generated: 2025-07-12 20:47:41 UTC</p>
+    </div>
+
+    <div class="summary">
+        <h2>Test Summary</h2>
+        <div class="stats">
+            <div class="stat">
+                <h3>11</h3>
+                <p>Total Tests</p>
+            </div>
+            <div class="stat">
+                <h3>0</h3>
+                <p>Passed</p>
+            </div>
+            <div class="stat">
+                <h3>11</h3>
+                <p>Failed</p>
+            </div>
+            <div class="stat">
+                <h3>0.0%</h3>
+                <p>Success Rate</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="results">
+        <h2>Test Results</h2>
+
+        <div class="test-result fail">
+            <h3>❌ API Gateway Health Check</h3>
+            <p><strong>Service:</strong> api-gateway</p>
+            <p><strong>Duration:</strong> 192.2ms</p>
+            <p><strong>Status Code:</strong> 502</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T20:47:40.137823</p>
+<p><strong>Error:</strong> Expected 200, got 502</p></div>
+        <div class="test-result fail">
+            <h3>❌ API Gateway Root Endpoint</h3>
+            <p><strong>Service:</strong> api-gateway</p>
+            <p><strong>Duration:</strong> 120.23ms</p>
+            <p><strong>Status Code:</strong> 502</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T20:47:40.137863</p>
+<p><strong>Error:</strong> Expected 200, got 502</p></div>
+        <div class="test-result fail">
+            <h3>❌ API Gateway Info Endpoint</h3>
+            <p><strong>Service:</strong> api-gateway</p>
+            <p><strong>Duration:</strong> 134.5ms</p>
+            <p><strong>Status Code:</strong> 502</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T20:47:40.137869</p>
+<p><strong>Error:</strong> Expected 200, got 502</p></div>
+        <div class="test-result fail">
+            <h3>❌ User Registration</h3>
+            <p><strong>Service:</strong> user-service</p>
+            <p><strong>Duration:</strong> 155.84ms</p>
+            <p><strong>Status Code:</strong> 502</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T20:47:40.415986</p>
+<p><strong>Error:</strong> Expected 201, got 502</p></div>
+        <div class="test-result fail">
+            <h3>❌ User Login</h3>
+            <p><strong>Service:</strong> user-service</p>
+            <p><strong>Duration:</strong> 119.09ms</p>
+            <p><strong>Status Code:</strong> 502</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T20:47:40.416002</p>
+<p><strong>Error:</strong> Expected 200, got 502</p></div>
+        <div class="test-result fail">
+            <h3>❌ User Profile</h3>
+            <p><strong>Service:</strong> user-service</p>
+            <p><strong>Duration:</strong> 0ms</p>
+            <p><strong>Status Code:</strong> None</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T20:47:40.416008</p>
+<p><strong>Error:</strong> No access token available for profile test</p></div>
+        <div class="test-result fail">
+            <h3>❌ Get All Assets</h3>
+            <p><strong>Service:</strong> inventory-service</p>
+            <p><strong>Duration:</strong> 153.89ms</p>
+            <p><strong>Status Code:</strong> 502</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T20:47:41.073201</p>
+<p><strong>Error:</strong> Expected 200, got 502</p></div>
+        <div class="test-result fail">
+            <h3>❌ Get Assets by Category (electronics)</h3>
+            <p><strong>Service:</strong> inventory-service</p>
+            <p><strong>Duration:</strong> 121.24ms</p>
+            <p><strong>Status Code:</strong> 502</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T20:47:41.073216</p>
+<p><strong>Error:</strong> Expected 200, got 502</p></div>
+        <div class="test-result fail">
+            <h3>❌ Get Asset by ID</h3>
+            <p><strong>Service:</strong> inventory-service</p>
+            <p><strong>Duration:</strong> 137.8ms</p>
+            <p><strong>Status Code:</strong> None</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T20:47:41.073221</p>
+<p><strong>Error:</strong> No assets available for testing</p></div>
+        <div class="test-result fail">
+            <h3>❌ Get All Categories</h3>
+            <p><strong>Service:</strong> inventory-service</p>
+            <p><strong>Duration:</strong> 122.87ms</p>
+            <p><strong>Status Code:</strong> 502</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T20:47:41.073226</p>
+<p><strong>Error:</strong> Expected 200, got 502</p></div>
+        <div class="test-result fail">
+            <h3>❌ Create Asset</h3>
+            <p><strong>Service:</strong> inventory-service</p>
+            <p><strong>Duration:</strong> 119.71ms</p>
+            <p><strong>Status Code:</strong> 502</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T20:47:41.073230</p>
+<p><strong>Error:</strong> Expected 201, got 502</p></div>
+    </div>
+</body>
+</html>

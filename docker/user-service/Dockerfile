@@ -10,24 +10,24 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (for better caching)
-COPY services/user-service/requirements.txt ./user-service/
+COPY services/user_service/requirements.txt ./user_service/
 COPY services/common/requirements.txt ./common/
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r ./user-service/requirements.txt
+RUN pip install --no-cache-dir -r ./user_service/requirements.txt
 RUN pip install --no-cache-dir -r ./common/requirements.txt
 
 # Copy the common src directory structure
 COPY services/common/src ./common
 
 # Copy user service source code
-COPY services/user-service/src ./user-service/src
+COPY services/user_service/src ./user_service/src
 
 # Set Python path to include the common directory for imports
-ENV PYTHONPATH="/app:/app/user-service/src"
+ENV PYTHONPATH="/app:/app/user_service/src"
 
 # Set working directory to user service
-WORKDIR /app/user-service/src
+WORKDIR /app/user_service/src
 
 # Expose port
 EXPOSE 8000

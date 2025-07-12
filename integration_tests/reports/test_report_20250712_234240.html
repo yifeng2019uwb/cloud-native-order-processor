@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Integration Test Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background-color: #f0f0f0; padding: 20px; border-radius: 5px; }
+        .summary { margin: 20px 0; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 3px; }
+        .pass { background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .fail { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        .stats { display: flex; gap: 20px; }
+        .stat { text-align: center; padding: 10px; background-color: #e9ecef; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Integration Test Report</h1>
+        <p>Generated: 2025-07-12 23:42:40 UTC</p>
+    </div>
+
+    <div class="summary">
+        <h2>Test Summary</h2>
+        <div class="stats">
+            <div class="stat">
+                <h3>11</h3>
+                <p>Total Tests</p>
+            </div>
+            <div class="stat">
+                <h3>5</h3>
+                <p>Passed</p>
+            </div>
+            <div class="stat">
+                <h3>6</h3>
+                <p>Failed</p>
+            </div>
+            <div class="stat">
+                <h3>45.45%</h3>
+                <p>Success Rate</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="results">
+        <h2>Test Results</h2>
+
+        <div class="test-result pass">
+            <h3>✅ API Gateway Health Check</h3>
+            <p><strong>Service:</strong> api-gateway</p>
+            <p><strong>Duration:</strong> 804.31ms</p>
+            <p><strong>Status Code:</strong> 200</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T23:42:40.259597</p>
+</div>
+        <div class="test-result pass">
+            <h3>✅ API Gateway Root Endpoint</h3>
+            <p><strong>Service:</strong> api-gateway</p>
+            <p><strong>Duration:</strong> 53.83ms</p>
+            <p><strong>Status Code:</strong> 200</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T23:42:40.259606</p>
+</div>
+        <div class="test-result fail">
+            <h3>❌ API Gateway Info Endpoint</h3>
+            <p><strong>Service:</strong> api-gateway</p>
+            <p><strong>Duration:</strong> 51.62ms</p>
+            <p><strong>Status Code:</strong> 404</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T23:42:40.259609</p>
+<p><strong>Error:</strong> Expected 200, got 404</p></div>
+        <div class="test-result fail">
+            <h3>❌ User Registration</h3>
+            <p><strong>Service:</strong> user-service</p>
+            <p><strong>Duration:</strong> 79.18ms</p>
+            <p><strong>Status Code:</strong> 200</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T23:42:40.372555</p>
+<p><strong>Error:</strong> Expected 201, got 200</p></div>
+        <div class="test-result pass">
+            <h3>✅ User Login</h3>
+            <p><strong>Service:</strong> user-service</p>
+            <p><strong>Duration:</strong> 32.49ms</p>
+            <p><strong>Status Code:</strong> 200</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T23:42:40.372565</p>
+</div>
+        <div class="test-result fail">
+            <h3>❌ User Profile</h3>
+            <p><strong>Service:</strong> user-service</p>
+            <p><strong>Duration:</strong> 0ms</p>
+            <p><strong>Status Code:</strong> None</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T23:42:40.372569</p>
+<p><strong>Error:</strong> No access token available for profile test</p></div>
+        <div class="test-result pass">
+            <h3>✅ Get All Assets</h3>
+            <p><strong>Service:</strong> inventory-service</p>
+            <p><strong>Duration:</strong> 58.04ms</p>
+            <p><strong>Status Code:</strong> 200</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T23:42:40.558159</p>
+</div>
+        <div class="test-result pass">
+            <h3>✅ Get Assets by Category (electronics)</h3>
+            <p><strong>Service:</strong> inventory-service</p>
+            <p><strong>Duration:</strong> 40.26ms</p>
+            <p><strong>Status Code:</strong> 200</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T23:42:40.558165</p>
+</div>
+        <div class="test-result fail">
+            <h3>❌ Get Asset by ID</h3>
+            <p><strong>Service:</strong> inventory-service</p>
+            <p><strong>Duration:</strong> 30.69ms</p>
+            <p><strong>Status Code:</strong> None</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T23:42:40.558167</p>
+<p><strong>Error:</strong> No assets available for testing</p></div>
+        <div class="test-result fail">
+            <h3>❌ Get All Categories</h3>
+            <p><strong>Service:</strong> inventory-service</p>
+            <p><strong>Duration:</strong> 26.81ms</p>
+            <p><strong>Status Code:</strong> 404</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T23:42:40.558169</p>
+<p><strong>Error:</strong> Expected 200, got 404</p></div>
+        <div class="test-result fail">
+            <h3>❌ Create Asset</h3>
+            <p><strong>Service:</strong> inventory-service</p>
+            <p><strong>Duration:</strong> 28.07ms</p>
+            <p><strong>Status Code:</strong> 405</p>
+            <p><strong>Timestamp:</strong> 2025-07-12T23:42:40.558171</p>
+<p><strong>Error:</strong> Expected 201, got 405</p></div>
+    </div>
+</body>
+</html>

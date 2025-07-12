@@ -1,0 +1,115 @@
+{
+  "test_run": {
+    "start_time": "2025-07-12T20:35:09.086543",
+    "end_time": "2025-07-12T20:35:09.727939",
+    "duration_seconds": 0.641396,
+    "total_tests": 11,
+    "passed_tests": 11,
+    "failed_tests": 0
+  },
+  "results": [
+    {
+      "test_name": "API Gateway Health Check",
+      "success": true,
+      "duration_ms": 168.5,
+      "status_code": 200,
+      "error": null,
+      "service": "api-gateway",
+      "timestamp": "2025-07-12T20:35:09.326063"
+    },
+    {
+      "test_name": "API Gateway Root Endpoint",
+      "success": true,
+      "duration_ms": 31.75,
+      "status_code": 200,
+      "error": null,
+      "service": "api-gateway",
+      "timestamp": "2025-07-12T20:35:09.326079"
+    },
+    {
+      "test_name": "API Gateway Info Endpoint",
+      "success": true,
+      "duration_ms": 38.7,
+      "status_code": 200,
+      "error": null,
+      "service": "api-gateway",
+      "timestamp": "2025-07-12T20:35:09.326105"
+    },
+    {
+      "test_name": "User Registration",
+      "success": true,
+      "duration_ms": 58.14,
+      "status_code": 201,
+      "error": null,
+      "service": "user-service",
+      "timestamp": "2025-07-12T20:35:09.473669"
+    },
+    {
+      "test_name": "User Login",
+      "success": true,
+      "duration_ms": 44.11,
+      "status_code": 200,
+      "error": null,
+      "service": "user-service",
+      "timestamp": "2025-07-12T20:35:09.473680"
+    },
+    {
+      "test_name": "User Profile",
+      "success": true,
+      "duration_ms": 42.57,
+      "status_code": 200,
+      "error": null,
+      "service": "user-service",
+      "timestamp": "2025-07-12T20:35:09.473684"
+    },
+    {
+      "test_name": "Get All Assets",
+      "success": true,
+      "duration_ms": 64.5,
+      "status_code": 200,
+      "error": null,
+      "service": "inventory-service",
+      "timestamp": "2025-07-12T20:35:09.727257"
+    },
+    {
+      "test_name": "Get Assets by Category (electronics)",
+      "success": true,
+      "duration_ms": 27.38,
+      "status_code": 200,
+      "error": null,
+      "service": "inventory-service",
+      "timestamp": "2025-07-12T20:35:09.727279"
+    },
+    {
+      "test_name": "Get Asset by ID (asset-1)",
+      "success": true,
+      "duration_ms": 94.54,
+      "status_code": 200,
+      "error": null,
+      "service": "inventory-service",
+      "timestamp": "2025-07-12T20:35:09.727285"
+    },
+    {
+      "test_name": "Get All Categories",
+      "success": true,
+      "duration_ms": 28.59,
+      "status_code": 200,
+      "error": null,
+      "service": "inventory-service",
+      "timestamp": "2025-07-12T20:35:09.727291"
+    },
+    {
+      "test_name": "Create Asset",
+      "success": true,
+      "duration_ms": 36.54,
+      "status_code": 201,
+      "error": null,
+      "service": "inventory-service",
+      "timestamp": "2025-07-12T20:35:09.727295"
+    }
+  ],
+  "summary": {
+    "success_rate": 100.0,
+    "average_response_time_ms": 57.76
+  }
+}

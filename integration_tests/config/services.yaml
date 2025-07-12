@@ -1,0 +1,39 @@
+# Service Configuration for Integration Tests
+# Environment-agnostic configuration
+
+# API Gateway (Lambda) endpoints
+api_gateway:
+  dev:
+    base_url: "https://gsgy1f1cmi.execute-api.us-west-2.amazonaws.com/dev"
+    timeout: 10
+    retry_attempts: 3
+  prod:
+    base_url: "${API_GATEWAY_URL}"  # From environment variable
+    timeout: 15
+    retry_attempts: 3
+
+# Local service endpoints (for development)
+local_services:
+  user_service:
+    base_url: "http://localhost:8000"
+    timeout: 5
+    retry_attempts: 2
+  inventory_service:
+    base_url: "http://localhost:8001"
+    timeout: 5
+    retry_attempts: 2
+
+# Test configuration
+test_config:
+  default_timeout: 10
+  default_retry_attempts: 3
+  cleanup_after_tests: true
+  generate_reports: true
+  report_format: ["json", "html"]
+
+# Test data configuration
+test_data:
+  user_prefix: "test_user"
+  asset_prefix: "test_asset"
+  email_domain: "test.example.com"
+  cleanup_timeout: 30

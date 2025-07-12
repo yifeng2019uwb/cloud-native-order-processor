@@ -17,6 +17,9 @@ mkdir -p package
 # Copy handler to root level
 cp lambda_handler.py package/lambda_handler.py
 
+# No service modules needed - Lambda uses mock endpoints
+echo "📁 Lambda mock endpoints mode - no service modules needed"
+
 # Install dependencies (using Python 3.11 for Lambda compatibility)
 python3.11 -m pip install -r requirements.txt -t package/
 

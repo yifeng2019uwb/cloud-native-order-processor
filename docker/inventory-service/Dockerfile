@@ -10,24 +10,24 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (for better caching)
-COPY services/inventory-service/requirements.txt ./inventory-service/
+COPY services/inventory_service/requirements.txt ./inventory_service/
 COPY services/common/requirements.txt ./common/
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r ./inventory-service/requirements.txt
+RUN pip install --no-cache-dir -r ./inventory_service/requirements.txt
 RUN pip install --no-cache-dir -r ./common/requirements.txt
 
 # Copy the common src directory structure
 COPY services/common/src ./common
 
 # Copy inventory service source code
-COPY services/inventory-service/src ./inventory-service/src
+COPY services/inventory_service/src ./inventory_service/src
 
 # Set Python path to include the common directory for imports
-ENV PYTHONPATH="/app:/app/inventory-service/src"
+ENV PYTHONPATH="/app:/app/inventory_service/src"
 
 # Set working directory to inventory service
-WORKDIR /app/inventory-service/src
+WORKDIR /app/inventory_service/src
 
 # Expose port
 EXPOSE 8001

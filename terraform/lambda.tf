@@ -6,15 +6,15 @@ resource "null_resource" "build_lambda_package" {
   count = local.enable_lambda ? 1 : 0
 
   triggers = {
-    requirements = filemd5("${path.module}/../lambda_package/requirements.txt")
     handler      = filemd5("${path.module}/../lambda_package/lambda_handler.py")
+    timestamp    = timestamp()
   }
 
   provisioner "local-exec" {
     command = <<-EOT
       cd ${path.module}/../lambda_package
 
-      # Use our build script
+      # Use our simple build script
       chmod +x build.sh
       ./build.sh
 
@@ -28,15 +28,7 @@ locals {
   lambda_package_path = "${path.module}/../lambda_package/lambda_package.zip"
 }
 
-# CloudWatch log group
-resource "aws_cloudwatch_log_group" "lambda_logs" {
-  count = local.enable_lambda ? 1 : 0
 
-  name              = "/aws/lambda/${local.resource_prefix}-order-api"
-  retention_in_days = 7
-
-  tags = local.common_tags
-}
 
 # Lambda function
 resource "aws_lambda_function" "order_api" {
@@ -65,8 +57,7 @@ resource "aws_lambda_function" "order_api" {
   }
 
   depends_on = [
-    aws_iam_role_policy_attachment.lambda_execution_basic,
-    aws_cloudwatch_log_group.lambda_logs
+    aws_iam_role_policy_attachment.lambda_execution_basic
   ]
 
   tags = local.common_tags

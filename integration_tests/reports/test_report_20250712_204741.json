@@ -1,0 +1,115 @@
+{
+  "test_run": {
+    "start_time": "2025-07-12T20:47:39.690219",
+    "end_time": "2025-07-12T20:47:41.073660",
+    "duration_seconds": 1.383441,
+    "total_tests": 11,
+    "passed_tests": 0,
+    "failed_tests": 11
+  },
+  "results": [
+    {
+      "test_name": "API Gateway Health Check",
+      "success": false,
+      "duration_ms": 192.2,
+      "status_code": 502,
+      "error": "Expected 200, got 502",
+      "service": "api-gateway",
+      "timestamp": "2025-07-12T20:47:40.137823"
+    },
+    {
+      "test_name": "API Gateway Root Endpoint",
+      "success": false,
+      "duration_ms": 120.23,
+      "status_code": 502,
+      "error": "Expected 200, got 502",
+      "service": "api-gateway",
+      "timestamp": "2025-07-12T20:47:40.137863"
+    },
+    {
+      "test_name": "API Gateway Info Endpoint",
+      "success": false,
+      "duration_ms": 134.5,
+      "status_code": 502,
+      "error": "Expected 200, got 502",
+      "service": "api-gateway",
+      "timestamp": "2025-07-12T20:47:40.137869"
+    },
+    {
+      "test_name": "User Registration",
+      "success": false,
+      "duration_ms": 155.84,
+      "status_code": 502,
+      "error": "Expected 201, got 502",
+      "service": "user-service",
+      "timestamp": "2025-07-12T20:47:40.415986"
+    },
+    {
+      "test_name": "User Login",
+      "success": false,
+      "duration_ms": 119.09,
+      "status_code": 502,
+      "error": "Expected 200, got 502",
+      "service": "user-service",
+      "timestamp": "2025-07-12T20:47:40.416002"
+    },
+    {
+      "test_name": "User Profile",
+      "success": false,
+      "duration_ms": 0,
+      "status_code": null,
+      "error": "No access token available for profile test",
+      "service": "user-service",
+      "timestamp": "2025-07-12T20:47:40.416008"
+    },
+    {
+      "test_name": "Get All Assets",
+      "success": false,
+      "duration_ms": 153.89,
+      "status_code": 502,
+      "error": "Expected 200, got 502",
+      "service": "inventory-service",
+      "timestamp": "2025-07-12T20:47:41.073201"
+    },
+    {
+      "test_name": "Get Assets by Category (electronics)",
+      "success": false,
+      "duration_ms": 121.24,
+      "status_code": 502,
+      "error": "Expected 200, got 502",
+      "service": "inventory-service",
+      "timestamp": "2025-07-12T20:47:41.073216"
+    },
+    {
+      "test_name": "Get Asset by ID",
+      "success": false,
+      "duration_ms": 137.8,
+      "status_code": null,
+      "error": "No assets available for testing",
+      "service": "inventory-service",
+      "timestamp": "2025-07-12T20:47:41.073221"
+    },
+    {
+      "test_name": "Get All Categories",
+      "success": false,
+      "duration_ms": 122.87,
+      "status_code": 502,
+      "error": "Expected 200, got 502",
+      "service": "inventory-service",
+      "timestamp": "2025-07-12T20:47:41.073226"
+    },
+    {
+      "test_name": "Create Asset",
+      "success": false,
+      "duration_ms": 119.71,
+      "status_code": 502,
+      "error": "Expected 201, got 502",
+      "service": "inventory-service",
+      "timestamp": "2025-07-12T20:47:41.073230"
+    }
+  ],
+  "summary": {
+    "success_rate": 0.0,
+    "average_response_time_ms": 125.22
+  }
+}
