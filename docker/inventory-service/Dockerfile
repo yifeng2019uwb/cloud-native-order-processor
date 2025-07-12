@@ -17,17 +17,14 @@ COPY services/common/requirements.txt ./common/
 RUN pip install --no-cache-dir -r ./inventory-service/requirements.txt
 RUN pip install --no-cache-dir -r ./common/requirements.txt
 
-# Copy common package source code (including setup.py) before installing
-COPY services/common ./common
-
-# Install common package in editable mode
-RUN pip install -e ./common
+# Copy the common src directory structure
+COPY services/common/src ./common
 
 # Copy inventory service source code
 COPY services/inventory-service/src ./inventory-service/src
 
-# Set Python path to find common package
-ENV PYTHONPATH="/app/common/src:/app/inventory-service/src"
+# Set Python path to include the common directory for imports
+ENV PYTHONPATH="/app:/app/inventory-service/src"
 
 # Set working directory to inventory service
 WORKDIR /app/inventory-service/src

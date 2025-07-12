@@ -17,17 +17,14 @@ COPY services/common/requirements.txt ./common/
 RUN pip install --no-cache-dir -r ./user-service/requirements.txt
 RUN pip install --no-cache-dir -r ./common/requirements.txt
 
-# Copy common package source code (including setup.py) before installing
-COPY services/common ./common
-
-# Install common package in editable mode
-RUN pip install -e ./common
+# Copy the common src directory structure
+COPY services/common/src ./common
 
 # Copy user service source code
 COPY services/user-service/src ./user-service/src
 
-# Set Python path to find common package
-ENV PYTHONPATH="/app/common/src:/app/user-service/src"
+# Set Python path to include the common directory for imports
+ENV PYTHONPATH="/app:/app/user-service/src"
 
 # Set working directory to user service
 WORKDIR /app/user-service/src
@@ -39,5 +36,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application
-CMD ["python", "main.py"]
+# Run the application as a module
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
