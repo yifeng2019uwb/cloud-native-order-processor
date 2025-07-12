@@ -14,36 +14,18 @@ resource "null_resource" "build_lambda_package" {
     command = <<-EOT
       cd ${path.module}/../lambda_package
 
-      # Clean previous build
-      rm -rf build/
-      mkdir build
+      # Use our build script
+      chmod +x build.sh
+      ./build.sh
 
-      # Install dependencies for Linux (Lambda runtime)
-      pip3 install -r requirements.txt -t build/ \
-        --platform linux_x86_64 \
-        --implementation cp \
-        --python-version 3.11 \
-        --only-binary=:all: \
-        --upgrade
-
-      # Copy your code
-      cp lambda_handler.py build/
-
-      echo "Lambda package built successfully"
+      echo "Lambda package built successfully using build.sh"
     EOT
   }
 }
 
-# Package the built Lambda code
-data "archive_file" "lambda_package" {
-  count = local.enable_lambda ? 1 : 0
-
-  type        = "zip"
-  output_path = "${path.module}/lambda_package.zip"
-  source_dir  = "${path.module}/../lambda_package/build"
-  excludes    = ["__pycache__", "*.pyc"]
-
-  depends_on = [null_resource.build_lambda_package]
+# Use the built Lambda package directly
+locals {
+  lambda_package_path = "${path.module}/../lambda_package/lambda_package.zip"
 }
 
 # CloudWatch log group
@@ -67,8 +49,8 @@ resource "aws_lambda_function" "order_api" {
   timeout       = 30
   memory_size   = 256
 
-  filename         = data.archive_file.lambda_package[0].output_path
-  source_code_hash = data.archive_file.lambda_package[0].output_base64sha256
+  filename         = local.lambda_package_path
+  source_code_hash = filebase64sha256(local.lambda_package_path)
 
   environment {
     variables = {
