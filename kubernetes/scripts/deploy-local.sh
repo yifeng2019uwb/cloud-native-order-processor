@@ -28,9 +28,9 @@ cd ../kubernetes
 
 # Load images into Kind cluster
 echo "📥 Loading images into Kind cluster..."
-kind load docker-image docker-user_service:latest --name order-processor
-kind load docker-image docker-inventory_service:latest --name order-processor
-kind load docker-image docker-frontend-dev:latest --name order-processor
+kind load docker-image order-processor-user_service:latest --name order-processor
+kind load docker-image order-processor-inventory_service:latest --name order-processor
+kind load docker-image order-processor-frontend:latest --name order-processor
 
 # Apply base configuration
 echo "🔧 Applying base configuration..."

@@ -23,7 +23,7 @@ spec:
       serviceAccountName: order-processor-sa
       containers:
       - name: user-service
-        image: docker-user_service:latest
+        image: order-processor-user_service:latest
         imagePullPolicy: Never  # Use local image for Kind
         ports:
         - containerPort: 8000
@@ -96,7 +96,7 @@ spec:
       serviceAccountName: order-processor-sa
       containers:
       - name: inventory-service
-        image: docker-inventory_service:latest
+        image: order-processor-inventory_service:latest
         imagePullPolicy: Never  # Use local image for Kind
         ports:
         - containerPort: 8001
@@ -167,7 +167,7 @@ spec:
       serviceAccountName: order-processor-sa
       containers:
       - name: frontend
-        image: docker-frontend-dev:latest
+        image: order-processor-frontend:latest
         imagePullPolicy: Never  # Use local image for Kind
         ports:
         - containerPort: 3000

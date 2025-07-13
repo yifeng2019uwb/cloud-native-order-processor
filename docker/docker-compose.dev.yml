@@ -3,6 +3,7 @@ services:
     build:
       context: ../
       dockerfile: docker/frontend/Dockerfile.dev
+    image: order-processor-frontend:latest
     container_name: order-processor-frontend-dev
     ports:
       - "3000:3000"
@@ -24,6 +25,7 @@ services:
     build:
       context: ../
       dockerfile: docker/user-service/Dockerfile
+    image: order-processor-user_service:latest
     container_name: order-processor-user_service
     ports:
       - "8000:8000"
@@ -56,6 +58,7 @@ services:
     build:
       context: ../
       dockerfile: docker/inventory-service/Dockerfile
+    image: order-processor-inventory_service:latest
     container_name: order-processor-inventory_service
     ports:
       - "8001:8001"

@@ -21,9 +21,9 @@ commonAnnotations:
   cluster: "kind-order-processor"
 
 images:
-- name: docker-user_service
+- name: order-processor-user_service
   newTag: latest
-- name: docker-inventory_service
+- name: order-processor-inventory_service
   newTag: latest
-- name: docker-frontend-dev
+- name: order-processor-frontend
   newTag: latest
