@@ -1,0 +1,101 @@
+# Production Environment Values
+# Used for AWS EKS deployment
+
+environment: production
+namespace: order-processor
+
+# AWS Configuration
+aws:
+  region: "us-east-1"
+  account_id: "${AWS_ACCOUNT_ID}"
+  eks_cluster_name: "order-processor-prod"
+
+# Domain Configuration
+domain:
+  api: "api.order-processor.yourdomain.com"
+  frontend: "order-processor.yourdomain.com"
+  www: "www.order-processor.yourdomain.com"
+  certificate_arn: "arn:aws:acm:us-east-1:${AWS_ACCOUNT_ID}:certificate/your-certificate-id"
+
+# Service Configuration
+services:
+  user-service:
+    replicas: 2
+    port: 8000
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+    image: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-user-service:latest"
+
+  inventory-service:
+    replicas: 2
+    port: 8001
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+    image: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-inventory-service:latest"
+
+  frontend:
+    replicas: 2
+    port: 3000
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    image: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-frontend:latest"
+
+# Database Configuration
+database:
+  region: "us-east-1"
+  tables:
+    users: "order-processor-prod-users"
+    orders: "order-processor-prod-orders"
+    inventory: "order-processor-prod-inventory"
+
+# Application Configuration
+app:
+  environment: "production"
+  jwt_secret_from_secret: "app-secrets"
+
+# Load Balancer Configuration
+load_balancer:
+  type: "alb"
+  scheme: "internet-facing"
+  target_type: "ip"
+  ssl_redirect: "443"
+  health_check:
+    path: "/health"
+    port: "8000"
+    protocol: "HTTP"
+    success_codes: "200,302"
+
+# Security Configuration
+security:
+  run_as_non_root: true
+  run_as_user: 1000
+  allow_privilege_escalation: false
+  read_only_root_filesystem: true
+
+# Monitoring Configuration
+monitoring:
+  liveness_probe:
+    initial_delay_seconds: 30
+    period_seconds: 10
+    timeout_seconds: 5
+    failure_threshold: 3
+  readiness_probe:
+    initial_delay_seconds: 5
+    period_seconds: 5
+    timeout_seconds: 3
+    failure_threshold: 3

@@ -1,0 +1,210 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: user-service
+    environment: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-processor
+      component: user-service
+  template:
+    metadata:
+      labels:
+        app: order-processor
+        component: user-service
+        environment: production
+    spec:
+      serviceAccountName: order-processor-sa
+      containers:
+      - name: user-service
+        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-user-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: USERS_TABLE
+          value: "order-processor-prod-users"
+        - name: ORDERS_TABLE
+          value: "order-processor-prod-orders"
+        - name: INVENTORY_TABLE
+          value: "order-processor-prod-inventory"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: jwt-secret
+        - name: AWS_REGION
+          value: "us-east-1"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: inventory-service
+    environment: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-processor
+      component: inventory-service
+  template:
+    metadata:
+      labels:
+        app: order-processor
+        component: inventory-service
+        environment: production
+    spec:
+      serviceAccountName: order-processor-sa
+      containers:
+      - name: inventory-service
+        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-inventory-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8001
+          name: http
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: USERS_TABLE
+          value: "order-processor-prod-users"
+        - name: ORDERS_TABLE
+          value: "order-processor-prod-orders"
+        - name: INVENTORY_TABLE
+          value: "order-processor-prod-inventory"
+        - name: AWS_REGION
+          value: "us-east-1"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: frontend
+    environment: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-processor
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: order-processor
+        component: frontend
+        environment: production
+    spec:
+      serviceAccountName: order-processor-sa
+      containers:
+      - name: frontend
+        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: REACT_APP_API_URL
+          value: "https://api.order-processor.yourdomain.com"
+        - name: REACT_APP_USER_SERVICE_URL
+          value: "https://api.order-processor.yourdomain.com/auth"
+        - name: REACT_APP_INVENTORY_SERVICE_URL
+          value: "https://api.order-processor.yourdomain.com/inventory"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
