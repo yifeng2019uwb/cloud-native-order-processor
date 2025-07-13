@@ -31,6 +31,11 @@ resource "aws_dynamodb_table" "orders" {
     projection_type = "ALL"
   }
 
+  # Point-in-Time Recovery for financial data (35 days retention)
+  point_in_time_recovery {
+    enabled = true
+  }
+
   tags = local.common_tags
 }
 
@@ -43,6 +48,11 @@ resource "aws_dynamodb_table" "inventory" {
   attribute {
     name = "product_id"
     type = "S"
+  }
+
+  # Point-in-Time Recovery for financial data (35 days retention)
+  point_in_time_recovery {
+    enabled = true
   }
 
   tags = local.common_tags
@@ -69,6 +79,12 @@ resource "aws_dynamodb_table" "users" {
     name            = "EmailIndex"
     hash_key        = "email"
     projection_type = "ALL"
+  }
+
+  # TTL for data lifecycle (7 days = 7 years in personal project)
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
   }
 
   tags = local.common_tags

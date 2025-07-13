@@ -33,6 +33,6 @@ output "app_config" {
     # Messaging (if you use them)
     queue_url = aws_sqs_queue.order_processing.url
     topic_arn = aws_sns_topic.order_events.arn
-    s3_bucket = aws_s3_bucket.events.bucket
+    s3_bucket = aws_s3_bucket.main.bucket
   }
 }
