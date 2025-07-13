@@ -18,17 +18,17 @@ show_usage() {
 
 run_smoke_tests() {
     echo "Running smoke tests..."
-    python smoke/health_tests.py
+    python3 smoke/health_tests.py
 }
 
 run_inventory_tests() {
     echo "Running inventory service tests..."
-    python inventory_service/inventory_tests.py
+    python3 inventory_service/inventory_tests.py
 }
 
 run_user_tests() {
     echo "Running user service tests..."
-    python user_services/user_tests.py
+    python3 user_services/user_tests.py
 }
 
 # Default to all tests if no argument provided

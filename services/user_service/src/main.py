@@ -172,28 +172,28 @@ except ImportError as e:
 # Import and include API routers
 try:
     from controllers.auth.login import router as login_router
-    app.include_router(login_router, tags=["authentication"])
+    app.include_router(login_router, prefix="/auth", tags=["authentication"])
     logger.info("✅ Login routes loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Login routes not available: {e}")
 
 try:
     from controllers.auth.register import router as register_router
-    app.include_router(register_router, tags=["authentication"])
+    app.include_router(register_router, prefix="/auth", tags=["authentication"])
     logger.info("✅ Registration routes loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Registration routes not available: {e}")
 
 try:
     from controllers.auth.profile import router as profile_router
-    app.include_router(profile_router, tags=["authentication"])
+    app.include_router(profile_router, prefix="/auth", tags=["authentication"])
     logger.info("✅ Profile routes loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Profile routes not available: {e}")
 
 try:
     from controllers.auth.logout import router as logout_router
-    app.include_router(logout_router, tags=["authentication"])
+    app.include_router(logout_router, prefix="/auth", tags=["authentication"])
     logger.info("✅ Logout routes loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Logout routes not available: {e}")

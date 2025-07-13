@@ -12,10 +12,10 @@ from service_urls import USER_SERVICE_URL, INVENTORY_SERVICE_URL
 
 # User Service API Enum
 class UserAPI(Enum):
-    REGISTER = '/register'  # This might not exist, will test
-    LOGIN = '/login'
-    PROFILE = '/me'
-    LOGOUT = '/logout'
+    REGISTER = '/auth/register'
+    LOGIN = '/auth/login'
+    PROFILE = '/auth/me'
+    LOGOUT = '/auth/logout'
     HEALTH = '/health'
 
 # Inventory Service API Enum
