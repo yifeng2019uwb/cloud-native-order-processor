@@ -39,7 +39,7 @@ OPTIONS:
     -h, --help                        Show this help message
 
 EXAMPLES:
-    $0 --environment dev     # Deploy cheap Lambda setup
+    $0 --environment dev     # Deploy development setup
     $0 --environment prod    # Deploy production setup
 
 EOF

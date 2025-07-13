@@ -17,7 +17,7 @@ Complete guide for the full build → deploy → test → destroy cycle for the 
 
 ## 🌍 Environments
 
-- **`dev`** - Development with Lambda + API Gateway (cost-optimized)
+- **`dev`** - Local FastAPI services (development)
 - **`prod`** - Production with EKS + Kubernetes (full infrastructure)
 
 ## 🔄 Full Cycle Workflow
@@ -54,7 +54,7 @@ Complete guide for the full build → deploy → test → destroy cycle for the 
 ```
 
 **What it deploys:**
-- **dev**: Lambda + API Gateway + DynamoDB
+- **dev**: Local FastAPI services + DynamoDB
 - **prod**: EKS + RDS + S3 + SNS/SQS
 
 **Duration:** 15-25 minutes
@@ -65,7 +65,7 @@ Complete guide for the full build → deploy → test → destroy cycle for the 
 ```
 
 **What it does:**
-- **dev**: Builds Lambda package and deploys to AWS Lambda
+- **dev**: Runs/Builds local FastAPI services
 - **prod**: Builds Docker image, pushes to ECR, deploys to EKS
 
 **Duration:** 3-8 minutes

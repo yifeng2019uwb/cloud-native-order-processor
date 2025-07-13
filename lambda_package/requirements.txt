@@ -1,6 +1,0 @@
-# lambda_package/requirements.txt
-fastapi==0.104.1
-mangum==0.17.0
-requests==2.31.0
-boto3
-pydantic==1.10.13

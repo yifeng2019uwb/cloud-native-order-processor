@@ -41,8 +41,8 @@ OPTIONS:
     -h, --help                        Show this help message
 
 EXAMPLES:
-    $0 --environment dev                    # Destroy Lambda infrastructure
-    $0 --environment prod                   # Destroy EKS infrastructure
+    $0 --environment dev                    # Destroy dev infrastructure
+    $0 --environment prod                   # Destroy prod infrastructure
     $0 --environment dev --dry-run          # Plan destruction only
     $0 --environment prod --force           # Force destroy without prompts
 
@@ -269,31 +269,7 @@ cleanup_api_gateway() {
 
     local api_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
 
-    # Get API Gateway IDs
-    local apis
-    apis=$(aws apigateway get-rest-apis \
-        --query "items[?contains(name, '${api_prefix}')].id" \
-        --output text 2>/dev/null || echo "")
 
-    for api_id in $apis; do
-        if [[ -n "$api_id" ]]; then
-            log_info "Deleting API Gateway: $api_id"
-            aws apigateway delete-rest-api --rest-api-id "$api_id" 2>/dev/null || true
-        fi
-    done
-
-    # Clean up API Gateway v2 (HTTP APIs)
-    local http_apis
-    http_apis=$(aws apigatewayv2 get-apis \
-        --query "Items[?contains(Name, '${api_prefix}')].ApiId" \
-        --output text 2>/dev/null || echo "")
-
-    for api_id in $http_apis; do
-        if [[ -n "$api_id" ]]; then
-            log_info "Deleting HTTP API Gateway: $api_id"
-            aws apigatewayv2 delete-api --api-id "$api_id" 2>/dev/null || true
-        fi
-    done
 }
 
 # KMS and Secrets cleanup
@@ -355,7 +331,6 @@ cleanup_iam_resources() {
         "*${resource_prefix}*"
         "*eks-cluster-service-role*"
         "*eks-nodegroup-*"
-        "*lambda-execution-role*"
         "*codebuild-*"
         "*codepipeline-*"
     )

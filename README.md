@@ -26,7 +26,7 @@ A comprehensive cloud-native microservice built for learning modern DevOps, infr
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Development   │    │   Production    │    │     Testing     │
 │                 │    │                 │    │                 │
-│ Lambda + API GW │    │ EKS + K8s       │    │ Unit + E2E      │
+│ EKS + K8s       │    │ EKS + K8s       │    │ Unit + E2E      │
 │ DynamoDB        │    │ PostgreSQL + RDS│    │ Coverage Reports│
 │ Local testing   │    │ Auto-scaling    │    │ CI/CD pipeline  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
@@ -130,7 +130,7 @@ pytest tests/test_models/ -v --cov=src/models
 - **IaC**: Terraform for all AWS resources
 - **Containers**: Docker with multi-stage builds
 - **Orchestration**: Kubernetes (EKS) for production
-- **Serverless**: AWS Lambda for development environment
+- **Containerization**: Docker with multi-stage builds
 
 ### **Data Layer**
 - **Development**: DynamoDB (cost-effective, NoSQL)
@@ -206,7 +206,7 @@ cloud-native-order-processor/
 
 ### **Best Practices**
 - Always run `destroy.sh --force` after development sessions
-- Use `dev` environment for daily work (Lambda + DynamoDB)
+- Use `dev` environment for daily work (EKS + DynamoDB)
 - Reserve `prod` environment for final validation only
 - Monitor AWS billing dashboard regularly
 

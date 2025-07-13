@@ -10,7 +10,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 # Import and include individual route modules
 try:
-    from .registration import router as register_router
+    from .register import router as register_router
     router.include_router(register_router)
     print("✅ Registration router included successfully")
 except ImportError as e:

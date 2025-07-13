@@ -42,9 +42,6 @@
 #   vpc_security_group_ids = local.create_vpc ? [aws_security_group.rds[0].id] : null
 #   db_subnet_group_name   = local.create_vpc ? aws_db_subnet_group.main[0].name : null
 
-#   # Public access for Lambda profile (no VPC), private for Kubernetes
-#   publicly_accessible = local.enable_lambda ? true : false
-
 #   # Destroy-friendly settings
 #   backup_retention_period   = 0
 #   skip_final_snapshot       = true

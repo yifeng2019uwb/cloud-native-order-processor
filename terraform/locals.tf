@@ -3,7 +3,6 @@
 
 locals {
   # Feature flags
-  enable_lambda     = var.environment == "dev"
   enable_kubernetes = var.environment == "prod"
 
   # Infrastructure

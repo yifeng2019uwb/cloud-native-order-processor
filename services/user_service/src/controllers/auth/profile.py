@@ -41,17 +41,17 @@ async def get_current_user(
     """Extract and validate user from JWT token"""
     try:
         # Use existing token verification utility
-        payload = verify_access_token(credentials.credentials)
+        username = verify_access_token(credentials.credentials)
 
-        if not payload:
+        if not username:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token",
                 headers={"WWW-Authenticate": "Bearer"}
             )
 
-        # Get user from database using email from token
-        user = await user_dao.get_user_by_email(payload["sub"])
+        # Get user from database using username from token
+        user = await user_dao.get_user_by_username(username)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

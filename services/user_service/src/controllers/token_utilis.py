@@ -56,13 +56,13 @@ def create_access_token(username: str, expires_delta: Optional[timedelta] = None
 
 def verify_access_token(token: str) -> Optional[str]:
     """
-    Verify JWT access token and extract user email
+    Verify JWT access token and extract username
 
     Args:
         token: JWT token string
 
     Returns:
-        User email if token is valid, None otherwise
+        Username if token is valid, None otherwise
 
     Raises:
         JWTError: If token is invalid or expired
@@ -75,14 +75,14 @@ def verify_access_token(token: str) -> Optional[str]:
             logger.warning("Invalid token type")
             raise JWTError("Invalid token type")
 
-        # Extract email
-        email: str = payload.get("sub")
-        if email is None:
-            logger.warning("Token missing subject (email)")
+        # Extract username
+        username: str = payload.get("sub")
+        if username is None:
+            logger.warning("Token missing subject (username)")
             raise JWTError("Token missing subject")
 
-        logger.debug(f"Token verified for user: {email}")
-        return email
+        logger.debug(f"Token verified for user: {username}")
+        return username
 
     except jwt.ExpiredSignatureError:
         logger.warning("Token has expired")

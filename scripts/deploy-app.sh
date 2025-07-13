@@ -1,7 +1,7 @@
 #!/bin/bash
 # scripts/deploy-app.sh
 # Application Deployment Script
-# Deploys to Lambda or EKS
+# Deploys to EKS
 
 set -e
 
@@ -29,7 +29,7 @@ $(printf "${BLUE}📦 Application Deployment Script${NC}")
 
 Usage: $0 --environment {dev|prod} [OPTIONS]
 
-Deploy application to AWS infrastructure based on evn.
+Deploy application to AWS EKS infrastructure.
 
 REQUIRED:
     --environment {dev|prod}           Target environment
@@ -41,15 +41,14 @@ OPTIONS:
     -h, --help                        Show this help message
 
 EXAMPLES:
-    $0 --environment dev                # Deploy to Lambda
-    $0 --environment prod               # Deploy to EKS
+    $0 --environment dev                # Deploy to EKS dev
+    $0 --environment prod               # Deploy to EKS prod
     $0 --environment dev --dry-run      # Plan only
     $0 --environment dev --skip-build   # Deploy without rebuilding
 
 PREREQUISITES:
     - Infrastructure must be deployed first (./scripts/deploy.sh)
-    - For dev: Python packaging tools
-    - For prod: Docker and kubectl
+    - Docker and kubectl
 
 EOF
 }
@@ -152,7 +151,7 @@ setup_environment() {
     fi
 }
 
-# Check prerequisites based on env
+# Check prerequisites
 check_prerequisites() {
     log_step "🔍 Checking Prerequisites"
 
@@ -160,41 +159,19 @@ check_prerequisites() {
     local errors=()
 
     # Common tools
-    local common_tools=("aws" "jq")
+    local common_tools=("aws" "jq" "docker" "kubectl")
     for tool in "${common_tools[@]}"; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             missing_tools+=("$tool")
         fi
     done
 
-    # ENVIRONMENT-specific tools
-    case "$ENVIRONMENT" in
-        "dev")
-            # Lambda deployment needs Python and ZIP
-            local lambda_tools=("python3" "pip" "zip")
-            for tool in "${lambda_tools[@]}"; do
-                if ! command -v "$tool" >/dev/null 2>&1; then
-                    missing_tools+=("$tool")
-                fi
-            done
-            ;;
-        "prod")
-            # Kubernetes deployment needs Docker and kubectl
-            local k8s_tools=("docker" "kubectl")
-            for tool in "${k8s_tools[@]}"; do
-                if ! command -v "$tool" >/dev/null 2>&1; then
-                    missing_tools+=("$tool")
-                fi
-            done
-
-            # Check Docker daemon for prod
-            if command -v docker >/dev/null 2>&1; then
-                if ! docker info >/dev/null 2>&1; then
-                    errors+=("Docker is installed but not running")
-                fi
-            fi
-            ;;
-    esac
+    # Check Docker daemon
+    if command -v docker >/dev/null 2>&1; then
+        if ! docker info >/dev/null 2>&1; then
+            errors+=("Docker is installed but not running")
+        fi
+    fi
 
     if [[ ${#missing_tools[@]} -gt 0 ]]; then
         errors+=("Missing required tools: ${missing_tools[*]}")
@@ -211,25 +188,13 @@ check_prerequisites() {
         errors+=("Infrastructure not deployed. Run ./scripts/deploy.sh first")
     fi
 
-    # Get infrastructure outputs based on ENVIRONMENT
-    case "$ENVIRONMENT" in
-        "dev")
-            if ! terraform output lambda_function_name >/dev/null 2>&1; then
-                errors+=("Lambda function not found in terraform outputs. Check infrastructure deployment.")
-            else
-                export LAMBDA_FUNCTION_NAME=$(terraform output -raw lambda_function_name 2>/dev/null || echo "")
-                log_info "Found Lambda function: $LAMBDA_FUNCTION_NAME"
-            fi
-            ;;
-        "prod")
-            if ! terraform output eks_cluster_name >/dev/null 2>&1; then
-                errors+=("EKS cluster not found in terraform outputs. Check infrastructure deployment.")
-            else
-                export EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name 2>/dev/null || echo "")
-                log_info "Found EKS cluster: $EKS_CLUSTER_NAME"
-            fi
-            ;;
-    esac
+    # Get EKS cluster name
+    if ! terraform output eks_cluster_name >/dev/null 2>&1; then
+        errors+=("EKS cluster not found in terraform outputs. Check infrastructure deployment.")
+    else
+        export EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name 2>/dev/null || echo "")
+        log_info "Found EKS cluster: $EKS_CLUSTER_NAME"
+    fi
 
     cd "$PROJECT_ROOT"
 
@@ -242,77 +207,6 @@ check_prerequisites() {
     fi
 
     log_success "Prerequisites check passed"
-}
-
-# Build and package application for Lambda
-build_lambda_package() {
-
-    if [[ "$SKIP_BUILD" == "true" ]]; then
-        log_info "Skipping Lambda package build (--skip-build specified)"
-        return 0
-    fi
-
-    if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run mode: Would build Lambda package"
-        return 0
-    fi
-
-    log_step "📦 Building Lambda Package"
-
-    local build_dir="$PROJECT_ROOT/.lambda-build"
-    local package_dir="$build_dir/package"
-    local source_dir="$PROJECT_ROOT/services/user_service"
-
-    # Clean and create build directory
-    rm -rf "$build_dir"
-    mkdir -p "$package_dir"
-
-    # Install dependencies
-    log_info "Installing Python dependencies..."
-    cd "$source_dir"
-
-    # Install requirements to package directory
-    pip install --only-binary=all -r requirements.txt -t "$package_dir" --quiet
-
-    # Install mangum for Lambda compatibility
-    pip install mangum -t "$package_dir" --quiet
-
-
-    # Install common package if it exists
-    if [[ -f "$PROJECT_ROOT/services/common/setup.py" ]]; then
-        log_info "Installing common package..."
-        pip install -e "$PROJECT_ROOT/services/common" -t "$package_dir" --quiet
-    fi
-
-    # Copy source code
-    log_info "Copying application source..."
-    cp -r src/* "$package_dir/"
-
-    # Create lambda_handler.py if it doesn't exist
-    if [[ ! -f "$package_dir/lambda_handler.py" ]]; then
-        log_info "Creating Lambda handler..."
-        cat > "$package_dir/lambda_handler.py" << 'EOF'
-from mangum import Mangum
-from app import app
-
-# Configure Mangum for Lambda
-handler = Mangum(app, lifespan="off")
-EOF
-    fi
-
-    # Install Mangum for Lambda compatibility
-    pip install mangum -t "$package_dir" --quiet
-
-    # Create deployment package
-    log_info "Creating deployment package..."
-    cd "$package_dir"
-    zip -r "../lambda-deployment.zip" . --quiet
-
-    # Store package path for deployment
-    export LAMBDA_PACKAGE_PATH="$build_dir/lambda-deployment.zip"
-
-    cd "$PROJECT_ROOT"
-    log_success "Lambda package built: $LAMBDA_PACKAGE_PATH"
 }
 
 # Build Docker image for Kubernetes
@@ -374,61 +268,6 @@ build_docker_image() {
         log_error "Dockerfile not found: docker/order-service/Dockerfile.simple"
         exit 1
     fi
-}
-
-# Deploy to Lambda
-deploy_to_lambda() {
-    if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run mode: Would deploy application to Lambda"
-        return 0
-    fi
-
-    log_step "🚀 Deploying Application to Lambda"
-
-    if [[ -z "$LAMBDA_PACKAGE_PATH" ]]; then
-        log_error "Lambda package not found. Build may have failed."
-        exit 1
-    fi
-
-    log_info "Updating Lambda function: $LAMBDA_FUNCTION_NAME"
-
-    # Update function code
-    aws lambda update-function-code \
-        --function-name "$LAMBDA_FUNCTION_NAME" \
-        --zip-file "fileb://$LAMBDA_PACKAGE_PATH" \
-        --region "${AWS_REGION:-us-west-2}" \
-        --output table
-
-    # Wait for update to complete
-    log_info "Waiting for Lambda function to be updated..."
-    aws lambda wait function-updated \
-        --function-name "$LAMBDA_FUNCTION_NAME" \
-        --region "${AWS_REGION:-us-west-2}"
-
-    # Test function
-    log_info "Testing Lambda function..."
-    local test_payload='{"httpMethod": "GET", "path": "/health", "headers": {}}'
-
-    if aws lambda invoke \
-        --function-name "$LAMBDA_FUNCTION_NAME" \
-        --payload "$test_payload" \
-        --region "${AWS_REGION:-us-west-2}" \
-        /tmp/lambda-response.json >/dev/null 2>&1; then
-        log_success "Lambda function test successful"
-    else
-        log_warning "Lambda function test failed (may be normal if /health endpoint doesn't exist)"
-    fi
-
-    # Get API Gateway URL
-    cd "$PROJECT_ROOT/terraform"
-    if terraform output api_gateway_url >/dev/null 2>&1; then
-        local api_url=$(terraform output -raw api_gateway_url)
-        export SERVICE_URL="$api_url"
-        log_info "Service URL: $SERVICE_URL"
-    fi
-    cd "$PROJECT_ROOT"
-
-    log_success "Application deployed to Lambda successfully"
 }
 
 # Deploy to Kubernetes
@@ -516,43 +355,20 @@ verify_deployment() {
 
     log_step "✅ Verifying Application Deployment"
 
-    case "$ENVIRONMENT" in
-        "dev")
-            # Verify Lambda deployment
-            log_info "Checking Lambda function status..."
-            local function_state=$(aws lambda get-function \
-                --function-name "$LAMBDA_FUNCTION_NAME" \
-                --region "${AWS_REGION:-us-west-2}" \
-                --query 'Configuration.State' \
-                --output text 2>/dev/null || echo "UNKNOWN")
+    # Verify Kubernetes deployment
+    log_info "Checking pod status..."
+    kubectl get pods -n order-processor 2>/dev/null || {
+        log_warning "Could not get pod status"
+    }
 
-            if [[ "$function_state" == "Active" ]]; then
-                log_success "Lambda function is active"
-            else
-                log_warning "Lambda function state: $function_state"
-            fi
+    log_info "Checking service status..."
+    kubectl get services -n order-processor 2>/dev/null || {
+        log_warning "Could not get service status"
+    }
 
-            if [[ -n "$SERVICE_URL" ]]; then
-                log_info "API Gateway URL: $SERVICE_URL"
-            fi
-            ;;
-        "prod")
-            # Verify Kubernetes deployment
-            log_info "Checking pod status..."
-            kubectl get pods -n order-processor 2>/dev/null || {
-                log_warning "Could not get pod status"
-            }
-
-            log_info "Checking service status..."
-            kubectl get services -n order-processor 2>/dev/null || {
-                log_warning "Could not get service status"
-            }
-
-            if [[ -n "$SERVICE_URL" ]]; then
-                log_info "Kubernetes Service URL: $SERVICE_URL"
-            fi
-            ;;
-    esac
+    if [[ -n "$SERVICE_URL" ]]; then
+        log_info "Kubernetes Service URL: $SERVICE_URL"
+    fi
 
     log_success "Application deployment verification completed"
 }
@@ -563,34 +379,16 @@ generate_summary() {
 
     log_info "Deployment Details:"
     log_info "  Environment: $ENVIRONMENT"
-
-    case "$ENVIRONMENT" in
-        "dev")
-            log_info "  Deployment Type: Lambda + API Gateway"
-            log_info "  Lambda Function: ${LAMBDA_FUNCTION_NAME:-unknown}"
-            log_info "  Service URL: ${SERVICE_URL:-pending}"
-            log_info "  Package: ${LAMBDA_PACKAGE_PATH:-unknown}"
-            ;;
-        "prod")
-            log_info "  Deployment Type: EKS + Kubernetes"
-            log_info "  EKS Cluster: ${EKS_CLUSTER_NAME:-unknown}"
-            log_info "  Docker Image: ${IMAGE_URI:-existing}"
-            log_info "  Service URL: ${SERVICE_URL:-pending}"
-            ;;
-    esac
+    log_info "  Deployment Type: EKS + Kubernetes"
+    log_info "  EKS Cluster: ${EKS_CLUSTER_NAME:-unknown}"
+    log_info "  Docker Image: ${IMAGE_URI:-existing}"
+    log_info "  Service URL: ${SERVICE_URL:-pending}"
 
     if [[ "$DRY_RUN" == "false" ]]; then
         log_success "✅ Application deployment completed successfully!"
         log_info "Next steps:"
         log_info "  1. Run integration tests: ./scripts/test-integration.sh --environment $ENVIRONMENT"
-        case "$ENVIRONMENT" in
-            "dev")
-                log_info "  2. Test via API Gateway: curl $SERVICE_URL/health"
-                ;;
-            "prod")
-                log_info "  2. Monitor pods: kubectl get pods -n order-processor"
-                ;;
-        esac
+        log_info "  2. Monitor pods: kubectl get pods -n order-processor"
         log_info "  3. When done, cleanup: ./scripts/destroy.sh --environment $ENVIRONMENT --force"
     else
         log_success "✅ Application deployment plan validated!"
@@ -617,23 +415,8 @@ main() {
     # Execute deployment steps
     setup_environment
     check_prerequisites
-
-    # ENVIRONMENT-specific deployment
-    case "$ENVIRONMENT" in
-        "dev")
-            build_lambda_package
-            deploy_to_lambda
-            ;;
-        "prod")
-            build_docker_image
-            deploy_to_kubernetes
-            ;;
-        *)
-            log_error "Unknown environment: $ENVIRONMENT"
-            exit 1
-            ;;
-    esac
-
+    build_docker_image
+    deploy_to_kubernetes
     verify_deployment
     generate_summary
 

@@ -63,7 +63,7 @@ cat reports/test_report_*.json
 ### Environment Variables
 ```bash
 # API Gateway URL (optional - will use config file if not set)
-export API_GATEWAY_URL="https://your-api-gateway-url.com/dev"
+export API_GATEWAY_URL="http://localhost:8000"  # Replace with FastAPI service URL
 
 # User Service URL (optional - for functional tests)
 export USER_SERVICE_URL="http://localhost:8000"
@@ -79,7 +79,7 @@ export ENVIRONMENT="dev"
 ```yaml
 api_gateway:
   dev:
-    base_url: "https://your-api-gateway-url.com/dev"
+    base_url: "http://localhost:8000"  # Replace with FastAPI service URL
     timeout: 10
     retry_attempts: 3
 

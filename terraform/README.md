@@ -1,12 +1,12 @@
 # Order Processor Infrastructure
 
 ## Overview
-- **Dev Environment**: Lambda + API Gateway + RDS (cheap, ~$15/month)
+- **Dev Environment**: Local FastAPI services + DynamoDB (no Lambda/API Gateway)
 - **Prod Environment**: EKS + Kubernetes + RDS (full-scale, ~$80/month)
 
 ## Usage
 ```bash
-# Deploy dev (Lambda)
+# Deploy dev (Local FastAPI)
 terraform apply -var="environment=dev"
 
 # Deploy prod (Kubernetes)

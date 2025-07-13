@@ -2,22 +2,6 @@
 # Essential outputs for development and deployment
 
 # ====================
-# DEVELOPMENT ESSENTIALS
-# ====================
-
-# Main API endpoint
-output "api_url" {
-  description = "API Gateway URL for testing and frontend integration"
-  value       = local.enable_lambda ? "https://${aws_api_gateway_rest_api.order_api[0].id}.execute-api.${var.region}.amazonaws.com/${var.environment}" : null
-}
-
-# Lambda function name for deployment scripts
-output "lambda_function_name" {
-  description = "Lambda function name for CI/CD deployment"
-  value       = local.enable_lambda ? aws_lambda_function.order_api[0].function_name : null
-}
-
-# ====================
 # PRODUCTION DEPLOYMENT (when needed)
 # ====================
 
@@ -39,7 +23,7 @@ output "app_config" {
   description = "Complete configuration for application environment variables"
   value = {
     # API
-    api_endpoint = local.enable_lambda ? "https://${aws_api_gateway_rest_api.order_api[0].id}.execute-api.${var.region}.amazonaws.com/${var.environment}" : "TBD after EKS setup"
+    api_endpoint = local.enable_kubernetes ? "TBD after EKS setup" : "http://localhost:8000"
 
     # Database tables
     users_table     = aws_dynamodb_table.users.name

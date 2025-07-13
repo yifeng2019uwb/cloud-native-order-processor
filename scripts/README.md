@@ -63,7 +63,7 @@ Mirrors the CI/CD pipeline locally for pre-push validation.
 ```
 
 **Environments:**
-- **`dev`** - Lambda + API Gateway (cost-optimized)
+- **`dev`** - Local FastAPI services (development)
 - **`prod`** - EKS + Kubernetes (full infrastructure)
 
 ### test-integration.sh
@@ -107,7 +107,7 @@ Deploy infrastructure using Terraform.
 ```
 
 **What it deploys:**
-- **dev**: Lambda + API Gateway + DynamoDB
+- **dev**: Local FastAPI services + DynamoDB
 - **prod**: EKS + RDS + S3 + SNS/SQS
 
 ### deploy-app.sh
@@ -120,7 +120,7 @@ Deploy application to infrastructure.
 ```
 
 **What it does:**
-- **dev**: Builds Lambda package and deploys to AWS Lambda
+- **dev**: Runs/Builds local FastAPI services
 - **prod**: Builds Docker image, pushes to ECR, deploys to EKS
 
 ### deploy-docker.sh
