@@ -20,7 +20,7 @@ services:
   user_service:
     build:
       context: ../
-      dockerfile: docker/user_service/Dockerfile
+      dockerfile: docker/user-service/Dockerfile
     container_name: order-processor-user_service
     ports:
       - "8000:8000"
@@ -52,7 +52,7 @@ services:
   inventory_service:
     build:
       context: ../
-      dockerfile: docker/inventory_service/Dockerfile
+      dockerfile: docker/inventory-service/Dockerfile
     container_name: order-processor-inventory_service
     ports:
       - "8001:8001"

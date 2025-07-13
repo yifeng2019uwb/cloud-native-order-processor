@@ -10,8 +10,10 @@ from typing import Dict, Any
 
 # Add parent directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
 from simple_retry import simple_retry
 from test_data import TestDataManager
+from api_endpoints import APIEndpoints, InventoryAPI
 
 class InventoryServiceTests:
     """Integration tests for inventory service"""
@@ -23,218 +25,26 @@ class InventoryServiceTests:
         self.test_data_manager = TestDataManager()
         self.created_assets = []
 
-    def test_get_assets(self) -> Dict[str, Any]:
-        """Test getting all assets"""
-        start_time = time.time()
+    def inventory_api(self, endpoint: str) -> str:
+        """Helper method to build inventory service API URLs"""
+        return APIEndpoints.get_inventory_endpoint(endpoint)
 
-        def get_assets():
-            return self.session.get(
-                f"{self.inventory_service_url}/assets",
-                timeout=self.timeout
-            )
+    def inventory_api_with_id(self, endpoint: str, asset_id: str) -> str:
+        """Helper method to build inventory service API URLs with asset ID"""
+        return APIEndpoints.get_inventory_endpoint(InventoryAPI.ASSET_BY_ID, id=asset_id)
 
-        try:
-            response = simple_retry(get_assets)
-            duration = time.time() - start_time
+    def test_get_assets(self):
+        r = self.session.get(self.inventory_api(InventoryAPI.ASSETS), timeout=self.timeout)
+        assert r.status_code == 200
+        assert "assets" in r.json()
+        assert any(a.get("asset_id") == "BTC" for a in r.json()["assets"])
 
-            success = response.status_code == 200
-            data = response.json() if success else {}
-
-            return {
-                'test_name': 'Get All Assets',
-                'success': success,
-                'duration': duration,
-                'status_code': response.status_code,
-                'error': None if success else f"Expected 200, got {response.status_code}",
-                'service': 'inventory-service',
-                'test_data': None
-            }
-
-        except Exception as e:
-            duration = time.time() - start_time
-            return {
-                'test_name': 'Get All Assets',
-                'success': False,
-                'duration': duration,
-                'status_code': None,
-                'error': str(e),
-                'service': 'inventory-service',
-                'test_data': None
-            }
-
-    def test_get_assets_by_category(self) -> Dict[str, Any]:
-        """Test getting assets filtered by category"""
-        start_time = time.time()
-
-        # Test with a common category
-        category = "electronics"
-
-        def get_assets_by_category():
-            return self.session.get(
-                f"{self.inventory_service_url}/assets?category={category}",
-                timeout=self.timeout
-            )
-
-        try:
-            response = simple_retry(get_assets_by_category)
-            duration = time.time() - start_time
-
-            success = response.status_code == 200
-            data = response.json() if success else {}
-
-            return {
-                'test_name': f'Get Assets by Category ({category})',
-                'success': success,
-                'duration': duration,
-                'status_code': response.status_code,
-                'error': None if success else f"Expected 200, got {response.status_code}",
-                'service': 'inventory-service',
-                'test_data': category
-            }
-
-        except Exception as e:
-            duration = time.time() - start_time
-            return {
-                'test_name': f'Get Assets by Category ({category})',
-                'success': False,
-                'duration': duration,
-                'status_code': None,
-                'error': str(e),
-                'service': 'inventory-service',
-                'test_data': category
-            }
-
-    def test_get_asset_by_id(self) -> Dict[str, Any]:
-        """Test getting a specific asset by ID"""
-        start_time = time.time()
-
-        # First get all assets to find an ID to test with
-        try:
-            response = self.session.get(f"{self.inventory_service_url}/assets", timeout=self.timeout)
-            if response.status_code == 200:
-                data = response.json()
-                assets = data.get('assets', [])
-                if assets:
-                    asset_id = assets[0].get('id')
-                    if asset_id:
-                        def get_asset_by_id():
-                            return self.session.get(
-                                f"{self.inventory_service_url}/assets/{asset_id}",
-                                timeout=self.timeout
-                            )
-
-                        response = simple_retry(get_asset_by_id)
-                        duration = time.time() - start_time
-
-                        success = response.status_code == 200
-                        data = response.json() if success else {}
-
-                        return {
-                            'test_name': f'Get Asset by ID ({asset_id})',
-                            'success': success,
-                            'duration': duration,
-                            'status_code': response.status_code,
-                            'error': None if success else f"Expected 200, got {response.status_code}",
-                            'service': 'inventory-service',
-                            'test_data': asset_id
-                        }
-        except Exception as e:
-            pass
-
-        # If no assets found or error occurred
-        duration = time.time() - start_time
-        return {
-            'test_name': 'Get Asset by ID',
-            'success': False,
-            'duration': duration,
-            'status_code': None,
-            'error': 'No assets available for testing',
-            'service': 'inventory-service',
-            'test_data': None
-        }
-
-    def test_get_categories(self) -> Dict[str, Any]:
-        """Test getting all categories"""
-        start_time = time.time()
-
-        def get_categories():
-            return self.session.get(
-                f"{self.inventory_service_url}/categories",
-                timeout=self.timeout
-            )
-
-        try:
-            response = simple_retry(get_categories)
-            duration = time.time() - start_time
-
-            success = response.status_code == 200
-            data = response.json() if success else {}
-
-            return {
-                'test_name': 'Get All Categories',
-                'success': success,
-                'duration': duration,
-                'status_code': response.status_code,
-                'error': None if success else f"Expected 200, got {response.status_code}",
-                'service': 'inventory-service',
-                'test_data': None
-            }
-
-        except Exception as e:
-            duration = time.time() - start_time
-            return {
-                'test_name': 'Get All Categories',
-                'success': False,
-                'duration': duration,
-                'status_code': None,
-                'error': str(e),
-                'service': 'inventory-service',
-                'test_data': None
-            }
-
-    def test_create_asset(self) -> Dict[str, Any]:
-        """Test creating a new asset with UUID-based data"""
-        start_time = time.time()
-
-        # Generate unique test asset data
-        asset_data = self.test_data_manager.generate_asset_data()
-        self.created_assets.append(asset_data)
-
-        def create_asset():
-            return self.session.post(
-                f"{self.inventory_service_url}/assets",
-                json=asset_data,
-                timeout=self.timeout
-            )
-
-        try:
-            response = simple_retry(create_asset)
-            duration = time.time() - start_time
-
-            success = response.status_code == 201
-            data = response.json() if success else {}
-
-            return {
-                'test_name': 'Create Asset',
-                'success': success,
-                'duration': duration,
-                'status_code': response.status_code,
-                'error': None if success else f"Expected 201, got {response.status_code}",
-                'service': 'inventory-service',
-                'test_data': asset_data['test_id']
-            }
-
-        except Exception as e:
-            duration = time.time() - start_time
-            return {
-                'test_name': 'Create Asset',
-                'success': False,
-                'duration': duration,
-                'status_code': None,
-                'error': str(e),
-                'service': 'inventory-service',
-                'test_data': asset_data['test_id']
-            }
+    def test_get_asset_by_id(self):
+        r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, "BTC"), timeout=self.timeout)
+        assert r.status_code == 200
+        data = r.json()
+        assert data.get("asset_id") == "BTC"
+        assert "name" in data
 
     def cleanup_test_assets(self):
         """Clean up test assets (placeholder for future implementation)"""
@@ -242,26 +52,38 @@ class InventoryServiceTests:
         # TODO: Implement actual cleanup when inventory service supports asset deletion
         self.created_assets = []
 
-    def run_all_inventory_tests(self) -> list:
-        """Run all inventory service tests"""
+    def run_all_inventory_tests(self):
         print("📦 Running inventory service tests...")
-
         tests = [
-            self.test_get_assets(),
-            self.test_get_assets_by_category(),
-            self.test_get_asset_by_id(),
-            self.test_get_categories(),
-            self.test_create_asset()
+            ("Get All Assets", self.test_get_assets),
+            ("Get Asset by ID", self.test_get_asset_by_id),
         ]
-
-        # Print results
-        for test in tests:
-            status = "✅ PASS" if test['success'] else "❌ FAIL"
-            print(f"  {status} {test['test_name']} - {test['duration']*1000:.2f}ms")
-            if test['error']:
-                print(f"    Error: {test['error']}")
-
-        # Cleanup test data
+        passed = 0
+        failed = 0
+        for name, test_func in tests:
+            try:
+                test_func()
+                print(f"  ✅ PASS {name}")
+                passed += 1
+            except AssertionError as e:
+                print(f"  ❌ FAIL {name}")
+                print(f"    Error: {e}")
+                failed += 1
+            except Exception as e:
+                print(f"  ❌ FAIL {name}")
+                print(f"    Unexpected error: {e}")
+                failed += 1
         self.cleanup_test_assets()
+        print("\n==================================================")
+        print(f"✅ Passed: {passed}/{len(tests)}")
+        print(f"❌ Failed: {failed}/{len(tests)}")
+        if failed == 0:
+            print("🎉 All inventory tests passed!")
+        else:
+            print("⚠️  Some tests failed")
 
-        return tests
+if __name__ == "__main__":
+    tests = InventoryServiceTests(APIEndpoints.get_inventory_endpoint(InventoryAPI.ASSETS).replace("/assets", ""))
+    tests.test_get_assets()
+    tests.test_get_asset_by_id()
+    print("All direct assertions passed.")

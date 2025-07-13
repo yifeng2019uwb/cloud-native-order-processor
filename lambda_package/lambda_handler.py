@@ -1,261 +1,177 @@
+# lambda_package/lambda_handler.py
+
 """
-Lambda Handler with FastAPI and Mangum Bridge
+Lambda Proxy Handler for External FastAPI Services
+
+This Lambda function acts as a pure proxy, forwarding API Gateway requests
+to external FastAPI services via HTTP calls. It does NOT import or run
+FastAPI apps inside Lambda.
+
+Request Flow:
+1. API Gateway receives HTTP request
+2. Lambda handler determines target service based on path
+3. Lambda forwards request to external service URL
+4. External service processes request and returns response
+5. Lambda forwards response back to API Gateway
 """
+
+import os
 import json
 import logging
-import os
-import sys
+import requests
 from datetime import datetime
+from urllib.parse import urljoin, urlparse
 
 # Configure logging for CloudWatch
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stdout
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global handler variable
-handler = None
-
-# Import FastAPI and Mangum
-try:
-    from fastapi import FastAPI, Request
-    from mangum import Mangum
-    import time
-    import uuid
-
-    # Create FastAPI app
-    app = FastAPI(
-        title="Order Processor API",
-        description="Cloud Native Order Processor API",
-        version="1.0.0"
-    )
-
-    # Add CloudWatch logging middleware
-    @app.middleware("http")
-    async def cloudwatch_logging_middleware(request: Request, call_next):
-        request_id = str(uuid.uuid4())
-        start_time = time.time()
-
-        # Log request start
-        logger.info(json.dumps({
-            "event": "request_start",
-            "request_id": request_id,
-            "method": request.method,
-            "path": request.url.path,
-            "timestamp": datetime.utcnow().isoformat(),
-            "service": "order-processor-api",
-            "environment": "lambda"
-        }))
-
-        # Process request
-        response = await call_next(request)
-
-        # Calculate duration
-        duration = time.time() - start_time
-
-        # Log request completion
-        logger.info(json.dumps({
-            "event": "request_complete",
-            "request_id": request_id,
-            "method": request.method,
-            "path": request.url.path,
-            "status_code": response.status_code,
-            "duration_seconds": round(duration, 3),
-            "timestamp": datetime.utcnow().isoformat(),
-            "service": "order-processor-api",
-            "environment": "lambda"
-        }))
-
-        return response
-
-    # Root endpoint
-    @app.get("/")
-    async def root():
-        return {
-            "message": "Order Processor API",
-            "environment": "lambda",
-            "timestamp": datetime.utcnow().isoformat(),
-            "status": "running"
-        }
-
-    # Health endpoint
-    @app.get("/health")
-    async def health():
-        return {
-            "status": "healthy",
-            "service": "Order Processor API",
-            "environment": "lambda",
-            "timestamp": datetime.utcnow().isoformat()
-        }
-
-    # Inventory service endpoints
-    @app.get("/assets")
-    async def get_assets():
-        """Get all assets - Lambda endpoint"""
-        return {
-            "assets": [
-                {
-                    "asset_id": "BTC",
-                    "name": "Bitcoin",
-                    "symbol": "BTC",
-                    "active": True,
-                    "price": 45000.00
-                },
-                {
-                    "asset_id": "ETH",
-                    "name": "Ethereum",
-                    "symbol": "ETH",
-                    "active": True,
-                    "price": 2800.00
-                }
-            ],
-            "total_count": 2,
-            "timestamp": datetime.utcnow().isoformat(),
-            "source": "lambda"
-        }
-
-    @app.get("/assets/{asset_id}")
-    async def get_asset_by_id(asset_id: str):
-        """Get specific asset - Lambda endpoint"""
-        if asset_id.upper() == "BTC":
-            return {
-                "asset_id": "BTC",
-                "name": "Bitcoin",
-                "symbol": "BTC",
-                "active": True,
-                "price": 45000.00,
-                "description": "Digital gold",
-                "timestamp": datetime.utcnow().isoformat(),
-                "source": "lambda"
-            }
-        elif asset_id.upper() == "ETH":
-            return {
-                "asset_id": "ETH",
-                "name": "Ethereum",
-                "symbol": "ETH",
-                "active": True,
-                "price": 2800.00,
-                "description": "Smart contract platform",
-                "timestamp": datetime.utcnow().isoformat(),
-                "source": "lambda"
-            }
-        else:
-            return {
-                "error": "Asset not found",
-                "asset_id": asset_id,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-
-    # User service endpoints
-    @app.get("/auth/register")
-    async def register():
-        """User registration endpoint - Lambda"""
-        return {
-            "message": "User registration endpoint",
-            "method": "GET",
-            "timestamp": datetime.utcnow().isoformat(),
-            "source": "lambda"
-        }
-
-    @app.post("/auth/register")
-    async def register_post(request: Request):
-        """User registration POST - Lambda"""
-        try:
-            body = await request.json()
-            return {
-                "message": "User registered successfully",
-                "user_id": "user_123",
-                "email": body.get("email", "unknown"),
-                "timestamp": datetime.utcnow().isoformat(),
-                "source": "lambda"
-            }
-        except:
-            return {
-                "message": "User registration endpoint",
-                "method": "POST",
-                "timestamp": datetime.utcnow().isoformat(),
-                "source": "lambda"
-            }
-
-    @app.get("/auth/login")
-    async def login():
-        """User login endpoint - Lambda"""
-        return {
-            "message": "User login endpoint",
-            "method": "GET",
-            "timestamp": datetime.utcnow().isoformat(),
-            "source": "lambda"
-        }
-
-    @app.post("/auth/login")
-    async def login_post(request: Request):
-        """User login POST - Lambda"""
-        try:
-            body = await request.json()
-            return {
-                "message": "User logged in successfully",
-                "token": "jwt_token_123",
-                "user_id": "user_123",
-                "timestamp": datetime.utcnow().isoformat(),
-                "source": "lambda"
-            }
-        except:
-            return {
-                "message": "User login endpoint",
-                "method": "POST",
-                "timestamp": datetime.utcnow().isoformat(),
-                "source": "lambda"
-            }
-
-    # Create Mangum handler - this is the bridge between Lambda and FastAPI
-    handler = Mangum(app, lifespan="off")
-    logger.info("✅ FastAPI + Mangum Lambda handler created successfully")
-
-except ImportError as import_error:
-    error_msg = str(import_error)
-    logger.error(f"❌ Failed to import FastAPI/Mangum: {error_msg}")
-
-    # Fallback handler
-    def fallback_handler(event, context):
-        logger.error("Using fallback handler - FastAPI/Mangum not available")
-        return {
-            'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({
-                "error": "FastAPI/Mangum not available",
-                "message": error_msg,
-                "timestamp": datetime.utcnow().isoformat()
-            })
-        }
-
-    handler = fallback_handler
+def get_service_url(path):
+    """
+    Determine which external service URL to use based on request path
+    """
+    if path.startswith('/auth'):
+        user_service_url = os.environ.get('USER_SERVICE_URL')
+        if not user_service_url:
+            raise ValueError("USER_SERVICE_URL environment variable not set")
+        return user_service_url
+    elif path.startswith('/inventory'):
+        inventory_service_url = os.environ.get('INVENTORY_SERVICE_URL')
+        if not inventory_service_url:
+            raise ValueError("INVENTORY_SERVICE_URL environment variable not set")
+        return inventory_service_url
+    else:
+        # Default to inventory service
+        inventory_service_url = os.environ.get('INVENTORY_SERVICE_URL')
+        if not inventory_service_url:
+            raise ValueError("INVENTORY_SERVICE_URL environment variable not set")
+        return inventory_service_url
 
 def lambda_handler(event, context):
     """
-    AWS Lambda entry point - Mangum bridges this to FastAPI
+    AWS Lambda entry point - Pure HTTP proxy to external services
     """
-    logger.info(f"🚀 Lambda invoked: {context.function_name}")
-    logger.info(f"📊 Event type: {event.get('httpMethod', 'unknown')}")
-    logger.info(f"🛣️ Path: {event.get('path', 'unknown')}")
+
+    # Extract request details
+    http_method = event.get('httpMethod', 'GET')
+    path = event.get('path', '')
+    headers = event.get('headers', {}) or {}
+    query_string = event.get('queryStringParameters', {}) or {}
+    body = event.get('body', '')
+
+    # Determine target service URL
+    base_url = get_service_url(path)
+
+    # Log request for monitoring
+    logger.info(json.dumps({
+        "event": "proxy_request",
+        "method": http_method,
+        "path": path,
+        "target_url": base_url,
+        "timestamp": datetime.utcnow().isoformat(),
+        "lambda_request_id": getattr(context, 'aws_request_id', 'unknown')
+    }))
 
     try:
-        if handler is None:
-            raise Exception("Handler not initialized")
+        # Prepare request to external service
+        url = urljoin(base_url, path)
 
-        # Mangum handles the conversion between Lambda event and FastAPI
-        result = handler(event, context)
-        logger.info("✅ Lambda execution completed successfully")
-        return result
-    except Exception as error:
-        logger.error(f"❌ Lambda execution failed: {str(error)}")
+        # Prepare headers (remove Lambda-specific headers)
+        proxy_headers = {}
+        for key, value in headers.items():
+            # Skip Lambda-specific headers
+            if key.lower() not in ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-port']:
+                proxy_headers[key] = value
+
+        # Add content-type if body exists
+        if body and 'content-type' not in [k.lower() for k in proxy_headers.keys()]:
+            proxy_headers['Content-Type'] = 'application/json'
+
+        # Make request to external service
+        response = requests.request(
+            method=http_method,
+            url=url,
+            headers=proxy_headers,
+            params=query_string,
+            data=body,
+            timeout=30  # 30 second timeout
+        )
+
+        # Prepare response for API Gateway
+        response_headers = dict(response.headers)
+
+        # Remove headers that might cause issues
+        headers_to_remove = ['content-encoding', 'transfer-encoding', 'connection']
+        for header in headers_to_remove:
+            response_headers.pop(header, None)
+
+        # Log successful response
+        logger.info(json.dumps({
+            "event": "proxy_success",
+            "method": http_method,
+            "path": path,
+            "status_code": response.status_code,
+            "timestamp": datetime.utcnow().isoformat()
+        }))
+
+        return {
+            'statusCode': response.status_code,
+            'headers': response_headers,
+            'body': response.text
+        }
+
+    except requests.exceptions.Timeout:
+        logger.error(json.dumps({
+            "event": "proxy_timeout",
+            "method": http_method,
+            "path": path,
+            "target_url": base_url,
+            "timestamp": datetime.utcnow().isoformat()
+        }))
+
+        return {
+            'statusCode': 504,
+            'headers': {'Content-Type': 'application/json'},
+            'body': json.dumps({
+                "error": "Gateway Timeout",
+                "message": f"External service at {base_url} did not respond within timeout"
+            })
+        }
+
+    except requests.exceptions.ConnectionError:
+        logger.error(json.dumps({
+            "event": "proxy_connection_error",
+            "method": http_method,
+            "path": path,
+            "target_url": base_url,
+            "timestamp": datetime.utcnow().isoformat()
+        }))
+
+        return {
+            'statusCode': 502,
+            'headers': {'Content-Type': 'application/json'},
+            'body': json.dumps({
+                "error": "Bad Gateway",
+                "message": f"Cannot connect to external service at {base_url}"
+            })
+        }
+
+    except Exception as e:
+        logger.error(json.dumps({
+            "event": "proxy_error",
+            "method": http_method,
+            "path": path,
+            "target_url": base_url,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "timestamp": datetime.utcnow().isoformat()
+        }))
+
         return {
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({
-                "error": "Internal server error",
-                "message": str(error),
-                "timestamp": datetime.utcnow().isoformat()
+                "error": "Internal Server Error",
+                "message": f"Proxy error: {str(e)}"
             })
         }
