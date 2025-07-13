@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: order-processor-local
+  namespace: order-processor
+
+resources:
+- ../base
+- deployment.yaml
+- service.yaml
+- secrets.yaml
+
+labels:
+  environment: local
+  deployment: local
+
+commonAnnotations:
+  description: "Local Kubernetes deployment for Order Processor application"
+  environment: "local"
+  cluster: "kind-order-processor"
+
+images:
+- name: docker-user_service
+  newTag: latest
+- name: docker-inventory_service
+  newTag: latest
+- name: docker-frontend-dev
+  newTag: latest
