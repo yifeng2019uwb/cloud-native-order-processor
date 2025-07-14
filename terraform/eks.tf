@@ -3,7 +3,7 @@
 
 # EKS Cluster
 resource "aws_eks_cluster" "main" {
-  count = local.enable_kubernetes ? 1 : 0
+  count = local.enable_prod ? 1 : 0
 
   name     = "${local.resource_prefix}-cluster"
   role_arn = aws_iam_role.eks_cluster[0].arn

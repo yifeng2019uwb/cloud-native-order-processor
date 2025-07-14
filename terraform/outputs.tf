@@ -7,12 +7,12 @@
 
 output "eks_cluster_name" {
   description = "EKS cluster name"
-  value       = local.enable_kubernetes ? aws_eks_cluster.main[0].name : null
+  value       = local.enable_prod ? aws_eks_cluster.main[0].name : null
 }
 
 output "ecr_repository_url" {
   description = "ECR repository URL for container deployment"
-  value       = local.enable_kubernetes ? aws_ecr_repository.order_api[0].repository_url : null
+  value       = local.enable_prod ? aws_ecr_repository.order_api[0].repository_url : null
 }
 
 # ====================
@@ -23,7 +23,7 @@ output "app_config" {
   description = "Complete configuration for application environment variables"
   value = {
     # API
-    api_endpoint = local.enable_kubernetes ? "TBD after EKS setup" : "http://localhost:8000"
+    api_endpoint = local.enable_prod ? "TBD after EKS setup" : "http://localhost:8000"
 
     # Database tables
     users_table     = aws_dynamodb_table.users.name
@@ -69,12 +69,12 @@ output "aws_region" {
 
 output "application_user_access_key_id" {
   description = "Access key ID for local K8s (only for local dev)"
-  value       = local.enable_kubernetes ? null : aws_iam_access_key.application_user[0].id
+  value       = local.enable_prod ? null : aws_iam_access_key.application_user[0].id
   sensitive   = false
 }
 
 output "application_user_access_key_secret" {
   description = "Access key secret for local K8s (only for local dev)"
-  value       = local.enable_kubernetes ? null : aws_iam_access_key.application_user[0].secret
+  value       = local.enable_prod ? null : aws_iam_access_key.application_user[0].secret
   sensitive   = true
 }

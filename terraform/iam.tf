@@ -7,7 +7,7 @@
 
 # EKS cluster role
 resource "aws_iam_role" "eks_cluster" {
-  count = local.enable_kubernetes ? 1 : 0
+  count = local.enable_prod ? 1 : 0
 
   name = "${local.resource_prefix}-eks-cluster-role"
 
@@ -28,7 +28,7 @@ resource "aws_iam_role" "eks_cluster" {
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  count = local.enable_kubernetes ? 1 : 0
+  count = local.enable_prod ? 1 : 0
 
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
   role       = aws_iam_role.eks_cluster[0].name
@@ -79,7 +79,7 @@ resource "aws_iam_user_policy_attachment" "application_user_assume_role" {
 
 # Access key for local K8s (only when not using EKS)
 resource "aws_iam_access_key" "application_user" {
-  count = local.enable_kubernetes ? 0 : 1  # Only create for local dev
+  count = local.enable_prod ? 0 : 1  # Only create for local dev
   user  = aws_iam_user.application_user.name
 
   # Lifecycle to prevent recreation unless user changes

@@ -2,12 +2,11 @@
 # Simple logic for personal project
 
 locals {
-  # Feature flags
-  enable_kubernetes = var.environment == "prod"
-  enable_vpc = var.environment == "prod"
+  # Single flag for prod vs dev environment
+  enable_prod = var.environment == "prod"
 
   # Infrastructure
-  create_vpc = local.enable_vpc
+  create_vpc = local.enable_prod
 
   # Data lifecycle configuration (1 days = 1 years in personal project)
   data_lifecycle = {
