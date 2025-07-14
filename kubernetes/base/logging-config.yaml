@@ -1,0 +1,178 @@
+---
+# Fluent Bit DaemonSet for centralized logging
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit
+  namespace: kube-system
+  labels:
+    app: fluent-bit
+    version: v1.9
+spec:
+  selector:
+    matchLabels:
+      app: fluent-bit
+  template:
+    metadata:
+      labels:
+        app: fluent-bit
+        version: v1.9
+    spec:
+      serviceAccount: fluent-bit
+      containers:
+      - name: fluent-bit
+        image: fluent/fluent-bit:2.1
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+        - name: varlibdockercontainers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+        - name: fluentbitconfig
+          mountPath: /fluent-bit/etc/
+        - name: aws-credentials
+          mountPath: /root/.aws
+          readOnly: true
+        resources:
+          limits:
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+      - name: fluentbitconfig
+        configMap:
+          name: fluent-bit-config
+      - name: aws-credentials
+        secret:
+          secretName: aws-credentials
+          defaultMode: 0400
+---
+# Service Account for Fluent Bit
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluent-bit
+  namespace: kube-system
+---
+# Cluster Role for Fluent Bit
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fluent-bit-read
+rules:
+- apiGroups: [""]
+  resources:
+  - namespaces
+  - pods
+  verbs: ["get", "list", "watch"]
+---
+# Cluster Role Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fluent-bit-read
+roleRef:
+  kind: ClusterRole
+  name: fluent-bit-read
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: fluent-bit
+  namespace: kube-system
+---
+# ConfigMap for Fluent Bit configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: kube-system
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush        1
+        Log_Level    info
+        Parsers_File parsers.conf
+        HTTP_Server  On
+        HTTP_Listen  0.0.0.0
+        HTTP_Port    2020
+
+    [INPUT]
+        Name              tail
+        Tag               kube.*
+        Path              /var/log/containers/*.log
+        Parser            docker
+        DB                /var/log/flb_kube.db
+        Skip_Long_Lines   On
+        Refresh_Interval  10
+        Mem_Buf_Limit     5MB
+
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Kube_URL           https://kubernetes.default.svc:443
+        Kube_CA_Path       /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        Kube_Token_Path    /var/run/secrets/kubernetes.io/serviceaccount/token
+        Merge_Log          On
+        Merge_Log_Key      log_processed
+        K8S-Logging.Parser On
+        K8S-Logging.Exclude On
+
+    [FILTER]
+        Name                modify
+        Match               kube.*
+        Add                 environment local
+        Add                 cluster_name order-processor-local
+
+    [OUTPUT]
+        Name                s3
+        Match               kube.*
+        bucket              ${S3_LOGS_BUCKET}
+        region              us-east-1
+        store_dir           /tmp/fluent-bit/s3
+        upload_timeout      10m
+        use_put_object      On
+        compression         gzip
+        log_key_name        log
+        time_key            timestamp
+        time_key_format     %Y-%m-%dT%H:%M:%S
+        s3_key_format       /logs/year=%Y/month=%m/day=%d/hour=%H/%L.gz
+
+    [OUTPUT]
+        Name                cloudwatch
+        Match               kube.*
+        region              us-east-1
+        log_group_name      /aws/eks/order-processor/local/application
+        log_stream_prefix   fluent-bit-
+        auto_create_group   true
+        log_key             log
+
+    [OUTPUT]
+        Name                file
+        Match               kube.*
+        Path                /var/log/fluent-bit/
+        Format              json
+        Time_Key            timestamp
+        Time_Format         %Y-%m-%dT%H:%M:%S
+
+  parsers.conf: |
+    [PARSER]
+        Name        docker
+        Format      json
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+        Time_Keep   On
+
+    [PARSER]
+        Name        syslog
+        Format      regex
+        Regex       ^\<(?<priority>[0-9]+)\>(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
+        Time_Key    time
+        Time_Format %b %d %H:%M:%S

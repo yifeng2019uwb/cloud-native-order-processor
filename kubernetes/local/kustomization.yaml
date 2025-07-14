@@ -11,7 +11,7 @@ resources:
 - service.yaml
 - secrets.yaml
 
-labels:
+commonLabels:
   environment: local
   deployment: local
 

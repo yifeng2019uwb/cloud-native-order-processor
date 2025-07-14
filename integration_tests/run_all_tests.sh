@@ -21,6 +21,63 @@ install_prerequisites() {
     echo "Prerequisites installed successfully!"
 }
 
+# Setup Kubernetes port forwarding
+setup_k8s_port_forward() {
+    echo "Setting up Kubernetes port forwarding..."
+
+    # Check if services exist in order-processor namespace
+    if kubectl get svc user-service -n order-processor >/dev/null 2>&1; then
+        echo "✅ Kubernetes services detected, setting up port forwarding..."
+
+        # Kill any existing port-forward processes
+        pkill -f "kubectl port-forward" || true
+
+        # Start port forwarding for user service
+        kubectl port-forward svc/user-service 8000:8000 -n order-processor >/dev/null 2>&1 &
+        USER_PF_PID=$!
+        echo "   User service port-forward started (PID: $USER_PF_PID)"
+
+        # Start port forwarding for inventory service
+        kubectl port-forward svc/inventory-service 8001:8001 -n order-processor >/dev/null 2>&1 &
+        INVENTORY_PF_PID=$!
+        echo "   Inventory service port-forward started (PID: $INVENTORY_PF_PID)"
+
+        # Wait a moment for port forwarding to establish
+        sleep 2
+
+        # Store PIDs for cleanup
+        echo $USER_PF_PID > .user_pf_pid
+        echo $INVENTORY_PF_PID > .inventory_pf_pid
+
+        echo "✅ Port forwarding setup complete"
+    else
+        echo "⚠️  Kubernetes services not found, skipping port forwarding"
+    fi
+}
+
+# Cleanup port forwarding
+cleanup_port_forward() {
+    echo "Cleaning up port forwarding..."
+
+    # Kill port-forward processes if PID files exist
+    if [ -f .user_pf_pid ]; then
+        USER_PID=$(cat .user_pf_pid)
+        kill $USER_PID 2>/dev/null || true
+        rm -f .user_pf_pid
+        echo "   User service port-forward stopped"
+    fi
+
+    if [ -f .inventory_pf_pid ]; then
+        INVENTORY_PID=$(cat .inventory_pf_pid)
+        kill $INVENTORY_PID 2>/dev/null || true
+        rm -f .inventory_pf_pid
+        echo "   Inventory service port-forward stopped"
+    fi
+
+    # Kill any remaining kubectl port-forward processes
+    pkill -f "kubectl port-forward" 2>/dev/null || true
+}
+
 show_usage() {
     echo "Usage: $0 [all|smoke|inventory|user]"
     echo "  all       - Run all tests (default)"
@@ -59,6 +116,9 @@ fi
 # Install prerequisites before running tests
 install_prerequisites
 
+# Setup Kubernetes port forwarding if services are available
+setup_k8s_port_forward
+
 case $ARG in
     "all")
         echo "=== Running All Tests ==="
@@ -88,3 +148,6 @@ case $ARG in
         exit 1
         ;;
 esac
+
+# Cleanup port forwarding
+cleanup_port_forward

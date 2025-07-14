@@ -8,8 +8,9 @@ metadata:
 resources:
 - namespace.yaml
 - service-account.yaml
+- logging-config.yaml
 
-labels:
+commonLabels:
   app: order-processor
   environment: base
   version: v1.0.0
