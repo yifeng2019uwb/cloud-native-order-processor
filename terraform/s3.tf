@@ -15,6 +15,16 @@ resource "aws_s3_bucket" "main" {
   tags = local.common_tags
 }
 
+# Dedicated bucket for application logs
+resource "aws_s3_bucket" "logs" {
+  bucket        = "${local.resource_prefix}-logs-${random_string.bucket_suffix.result}"
+  force_destroy = true
+
+  tags = merge(local.common_tags, {
+    Purpose = "Application Logs"
+  })
+}
+
 # Block public access
 resource "aws_s3_bucket_public_access_block" "main" {
   bucket = aws_s3_bucket.main.id
@@ -25,9 +35,30 @@ resource "aws_s3_bucket_public_access_block" "main" {
   restrict_public_buckets = true
 }
 
+# Block public access for logs bucket
+resource "aws_s3_bucket_public_access_block" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 # Basic encryption
 resource "aws_s3_bucket_server_side_encryption_configuration" "main" {
   bucket = aws_s3_bucket.main.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Encryption for logs bucket
+resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
+  bucket = aws_s3_bucket.logs.id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -83,6 +114,33 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
     # Apply to snapshot prefix
     filter {
       prefix = "snapshots/"
+    }
+  }
+}
+
+# Lifecycle policy for application logs
+resource "aws_s3_bucket_lifecycle_configuration" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  rule {
+    id     = "application-logs"
+    status = "Enabled"
+
+    # Move to cheaper storage after 7 days
+    transition {
+      days          = 7
+      storage_class = "STANDARD_IA"
+    }
+
+    # Move to glacier after 30 days
+    transition {
+      days          = 30
+      storage_class = "GLACIER"
+    }
+
+    # Delete after 90 days
+    expiration {
+      days = 90
     }
   }
 }

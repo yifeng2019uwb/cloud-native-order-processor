@@ -7,6 +7,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Import STS client
+try:
+    from ..aws.sts_client import STSClient
+except ImportError:
+    # Fallback for when common package is not installed
+    STSClient = None
+
 
 class DynamoDBManager:
     """DynamoDB Manager - Only handles connections and table references"""
@@ -25,10 +32,19 @@ class DynamoDBManager:
         if not self.inventory_table_name:
             raise ValueError("INVENTORY_TABLE environment variable not found")
 
-        # Initialize boto3 client and resource
-        self.region = os.getenv("REGION", "us-west-2")
-        self.dynamodb = boto3.resource('dynamodb', region_name=self.region)
-        self.client = boto3.client('dynamodb', region_name=self.region)
+        # Initialize boto3 client and resource with STS support
+        self.region = os.getenv("AWS_REGION", "us-west-2")
+
+        # Use STS client if available, otherwise fallback to direct boto3
+        if STSClient:
+            sts_client = STSClient()
+            self.dynamodb = sts_client.get_resource('dynamodb')
+            self.client = sts_client.get_client('dynamodb')
+            logger.info("Using STS client for DynamoDB connection")
+        else:
+            self.dynamodb = boto3.resource('dynamodb', region_name=self.region)
+            self.client = boto3.client('dynamodb', region_name=self.region)
+            logger.info("Using direct boto3 for DynamoDB connection")
 
         # ✅ Get table references
         self.users_table = self.dynamodb.Table(self.users_table_name)

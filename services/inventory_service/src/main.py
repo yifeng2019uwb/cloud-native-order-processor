@@ -45,6 +45,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize STS client for AWS role assumption
+try:
+    from common.aws.sts_client import STSClient
+    sts_client = STSClient()
+    logger.info("✅ STS client initialized for role assumption")
+except ImportError:
+    sts_client = None
+    logger.info("⚠️ STS client not available, using local credentials")
+
 # Create FastAPI app
 app = FastAPI(
     title="Inventory Service",

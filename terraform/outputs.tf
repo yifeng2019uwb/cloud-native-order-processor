@@ -34,5 +34,26 @@ output "app_config" {
     queue_url = aws_sqs_queue.order_processing.url
     topic_arn = aws_sns_topic.order_events.arn
     s3_bucket = aws_s3_bucket.main.bucket
+    logs_bucket = aws_s3_bucket.logs.bucket
+
+    # IAM Role for application services
+    application_role_arn = aws_iam_role.application_service.arn
+    aws_account_id = data.aws_caller_identity.current.account_id
   }
+}
+
+# Individual outputs for easier access
+output "application_role_arn" {
+  description = "ARN of the IAM role for application services"
+  value       = aws_iam_role.application_service.arn
+}
+
+output "application_user_arn" {
+  description = "ARN of the IAM user for application role assumption"
+  value       = aws_iam_user.application_user.arn
+}
+
+output "aws_account_id" {
+  description = "Current AWS account ID"
+  value       = data.aws_caller_identity.current.account_id
 }
