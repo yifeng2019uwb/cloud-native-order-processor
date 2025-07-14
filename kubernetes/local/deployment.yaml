@@ -43,6 +43,16 @@ spec:
           value: "us-west-2"
         - name: AWS_ROLE_ARN
           value: "arn:aws:iam::940482447349:role/order-processor-dev-application-service-role"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: aws-access-key-id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: aws-secret-access-key
         resources:
           requests:
             memory: "128Mi"
@@ -106,6 +116,16 @@ spec:
           value: "us-west-2"
         - name: AWS_ROLE_ARN
           value: "arn:aws:iam::940482447349:role/order-processor-dev-application-service-role"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: aws-access-key-id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: aws-secret-access-key
         resources:
           requests:
             memory: "128Mi"

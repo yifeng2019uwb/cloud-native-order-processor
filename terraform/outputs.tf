@@ -62,3 +62,19 @@ output "aws_region" {
   description = "Current AWS region"
   value       = data.aws_region.current.name
 }
+
+# ====================
+# LOCAL K8S CREDENTIALS (only for local dev)
+# ====================
+
+output "application_user_access_key_id" {
+  description = "Access key ID for local K8s (only for local dev)"
+  value       = local.enable_kubernetes ? null : aws_iam_access_key.application_user[0].id
+  sensitive   = false
+}
+
+output "application_user_access_key_secret" {
+  description = "Access key secret for local K8s (only for local dev)"
+  value       = local.enable_kubernetes ? null : aws_iam_access_key.application_user[0].secret
+  sensitive   = true
+}

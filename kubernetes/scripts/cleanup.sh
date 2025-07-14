@@ -38,6 +38,15 @@ case $CLEANUP_TARGET in
         else
             echo "ℹ️  No deployments found"
         fi
+
+        # Also delete Kind cluster if it exists
+        if kind get clusters | grep -q "order-processor"; then
+            echo "🗑️  Deleting Kind cluster 'order-processor'..."
+            kind delete cluster --name order-processor
+            echo "✅ Kind cluster deleted"
+        else
+            echo "ℹ️  No Kind cluster found"
+        fi
         ;;
     *)
         echo "❌ Invalid target: $CLEANUP_TARGET"
@@ -47,4 +56,4 @@ case $CLEANUP_TARGET in
 esac
 
 echo ""
-echo "�� Cleanup complete!"
+echo "🧹 Cleanup complete!"

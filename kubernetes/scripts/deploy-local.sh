@@ -7,11 +7,14 @@ set -e
 
 echo "🚀 Deploying Order Processor to Local Kubernetes (Kind)..."
 
-# Check if Kind cluster exists
+# Check if Kind cluster exists, create multi-node if not
 if ! kind get clusters | grep -q "order-processor"; then
     echo "❌ Kind cluster 'order-processor' not found!"
-    echo "Please create it first: kind create cluster --name order-processor"
-    exit 1
+    echo "🔧 Creating multi-node Kind cluster 'order-processor'..."
+    kind create cluster --name order-processor --config ../kind-config.yaml
+    echo "✅ Multi-node Kind cluster created successfully!"
+else
+    echo "✅ Kind cluster 'order-processor' already exists"
 fi
 
 # Check if kubectl is configured for the cluster
@@ -22,7 +25,7 @@ fi
 
 # Build Docker images
 echo "📦 Building Docker images..."
-cd ../docker
+cd ../../docker
 docker-compose -f docker-compose.dev.yml build
 cd ../kubernetes
 

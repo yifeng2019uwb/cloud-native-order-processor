@@ -77,6 +77,17 @@ resource "aws_iam_user_policy_attachment" "application_user_assume_role" {
   policy_arn = aws_iam_policy.assume_application_role.arn
 }
 
+# Access key for local K8s (only when not using EKS)
+resource "aws_iam_access_key" "application_user" {
+  count = local.enable_kubernetes ? 0 : 1  # Only create for local dev
+  user  = aws_iam_user.application_user.name
+
+  # Lifecycle to prevent recreation unless user changes
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 # IAM Role for application services (Kubernetes pods)
 resource "aws_iam_role" "application_service" {
   name = "${local.resource_prefix}-application-service-role"

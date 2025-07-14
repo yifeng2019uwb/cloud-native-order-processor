@@ -216,3 +216,10 @@ Personal learning project. Feedback on architecture, security, and DevOps is wel
 
 ## 📄 License
 Educational use only. Learn and adapt freely.
+
+You can run it from your project root with:
+```bash
+python services/inventory_service/src/services/fetch_coingecko.py
+```
+
+Let me know if you need help running it or want to move it elsewhere!
