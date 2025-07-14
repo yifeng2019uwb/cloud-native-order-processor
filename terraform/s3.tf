@@ -99,6 +99,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
     expiration {
       days = 365
     }
+
+    # Apply to all objects (required filter)
+    filter {
+      prefix = ""
+    }
   }
 
   # Rule for frequent snapshots (every 5 minutes)
@@ -126,21 +131,26 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
     id     = "application-logs"
     status = "Enabled"
 
-    # Move to cheaper storage after 7 days
+    # Move to cheaper storage after 30 days (minimum for STANDARD_IA)
     transition {
-      days          = 7
+      days          = 30
       storage_class = "STANDARD_IA"
     }
 
-    # Move to glacier after 30 days
+    # Move to glacier after 90 days
     transition {
-      days          = 30
+      days          = 90
       storage_class = "GLACIER"
     }
 
-    # Delete after 90 days
+    # Delete after 180 days
     expiration {
-      days = 90
+      days = 180
+    }
+
+    # Apply to all objects (required filter)
+    filter {
+      prefix = ""
     }
   }
 }

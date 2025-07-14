@@ -185,9 +185,7 @@ resource "aws_iam_policy" "sqs_access" {
         ]
         Resource = [
           aws_sqs_queue.order_processing.arn,
-          aws_sqs_queue.payment_processing.arn,
-          aws_sqs_queue.inventory_processing.arn,
-          aws_sqs_queue.notification_processing.arn
+          aws_sqs_queue.order_dlq.arn
         ]
       }
     ]
@@ -209,10 +207,7 @@ resource "aws_iam_policy" "sns_access" {
           "sns:GetTopicAttributes"
         ]
         Resource = [
-          aws_sns_topic.order_events.arn,
-          aws_sns_topic.payment_events.arn,
-          aws_sns_topic.inventory_events.arn,
-          aws_sns_topic.notification_events.arn
+          aws_sns_topic.order_events.arn
         ]
       }
     ]

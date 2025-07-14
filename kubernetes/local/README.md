@@ -15,26 +15,30 @@ This directory contains the local Kubernetes configurations for deploying the Or
    docker-compose -f ../docker/docker-compose.dev.yml build
    ```
 
-3. **AWS credentials configured** (for DynamoDB access):
-   - Update `secrets.yaml` with your AWS credentials
-   - Base64 encode your credentials:
-     ```bash
-     echo -n "your-access-key" | base64
-     echo -n "your-secret-key" | base64
-     ```
+3. **AWS infrastructure deployed** (for DynamoDB access):
+   - Run `terraform apply` in the terraform directory
+   - This creates the IAM role and DynamoDB tables
+   - Uses your existing AWS credentials (local/GitHub) for role assumption
 
 ## Deployment
 
-### 1. Apply base configuration:
+### 1. Deploy using the automated script (Recommended):
 ```bash
-kubectl apply -k ../base
+./scripts/deploy-local-k8s.sh
 ```
 
-### 2. Update secrets with your credentials:
-Edit `secrets.yaml` and replace the placeholder values with your actual base64-encoded AWS credentials.
+This script will:
+- Get the role ARN from Terraform outputs
+- Update Kubernetes deployment files
+- Apply all configurations
+- Wait for pods to be ready
 
-### 3. Deploy to local cluster:
+### 2. Manual deployment (Alternative):
 ```bash
+# Apply base configuration
+kubectl apply -k ../base
+
+# Deploy to local cluster
 kubectl apply -k .
 ```
 
@@ -56,6 +60,7 @@ After deployment, the services will be available at:
 ### Environment Variables
 - `ENVIRONMENT`: development
 - `AWS_REGION`: us-east-1
+- `AWS_ROLE_ARN`: Automatically set from Terraform outputs
 - `JWT_SECRET`: local-dev-secret-key
 
 ### Resources
@@ -101,4 +106,5 @@ kubectl delete -k .
 - Uses `imagePullPolicy: Never` to use local Docker images
 - NodePort services for external access
 - Minimal resource allocation for local development
-- AWS credentials required for DynamoDB access
+- Uses STS role assumption with existing AWS credentials
+- Role ARN automatically retrieved from Terraform outputs

@@ -44,7 +44,7 @@ services:
 
 # Database Configuration
 database:
-  region: "us-east-1"
+  region: "${AWS_REGION}"
   tables:
     users: "order-processor-dev-users"
     orders: "order-processor-dev-orders"
@@ -52,8 +52,9 @@ database:
 
 # AWS Configuration
 aws:
-  region: "us-east-1"
-  # Credentials will be loaded from secrets
+  region: "${AWS_REGION}"
+  account_id: "${AWS_ACCOUNT_ID}"
+  role_arn: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/order-processor-dev-application-service-role"
 
 # Application Configuration
 app:

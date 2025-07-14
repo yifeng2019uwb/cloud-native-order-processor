@@ -40,9 +40,9 @@ spec:
         - name: JWT_SECRET
           value: "local-dev-secret-key"
         - name: AWS_REGION
-          value: "us-west-2"
+          value: "${AWS_REGION}"
         - name: AWS_ROLE_ARN
-          value: "arn:aws:iam::940482447349:role/order-processor-dev-application-service-role"
+          value: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/order-processor-dev-application-service-role"
         resources:
           requests:
             memory: "128Mi"
@@ -103,9 +103,9 @@ spec:
         - name: INVENTORY_TABLE
           value: "order-processor-dev-inventory"
         - name: AWS_REGION
-          value: "us-west-2"
+          value: "${AWS_REGION}"
         - name: AWS_ROLE_ARN
-          value: "arn:aws:iam::940482447349:role/order-processor-dev-application-service-role"
+          value: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/order-processor-dev-application-service-role"
         resources:
           requests:
             memory: "128Mi"
