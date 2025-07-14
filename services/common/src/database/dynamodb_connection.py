@@ -33,7 +33,9 @@ class DynamoDBManager:
             raise ValueError("INVENTORY_TABLE environment variable not found")
 
         # Initialize boto3 client and resource with STS support
-        self.region = os.getenv("AWS_REGION", "us-west-2")
+        self.region = os.getenv("AWS_REGION")
+        if not self.region:
+            raise ValueError("AWS_REGION environment variable is required")
 
         # Use STS client if available, otherwise fallback to direct boto3
         if STSClient:

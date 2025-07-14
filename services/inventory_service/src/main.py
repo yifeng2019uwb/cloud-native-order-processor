@@ -208,7 +208,7 @@ async def startup_event():
     logger.info(f"  Environment: {os.getenv('ENVIRONMENT', 'development')}")
     logger.info(f"  Services Root: {Path(__file__).parent.parent.parent}")
     logger.info(f"  Service: inventory-service")
-    logger.info(f"  Database Region: {os.getenv('REGION', 'us-west-2')}")
+    logger.info(f"  Database Region: {os.getenv('AWS_REGION', 'Not Set')}")
 
     # Check required environment variables
     required_env_vars = {
