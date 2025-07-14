@@ -3,6 +3,24 @@
 # Simple script to run test cases with options
 # Usage: ./run_all_tests.sh [all|smoke|inventory|user]
 
+# Install prerequisites
+install_prerequisites() {
+    echo "Installing prerequisites..."
+
+    # Check if virtual environment exists, create if not
+    if [ ! -d "venv" ]; then
+        echo "Creating virtual environment..."
+        python3 -m venv venv
+    fi
+
+    # Activate virtual environment and install requirements
+    echo "Activating virtual environment and installing requirements..."
+    source venv/bin/activate
+    pip install -r requirements.txt
+
+    echo "Prerequisites installed successfully!"
+}
+
 show_usage() {
     echo "Usage: $0 [all|smoke|inventory|user]"
     echo "  all       - Run all tests (default)"
@@ -37,6 +55,9 @@ if [ $# -eq 0 ]; then
 else
     ARG="$1"
 fi
+
+# Install prerequisites before running tests
+install_prerequisites
 
 case $ARG in
     "all")
