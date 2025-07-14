@@ -51,7 +51,6 @@ flowchart TD
     X["K8s Ingress"]
   end
   subgraph API
-    B["API Gateway"]
     C["User Service (FastAPI)"]
     D["Inventory Service (FastAPI)"]
   end
@@ -64,9 +63,8 @@ flowchart TD
     G["Grafana Dashboards"]
   end
   A -->|HTTP/REST| X
-  X --> B
-  B --> C
-  B --> D
+  X --> C
+  X --> D
   C -->|Read/Write| E
   D -->|Read/Write| E
   C -->|Store/Fetch| F
@@ -74,12 +72,11 @@ flowchart TD
   C --> P
   D --> P
   P --> G
-  B -->|Auth| C
-  B -->|Auth| D
 ```
 
 **Note:**
 - EKS (or local K8s) runs FastAPI microservices in Docker containers.
+- K8s Ingress routes traffic directly to FastAPI services (no API Gateway).
 - Monitoring uses Prometheus for metrics collection and Grafana for dashboards.
 - DynamoDB is used for all environments for cost efficiency and simplicity. RDS/PostgreSQL is not used or planned.
 - Focus is on Docker, Kubernetes, security, and monitoring best practices.
