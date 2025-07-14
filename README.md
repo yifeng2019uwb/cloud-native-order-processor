@@ -1,60 +1,99 @@
 # 🚀 Cloud-Native Order Service
 
-A comprehensive cloud-native microservice built for learning modern DevOps, infrastructure automation, and scalable system design. This project demonstrates real-world practices used in production environments while maintaining cost-effective development patterns.
+A hands-on cloud-native microservice project focused on learning Docker, Kubernetes, security, and modern DevOps practices. The stack is designed for cost efficiency and practical experimentation, using DynamoDB (not RDS/PostgreSQL) for all data storage.
 
 ## 📋 Project Overview
 
-**Current Focus:** User Authentication Service with JWT-based security
-**Architecture:** Cloud-native microservices with infrastructure as code
-**Learning Goals:** Master Terraform, FastAPI, Docker, Kubernetes, and AWS services
+**Current Focus:** User Authentication, Docker, Kubernetes, Security, and Monitoring
+**Architecture:** Microservices, Infrastructure as Code, Cost-Efficient Cloud Patterns
+**Learning Goals:** Docker, Kubernetes, AWS IAM/Security, Monitoring, CI/CD, and Infrastructure Automation
 
-### 🎯 What This Project Teaches
-
-- **Infrastructure as Code** with Terraform
-- **Containerization** with Docker and Kubernetes
-- **CI/CD Pipelines** with GitHub Actions
-- **Cloud Security** with AWS IAM, JWT, and encryption
-- **Database Design** with DynamoDB and PostgreSQL
-- **API Development** with FastAPI and async Python
-- **Testing Strategies** with unit, integration, and load testing
-- **Cost Management** and resource optimization
+### What This Project Teaches
+- **Docker & Kubernetes**: Containerization, orchestration, and deployment
+- **Security**: JWT, IAM, secrets management, least privilege
+- **Infrastructure as Code**: Terraform for AWS
+- **API Development**: FastAPI (Python)
+- **Monitoring**: K8s monitoring (in progress)
+- **Testing**: Unit, integration, and E2E
+- **Cost Management**: Resource cleanup, minimal AWS usage
 
 ## 🏗️ Architecture
 
-### **Current Implementation**
+### Current Implementation
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Development   │    │   Production    │    │     Testing     │
-│                 │    │                 │    │                 │
-│ EKS + K8s       │    │ EKS + K8s       │    │ Unit + E2E      │
-│ DynamoDB        │    │ PostgreSQL + RDS│    │ Coverage Reports│
-│ Local testing   │    │ Auto-scaling    │    │ CI/CD pipeline  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌───────────────┐    ┌───────────────┐    ┌───────────────┐
+│ Development   │    │ Production    │    │  Monitoring   │
+│               │    │               │    │               │
+│ EKS/K8s       │    │ EKS/K8s       │    │ Prometheus    │
+│ FastAPI       │    │ FastAPI       │    │ Grafana       │
+│ Docker        │    │ Docker        │    │ Dashboards    │
+└───────────────┘    └───────────────┘    └───────────────┘
 ```
 
-### **Services Architecture**
+### Services Architecture
 ```
-services/
-├── common/           # Shared models, DAOs, utilities
-│   ├── src/
-│   │   ├── models/   # Pydantic data models
-│   │   └── database/ # Database access layer
-│   └── tests/        # Unit tests with coverage
-└── order-service/    # Main service (User Auth MVP)
-    ├── src/          # FastAPI application
-    └── tests/        # Service-specific tests
+cloud-native-order-processor/
+├── frontend/                 # Web frontend (React + Vite)
+├── services/
+│   ├── common/               # Shared Python code, models, DAOs
+│   ├── inventory-service/    # Inventory microservice (FastAPI)
+│   └── user-service/         # User authentication microservice (FastAPI)
+├── integration_tests/        # Integration and smoke tests (Python)
 ```
+
+### Data Flow
+```mermaid
+flowchart TD
+  subgraph User
+    A["User (Frontend/Web)"]
+  end
+  subgraph Ingress
+    X["K8s Ingress"]
+  end
+  subgraph API
+    B["API Gateway"]
+    C["User Service (FastAPI)"]
+    D["Inventory Service (FastAPI)"]
+  end
+  subgraph Data
+    E["DynamoDB (All Envs)"]
+    F["S3 (Assets/Backups)"]
+  end
+  subgraph Monitoring
+    P["Prometheus"]
+    G["Grafana Dashboards"]
+  end
+  A -->|HTTP/REST| X
+  X --> B
+  B --> C
+  B --> D
+  C -->|Read/Write| E
+  D -->|Read/Write| E
+  C -->|Store/Fetch| F
+  D -->|Store/Fetch| F
+  C --> P
+  D --> P
+  P --> G
+  B -->|Auth| C
+  B -->|Auth| D
+```
+
+**Note:**
+- EKS (or local K8s) runs FastAPI microservices in Docker containers.
+- Monitoring uses Prometheus for metrics collection and Grafana for dashboards.
+- DynamoDB is used for all environments for cost efficiency and simplicity. RDS/PostgreSQL is not used or planned.
+- Focus is on Docker, Kubernetes, security, and monitoring best practices.
 
 ## 🚀 Quick Start
 
-### **Prerequisites**
+### Prerequisites
 - Python 3.11+
 - AWS CLI configured
 - Terraform ≥ 1.5.0
 - Docker Desktop
 - Git
 
-### **Local Development**
+### Local Development
 ```bash
 # 1. Clone and setup
 git clone <repository-url>
@@ -70,7 +109,7 @@ cd cloud-native-order-processor
 ./scripts/destroy.sh --environment dev --force   # Clean up
 ```
 
-### **Run Tests Only**
+### Run Tests Only
 ```bash
 cd services/common
 python3 -m venv .venv
@@ -81,174 +120,102 @@ pytest tests/test_models/ -v --cov=src/models
 
 ## 🔧 Development Workflow
 
-### **Daily Development**
 ```bash
-# Morning: Deploy infrastructure once
+# Deploy infrastructure
 ./scripts/deploy.sh --environment dev
-
-# During development: Quick app updates
+# Deploy app updates
 ./scripts/deploy-app.sh --environment dev --skip-build
-
-# Test changes
+# Run integration tests
 ./scripts/test-integration.sh --environment dev
-
-# End of day: Clean up resources
+# Clean up resources
 ./scripts/destroy.sh --environment dev --force
 ```
 
-### **Pre-Push Validation**
-```bash
-# Full validation pipeline
-./scripts/test-local.sh --environment dev --full-test
-
-# Production simulation
-./scripts/test-local.sh --environment prod --full-test
-```
-
 ## 🧪 Testing Strategy
-
-### **Test Pyramid**
-- **Unit Tests**: Models, DAOs, business logic (fast, isolated)
-- **Integration Tests**: API endpoints, database connections
-- **End-to-End Tests**: Complete user workflows
-- **Load Tests**: Performance and scalability validation
-
-### **Coverage Goals**
-- Unit Tests: >90% coverage on core business logic
-- Integration Tests: All API endpoints and database operations
-- Security Tests: Authentication, authorization, input validation
+- **Unit Tests**: Fast, isolated, core logic
+- **Integration Tests**: API/database
+- **E2E Tests**: User workflows
+- **Coverage**: >90% on business logic
 
 ## 🛠️ Technology Stack
-
-### **Backend Services**
-- **Framework**: FastAPI (Python 3.11)
-- **Authentication**: JWT with bcrypt password hashing
-- **Validation**: Pydantic models with strict typing
-- **Testing**: pytest with async support and coverage
-
-### **Infrastructure**
-- **IaC**: Terraform for all AWS resources
-- **Containers**: Docker with multi-stage builds
-- **Orchestration**: Kubernetes (EKS) for production
-- **Containerization**: Docker with multi-stage builds
-
-### **Data Layer**
-- **Development**: DynamoDB (cost-effective, NoSQL)
-- **Production**: PostgreSQL (ACID compliance, complex queries)
-- **Caching**: Redis for session management and rate limiting
-- **Files**: S3 for static assets and backup storage
-
-### **DevOps & Monitoring**
-- **CI/CD**: GitHub Actions with automated testing
-- **Secrets**: AWS Secrets Manager and Kubernetes secrets
-- **Monitoring**: CloudWatch for AWS services
-- **Cost Control**: Automated resource cleanup and tagging
+- **Backend**: FastAPI (Python 3.11)
+- **Auth**: JWT, bcrypt
+- **Frontend**: React + Vite
+- **Infra**: Terraform, AWS (DynamoDB, S3, EKS)
+- **Containers**: Docker, Kubernetes
+- **CI/CD**: GitHub Actions
+- **Secrets**: AWS Secrets Manager, K8s secrets
+- **Monitoring**: Prometheus, Grafana
 
 ## 📦 Project Structure
-
 ```
 cloud-native-order-processor/
-├── .github/workflows/        # CI/CD pipelines
 ├── config/                   # Environment configurations
-├── scripts/                  # Deployment and utility scripts
+├── docker/                   # Docker and container configs
+├── docs/                     # Documentation
+├── frontend/                 # Web frontend (React + Vite)
+├── integration_tests/        # Integration and smoke tests (Python)
+├── kubernetes/               # K8s manifests, scripts, secrets
+├── logs/
+├── scripts/                  # Deployment, build, and utility scripts
+│   └── shared/
 ├── services/                 # Microservices code
-│   ├── common/              # Shared libraries
-│   └── order-service/       # Main service implementation
-├── terraform/               # Infrastructure as code
-├── docker/                  # Container configurations
-├── kubernetes/              # K8s manifests and configs
-└── docs/                    # Additional documentation
+│   ├── common/               # Shared Python code, models, DAOs
+│   ├── inventory-service/    # Inventory microservice (FastAPI)
+│   └── user-service/         # User authentication microservice (FastAPI)
+├── terraform/                # Infrastructure as code (Terraform)
+│   └── scripts/
+├── venv/                     # Python virtual environment (local)
+├── Makefile, README.md, etc.
 ```
 
 ## 🎯 Roadmap & Learning Plan
 
-### **Phase 1: Foundation (Current)** ✅
-- [x] User authentication service with JWT
-- [x] Unit testing with coverage reports
-- [x] Terraform infrastructure automation
-- [x] CI/CD pipeline with GitHub Actions
+### Foundation
+- [x] User authentication (JWT)
+- [x] Unit testing & coverage
+- [x] Terraform automation
+- [x] CI/CD pipeline
 - [x] Docker containerization
 
-### **Phase 2: Core Services (Next 2-4 weeks)**
-- [ ] Trading/order management endpoints
-- [ ] Integration testing suite
-- [ ] Kubernetes deployment with EKS
-- [ ] Database schema design and migrations
-- [ ] API rate limiting and caching
+### Core Services
+- [ ] Trading/order endpoints
+- [ ] Integration testing
+- [ ] Kubernetes deployment
+- [ ] API rate limiting/caching
 
-### **Phase 3: Production Features (Month 2-3)**
-- [ ] Comprehensive security implementation
-- [ ] Monitoring and alerting setup
-- [ ] Load testing and performance optimization
-- [ ] Multi-environment deployment (staging/prod)
-- [ ] Database backup and disaster recovery
+### Production Features
+- [ ] Security hardening
+- [ ] Monitoring/alerting
+- [ ] Load/performance testing
+- [ ] Multi-environment deployment
 
-### **Phase 4: Advanced Features (Month 3-6)**
-- [ ] Scheduled trading (crypto DCA strategies)
-- [ ] Real-time price feeds and WebSocket support
-- [ ] Compliance features (tax reporting, GDPR)
-- [ ] Mobile API optimization
-- [ ] Advanced analytics and reporting
-
-### **Phase 5: Scale & Optimization (Month 6+)**
-- [ ] Multi-region deployment
-- [ ] Service mesh implementation
-- [ ] Advanced monitoring (Prometheus/Grafana)
-- [ ] Cost optimization strategies
-- [ ] Open source contribution preparation
+### Advanced/Scale
+- [ ] Real-time/WebSocket support
+- [ ] Compliance features
+- [ ] Advanced analytics
+- [ ] Multi-region/service mesh
 
 ## 💰 Cost Management
-
-### **Development Costs**
-- **Daily usage**: ~$1-5/day when actively developing
-- **Monthly estimate**: ~$20-50/month with regular cleanup
-- **Cost control**: Automated resource destruction after testing
-
-### **Best Practices**
-- Always run `destroy.sh --force` after development sessions
-- Use `dev` environment for daily work (EKS + DynamoDB)
-- Reserve `prod` environment for final validation only
-- Monitor AWS billing dashboard regularly
+- DynamoDB and other AWS resources are used for cost efficiency.
+- Always run `destroy.sh --force` after development to avoid charges.
+- Monitor AWS billing regularly.
 
 ## 🤝 Contributing
-
-This is a personal learning project, but feedback and suggestions are welcome!
-
-### **Areas for Feedback**
-- Architecture and design patterns
-- Security implementations
-- Performance optimizations
-- Testing strategies
-- Documentation improvements
+Personal learning project. Feedback on architecture, security, and DevOps is welcome.
 
 ## 📚 Learning Resources
-
-### **Technologies Used**
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [FastAPI](https://fastapi.tiangolo.com/)
 - [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
-- [AWS Well-Architected Framework](https://aws.amazon.com/architecture/well-architected/)
-
-### **Inspiration & Patterns**
-- Microservices patterns from industry leaders
-- Cloud-native design principles
-- DevOps best practices from major tech companies
+- [Kubernetes Docs](https://kubernetes.io/docs/)
+- [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected/)
 
 ## 🔐 Security Considerations
-
-- JWT tokens with secure secret management
-- Password hashing with bcrypt and salt
-- AWS IAM roles with least privilege access
-- Secrets stored in AWS Secrets Manager
-- Container security scanning in CI/CD
-- Input validation with Pydantic models
+- JWT tokens, secret management
+- Password hashing (bcrypt)
+- IAM least privilege
+- Container security scanning
+- Input validation (Pydantic)
 
 ## 📄 License
-
-This project is for educational purposes. Feel free to learn from the code and architecture patterns.
-
----
-
-**Built with ❤️ for learning modern cloud-native development**
-
-*Remember: Always clean up AWS resources when done to avoid unexpected charges!*
+Educational use only. Learn and adapt freely.
