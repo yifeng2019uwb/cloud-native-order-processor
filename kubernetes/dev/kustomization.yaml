@@ -6,8 +6,7 @@ metadata:
   namespace: order-processor
 
 resources:
-- ../base
-- ../secrets/deployment_dev.yaml
+- deployment.yaml
 - service.yaml
 
 images:

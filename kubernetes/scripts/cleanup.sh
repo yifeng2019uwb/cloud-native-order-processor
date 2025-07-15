@@ -20,6 +20,10 @@ fi
 echo "🧹 Cleaning up Order Processor deployment for environment: $CLEANUP_ENV..."
 
 if [[ "$CLEANUP_ENV" == "dev" ]]; then
+    # Clean up secrets resources first
+    if [ -d "$K8S_DIR/secrets" ]; then
+        kubectl delete -k "$K8S_DIR/secrets" --ignore-not-found=true
+    fi
     if kubectl get namespace order-processor >/dev/null 2>&1; then
         kubectl delete -k "$K8S_DIR/dev" --ignore-not-found=true
         echo "✅ Dev deployment cleaned up"
