@@ -1,3 +1,9 @@
+# NOTE:
+# For local development, this Service uses NodePort to allow direct access from the host machine (e.g., localhost:30001).
+# In a production or enterprise cloud setup, you should use 'type: LoadBalancer' to expose services publicly via a cloud load balancer (e.g., AWS ELB, GCP LB).
+# For internal-only services, use 'type: ClusterIP' (the default) to restrict access to within the cluster.
+# This is a personal project, so NodePort is used for simplicity and to focus on core skills, not on advanced networking or ingress.
+# Plan: Switch to LoadBalancer for public endpoints and ClusterIP for internal-only access in production or when security is a priority.
 apiVersion: v1
 kind: Service
 metadata:
