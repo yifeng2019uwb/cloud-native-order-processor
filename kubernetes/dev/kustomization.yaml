@@ -7,18 +7,8 @@ metadata:
 
 resources:
 - ../base
-- deployment.yaml
+- ../secrets/deployment_dev.yaml
 - service.yaml
-- secrets.yaml
-
-commonLabels:
-  environment: dev
-  deployment: dev
-
-commonAnnotations:
-  description: "Dev Kubernetes deployment for Order Processor application"
-  environment: "dev"
-  cluster: "kind-order-processor"
 
 images:
 - name: order-processor-user_service

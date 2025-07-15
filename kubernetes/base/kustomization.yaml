@@ -6,9 +6,10 @@ metadata:
   namespace: order-processor
 
 resources:
-- namespace.yaml
-- service-account.yaml
-- logging-config.yaml
+  - namespace.yaml
+  - service-account.yaml
+  - logging-config.yaml
+  - ../secrets/
 
 commonLabels:
   app: order-processor

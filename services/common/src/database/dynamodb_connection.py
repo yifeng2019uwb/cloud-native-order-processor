@@ -7,13 +7,30 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Import STS client
-try:
-    from ..aws.sts_client import STSClient
-except ImportError:
-    # Fallback for when common package is not installed
-    STSClient = None
+# Universal session pattern for IRSA and AssumeRole
 
+def get_boto3_session():
+    region = os.getenv("AWS_REGION")
+    # If running in EKS with IRSA, let boto3 handle it natively
+    if os.getenv("AWS_WEB_IDENTITY_TOKEN_FILE"):
+        return boto3.Session(region_name=region)
+    # Otherwise, if AWS_ROLE_ARN is set, assume the role
+    role_arn = os.getenv("AWS_ROLE_ARN")
+    if role_arn:
+        sts = boto3.client("sts", region_name=region)
+        resp = sts.assume_role(
+            RoleArn=role_arn,
+            RoleSessionName="order-processor-session"
+        )
+        creds = resp["Credentials"]
+        return boto3.Session(
+            aws_access_key_id=creds["AccessKeyId"],
+            aws_secret_access_key=creds["SecretAccessKey"],
+            aws_session_token=creds["SessionToken"],
+            region_name=region
+        )
+    # Fallback: use default credentials (for local dev, etc.)
+    return boto3.Session(region_name=region)
 
 class DynamoDBManager:
     """DynamoDB Manager - Only handles connections and table references"""
@@ -32,21 +49,15 @@ class DynamoDBManager:
         if not self.inventory_table_name:
             raise ValueError("INVENTORY_TABLE environment variable not found")
 
-        # Initialize boto3 client and resource with STS support
         self.region = os.getenv("AWS_REGION")
         if not self.region:
             raise ValueError("AWS_REGION environment variable is required")
 
-        # Use STS client if available, otherwise fallback to direct boto3
-        if STSClient:
-            sts_client = STSClient()
-            self.dynamodb = sts_client.get_resource('dynamodb')
-            self.client = sts_client.get_client('dynamodb')
-            logger.info("Using STS client for DynamoDB connection")
-        else:
-            self.dynamodb = boto3.resource('dynamodb', region_name=self.region)
-            self.client = boto3.client('dynamodb', region_name=self.region)
-            logger.info("Using direct boto3 for DynamoDB connection")
+        # Use the universal session pattern
+        session = get_boto3_session()
+        self.dynamodb = session.resource('dynamodb', region_name=self.region)
+        self.client = session.client('dynamodb', region_name=self.region)
+        logger.info("DynamoDB connection initialized using universal session pattern (IRSA/AssumeRole/local)")
 
         # ✅ Get table references
         self.users_table = self.dynamodb.Table(self.users_table_name)

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Setup AWS credentials for Kubernetes deployment
-# This script fetches access keys for the IAM user from Terraform outputs and updates Kubernetes secrets
-# NOTE: For security, rotate these credentials regularly. To rotate, use AWS Console or a rotation script.
+# This script fetches access keys for the IAM user from Terraform outputs and creates/updates Kubernetes secrets directly.
+# NOTE: For security, rotate these credentials regularly. No secrets.yaml file is used or required.
 
 set -e
 
@@ -19,28 +19,13 @@ ACCESS_KEY_ID=$(terraform output -raw application_user_access_key_id 2>/dev/null
 SECRET_ACCESS_KEY=$(terraform output -raw application_user_access_key_secret 2>/dev/null || echo "")
 cd "$PROJECT_ROOT"
 
-# Check if we're in EKS mode (enable_kubernetes=true)
 if [ -z "$ACCESS_KEY_ID" ] || [ "$ACCESS_KEY_ID" = "null" ]; then
     echo "❌ Access key not available from Terraform outputs."
-    echo "   This might be because:"
-    echo "   1. Terraform is configured for EKS (enable_kubernetes=true)"
-    echo "   2. Terraform outputs are not available"
-    echo "   3. Terraform needs to be applied"
-    echo ""
-    echo "💡 For EKS: Use IRSA (IAM Roles for Service Accounts) instead of access keys"
-    echo "💡 For local K8s: Set enable_kubernetes=false in Terraform and re-apply"
     exit 1
 fi
 
 if [ -z "$SECRET_ACCESS_KEY" ] || [ "$SECRET_ACCESS_KEY" = "null" ]; then
     echo "❌ Access key secret not available from Terraform outputs."
-    echo "   This might be because:"
-    echo "   1. Terraform is configured for EKS (enable_kubernetes=true)"
-    echo "   2. Terraform outputs are not available"
-    echo "   3. Terraform needs to be applied"
-    echo ""
-    echo "💡 For EKS: Use IRSA (IAM Roles for Service Accounts) instead of access keys"
-    echo "💡 For local K8s: Set enable_kubernetes=false in Terraform and re-apply"
     exit 1
 fi
 
@@ -48,19 +33,15 @@ echo "📋 IAM User: $IAM_USER_NAME"
 echo "🔑 Access Key ID: $ACCESS_KEY_ID"
 echo "🔐 Secret Access Key: [HIDDEN]"
 
-# Base64 encode the credentials
-ACCESS_KEY_B64=$(echo -n "$ACCESS_KEY_ID" | base64)
-SECRET_KEY_B64=$(echo -n "$SECRET_ACCESS_KEY" | base64)
+# Create or update the Kubernetes secret directly
+kubectl get namespace order-processor >/dev/null 2>&1 || kubectl create namespace order-processor
+kubectl delete secret aws-credentials -n order-processor 2>/dev/null || true
+kubectl create secret generic aws-credentials \
+  --from-literal=aws-access-key-id="$ACCESS_KEY_ID" \
+  --from-literal=aws-secret-access-key="$SECRET_ACCESS_KEY" \
+  -n order-processor
 
-# Update the secrets file with the new credentials
-echo "📝 Updating Kubernetes secrets..."
-sed -i.bak "s/aws-access-key-id: .*/aws-access-key-id: $ACCESS_KEY_B64/" kubernetes/dev/secrets.yaml
-sed -i.bak "s/aws-secret-access-key: .*/aws-secret-access-key: $SECRET_KEY_B64/" kubernetes/dev/secrets.yaml
-
-# Clean up backup file
-rm -f kubernetes/dev/secrets.yaml.bak
-
-echo "✅ Kubernetes secrets updated successfully!"
+echo "✅ Kubernetes secret 'aws-credentials' created/updated successfully!"
 echo ""
 echo "📋 Next steps:"
 echo "   1. Deploy to Kubernetes: ./kubernetes/deploy.sh --environment dev"

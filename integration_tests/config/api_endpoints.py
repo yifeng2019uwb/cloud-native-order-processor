@@ -12,6 +12,7 @@ from service_urls import USER_SERVICE_URL, INVENTORY_SERVICE_URL
 
 # User Service API Enum
 class UserAPI(Enum):
+    ROOT = '/'
     REGISTER = '/auth/register'
     LOGIN = '/auth/login'
     PROFILE = '/auth/me'
@@ -20,6 +21,7 @@ class UserAPI(Enum):
 
 # Inventory Service API Enum
 class InventoryAPI(Enum):
+    ROOT = '/'
     ASSETS = '/inventory/assets'
     ASSET_BY_ID = '/inventory/assets/{id}'
     HEALTH = '/health'

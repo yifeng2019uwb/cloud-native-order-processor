@@ -61,11 +61,6 @@ resource "aws_iam_policy" "assume_application_role" {
         Effect = "Allow"
         Action = "sts:AssumeRole"
         Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.resource_prefix}-application-service-role"
-        Condition = {
-          StringEquals = {
-            "aws:RequestTag/Environment" = var.environment
-          }
-        }
       }
     ]
   })
@@ -101,11 +96,6 @@ resource "aws_iam_role" "application_service" {
           AWS = aws_iam_user.application_user.arn
         }
         Action = "sts:AssumeRole"
-        Condition = {
-          StringEquals = {
-            "aws:RequestTag/Environment" = var.environment
-          }
-        }
       }
     ]
   })
@@ -142,6 +132,7 @@ resource "aws_iam_policy" "dynamodb_access" {
         ]
         Resource = [
           aws_dynamodb_table.users.arn,
+          "${aws_dynamodb_table.users.arn}/index/EmailIndex",
           aws_dynamodb_table.orders.arn,
           aws_dynamodb_table.inventory.arn
         ]
