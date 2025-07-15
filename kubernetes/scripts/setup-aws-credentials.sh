@@ -6,14 +6,18 @@
 
 set -e
 
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
 echo "🔐 Setting up AWS credentials for Kubernetes (no rotation, just fetch from Terraform)..."
 
 # Get the IAM user name and keys from Terraform output
-cd ../../terraform
+cd "$PROJECT_ROOT/terraform"
 IAM_USER_NAME=$(terraform output -raw application_user_name 2>/dev/null || echo "order-processor-dev-application-user")
 ACCESS_KEY_ID=$(terraform output -raw application_user_access_key_id 2>/dev/null || echo "")
 SECRET_ACCESS_KEY=$(terraform output -raw application_user_access_key_secret 2>/dev/null || echo "")
-cd ../kubernetes
+cd "$PROJECT_ROOT"
 
 # Check if we're in EKS mode (enable_kubernetes=true)
 if [ -z "$ACCESS_KEY_ID" ] || [ "$ACCESS_KEY_ID" = "null" ]; then
@@ -50,16 +54,16 @@ SECRET_KEY_B64=$(echo -n "$SECRET_ACCESS_KEY" | base64)
 
 # Update the secrets file with the new credentials
 echo "📝 Updating Kubernetes secrets..."
-sed -i.bak "s/aws-access-key-id: .*/aws-access-key-id: $ACCESS_KEY_B64/" local/secrets.yaml
-sed -i.bak "s/aws-secret-access-key: .*/aws-secret-access-key: $SECRET_KEY_B64/" local/secrets.yaml
+sed -i.bak "s/aws-access-key-id: .*/aws-access-key-id: $ACCESS_KEY_B64/" kubernetes/dev/secrets.yaml
+sed -i.bak "s/aws-secret-access-key: .*/aws-secret-access-key: $SECRET_KEY_B64/" kubernetes/dev/secrets.yaml
 
 # Clean up backup file
-rm -f local/secrets.yaml.bak
+rm -f kubernetes/dev/secrets.yaml.bak
 
 echo "✅ Kubernetes secrets updated successfully!"
 echo ""
 echo "📋 Next steps:"
-echo "   1. Deploy to Kubernetes: ./kubernetes/scripts/deploy-local.sh"
+echo "   1. Deploy to Kubernetes: ./kubernetes/deploy.sh --environment dev"
 echo "   2. The services will now use these credentials to assume the IAM role"
 echo ""
 echo "⚠️  Important: Keep these credentials secure and rotate them regularly!"

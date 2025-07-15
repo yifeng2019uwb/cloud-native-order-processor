@@ -6,7 +6,7 @@ metadata:
   labels:
     app: order-processor
     component: user-service
-    environment: local
+    environment: dev
 spec:
   type: NodePort
   selector:
@@ -27,7 +27,7 @@ metadata:
   labels:
     app: order-processor
     component: inventory-service
-    environment: local
+    environment: dev
 spec:
   type: NodePort
   selector:
@@ -48,7 +48,7 @@ metadata:
   labels:
     app: order-processor
     component: frontend
-    environment: local
+    environment: dev
 spec:
   type: NodePort
   selector:

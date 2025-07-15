@@ -2,7 +2,7 @@
 
 # kubernetes/deploy.sh
 # Main K8s deployment script that handles all K8s-specific operations
-# Usage: ./kubernetes/deploy.sh [--environment dev|prod] [--no-cache] [--verbose]
+# Usage: ./kubernetes/deploy.sh [--environment dev|prod] [--no-cache] [--verbose] [--step STEP_NAME]
 
 set -e
 
@@ -23,6 +23,7 @@ NC='\033[0m' # No Color
 ENVIRONMENT="dev"
 NO_CACHE=false
 VERBOSE=false
+STEP=""
 
 # Logging functions
 log_info() {
@@ -60,11 +61,24 @@ while [[ $# -gt 0 ]]; do
             VERBOSE=true
             shift
             ;;
+        --step)
+            STEP="$2"
+            shift 2
+            ;;
         -h|--help)
-            echo "Usage: $0 [--environment dev|prod] [--no-cache] [--verbose]"
+            echo "Usage: $0 [--environment dev|prod] [--no-cache] [--verbose] [--step STEP_NAME]"
             echo "  --environment: Target environment (default: dev)"
             echo "  --no-cache: Build Docker images without cache"
             echo "  --verbose: Enable verbose output"
+            echo "  --step: Run specific step only (prerequisites|cluster|credentials|build|deploy|status)"
+            echo ""
+            echo "Available steps:"
+            echo "  prerequisites - Check required tools"
+            echo "  cluster       - Create/check Kind cluster"
+            echo "  credentials   - Setup AWS credentials"
+            echo "  build         - Build and load Docker images"
+            echo "  deploy        - Deploy to Kubernetes"
+            echo "  status        - Show deployment status"
             exit 0
             ;;
         *)
@@ -80,46 +94,166 @@ if [[ "$ENVIRONMENT" != "dev" && "$ENVIRONMENT" != "prod" ]]; then
     exit 1
 fi
 
+# Validate step if provided
+if [[ -n "$STEP" ]]; then
+    case $STEP in
+        prerequisites|cluster|credentials|build|deploy|status)
+            ;;
+        *)
+            log_error "Invalid step: $STEP"
+            echo "Available steps: prerequisites, cluster, credentials, build, deploy, status"
+            exit 1
+            ;;
+    esac
+fi
+
 log_step "Deploying to Kubernetes (Environment: $ENVIRONMENT)"
 
-# Check prerequisites
-log_info "Checking prerequisites..."
+# Step 1: Check prerequisites
+check_prerequisites() {
+    log_step "Checking Prerequisites"
+    log_info "Checking prerequisites..."
 
-if ! command -v kubectl &> /dev/null; then
-    log_error "kubectl is not installed or not in PATH"
-    exit 1
-fi
-
-if ! command -v docker &> /dev/null; then
-    log_error "docker is not installed or not in PATH"
-    exit 1
-fi
-
-if ! command -v kind &> /dev/null; then
-    log_error "kind is not installed or not in PATH"
-    exit 1
-fi
-
-log_success "Prerequisites check passed"
-
-# Environment-specific deployment
-if [[ "$ENVIRONMENT" == "dev" ]]; then
-    log_step "Local Development Deployment (Kind)"
-
-    # Check if Kind cluster exists, create multi-node if not
-    if ! kind get clusters | grep -q "order-processor"; then
-        log_info "Creating multi-node Kind cluster 'order-processor'..."
-        kind create cluster --name order-processor --config kubernetes/kind-config.yaml
-        log_success "Multi-node Kind cluster created successfully!"
-    else
-        log_info "Kind cluster 'order-processor' already exists"
-    fi
-
-    # Check if kubectl is configured for the cluster
-    if ! kubectl cluster-info --context kind-order-processor >/dev/null 2>&1; then
-        log_error "kubectl not configured for kind-order-processor cluster!"
+    if ! command -v kubectl &> /dev/null; then
+        log_error "kubectl is not installed or not in PATH"
         exit 1
     fi
+
+    if ! command -v docker &> /dev/null; then
+        log_error "docker is not installed or not in PATH"
+        exit 1
+    fi
+
+    if ! command -v kind &> /dev/null; then
+        log_error "kind is not installed or not in PATH"
+        exit 1
+    fi
+
+    log_success "Prerequisites check passed"
+}
+
+# Step 2: Setup cluster
+setup_cluster() {
+    log_step "Setting up Kind Cluster"
+
+    # Check if Kind cluster exists
+    if kind get clusters | grep -q "order-processor"; then
+        log_info "Kind cluster 'order-processor' already exists"
+
+        # Check cluster health and worker nodes
+        log_info "Checking cluster health..."
+        if ! kubectl cluster-info --context kind-order-processor >/dev/null 2>&1; then
+            log_error "kubectl not configured for kind-order-processor cluster!"
+            exit 1
+        fi
+
+        # Check worker nodes
+        log_info "Checking worker nodes..."
+        NODE_COUNT=$(kubectl get nodes --context kind-order-processor --no-headers | wc -l)
+        log_info "Found $NODE_COUNT nodes in cluster"
+
+        # Check if nodes are ready
+        READY_NODES=$(kubectl get nodes --context kind-order-processor --no-headers | grep -c "Ready")
+        if [[ "$READY_NODES" -lt "$NODE_COUNT" ]]; then
+            log_warning "Some nodes are not ready. Ready: $READY_NODES/$NODE_COUNT"
+            log_info "Attempting to restart unhealthy nodes..."
+
+            # Get unhealthy nodes
+            UNHEALTHY_NODES=$(kubectl get nodes --context kind-order-processor --no-headers | grep -v "Ready" | awk '{print $1}')
+            for node in $UNHEALTHY_NODES; do
+                log_info "Restarting node: $node"
+                docker restart "$node" 2>/dev/null || log_warning "Could not restart node $node"
+            done
+
+            # Wait a bit and check again
+            sleep 10
+            READY_NODES=$(kubectl get nodes --context kind-order-processor --no-headers | grep -c "Ready")
+            if [[ "$READY_NODES" -lt "$NODE_COUNT" ]]; then
+                log_warning "Some nodes still not ready after restart. Ready: $READY_NODES/$NODE_COUNT"
+            else
+                log_success "All nodes are now ready after restart"
+            fi
+        else
+            log_success "All nodes are ready"
+        fi
+
+        # Check cluster version and update if needed
+        log_info "Checking cluster version..."
+        CLUSTER_VERSION=$(kubectl version --context kind-order-processor --short 2>/dev/null | grep "Server Version" | cut -d' ' -f3 || echo "unknown")
+        log_info "Current cluster version: $CLUSTER_VERSION"
+
+        # Check if we need to update the cluster configuration
+        log_info "Checking if cluster configuration needs updates..."
+        # This could be expanded to check for specific configuration changes
+
+    else
+        log_info "Kind cluster 'order-processor' does not exist"
+
+        # Clean up Docker cache before creating new cluster
+        log_info "Cleaning up Docker cache before creating new cluster..."
+
+        # Remove any existing order-processor related images
+        log_info "Removing existing order-processor Docker images..."
+        docker rmi order-processor-user_service:latest order-processor-inventory_service:latest order-processor-frontend:latest 2>/dev/null || true
+
+        # Clean up unused Docker resources
+        log_info "Cleaning up unused Docker resources..."
+        docker system prune -f
+
+        # Clean up any dangling images
+        log_info "Cleaning up dangling images..."
+        docker image prune -f
+
+        # Create new multi-node Kind cluster
+        log_info "Creating multi-node Kind cluster 'order-processor'..."
+        kind create cluster --name order-processor --config kubernetes/kind-config.yaml
+
+        # Verify cluster creation
+        if kind get clusters | grep -q "order-processor"; then
+            log_success "Multi-node Kind cluster created successfully!"
+        else
+            log_error "Failed to create Kind cluster"
+            exit 1
+        fi
+
+        # Wait for cluster to be ready
+        log_info "Waiting for cluster to be ready..."
+        sleep 10
+
+        # Check cluster health
+        log_info "Checking cluster health..."
+        if ! kubectl cluster-info --context kind-order-processor >/dev/null 2>&1; then
+            log_error "kubectl not configured for kind-order-processor cluster!"
+            exit 1
+        fi
+
+        # Check worker nodes
+        log_info "Checking worker nodes..."
+        NODE_COUNT=$(kubectl get nodes --context kind-order-processor --no-headers | wc -l)
+        log_info "Found $NODE_COUNT nodes in cluster"
+
+        # Wait for all nodes to be ready
+        log_info "Waiting for all nodes to be ready..."
+        kubectl wait --for=condition=ready --timeout=300s node --all --context kind-order-processor
+
+        READY_NODES=$(kubectl get nodes --context kind-order-processor --no-headers | grep -c "Ready")
+        if [[ "$READY_NODES" -eq "$NODE_COUNT" ]]; then
+            log_success "All nodes are ready"
+        else
+            log_error "Not all nodes are ready. Ready: $READY_NODES/$NODE_COUNT"
+            exit 1
+        fi
+    fi
+
+    # Final cluster status check
+    log_info "Final cluster status:"
+    kubectl get nodes --context kind-order-processor
+    log_success "Cluster setup complete"
+}
+
+# Step 3: Setup credentials
+setup_credentials() {
+    log_step "Setting up AWS Credentials"
 
     # Update AWS credentials from Terraform outputs
     log_info "Setting up AWS credentials from Terraform outputs..."
@@ -128,6 +262,11 @@ if [[ "$ENVIRONMENT" == "dev" ]]; then
     else
         log_warning "AWS credentials setup script not found, using existing configuration"
     fi
+}
+
+# Step 4: Build images
+build_images() {
+    log_step "Building Docker Images"
 
     # Build Docker images with cache cleanup
     log_info "Building Docker images..."
@@ -151,20 +290,30 @@ if [[ "$ENVIRONMENT" == "dev" ]]; then
     kind load docker-image order-processor-user_service:latest --name order-processor
     kind load docker-image order-processor-inventory_service:latest --name order-processor
     kind load docker-image order-processor-frontend:latest --name order-processor
+}
+
+# Step 5: Deploy to Kubernetes
+deploy_to_k8s() {
+    log_step "Deploying to Kubernetes"
 
     # Apply base configuration
     log_info "Applying base configuration..."
     kubectl apply -k kubernetes/base
 
-    # Deploy to local cluster
+    # Deploy to local cluster (updates existing deployments if they exist)
     log_info "Deploying to local cluster..."
-    kubectl apply -k kubernetes/local
+    kubectl apply -k kubernetes/dev
 
     # Wait for deployments to be ready
     log_info "Waiting for deployments to be ready..."
     kubectl wait --for=condition=available --timeout=300s deployment/user-service -n order-processor
     kubectl wait --for=condition=available --timeout=300s deployment/inventory-service -n order-processor
     kubectl wait --for=condition=available --timeout=300s deployment/frontend -n order-processor
+}
+
+# Step 6: Show status
+show_status() {
+    log_step "Deployment Status"
 
     # Show deployment status
     log_info "Deployment Status:"
@@ -176,40 +325,90 @@ if [[ "$ENVIRONMENT" == "dev" ]]; then
     echo "   Frontend: http://localhost:30000"
     echo "   User Service: http://localhost:30001"
     echo "   Inventory Service: http://localhost:30002"
+}
+
+# Main execution logic
+if [[ "$ENVIRONMENT" == "dev" ]]; then
+    if [[ -n "$STEP" ]]; then
+        # Run specific step only
+        case $STEP in
+            prerequisites)
+                check_prerequisites
+                ;;
+            cluster)
+                check_prerequisites
+                setup_cluster
+                ;;
+            credentials)
+                setup_credentials
+                ;;
+            build)
+                check_prerequisites
+                setup_cluster
+                build_images
+                ;;
+            deploy)
+                check_prerequisites
+                setup_cluster
+                setup_credentials
+                build_images
+                deploy_to_k8s
+                ;;
+            status)
+                show_status
+                ;;
+        esac
+    else
+        # Run all steps
+        check_prerequisites
+        setup_cluster
+        setup_credentials
+        build_images
+        deploy_to_k8s
+        show_status
+    fi
 
 elif [[ "$ENVIRONMENT" == "prod" ]]; then
-    log_step "Production Deployment (EKS)"
+    log_step "Production Deployment (EKS) - DISABLED"
+    log_warning "Production deployment is currently disabled/not implemented"
+    log_info "This section will be implemented when production deployment is ready"
+    exit 1
 
-    # Check if kubectl is configured for EKS
-    if ! kubectl cluster-info >/dev/null 2>&1; then
-        log_error "kubectl not configured for EKS cluster!"
-        exit 1
-    fi
+    # TODO: Implement production deployment when ready
+    # The following code is commented out until production deployment is implemented
 
-    # Build and push to ECR
-    log_info "Building and pushing images to ECR..."
-    if [[ -f "scripts/ecr_build_push.sh" ]]; then
-        ./scripts/ecr_build_push.sh
-    else
-        log_error "ECR build script not found"
-        exit 1
-    fi
-
-    # Apply production configuration
-    log_info "Applying production configuration..."
-    kubectl apply -k kubernetes/prod
-
-    # Wait for deployments to be ready
-    log_info "Waiting for deployments to be ready..."
-    kubectl wait --for=condition=available --timeout=600s deployment/user-service -n order-processor
-    kubectl wait --for=condition=available --timeout=600s deployment/inventory-service -n order-processor
-    kubectl wait --for=condition=available --timeout=600s deployment/frontend -n order-processor
-
-    # Show deployment status
-    log_info "Deployment Status:"
-    kubectl get all -n order-processor
-
-    log_success "Production deployment complete!"
+    # log_step "Production Deployment (EKS)"
+    #
+    # # Check if kubectl is configured for EKS
+    # if ! kubectl cluster-info >/dev/null 2>&1; then
+    #     log_error "kubectl not configured for EKS cluster!"
+    #     exit 1
+    # fi
+    #
+    # # Build and push to ECR
+    # log_info "Building and pushing images to ECR..."
+    # if [[ -f "scripts/ecr_build_push.sh" ]]; then
+    #     ./scripts/ecr_build_push.sh
+    # else
+    #     log_error "ECR build script not found"
+    #     exit 1
+    # fi
+    #
+    # # Apply production configuration
+    # log_info "Applying production configuration..."
+    # kubectl apply -k kubernetes/prod
+    #
+    # # Wait for deployments to be ready
+    # log_info "Waiting for deployments to be ready..."
+    # kubectl wait --for=condition=available --timeout=600s deployment/user-service -n order-processor
+    # kubectl wait --for=condition=available --timeout=600s deployment/inventory-service -n order-processor
+    # kubectl wait --for=condition=available --timeout=600s deployment/frontend -n order-processor
+    #
+    # # Show deployment status
+    # log_info "Deployment Status:"
+    # kubectl get all -n order-processor
+    #
+    # log_success "Production deployment complete!"
 fi
 
 log_success "✅ Kubernetes deployment successful!"

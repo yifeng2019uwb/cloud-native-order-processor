@@ -34,7 +34,7 @@ if ! command -v kubectl &> /dev/null; then
 fi
 
 # Check if we're in the right directory
-if [ ! -f "kubernetes/local/secrets.yaml" ]; then
+if [ ! -f "kubernetes/dev/secrets.yaml" ]; then
     print_error "Please run this script from the project root directory"
     exit 1
 fi
@@ -100,7 +100,7 @@ update_k8s_secrets() {
     local encoded_secret_key=$(echo -n "$secret_key" | base64)
 
     # Create a temporary file with updated secrets
-    cat > kubernetes/local/secrets-updated.yaml << EOF
+    cat > kubernetes/dev/secrets-updated.yaml << EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -130,13 +130,13 @@ data:
 EOF
 
     # Backup original secrets
-    cp kubernetes/local/secrets.yaml kubernetes/local/secrets.yaml.backup
+    cp kubernetes/dev/secrets.yaml kubernetes/dev/secrets.yaml.backup
 
     # Replace with updated secrets
-    mv kubernetes/local/secrets-updated.yaml kubernetes/local/secrets.yaml
+    mv kubernetes/dev/secrets-updated.yaml kubernetes/dev/secrets.yaml
 
-    print_success "Updated kubernetes/local/secrets.yaml"
-    print_info "Original file backed up as kubernetes/local/secrets.yaml.backup"
+    print_success "Updated kubernetes/dev/secrets.yaml"
+    print_info "Original file backed up as kubernetes/dev/secrets.yaml.backup"
 }
 
 # Function to apply secrets to cluster
@@ -150,7 +150,7 @@ apply_secrets() {
     fi
 
     # Apply the secrets
-    kubectl apply -f kubernetes/local/secrets.yaml
+    kubectl apply -f kubernetes/dev/secrets.yaml
 
     print_success "Secrets applied to Kubernetes cluster"
 }

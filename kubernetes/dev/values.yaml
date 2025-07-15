@@ -1,7 +1,7 @@
-# Local Environment Values
+# Dev Environment Values
 # Used for Kind cluster deployment
 
-environment: local
+environment: dev
 namespace: order-processor
 
 # Service Configuration
@@ -58,7 +58,7 @@ aws:
 
 # Application Configuration
 app:
-  jwt_secret: "local-dev-secret-key"
+  jwt_secret: "dev-secret-key"
   environment: "development"
 
 # External URLs (for frontend)

@@ -6,7 +6,7 @@ metadata:
   labels:
     app: order-processor
     component: user-service
-    environment: local
+    environment: dev
 spec:
   replicas: 1
   selector:
@@ -15,16 +15,16 @@ spec:
       component: user-service
   template:
     metadata:
-      labels:
-        app: order-processor
-        component: user-service
-        environment: local
+              labels:
+          app: order-processor
+          component: user-service
+          environment: dev
     spec:
       serviceAccountName: order-processor-sa
       containers:
       - name: user-service
         image: order-processor-user_service:latest
-        imagePullPolicy: Never  # Use local image for Kind
+        imagePullPolicy: Never  # Use dev image for Kind
         ports:
         - containerPort: 8000
           name: http
@@ -38,7 +38,7 @@ spec:
         - name: INVENTORY_TABLE
           value: "order-processor-dev-inventory"
         - name: JWT_SECRET
-          value: "local-dev-secret-key"
+          value: "dev-secret-key"
         - name: AWS_REGION
           value: "us-west-2"
         - name: AWS_ROLE_ARN
@@ -81,7 +81,7 @@ metadata:
   labels:
     app: order-processor
     component: inventory-service
-    environment: local
+    environment: dev
 spec:
   replicas: 1
   selector:
@@ -90,16 +90,16 @@ spec:
       component: inventory-service
   template:
     metadata:
-      labels:
-        app: order-processor
-        component: inventory-service
-        environment: local
+              labels:
+          app: order-processor
+          component: inventory-service
+          environment: dev
     spec:
       serviceAccountName: order-processor-sa
       containers:
       - name: inventory-service
         image: order-processor-inventory_service:latest
-        imagePullPolicy: Never  # Use local image for Kind
+        imagePullPolicy: Never  # Use dev image for Kind
         ports:
         - containerPort: 8001
           name: http
@@ -154,7 +154,7 @@ metadata:
   labels:
     app: order-processor
     component: frontend
-    environment: local
+    environment: dev
 spec:
   replicas: 1
   selector:
@@ -163,16 +163,16 @@ spec:
       component: frontend
   template:
     metadata:
-      labels:
-        app: order-processor
-        component: frontend
-        environment: local
+              labels:
+          app: order-processor
+          component: frontend
+          environment: dev
     spec:
       serviceAccountName: order-processor-sa
       containers:
       - name: frontend
         image: order-processor-frontend:latest
-        imagePullPolicy: Never  # Use local image for Kind
+        imagePullPolicy: Never  # Use dev image for Kind
         ports:
         - containerPort: 3000
           name: http

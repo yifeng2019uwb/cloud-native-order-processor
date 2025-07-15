@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Deploy Order Processor to Local Kubernetes (Kind)
-# Usage: ./deploy-local.sh
+# kubernetes/scripts/deploy-dev.sh
+# Usage: ./deploy-dev.sh
 
 set -e
 
@@ -53,7 +53,7 @@ kubectl apply -k base
 
 # Deploy to local cluster
 echo "🚀 Deploying to local cluster..."
-kubectl apply -k local
+kubectl apply -k dev
 
 # Wait for deployments to be ready
 echo "⏳ Waiting for deployments to be ready..."

@@ -1,59 +1,49 @@
 #!/bin/bash
 
 # Cleanup Order Processor deployments
-# Usage: ./cleanup.sh [local|prod|all]
+# Usage: ./cleanup.sh [dev|prod]
 
 set -e
 
-CLEANUP_TARGET=${1:-"all"}
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+K8S_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-echo "🧹 Cleaning up Order Processor deployments..."
+CLEANUP_ENV=${1:-"dev"}
 
-case $CLEANUP_TARGET in
-    "local")
-        echo "🗑️  Cleaning up local deployment..."
-        if kubectl get namespace order-processor >/dev/null 2>&1; then
-            kubectl delete -k local --ignore-not-found=true
-            echo "✅ Local deployment cleaned up"
-        else
-            echo "ℹ️  No local deployment found"
-        fi
-        ;;
-    "prod")
-        echo "🗑️  Cleaning up production deployment..."
-        if kubectl get namespace order-processor >/dev/null 2>&1; then
-            kubectl delete -k prod --ignore-not-found=true
-            echo "✅ Production deployment cleaned up"
-        else
-            echo "ℹ️  No production deployment found"
-        fi
-        ;;
-    "all")
-        echo "🗑️  Cleaning up all deployments..."
-        if kubectl get namespace order-processor >/dev/null 2>&1; then
-            kubectl delete -k local --ignore-not-found=true
-            kubectl delete -k prod --ignore-not-found=true
-            kubectl delete -k base --ignore-not-found=true
-            echo "✅ All deployments cleaned up"
-        else
-            echo "ℹ️  No deployments found"
-        fi
+if [[ "$CLEANUP_ENV" != "dev" && "$CLEANUP_ENV" != "prod" ]]; then
+    echo "❌ Invalid environment: $CLEANUP_ENV"
+    echo "Usage: $0 [dev|prod]"
+    exit 1
+fi
 
-        # Also delete Kind cluster if it exists
-        if kind get clusters | grep -q "order-processor"; then
-            echo "🗑️  Deleting Kind cluster 'order-processor'..."
-            kind delete cluster --name order-processor
-            echo "✅ Kind cluster deleted"
-        else
-            echo "ℹ️  No Kind cluster found"
-        fi
-        ;;
-    *)
-        echo "❌ Invalid target: $CLEANUP_TARGET"
-        echo "Usage: $0 [local|prod|all]"
-        exit 1
-        ;;
-esac
+echo "🧹 Cleaning up Order Processor deployment for environment: $CLEANUP_ENV..."
+
+if [[ "$CLEANUP_ENV" == "dev" ]]; then
+    if kubectl get namespace order-processor >/dev/null 2>&1; then
+        kubectl delete -k "$K8S_DIR/dev" --ignore-not-found=true
+        echo "✅ Dev deployment cleaned up"
+    else
+        echo "ℹ️  No dev deployment found"
+    fi
+    # Also delete Kind cluster if it exists
+    if kind get clusters | grep -q "order-processor"; then
+        echo "🗑️  Deleting Kind cluster 'order-processor'..."
+        kind delete cluster --name order-processor
+        echo "✅ Kind cluster deleted"
+    else
+        echo "ℹ️  No Kind cluster found"
+    fi
+elif [[ "$CLEANUP_ENV" == "prod" ]]; then
+    if kubectl get namespace order-processor >/dev/null 2>&1; then
+        kubectl delete -k "$K8S_DIR/dev" --ignore-not-found=true
+        kubectl delete -k "$K8S_DIR/prod" --ignore-not-found=true
+        kubectl delete -k "$K8S_DIR/base" --ignore-not-found=true
+        echo "✅ All deployments cleaned up"
+    else
+        echo "ℹ️  No deployments found"
+    fi
+fi
 
 echo ""
 echo "🧹 Cleanup complete!"
