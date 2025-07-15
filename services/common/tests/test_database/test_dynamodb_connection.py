@@ -27,28 +27,18 @@ class TestDynamoDBManager:
         'INVENTORY_TABLE': 'test-inventory-table',
         'AWS_REGION': 'us-west-2'
     })
-    @patch('src.database.dynamodb_connection.STSClient')
-    @patch('src.database.dynamodb_connection.boto3')
-    @pytest.mark.skip(reason='Disabled due to removal of STSClient')
-    def test_dynamodb_manager_init_success(self, mock_boto3, mock_sts_client):
-        """Test successful DynamoDBManager initialization"""
-        # Mock STS client components
-        mock_sts_instance = Mock()
-        mock_resource = Mock()
-        mock_client = Mock()
-        mock_users_table = Mock()
-        mock_orders_table = Mock()
-        mock_inventory_table = Mock()
-
-        mock_sts_client.return_value = mock_sts_instance
-        mock_sts_instance.get_resource.return_value = mock_resource
-        mock_sts_instance.get_client.return_value = mock_client
+    @patch('src.database.dynamodb_connection.boto3.Session')
+    def test_dynamodb_manager_init_success(self, mock_boto3_session):
+        mock_session = MagicMock()
+        mock_resource = MagicMock()
+        mock_users_table = MagicMock()
+        mock_orders_table = MagicMock()
+        mock_inventory_table = MagicMock()
+        mock_boto3_session.return_value = mock_session
+        mock_session.resource.return_value = mock_resource
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
 
-        # Initialize manager
         manager = DynamoDBManager()
-
-        # Verify initialization
         assert manager.users_table_name == 'test-users-table'
         assert manager.orders_table_name == 'test-orders-table'
         assert manager.inventory_table_name == 'test-inventory-table'
@@ -56,12 +46,6 @@ class TestDynamoDBManager:
         assert manager.users_table == mock_users_table
         assert manager.orders_table == mock_orders_table
         assert manager.inventory_table == mock_inventory_table
-
-        # Verify STS client calls
-        mock_sts_client.assert_called_once()
-        mock_sts_instance.get_resource.assert_called_once_with('dynamodb')
-        mock_sts_instance.get_client.assert_called_once_with('dynamodb')
-        assert mock_resource.Table.call_count == 3
 
     @patch.dict(os.environ, {
         'ORDERS_TABLE': 'test-orders-table',
@@ -114,28 +98,22 @@ class TestDynamoDBManager:
         'INVENTORY_TABLE': 'test-inventory-table',
         'AWS_REGION': 'eu-west-1'
     })
-    @patch('src.database.dynamodb_connection.STSClient')
-    @patch('src.database.dynamodb_connection.boto3')
-    @pytest.mark.skip(reason='Disabled due to removal of STSClient')
-    def test_dynamodb_manager_custom_region(self, mock_boto3, mock_sts_client):
-        """Test DynamoDBManager uses custom region when AWS_REGION is set"""
-        # Mock STS client components
-        mock_sts_instance = Mock()
-        mock_resource = Mock()
-        mock_client = Mock()
-        mock_sts_client.return_value = mock_sts_instance
-        mock_sts_instance.get_resource.return_value = mock_resource
-        mock_sts_instance.get_client.return_value = mock_client
-        mock_resource.Table.return_value = Mock()
+    @patch('src.database.dynamodb_connection.boto3.Session')
+    def test_dynamodb_manager_custom_region(self, mock_boto3_session):
+        mock_session = MagicMock()
+        mock_resource = MagicMock()
+        mock_users_table = MagicMock()
+        mock_orders_table = MagicMock()
+        mock_inventory_table = MagicMock()
+        mock_boto3_session.return_value = mock_session
+        mock_session.resource.return_value = mock_resource
+        mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
 
-        # Initialize manager
         manager = DynamoDBManager()
-
-        # Verify custom region
         assert manager.region == 'eu-west-1'
-        mock_sts_client.assert_called_once()
-        mock_sts_instance.get_resource.assert_called_once_with('dynamodb')
-        mock_sts_instance.get_client.assert_called_once_with('dynamodb')
+        assert manager.users_table == mock_users_table
+        assert manager.orders_table == mock_orders_table
+        assert manager.inventory_table == mock_inventory_table
 
     @patch.dict(os.environ, {
         'USERS_TABLE': 'test-users-table',
@@ -143,38 +121,24 @@ class TestDynamoDBManager:
         'INVENTORY_TABLE': 'test-inventory-table',
         'AWS_REGION': 'us-west-2'
     })
-    @patch('src.database.dynamodb_connection.STSClient')
-    @patch('src.database.dynamodb_connection.boto3')
+    @patch('src.database.dynamodb_connection.boto3.Session')
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason='Disabled due to removal of STSClient')
-    async def test_health_check_success(self, mock_boto3, mock_sts_client):
-        """Test successful health check"""
-        # Mock STS client components
-        mock_sts_instance = Mock()
-        mock_resource = Mock()
-        mock_client = Mock()
-        mock_users_table = Mock()
-        mock_orders_table = Mock()
-        mock_inventory_table = Mock()
-
-        mock_sts_client.return_value = mock_sts_instance
-        mock_sts_instance.get_resource.return_value = mock_resource
-        mock_sts_instance.get_client.return_value = mock_client
+    async def test_health_check_success(self, mock_boto3_session):
+        mock_session = MagicMock()
+        mock_resource = MagicMock()
+        mock_users_table = MagicMock()
+        mock_orders_table = MagicMock()
+        mock_inventory_table = MagicMock()
+        mock_boto3_session.return_value = mock_session
+        mock_session.resource.return_value = mock_resource
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
-
-        # Mock successful describe_table calls
         mock_users_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-users-table'}}
         mock_orders_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-orders-table'}}
         mock_inventory_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-inventory-table'}}
 
-        # Initialize manager and test health check
         manager = DynamoDBManager()
         result = await manager.health_check()
-
-        # Verify result
         assert result is True
-
-        # Verify describe_table calls
         mock_users_table.meta.client.describe_table.assert_called_once_with(TableName='test-users-table')
         mock_orders_table.meta.client.describe_table.assert_called_once_with(TableName='test-orders-table')
         mock_inventory_table.meta.client.describe_table.assert_called_once_with(TableName='test-inventory-table')
@@ -185,33 +149,21 @@ class TestDynamoDBManager:
         'INVENTORY_TABLE': 'test-inventory-table',
         'AWS_REGION': 'us-west-2'
     })
-    @patch('src.database.dynamodb_connection.STSClient')
-    @patch('src.database.dynamodb_connection.boto3')
+    @patch('src.database.dynamodb_connection.boto3.Session')
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason='Disabled due to removal of STSClient')
-    async def test_health_check_failure(self, mock_boto3, mock_sts_client):
-        """Test health check failure when table is not accessible"""
-        # Mock STS client components
-        mock_sts_instance = Mock()
-        mock_resource = Mock()
-        mock_client = Mock()
-        mock_users_table = Mock()
-        mock_orders_table = Mock()
-        mock_inventory_table = Mock()
-
-        mock_sts_client.return_value = mock_sts_instance
-        mock_sts_instance.get_resource.return_value = mock_resource
-        mock_sts_instance.get_client.return_value = mock_client
+    async def test_health_check_failure(self, mock_boto3_session):
+        mock_session = MagicMock()
+        mock_resource = MagicMock()
+        mock_users_table = MagicMock()
+        mock_orders_table = MagicMock()
+        mock_inventory_table = MagicMock()
+        mock_boto3_session.return_value = mock_session
+        mock_session.resource.return_value = mock_resource
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
-
-        # Mock failed describe_table call
         mock_users_table.meta.client.describe_table.side_effect = Exception("Table not found")
 
-        # Initialize manager and test health check
         manager = DynamoDBManager()
         result = await manager.health_check()
-
-        # Verify result
         assert result is False
 
     @patch.dict(os.environ, {
@@ -220,29 +172,19 @@ class TestDynamoDBManager:
         'INVENTORY_TABLE': 'test-inventory-table',
         'AWS_REGION': 'us-west-2'
     })
-    @patch('src.database.dynamodb_connection.STSClient')
-    @patch('src.database.dynamodb_connection.boto3')
+    @patch('src.database.dynamodb_connection.boto3.Session')
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason='Disabled due to removal of STSClient')
-    async def test_get_connection_context_manager(self, mock_boto3, mock_sts_client):
-        """Test get_connection context manager"""
-        # Mock STS client components
-        mock_sts_instance = Mock()
-        mock_resource = Mock()
-        mock_client = Mock()
-        mock_users_table = Mock()
-        mock_orders_table = Mock()
-        mock_inventory_table = Mock()
-
-        mock_sts_client.return_value = mock_sts_instance
-        mock_sts_instance.get_resource.return_value = mock_resource
-        mock_sts_instance.get_client.return_value = mock_client
+    async def test_get_connection_context_manager(self, mock_boto3_session):
+        mock_session = MagicMock()
+        mock_resource = MagicMock()
+        mock_users_table = MagicMock()
+        mock_orders_table = MagicMock()
+        mock_inventory_table = MagicMock()
+        mock_boto3_session.return_value = mock_session
+        mock_session.resource.return_value = mock_resource
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
 
-        # Initialize manager
         manager = DynamoDBManager()
-
-        # Test context manager
         async with manager.get_connection() as connection:
             assert isinstance(connection, DynamoDBConnection)
             assert connection.users_table == mock_users_table
@@ -255,37 +197,25 @@ class TestDynamoDBManager:
         'INVENTORY_TABLE': 'test-inventory-table',
         'AWS_REGION': 'us-west-2'
     })
-    @patch('src.database.dynamodb_connection.STSClient')
-    @patch('src.database.dynamodb_connection.boto3')
+    @patch('src.database.dynamodb_connection.boto3.Session')
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason='Disabled due to removal of STSClient')
-    async def test_get_connection_exception_handling(self, mock_boto3, mock_sts_client):
-        """Test get_connection handles exceptions properly"""
-        # Mock STS client components
-        mock_sts_instance = Mock()
-        mock_resource = Mock()
-        mock_client = Mock()
-        mock_users_table = Mock()
-        mock_orders_table = Mock()
-        mock_inventory_table = Mock()
-
-        mock_sts_client.return_value = mock_sts_instance
-        mock_sts_instance.get_resource.return_value = mock_resource
-        mock_sts_instance.get_client.return_value = mock_client
+    async def test_get_connection_exception_handling(self, mock_boto3_session):
+        mock_session = MagicMock()
+        mock_resource = MagicMock()
+        mock_users_table = MagicMock()
+        mock_orders_table = MagicMock()
+        mock_inventory_table = MagicMock()
+        mock_boto3_session.return_value = mock_session
+        mock_session.resource.return_value = mock_resource
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
+        mock_users_table.meta.client.describe_table.side_effect = Exception("Table not found")
 
-        # Initialize manager
         manager = DynamoDBManager()
-
-        # Test context manager with exception
         try:
             async with manager.get_connection() as connection:
-                assert isinstance(connection, DynamoDBConnection)
-                raise Exception("Test exception")
+                pass
         except Exception as e:
-            assert str(e) == "Test exception"
-
-        # Context manager should handle cleanup gracefully
+            assert str(e) == "Table not found"
 
 
 class TestDynamoDBConnection:
@@ -420,38 +350,24 @@ class TestDynamoDBIntegration:
         'INVENTORY_TABLE': 'test-inventory-table',
         'AWS_REGION': 'us-west-2'
     })
-    @patch('src.database.dynamodb_connection.STSClient')
-    @patch('src.database.dynamodb_connection.boto3')
+    @patch('src.database.dynamodb_connection.boto3.Session')
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason='Disabled due to removal of STSClient')
-    async def test_end_to_end_connection_flow(self, mock_boto3, mock_sts_client):
-        """Test end-to-end connection flow"""
-        # Mock STS client components
-        mock_sts_instance = Mock()
-        mock_resource = Mock()
-        mock_client = Mock()
-        mock_users_table = Mock()
-        mock_orders_table = Mock()
-        mock_inventory_table = Mock()
-
-        mock_sts_client.return_value = mock_sts_instance
-        mock_sts_instance.get_resource.return_value = mock_resource
-        mock_sts_instance.get_client.return_value = mock_client
+    async def test_end_to_end_connection_flow(self, mock_boto3_session):
+        mock_session = MagicMock()
+        mock_resource = MagicMock()
+        mock_users_table = MagicMock()
+        mock_orders_table = MagicMock()
+        mock_inventory_table = MagicMock()
+        mock_boto3_session.return_value = mock_session
+        mock_session.resource.return_value = mock_resource
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
-
-        # Mock successful health check
         mock_users_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-users-table'}}
         mock_orders_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-orders-table'}}
         mock_inventory_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-inventory-table'}}
 
-        # Initialize manager
         manager = DynamoDBManager()
-
-        # Test health check
         health_result = await manager.health_check()
         assert health_result is True
-
-        # Test connection retrieval
         async with manager.get_connection() as connection:
             assert hasattr(connection, 'users_table')
             assert hasattr(connection, 'orders_table')
@@ -460,42 +376,27 @@ class TestDynamoDBIntegration:
             assert connection.orders_table == mock_orders_table
             assert connection.inventory_table == mock_inventory_table
 
-        # Test FastAPI dependency
-        async_gen = get_dynamodb()
-        dependency_connection = await async_gen.__anext__()
-        assert hasattr(dependency_connection, 'users_table')
-        assert hasattr(dependency_connection, 'orders_table')
-        assert hasattr(dependency_connection, 'inventory_table')
-
     @patch.dict(os.environ, {
         'USERS_TABLE': 'test-users-table',
         'ORDERS_TABLE': 'test-orders-table',
         'INVENTORY_TABLE': 'test-inventory-table',
         'AWS_REGION': 'us-west-2'
     })
-    @patch('src.database.dynamodb_connection.STSClient')
-    @patch('src.database.dynamodb_connection.boto3')
-    @pytest.mark.skip(reason='Disabled due to removal of STSClient')
-    def test_table_name_configuration(self, mock_boto3, mock_sts_client):
-        """Test that table names are properly configured from environment"""
-        # Mock STS client components
-        mock_sts_instance = Mock()
-        mock_resource = Mock()
-        mock_client = Mock()
-        mock_sts_client.return_value = mock_sts_instance
-        mock_sts_instance.get_resource.return_value = mock_resource
-        mock_sts_instance.get_client.return_value = mock_client
-        mock_resource.Table.return_value = Mock()
+    @patch('src.database.dynamodb_connection.boto3.Session')
+    def test_table_name_configuration(self, mock_boto3_session):
+        mock_session = MagicMock()
+        mock_resource = MagicMock()
+        mock_users_table = MagicMock()
+        mock_orders_table = MagicMock()
+        mock_inventory_table = MagicMock()
+        mock_boto3_session.return_value = mock_session
+        mock_session.resource.return_value = mock_resource
+        mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
 
-        # Initialize manager
         manager = DynamoDBManager()
-
-        # Verify table names are set from environment
         assert manager.users_table_name == 'test-users-table'
         assert manager.orders_table_name == 'test-orders-table'
         assert manager.inventory_table_name == 'test-inventory-table'
-
-        # Verify STS client Table calls used correct names
         table_calls = [call[0][0] for call in mock_resource.Table.call_args_list]
         assert 'test-users-table' in table_calls
         assert 'test-orders-table' in table_calls

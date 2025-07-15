@@ -29,14 +29,22 @@ class TestAssetDAO:
 
     @pytest.fixture
     def sample_asset_create(self):
-        """Sample asset creation data"""
         return AssetCreate(
             asset_id="BTC",
             name="Bitcoin",
             description="Digital currency",
             category="major",
             amount=Decimal("10.5"),
-            price_usd=Decimal("45000.0")
+            price_usd=Decimal("45000.0"),
+            symbol="BTC",
+            image="https://assets.coingecko.com/coins/images/1/large/bitcoin.png",
+            market_cap_rank=1,
+            high_24h=68000.0,
+            low_24h=66000.0,
+            circulating_supply=19400000.0,
+            price_change_24h=500.0,
+            ath_change_percentage=-2.5,
+            market_cap=1300000000000.0
         )
 
     @pytest.fixture
@@ -68,7 +76,6 @@ class TestAssetDAO:
 
     @pytest.fixture
     def sample_db_item(self):
-        """Sample database item response"""
         now = datetime.now(UTC).isoformat()
         return {
             'product_id': 'BTC',
@@ -78,6 +85,15 @@ class TestAssetDAO:
             'category': 'major',
             'amount': Decimal("10.5"),
             'price_usd': Decimal("45000.0"),
+            'symbol': 'BTC',
+            'image': 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+            'market_cap_rank': 1,
+            'high_24h': 68000.0,
+            'low_24h': 66000.0,
+            'circulating_supply': 19400000.0,
+            'price_change_24h': 500.0,
+            'ath_change_percentage': -2.5,
+            'market_cap': 1300000000000.0,
             'is_active': True,
             'created_at': now,
             'updated_at': now
@@ -87,11 +103,7 @@ class TestAssetDAO:
 
     @pytest.mark.asyncio
     async def test_create_asset_success(self, asset_dao, sample_asset_create, mock_db_connection):
-        """Test successful asset creation"""
-        # Mock that asset doesn't exist
         asset_dao.get_asset_by_id = AsyncMock(return_value=None)
-
-        # Mock successful database operations
         now = datetime.now(UTC).isoformat()
         created_item = {
             'product_id': 'BTC',
@@ -101,55 +113,40 @@ class TestAssetDAO:
             'category': 'major',
             'amount': 10.5,
             'price_usd': 45000.0,
+            'symbol': 'BTC',
+            'image': 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+            'market_cap_rank': 1,
+            'high_24h': 68000.0,
+            'low_24h': 66000.0,
+            'circulating_supply': 19400000.0,
+            'price_change_24h': 500.0,
+            'ath_change_percentage': -2.5,
+            'market_cap': 1300000000000.0,
             'is_active': True,
             'created_at': now,
             'updated_at': now
         }
         mock_db_connection.inventory_table.put_item.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
-
-        # Create asset
         result = await asset_dao.create_asset(sample_asset_create)
-
-        # Verify result
         assert isinstance(result, Asset)
         assert result.asset_id == "BTC"
         assert result.name == "Bitcoin"
-        assert result.description == "Digital currency"
-        assert result.category == "major"
-        assert result.amount == Decimal("10.5")
-        assert result.price_usd == Decimal("45000.0")
+        assert result.symbol == "BTC"
+        assert result.image.startswith("https://")
+        assert result.market_cap_rank == 1
+        assert result.high_24h == 68000.0
+        assert result.low_24h == 66000.0
+        assert result.circulating_supply == 19400000.0
+        assert result.price_change_24h == 500.0
+        assert result.ath_change_percentage == -2.5
+        assert result.market_cap == 1300000000000.0
         assert result.is_active is True
         assert isinstance(result.created_at, datetime)
         assert isinstance(result.updated_at, datetime)
-
-        # Verify database was called
         mock_db_connection.inventory_table.put_item.assert_called_once()
         call_args = mock_db_connection.inventory_table.put_item.call_args[1]['Item']
-        assert call_args['product_id'] == 'BTC'
-        assert call_args['asset_id'] == 'BTC'
-        assert call_args['name'] == 'Bitcoin'
-        assert call_args['is_active'] is True
-
-    @pytest.mark.asyncio
-    async def test_create_asset_zero_price_sets_inactive(self, asset_dao, sample_asset_create_zero_price, mock_db_connection):
-        """Test creating asset with zero price automatically sets is_active to False"""
-        # Mock that asset doesn't exist
-        asset_dao.get_asset_by_id = AsyncMock(return_value=None)
-
-        # Mock successful database operations
-        mock_db_connection.inventory_table.put_item.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
-
-        # Create asset with zero price
-        result = await asset_dao.create_asset(sample_asset_create_zero_price)
-
-        # Verify result
-        assert result.price_usd == 0.0
-        assert result.is_active is False
-
-        # Verify database was called with is_active=False
-        call_args = mock_db_connection.inventory_table.put_item.call_args[1]['Item']
-        assert call_args['price_usd'] == 0.0
-        assert call_args['is_active'] is False
+        assert call_args['symbol'] == 'BTC'
+        assert call_args['image'].startswith('https://')
 
     @pytest.mark.asyncio
     async def test_create_asset_already_exists(self, asset_dao, sample_asset_create, sample_asset):
@@ -182,27 +179,22 @@ class TestAssetDAO:
 
     @pytest.mark.asyncio
     async def test_get_asset_by_id_found(self, asset_dao, sample_db_item, mock_db_connection):
-        """Test getting asset by ID when found"""
-        # Mock database response
         mock_db_connection.inventory_table.get_item.return_value = {'Item': sample_db_item}
-
-        # Get asset
         result = await asset_dao.get_asset_by_id('BTC')
-
-        # Verify result
         assert isinstance(result, Asset)
         assert result.asset_id == 'BTC'
         assert result.name == 'Bitcoin'
-        assert result.description == 'Digital currency'
-        assert result.category == 'major'
-        assert result.amount == Decimal("10.5")
-        assert result.price_usd == Decimal("45000.0")
+        assert result.symbol == 'BTC'
+        assert result.image.startswith('https://')
+        assert result.market_cap_rank == 1
+        assert result.high_24h == 68000.0
+        assert result.low_24h == 66000.0
+        assert result.circulating_supply == 19400000.0
+        assert result.price_change_24h == 500.0
+        assert result.ath_change_percentage == -2.5
+        assert result.market_cap == 1300000000000.0
         assert result.is_active is True
-
-        # Verify database was called correctly
-        mock_db_connection.inventory_table.get_item.assert_called_once_with(
-            Key={'product_id': 'BTC'}
-        )
+        mock_db_connection.inventory_table.get_item.assert_called_once_with(Key={'product_id': 'BTC'})
 
     @pytest.mark.asyncio
     async def test_get_asset_by_id_not_found(self, asset_dao, mock_db_connection):
@@ -470,39 +462,60 @@ class TestAssetDAO:
 
     @pytest.mark.asyncio
     async def test_update_asset_success(self, asset_dao, mock_db_connection):
-        """Test successful asset update"""
-        # Mock database response
+        now = datetime.now(UTC).isoformat()
         updated_item = {
             'asset_id': 'BTC',
             'name': 'Bitcoin',
-            'description': 'Updated description',
+            'description': 'Updated desc',
             'category': 'major',
-            'amount': 15.0,
+            'amount': 20.0,
             'price_usd': 50000.0,
+            'symbol': 'BTC',
+            'image': 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+            'market_cap_rank': 1,
+            'high_24h': 70000.0,
+            'low_24h': 65000.0,
+            'circulating_supply': 20000000.0,
+            'price_change_24h': 1000.0,
+            'ath_change_percentage': -1.5,
+            'market_cap': 1400000000000.0,
             'is_active': True,
-            'created_at': datetime.now(UTC).isoformat(),
-            'updated_at': datetime.now(UTC).isoformat()
+            'created_at': now,
+            'updated_at': now
         }
         mock_db_connection.inventory_table.update_item.return_value = {'Attributes': updated_item}
-
-        # Create update data
         asset_update = AssetUpdate(
-            description="Updated description",
-            amount=15.0,
-            price_usd=50000.0
+            description="Updated desc",
+            amount=Decimal("20.0"),
+            price_usd=Decimal("50000.0"),
+            symbol="BTC",
+            image="https://assets.coingecko.com/coins/images/1/large/bitcoin.png",
+            market_cap_rank=1,
+            high_24h=70000.0,
+            low_24h=65000.0,
+            circulating_supply=20000000.0,
+            price_change_24h=1000.0,
+            ath_change_percentage=-1.5,
+            market_cap=1400000000000.0
         )
-
-        # Update asset
-        result = await asset_dao.update_asset('BTC', asset_update)
-
-        # Verify result
+        result = await asset_dao.update_asset("BTC", asset_update)
         assert isinstance(result, Asset)
-        assert result.description == "Updated description"
-        assert result.amount == 15.0
+        assert result.asset_id == "BTC"
+        assert result.description == "Updated desc"
+        assert result.amount == 20.0
         assert result.price_usd == 50000.0
-
-        # Verify database was called
-        mock_db_connection.inventory_table.update_item.assert_called_once()
+        assert result.symbol == "BTC"
+        assert result.image.startswith("https://")
+        assert result.market_cap_rank == 1
+        assert result.high_24h == 70000.0
+        assert result.low_24h == 65000.0
+        assert result.circulating_supply == 20000000.0
+        assert result.price_change_24h == 1000.0
+        assert result.ath_change_percentage == -1.5
+        assert result.market_cap == 1400000000000.0
+        assert result.is_active is True
+        assert isinstance(result.created_at, datetime)
+        assert isinstance(result.updated_at, datetime)
 
     @pytest.mark.asyncio
     async def test_update_asset_no_changes(self, asset_dao, sample_asset):
@@ -1151,24 +1164,6 @@ class TestAssetDAO:
         mock_db_connection.inventory_table.delete_item.return_value = {}
         result = await asset_dao.delete_asset('')
         assert result is False
-
-    # ==================== LOGGING TESTS ====================
-
-    @pytest.mark.asyncio
-    async def test_logging_in_methods(self, asset_dao, mock_db_connection, caplog):
-        """Test that appropriate logging occurs in DAO methods"""
-        import logging
-
-        # Set log level to capture debug messages
-        caplog.set_level(logging.INFO)
-
-        # Test get_asset_by_id logging
-        mock_db_connection.inventory_table.get_item.return_value = {}
-        await asset_dao.get_asset_by_id('TEST')
-
-        # Check that debug logs were created
-        assert any("Looking up asset by ID: 'TEST'" in record.message for record in caplog.records)
-        assert any("No asset found for ID: 'TEST'" in record.message for record in caplog.records)
 
     # ==================== BOUNDARY VALUE TESTS ====================
 

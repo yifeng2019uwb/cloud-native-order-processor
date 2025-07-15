@@ -7,135 +7,29 @@ import re
 
 class AssetCreate(BaseModel):
     """Request model for creating new crypto assets"""
+    asset_id: str = Field(..., description="Asset symbol (3-6 characters, uppercase)")
+    name: str = Field(..., description="Asset full name")
+    description: Optional[str] = Field(None, description="Asset description (optional)")
+    category: str = Field(..., description="Asset category")
+    amount: Decimal = Field(..., description="Available inventory amount")
+    price_usd: Decimal = Field(..., description="Current USD price")
+    symbol: Optional[str] = Field(None, description="Ticker symbol (e.g., BTC)")
+    image: Optional[str] = Field(None, description="URL to coin logo")
+    market_cap_rank: Optional[int] = Field(None, description="Rank by market cap")
+    high_24h: Optional[float] = Field(None, description="24-hour high price")
+    low_24h: Optional[float] = Field(None, description="24-hour low price")
+    circulating_supply: Optional[float] = Field(None, description="Circulating supply")
+    price_change_24h: Optional[float] = Field(None, description="Price change in last 24h")
+    ath_change_percentage: Optional[float] = Field(None, description="% change from all-time high")
+    market_cap: Optional[float] = Field(None, description="Market capitalization")
 
-    asset_id: str = Field(
-        ...,
-        min_length=3,
-        max_length=6,
-        description="Asset symbol (3-6 characters, uppercase)",
-        example="BTC"
-    )
-
-    name: str = Field(
-        ...,
-        min_length=1,
-        max_length=50,
-        strip_whitespace=True,
-        description="Asset full name",
-        example="Bitcoin"
-    )
-
-    description: Optional[str] = Field(
-        None,
-        min_length=0,
-        max_length=1000,
-        strip_whitespace=True,
-        description="Asset description (optional)",
-        example="Digital currency and store of value"
-    )
-
-    category: str = Field(
-        ...,
-        description="Asset category",
-        example="major"
-    )
-
-    amount: Decimal = Field(
-        ...,
-        ge=0,
-        description="Available inventory amount",
-        example=Decimal("500.25")
-    )
-
-    price_usd: Decimal = Field(
-        ...,
-        ge=0,
-        description="Current USD price",
-        example=Decimal("45000.50")
-    )
-
-    @field_validator("asset_id")
+    @model_validator(mode="before")
     @classmethod
-    def validate_asset_id(cls, v):
-        """Validate asset symbol format"""
-        if not v or not v.strip():
-            raise ValueError("Asset ID cannot be empty")
-
-        # Convert to uppercase and strip whitespace
-        v = v.strip().upper()
-
-        # Must be 3-6 characters, alphanumeric only
-        if not re.match(r'^[A-Z0-9]{3,6}$', v):
-            raise ValueError("Asset ID must be 3-6 uppercase letters/numbers only")
-
-        return v
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v):
-        """Validate asset name"""
-        if not v or not v.strip():
-            raise ValueError("Asset name cannot be empty")
-
-        # Strip whitespace and convert to title case
-        v = v.strip().title()
-
-        # Basic format validation - letters, numbers, spaces allowed
-        if not re.match(r'^[a-zA-Z0-9\s\-\.]+$', v):
-            raise ValueError("Asset name contains invalid characters")
-
-        return v
-
-    @field_validator("category")
-    @classmethod
-    def validate_category(cls, v):
-        """Validate asset category"""
-        valid_categories = ["major", "altcoin", "stablecoin"]
-
-        if v.lower() not in valid_categories:
-            raise ValueError(f"Category must be one of: {', '.join(valid_categories)}")
-
-        return v.lower()
-
-    @field_validator("description")
-    @classmethod
-    def validate_description(cls, v):
-        """Validate description if provided"""
-        if v is None:
-            return v
-
-        # Strip whitespace
-        v = v.strip()
-
-        # Allow empty description
-        if len(v) == 0:
-            return v
-
-        # Check length
-        if len(v) > 1000:
-            raise ValueError("Description cannot exceed 1000 characters")
-
-        return v
-
-    @field_validator("amount")
-    @classmethod
-    def validate_amount(cls, v):
-        """Validate inventory amount"""
-        if v < 0:
-            raise ValueError("Amount cannot be negative")
-
-        # Round to 8 decimal places (crypto precision)
-        return round(v, 8)
-
-    @field_validator("price_usd")
-    @classmethod
-    def validate_price_usd(cls, v):
-        """Validate USD price"""
-        if v < 0:
-            raise ValueError("Price cannot be negative")
-
-        # Round to 2 decimal places (USD precision)
-        return round(v, 2)
+    def trim_strings(cls, values):
+        for field in ["asset_id", "name", "description", "category", "symbol", "image"]:
+            if field in values and isinstance(values[field], str):
+                values[field] = values[field].strip()
+        return values
 
     class Config:
         json_schema_extra = {
@@ -183,6 +77,17 @@ class Asset(BaseModel):
         description="Current USD price"
     )
 
+    # New fields
+    symbol: Optional[str] = Field(None, description="Ticker symbol (e.g., BTC)")
+    image: Optional[str] = Field(None, description="URL to coin logo")
+    market_cap_rank: Optional[int] = Field(None, description="Rank by market cap")
+    high_24h: Optional[float] = Field(None, description="24-hour high price")
+    low_24h: Optional[float] = Field(None, description="24-hour low price")
+    circulating_supply: Optional[float] = Field(None, description="Circulating supply")
+    price_change_24h: Optional[float] = Field(None, description="Price change in last 24h")
+    ath_change_percentage: Optional[float] = Field(None, description="% change from all-time high")
+    market_cap: Optional[float] = Field(None, description="Market capitalization")
+
     is_active: bool = Field(
         default=True,
         description="Whether asset is available for trading"
@@ -197,14 +102,6 @@ class Asset(BaseModel):
         ...,
         description="Last update timestamp"
     )
-
-    @model_validator(mode='after')
-    def validate_price_active_relationship(self):
-        """Validate price and active status relationship"""
-        if self.price_usd == 0 and self.is_active:
-            raise ValueError("Asset cannot be active with zero price")
-
-        return self
 
     class Config:
         json_encoders = {
@@ -295,101 +192,28 @@ class AssetResponse(BaseModel):
 class AssetUpdate(BaseModel):
     """Model for updating existing assets (asset_id and name cannot be changed)"""
 
-    description: Optional[str] = Field(
-        None,
-        min_length=0,
-        max_length=1000,
-        strip_whitespace=True,
-        description="Updated asset description"
-    )
+    description: Optional[str] = Field(None, description="Updated asset description")
+    category: Optional[str] = Field(None, description="Updated asset category")
+    amount: Optional[Decimal] = Field(None, description="Updated inventory amount")
+    price_usd: Optional[Decimal] = Field(None, description="Updated USD price")
+    is_active: Optional[bool] = Field(None, description="Updated active status")
+    symbol: Optional[str] = Field(None, description="Ticker symbol (e.g., BTC)")
+    image: Optional[str] = Field(None, description="URL to coin logo")
+    market_cap_rank: Optional[int] = Field(None, description="Rank by market cap")
+    high_24h: Optional[float] = Field(None, description="24-hour high price")
+    low_24h: Optional[float] = Field(None, description="24-hour low price")
+    circulating_supply: Optional[float] = Field(None, description="Circulating supply")
+    price_change_24h: Optional[float] = Field(None, description="Price change in last 24h")
+    ath_change_percentage: Optional[float] = Field(None, description="% change from all-time high")
+    market_cap: Optional[float] = Field(None, description="Market capitalization")
 
-    category: Optional[str] = Field(
-        None,
-        description="Updated asset category"
-    )
-
-    amount: Optional[Decimal] = Field(
-        None,
-        ge=0,
-        description="Updated inventory amount"
-    )
-
-    price_usd: Optional[Decimal] = Field(
-        None,
-        ge=0,
-        description="Updated USD price"
-    )
-
-    is_active: Optional[bool] = Field(
-        None,
-        description="Updated active status"
-    )
-
-    @field_validator("category")
+    @model_validator(mode="before")
     @classmethod
-    def validate_category(cls, v):
-        """Validate category if provided"""
-        if v is None:
-            return v
-
-        valid_categories = ["major", "altcoin", "stablecoin"]
-
-        if v.lower() not in valid_categories:
-            raise ValueError(f"Category must be one of: {', '.join(valid_categories)}")
-
-        return v.lower()
-
-    @field_validator("description")
-    @classmethod
-    def validate_description(cls, v):
-        """Validate description if provided"""
-        if v is None:
-            return v
-
-        # Strip whitespace
-        v = v.strip()
-
-        # Allow empty description
-        if len(v) == 0:
-            return v
-
-        return v
-
-    @field_validator("amount")
-    @classmethod
-    def validate_amount(cls, v):
-        """Validate amount if provided"""
-        if v is None:
-            return v
-
-        if v < 0:
-            raise ValueError("Amount cannot be negative")
-
-        # Round to 8 decimal places (crypto precision)
-        return round(v, 8)
-
-    @field_validator("price_usd")
-    @classmethod
-    def validate_price_usd(cls, v):
-        """Validate price if provided"""
-        if v is None:
-            return v
-
-        if v < 0:
-            raise ValueError("Price cannot be negative")
-
-        # Round to 2 decimal places (USD precision)
-        return round(v, 2)
-
-    @model_validator(mode='after')
-    def validate_price_active_relationship(self):
-        """Validate price and active relationship if both are being updated"""
-        # Only validate if both fields are provided in the update
-        if self.price_usd is not None and self.is_active is not None:
-            if self.price_usd == 0 and self.is_active:
-                raise ValueError("Asset cannot be active with zero price")
-
-        return self
+    def trim_strings(cls, values):
+        for field in ["description", "category", "symbol", "image"]:
+            if field in values and isinstance(values[field], str):
+                values[field] = values[field].strip()
+        return values
 
     class Config:
         json_schema_extra = {

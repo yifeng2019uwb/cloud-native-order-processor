@@ -18,35 +18,34 @@ class AssetDAO(BaseDAO):
     """Data Access Object for asset operations"""
 
     async def create_asset(self, asset_create: AssetCreate) -> Asset:
-        """Create a new asset"""
         try:
-            # Check if asset already exists
             existing_asset = await self.get_asset_by_id(asset_create.asset_id)
             if existing_asset:
                 raise ValueError(f"Asset with ID {asset_create.asset_id} already exists")
 
-            # Create asset item
             now = datetime.now(UTC).isoformat()
             asset_item = {
-                'product_id': asset_create.asset_id,  # Using existing table schema (product_id)
-                'asset_id': asset_create.asset_id,    # Also store as asset_id for clarity
+                'product_id': asset_create.asset_id,
+                'asset_id': asset_create.asset_id,
                 'name': asset_create.name,
                 'description': asset_create.description or "",
                 'category': asset_create.category,
                 'amount': asset_create.amount,
                 'price_usd': asset_create.price_usd,
-                'is_active': True,  # New assets are active by default
+                'symbol': asset_create.symbol,
+                'image': asset_create.image,
+                'market_cap_rank': asset_create.market_cap_rank,
+                'high_24h': asset_create.high_24h,
+                'low_24h': asset_create.low_24h,
+                'circulating_supply': asset_create.circulating_supply,
+                'price_change_24h': asset_create.price_change_24h,
+                'ath_change_percentage': asset_create.ath_change_percentage,
+                'market_cap': asset_create.market_cap,
+                'is_active': True,
                 'created_at': now,
                 'updated_at': now
             }
-
-            # Validate price/active relationship
-            if asset_item['price_usd'] == 0:
-                asset_item['is_active'] = False
-
-            # Save to inventory table
             created_item = self._safe_put_item(self.db.inventory_table, asset_item)
-
             return Asset(
                 asset_id=asset_create.asset_id,
                 name=asset_create.name,
@@ -54,33 +53,29 @@ class AssetDAO(BaseDAO):
                 category=asset_create.category,
                 amount=asset_create.amount,
                 price_usd=asset_create.price_usd,
+                symbol=asset_create.symbol,
+                image=asset_create.image,
+                market_cap_rank=asset_create.market_cap_rank,
+                high_24h=asset_create.high_24h,
+                low_24h=asset_create.low_24h,
+                circulating_supply=asset_create.circulating_supply,
+                price_change_24h=asset_create.price_change_24h,
+                ath_change_percentage=asset_create.ath_change_percentage,
+                market_cap=asset_create.market_cap,
                 is_active=created_item['is_active'],
                 created_at=datetime.fromisoformat(created_item['created_at']),
                 updated_at=datetime.fromisoformat(created_item['updated_at'])
             )
-
         except Exception as e:
             logger.error(f"Failed to create asset: {e}")
             raise
 
     async def get_asset_by_id(self, asset_id: str) -> Optional[Asset]:
-        """Get asset by asset_id (Primary Key lookup)"""
         try:
-            logger.info(f"🔍 DEBUG: Looking up asset by ID: '{asset_id}'")
-
-            key = {
-                'product_id': asset_id  # Using existing table schema
-            }
-
-            logger.info(f"🔍 DEBUG: Using key: {key}")
-
+            key = {'product_id': asset_id}
             item = self._safe_get_item(self.db.inventory_table, key)
-            logger.info(f"🔍 DEBUG: Database returned item: {item}")
-
             if not item:
-                logger.warning(f"❌ DEBUG: No asset found for ID: '{asset_id}'")
                 return None
-
             return Asset(
                 asset_id=item['asset_id'],
                 name=item['name'],
@@ -88,11 +83,19 @@ class AssetDAO(BaseDAO):
                 category=item['category'],
                 amount=float(item['amount']),
                 price_usd=float(item['price_usd']),
+                symbol=item.get('symbol'),
+                image=item.get('image'),
+                market_cap_rank=item.get('market_cap_rank'),
+                high_24h=item.get('high_24h'),
+                low_24h=item.get('low_24h'),
+                circulating_supply=item.get('circulating_supply'),
+                price_change_24h=item.get('price_change_24h'),
+                ath_change_percentage=item.get('ath_change_percentage'),
+                market_cap=item.get('market_cap'),
                 is_active=item.get('is_active', True),
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
-
         except Exception as e:
             logger.error(f"Failed to get asset by ID {asset_id}: {e}")
             raise
@@ -123,6 +126,15 @@ class AssetDAO(BaseDAO):
                         category=item.get('category', 'unknown'),
                         amount=float(item.get('amount', 0)),
                         price_usd=float(item.get('price_usd', 0)),
+                        symbol=item.get('symbol'),
+                        image=item.get('image'),
+                        market_cap_rank=item.get('market_cap_rank'),
+                        high_24h=item.get('high_24h'),
+                        low_24h=item.get('low_24h'),
+                        circulating_supply=item.get('circulating_supply'),
+                        price_change_24h=item.get('price_change_24h'),
+                        ath_change_percentage=item.get('ath_change_percentage'),
+                        market_cap=item.get('market_cap'),
                         is_active=item.get('is_active', True),
                         created_at=datetime.fromisoformat(item.get('created_at', datetime.utcnow().isoformat())),
                         updated_at=datetime.fromisoformat(item.get('updated_at', datetime.utcnow().isoformat()))
@@ -158,6 +170,15 @@ class AssetDAO(BaseDAO):
                         category=item.get('category', category),
                         amount=float(item.get('amount', 0)),
                         price_usd=float(item.get('price_usd', 0)),
+                        symbol=item.get('symbol'),
+                        image=item.get('image'),
+                        market_cap_rank=item.get('market_cap_rank'),
+                        high_24h=item.get('high_24h'),
+                        low_24h=item.get('low_24h'),
+                        circulating_supply=item.get('circulating_supply'),
+                        price_change_24h=item.get('price_change_24h'),
+                        ath_change_percentage=item.get('ath_change_percentage'),
+                        market_cap=item.get('market_cap'),
                         is_active=item.get('is_active', True),
                         created_at=datetime.fromisoformat(item.get('created_at', datetime.utcnow().isoformat())),
                         updated_at=datetime.fromisoformat(item.get('updated_at', datetime.utcnow().isoformat()))
@@ -171,61 +192,34 @@ class AssetDAO(BaseDAO):
             raise
 
     async def update_asset(self, asset_id: str, asset_update: AssetUpdate) -> Optional[Asset]:
-        """Update asset (asset_id and name cannot be changed)"""
         try:
-            # Build update expression for provided fields only
             updates = {}
-            if asset_update.description is not None:
-                updates['description'] = asset_update.description
-            if asset_update.category is not None:
-                updates['category'] = asset_update.category
-            if asset_update.amount is not None:
-                updates['amount'] = asset_update.amount
-            if asset_update.price_usd is not None:
-                updates['price_usd'] = asset_update.price_usd
-            if asset_update.is_active is not None:
-                updates['is_active'] = asset_update.is_active
-
+            for field in [
+                'description', 'category', 'amount', 'price_usd', 'is_active',
+                'symbol', 'image', 'market_cap_rank', 'high_24h', 'low_24h',
+                'circulating_supply', 'price_change_24h', 'ath_change_percentage', 'market_cap']:
+                value = getattr(asset_update, field, None)
+                if value is not None:
+                    updates[field] = value
             if not updates:
-                # No updates provided, just return current asset
                 return await self.get_asset_by_id(asset_id)
-
-            # Validate price/active relationship if both are being updated
-            if 'price_usd' in updates and 'is_active' in updates:
-                if updates['price_usd'] == 0 and updates['is_active']:
-                    raise ValueError("Asset cannot be active with zero price")
-            elif 'price_usd' in updates and updates['price_usd'] == 0:
-                # If setting price to 0, force is_active to False
-                updates['is_active'] = False
-
-            # Build update expression
             set_clauses = []
             expression_values = {}
-
             for field, value in updates.items():
                 set_clauses.append(f"{field} = :{field}")
                 expression_values[f":{field}"] = value
-
-            # Always update timestamp
             set_clauses.append("updated_at = :updated_at")
             expression_values[":updated_at"] = datetime.utcnow().isoformat()
-
             update_expression = "SET " + ", ".join(set_clauses)
-
-            key = {
-                'product_id': asset_id  # Using existing table schema
-            }
-
+            key = {'product_id': asset_id}
             item = self._safe_update_item(
                 self.db.inventory_table,
                 key,
                 update_expression,
                 expression_values
             )
-
             if not item:
                 return None
-
             return Asset(
                 asset_id=item.get('asset_id', asset_id),
                 name=item['name'],
@@ -233,11 +227,19 @@ class AssetDAO(BaseDAO):
                 category=item['category'],
                 amount=float(item['amount']),
                 price_usd=float(item['price_usd']),
+                symbol=item.get('symbol'),
+                image=item.get('image'),
+                market_cap_rank=item.get('market_cap_rank'),
+                high_24h=item.get('high_24h'),
+                low_24h=item.get('low_24h'),
+                circulating_supply=item.get('circulating_supply'),
+                price_change_24h=item.get('price_change_24h'),
+                ath_change_percentage=item.get('ath_change_percentage'),
+                market_cap=item.get('market_cap'),
                 is_active=item.get('is_active', True),
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
-
         except Exception as e:
             logger.error(f"Failed to update asset {asset_id}: {e}")
             raise
