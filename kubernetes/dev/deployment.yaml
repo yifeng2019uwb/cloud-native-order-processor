@@ -40,9 +40,7 @@ spec:
         - name: JWT_SECRET
           value: "dev-secret-key"
         - name: AWS_REGION
-          value: "us-west-2"
-        - name: AWS_ROLE_ARN
-          value: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/order-processor-dev-application-service-role"
+          value: "${AWS_REGION}"
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
@@ -113,9 +111,7 @@ spec:
         - name: INVENTORY_TABLE
           value: "order-processor-dev-inventory"
         - name: AWS_REGION
-          value: "us-west-2"
-        - name: AWS_ROLE_ARN
-          value: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/order-processor-dev-application-service-role"
+          value: "${AWS_REGION}"
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
