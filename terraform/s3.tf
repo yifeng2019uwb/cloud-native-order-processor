@@ -155,11 +155,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   }
 }
 
-# CloudWatch Event Rule for 5-minute snapshots
+# CloudWatch Event Rule for daily snapshots (reduced frequency for cost optimization)
 resource "aws_cloudwatch_event_rule" "snapshot_rule" {
   name                = "${local.resource_prefix}-snapshot-rule"
-  description         = "Trigger DynamoDB snapshot every 5 minutes"
-  schedule_expression = "rate(5 minutes)"
+  description         = "Trigger DynamoDB snapshot once per day (reduced from every 5 minutes for cost savings)"
+  # Cost optimization: Reduce S3 and Lambda requests by running daily instead of every 5 minutes
+  schedule_expression = "rate(1 day)"
 
   tags = local.common_tags
 }
