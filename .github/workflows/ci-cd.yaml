@@ -1,30 +1,17 @@
 name: CI/CD Pipeline
 
-# CI runs automatically (free) - tests and builds
+# CI runs automatically (free) - tests and builds only
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
 
-  # CD runs ONLY manually (cost control) - actual AWS deployment
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        default: 'prod'
-        type: choice
-        options:
-          - dev
-          - prod
-
 env:
   PYTHON_VERSION: '3.11'
-  AWS_REGION: 'us-west-2'
 
 jobs:
-  # Job 1: CI - Always runs (FREE) - Tests and validation
+  # Job 1: CI - Always runs (FREE) - Tests and validation only
   test:
     name: Run Tests and Build Validation
     runs-on: ubuntu-latest
@@ -55,172 +42,28 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest pytest-cov
 
-    - name: 🧪 Run Unit Tests with Coverage
-      working-directory: ./services/common
+    - name: 🧪 Run Unified Build and Tests
       run: |
-        pip install -r requirements.txt
-        export PYTHONPATH=src:$PYTHONPATH
-        # Only test models (DAO files not in repository yet)
-        if [ -d "tests/test_models" ]; then
-          pytest tests/test_models/ --cov=src/models --cov-report=html --cov-report=xml --cov-report=term -v
-        else
-          echo "No tests directory found, skipping tests"
-        fi
-
-    - name: 🐳 Build Docker Image (validation only)
-      run: |
-        echo "Building Docker image for validation..."
-        if [ -f "docker/order-service/Dockerfile.simple" ] && [ -f "services/order-service/requirements.txt" ]; then
-          docker build -f docker/order-service/Dockerfile.simple -t order-service:latest .
-        else
-          echo "⏭️ Skipping Docker build - service files not ready yet"
-        fi
+        chmod +x scripts/build-test.sh
+        # Uses 60% coverage threshold (target: 80% when all services have proper test coverage)
+        ./scripts/build-test.sh --test-only --verbose
 
     - name: Upload test coverage
       uses: actions/upload-artifact@v4
       with:
         name: coverage-reports
         path: |
-          services/common/htmlcov/
-          services/common/coverage.xml
+          services/*/htmlcov/
+          services/*/coverage.xml
         retention-days: 7
 
-    - name: Build and Test Common Service
-      working-directory: ./services
-      run: ./build.sh --coverage 0 common
-
-    - name: Build and Test User Service
-      working-directory: ./services
-      run: ./build.sh --coverage 0 user_service
-
-  # Job 2: Deploy - ONLY runs manually for cost control
-  deploy:
-    name: Deploy to AWS
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'workflow_dispatch'
-    environment: ${{ github.event.inputs.environment }}
-
-    steps:
-    - name: 🚀 Starting Deployment Pipeline
+    - name: 📊 Test Summary
       run: |
-        echo "Starting deployment to: ${{ github.event.inputs.environment }}"
-        echo "This will run the complete infrastructure pipeline"
-
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: 🏗️ Deploy Infrastructure
-      run: |
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh --environment ${{ github.event.inputs.environment }} --verbose
-
-    - name: ✅ Infrastructure Ready - Deploying Application
-      run: |
-        echo "🎉 Infrastructure deployed successfully!"
-        echo "📦 Starting application deployment..."
-        echo "Environment: ${{ github.event.inputs.environment }}"
-
-    - name: 📦 Deploy Application
-      run: |
-        chmod +x scripts/deploy-app.sh
-        ./scripts/deploy-app.sh --environment ${{ github.event.inputs.environment }} --verbose
-
-    - name: ✅ Application Ready - Running Integration Tests
-      run: |
-        echo "🎉 Application deployed successfully!"
-        echo "🧪 Starting integration tests..."
-        echo "This will validate the complete system end-to-end"
-
-    - name: 🧪 Run Integration Tests
-      run: |
-        chmod +x scripts/test-integration.sh
-        ./scripts/test-integration.sh --environment ${{ github.event.inputs.environment }} --verbose
-
-    - name: ✅ Tests Complete - Starting Cleanup
-      run: |
-        echo "🎉 Integration tests completed successfully!"
-        echo "🧹 Starting resource cleanup to prevent ongoing costs..."
-        echo "This will destroy all AWS resources created during deployment"
-
-    - name: 🧹 Cleanup Resources
-      if: always()
-      run: |
-        chmod +x scripts/destroy.sh
-        ./scripts/destroy.sh --environment ${{ github.event.inputs.environment }} --force --verbose
-
-    - name: 📊 Deployment Summary
-      if: always()
-      run: |
-        echo "=== 🚀 CI/CD Pipeline Summary ==="
+        echo "=== 🧪 CI Pipeline Summary ==="
         echo ""
-        echo "Environment: ${{ github.event.inputs.environment }}"
-        echo "Deployment completed: $(date)"
+        echo "✅ Frontend: Built and tested"
+        echo "✅ Backend Services: Built and tested"
+        echo "✅ Coverage: Reports uploaded"
         echo ""
-        echo "✅ Infrastructure: Deployed and tested"
-        echo "✅ Application: Deployed and tested"
-        echo "✅ Integration: Tests completed"
-        echo "✅ Cleanup: Resources destroyed"
-        echo ""
-        echo "💰 Expected cost impact: Minimal (resources destroyed)"
-        echo "🎯 Learning objectives achieved: Full infrastructure automation"
-
-  # Job 3: Verify Cleanup - Always runs to ensure no ongoing costs
-  verify_cleanup:
-    name: Verify Complete Cleanup
-    runs-on: ubuntu-latest
-    needs: deploy
-    if: always() && github.event_name == 'workflow_dispatch'
-
-    steps:
-    - name: Setup AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: 🔍 Verify Resource Cleanup
-      run: |
-        echo "Checking for any remaining project resources..."
-
-        # Check for tagged resources
-        remaining=$(aws resourcegroupstaggingapi get-resources \
-          --tag-filters Key=Project,Values=order-service \
-          --region ${{ env.AWS_REGION }} \
-          --query 'ResourceTagMappingList | length' \
-          --output text 2>/dev/null || echo "0")
-
-        if [[ "$remaining" -eq 0 ]]; then
-          echo "✅ SUCCESS: All resources cleaned up!"
-          echo "💰 Estimated ongoing cost: $0.00/month"
-        else
-          echo "⚠️ WARNING: $remaining resources still exist"
-          echo "💰 These may incur ongoing charges"
-
-          # Show remaining resources
-          aws resourcegroupstaggingapi get-resources \
-            --tag-filters Key=Project,Values=order-service \
-            --region ${{ env.AWS_REGION }} \
-            --query 'ResourceTagMappingList[].ResourceARN' \
-            --output table || true
-        fi
-
-    - name: 💰 Cost Control Summary
-      if: always()
-      run: |
-        echo "=== 💰 Cost Control Report ==="
-        echo "Deployment duration: ~30-60 minutes"
-        echo "Expected total cost: ~$2-10 for this run"
-        echo "Ongoing cost: $0 (all resources destroyed)"
-        echo ""
-        echo "🎉 CI/CD pipeline completed successfully!"
-        echo "✅ All AWS resources have been cleaned up"
-        echo "✅ No ongoing costs expected"
+        echo "🎉 CI pipeline completed successfully!"
+        echo "💰 Cost: $0 (no AWS resources used)"
