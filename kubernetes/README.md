@@ -11,13 +11,16 @@ kubernetes/
 │   ├── service-account.yaml # Service account + RBAC
 │   ├── kustomization.yaml   # Base kustomize config
 │   └── README.md           # Base documentation
-├── local/                   # Local development (Kind)
-│   ├── deployment.yaml     # Local deployments
+├── dev/                     # Local development overlay (hidden, .gitignored)
+│   ├── deployment.yaml     # Local deployments (not in version control)
 │   ├── service.yaml        # NodePort services
-│   ├── secrets.yaml        # Local secrets
 │   ├── values.yaml         # Local configuration
 │   ├── kustomization.yaml  # Local kustomize config
 │   └── README.md           # Local deployment guide
+├── secrets/                 # Sensitive manifests (hidden, .gitignored)
+│   ├── deployment_dev.yaml # Dev deployments with secrets (not in version control)
+│   ├── credentials-secret.yaml # Example secret manifest
+│   └── kustomization.yaml  # Kustomize config for secrets
 ├── prod/                    # Production (AWS EKS)
 │   ├── deployment.yaml     # Production deployments
 │   ├── service.yaml        # ClusterIP services
@@ -185,6 +188,7 @@ kubectl port-forward svc/user-service 8000:8000 -n order-processor
 
 ## Security Notes
 
+- dev/ and secrets/ directories are excluded from version control (.gitignore) to prevent accidental exposure of sensitive or local-only configuration.
 - Production uses non-root containers
 - Secrets are stored in Kubernetes secrets
 - SSL/TLS enabled in production
