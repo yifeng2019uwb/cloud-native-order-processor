@@ -15,10 +15,10 @@ spec:
       component: user-service
   template:
     metadata:
-              labels:
-          app: order-processor
-          component: user-service
-          environment: dev
+      labels:
+        app: order-processor
+        component: user-service
+        environment: dev
     spec:
       serviceAccountName: order-processor-sa
       containers:
@@ -42,7 +42,7 @@ spec:
         - name: AWS_REGION
           value: "us-west-2"
         - name: AWS_ROLE_ARN
-          value: "arn:aws:iam::940482447349:role/order-processor-dev-application-service-role"
+          value: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/order-processor-dev-application-service-role"
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
@@ -90,10 +90,10 @@ spec:
       component: inventory-service
   template:
     metadata:
-              labels:
-          app: order-processor
-          component: inventory-service
-          environment: dev
+      labels:
+        app: order-processor
+        component: inventory-service
+        environment: dev
     spec:
       serviceAccountName: order-processor-sa
       containers:
@@ -115,7 +115,7 @@ spec:
         - name: AWS_REGION
           value: "us-west-2"
         - name: AWS_ROLE_ARN
-          value: "arn:aws:iam::940482447349:role/order-processor-dev-application-service-role"
+          value: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/order-processor-dev-application-service-role"
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
@@ -163,10 +163,10 @@ spec:
       component: frontend
   template:
     metadata:
-              labels:
-          app: order-processor
-          component: frontend
-          environment: dev
+      labels:
+        app: order-processor
+        component: frontend
+        environment: dev
     spec:
       serviceAccountName: order-processor-sa
       containers:

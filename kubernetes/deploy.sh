@@ -300,6 +300,11 @@ deploy_to_k8s() {
     log_info "Applying base configuration..."
     kubectl apply -k kubernetes/base
 
+    # Clean up any conflicting DaemonSets before deployment
+    log_info "Cleaning up any conflicting DaemonSets..."
+    kubectl delete daemonset fluent-bit -n kube-system 2>/dev/null || true
+    kubectl delete daemonset fluent-bit -n order-processor 2>/dev/null || true
+
     # Deploy to local cluster (updates existing deployments if they exist)
     log_info "Deploying to local cluster..."
     kubectl apply -k kubernetes/dev
