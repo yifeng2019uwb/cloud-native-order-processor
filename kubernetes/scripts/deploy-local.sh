@@ -23,10 +23,22 @@ if ! kubectl cluster-info --context kind-order-processor >/dev/null 2>&1; then
     exit 1
 fi
 
-# Build Docker images
-echo "📦 Building Docker images..."
+# Update AWS credentials from Terraform outputs
+echo "🔐 Updating AWS credentials from Terraform outputs..."
+./setup-aws-credentials.sh
+
+# Build Docker images with cache cleanup
+echo "📦 Building Docker images (with cache cleanup)..."
 cd ../../docker
-docker-compose -f docker-compose.dev.yml build
+
+# Remove old images to ensure fresh builds
+echo "🧹 Cleaning up old images..."
+docker rmi order-processor-user_service:latest order-processor-inventory_service:latest order-processor-frontend:latest 2>/dev/null || true
+
+# Build with no cache to ensure fresh builds
+echo "🔨 Building images with --no-cache..."
+docker-compose -f docker-compose.dev.yml build --no-cache
+
 cd ../kubernetes
 
 # Load images into Kind cluster
@@ -38,16 +50,6 @@ kind load docker-image order-processor-frontend:latest --name order-processor
 # Apply base configuration
 echo "🔧 Applying base configuration..."
 kubectl apply -k base
-
-# Check if secrets need to be updated
-echo "🔐 Checking secrets configuration..."
-if grep -q "<base64-encoded-access-key>" local/secrets.yaml; then
-    echo "⚠️  Please update local/secrets.yaml with your AWS credentials before deploying!"
-    echo "   Run: echo -n 'your-access-key' | base64"
-    echo "   Run: echo -n 'your-secret-key' | base64"
-    echo "   Then update the secrets.yaml file"
-    exit 1
-fi
 
 # Deploy to local cluster
 echo "🚀 Deploying to local cluster..."

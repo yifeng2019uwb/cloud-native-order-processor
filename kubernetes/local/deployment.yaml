@@ -30,7 +30,7 @@ spec:
           name: http
         env:
         - name: ENVIRONMENT
-          value: "development"
+          value: "dev"
         - name: USERS_TABLE
           value: "order-processor-dev-users"
         - name: ORDERS_TABLE
@@ -105,7 +105,7 @@ spec:
           name: http
         env:
         - name: ENVIRONMENT
-          value: "development"
+          value: "dev"
         - name: USERS_TABLE
           value: "order-processor-dev-users"
         - name: ORDERS_TABLE

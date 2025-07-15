@@ -109,8 +109,8 @@ fi
 
 if $DO_APP; then
   log_info "Step: Deploy application ($ENVIRONMENT)"
-  if ! ./scripts/deploy-app.sh --environment "$ENVIRONMENT" $VERBOSE; then
-    log_error "App deploy failed. Aborting."
+  if ! ./kubernetes/deploy.sh --environment "$ENVIRONMENT" $VERBOSE; then
+    log_error "Kubernetes deploy failed. Aborting."
     exit 1
   fi
 fi

@@ -48,9 +48,8 @@ echo "🔐 Secret Access Key: [HIDDEN]"
 ACCESS_KEY_B64=$(echo -n "$ACCESS_KEY_ID" | base64)
 SECRET_KEY_B64=$(echo -n "$SECRET_ACCESS_KEY" | base64)
 
-# Update the secrets file
-# Add a comment about rotation
-sed -i.bak "/aws-access-key-id:/i \\n  # NOTE: For security, rotate these credentials regularly. To rotate, use AWS Console or a rotation script." local/secrets.yaml
+# Update the secrets file with the new credentials
+echo "📝 Updating Kubernetes secrets..."
 sed -i.bak "s/aws-access-key-id: .*/aws-access-key-id: $ACCESS_KEY_B64/" local/secrets.yaml
 sed -i.bak "s/aws-secret-access-key: .*/aws-secret-access-key: $SECRET_KEY_B64/" local/secrets.yaml
 

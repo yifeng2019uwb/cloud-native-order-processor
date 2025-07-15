@@ -50,15 +50,11 @@ class STSClient:
             sts_client = boto3.client('sts', region_name=region)
 
             # Assume role with session name
-            session_name = f"order-processor-{os.getenv('ENVIRONMENT', 'local')}"
+            session_name = f"order-processor-{os.getenv('ENVIRONMENT', 'dev')}"
 
             response = sts_client.assume_role(
                 RoleArn=self.role_arn,
-                RoleSessionName=session_name,
-                Tags=[
-                    {'Key': 'Environment', 'Value': os.getenv('ENVIRONMENT', 'local')},
-                    {'Key': 'Service', 'Value': 'order-processor'}
-                ]
+                RoleSessionName=session_name
             )
 
             # Create session with temporary credentials and region

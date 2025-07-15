@@ -267,54 +267,23 @@ check_prerequisites() {
 run_build_tests() {
     log_step "🏗️ Build and Package Tests"
 
-    # 1. Run unit tests with coverage (same as CI/CD)
-    log_substep "Running unit tests with coverage"
-    cd "$PROJECT_ROOT/services/common"
-
-    # Install dependencies
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run: Would install dependencies and run tests"
-    else
-        # Set up Python environment
-        export PYTHONPATH=src:$PYTHONPATH
-        export ORDERS_TABLE=test-orders-table
-        export INVENTORY_TABLE=test-inventory-table
-        export REGION=us-west-2
-
-        # Install project dependencies (includes test deps)
-        if [[ -f "requirements.txt" ]]; then
-            log_info "Installing dependencies from requirements.txt..."
-            pip install -r requirements.txt >/dev/null 2>&1 || pip3 install -r requirements.txt >/dev/null 2>&1
-        fi
-
-        # Run tests (same as CI/CD)
-        if [[ -d "tests/test_models" ]]; then
-            log_info "Running model tests..."
-            pytest tests/test_models/ --cov=src/models --cov-report=html --cov-report=xml --cov-report=term -v
-        else
-            log_warning "No test_models directory found, skipping unit tests"
-        fi
+        log_info "Dry-run: Would run build and test for all services"
+        return 0
     fi
 
-    cd "$PROJECT_ROOT"
+    # Use the unified build-test script
+    local build_args=""
 
-    # 2. Validate Docker build (same as CI/CD)
-    log_substep "Validating Docker build"
-    if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run: Would validate Docker build"
-    else
-        if [[ -f "docker/order-service/Dockerfile.simple" ]] && [[ -f "services/order-service/requirements.txt" ]]; then
-            log_info "Building Docker image for validation..."
-            if docker build -f docker/order-service/Dockerfile.simple -t order-service:latest . >/dev/null 2>&1; then
-                log_success "Docker image built successfully"
-            else
-                log_error "Docker image build failed"
-                return 1
-            fi
-        else
-            log_warning "⏭️ Skipping Docker build - service files not ready yet"
-            log_info "Missing: docker/order-service/Dockerfile.simple or services/order-service/requirements.txt"
-        fi
+    if [[ "$VERBOSE" == "true" ]]; then
+        build_args="$build_args --verbose"
+    fi
+
+    log_info "Calling: ./scripts/build-test.sh $build_args"
+
+    if ! ./scripts/build-test.sh $build_args; then
+        log_error "Build and test failed"
+        return 1
     fi
 
     log_success "Build and validation tests completed successfully"

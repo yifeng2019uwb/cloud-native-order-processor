@@ -98,7 +98,7 @@ class HealthTests:
         start_time = time.time()
 
         def root_check():
-            return self.session.get("http://localhost:8000/", timeout=self.timeout)
+            return self.session.get(APIEndpoints.get_user_endpoint(UserAPI.ROOT), timeout=self.timeout)
 
         try:
             response = simple_retry(root_check)
@@ -134,7 +134,7 @@ class HealthTests:
         start_time = time.time()
 
         def root_check():
-            return self.session.get("http://localhost:8001/", timeout=self.timeout)
+            return self.session.get(APIEndpoints.get_inventory_endpoint(InventoryAPI.ROOT), timeout=self.timeout)
 
         try:
             response = simple_retry(root_check)

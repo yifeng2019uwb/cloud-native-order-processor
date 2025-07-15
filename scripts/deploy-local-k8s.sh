@@ -117,21 +117,12 @@ mv "$TEMP_DEPLOYMENT" kubernetes/local/deployment.yaml
 
 print_success "Kubernetes deployment files updated"
 
-# Apply base configuration
-print_step "Applying base Kubernetes configuration..."
-kubectl apply -k kubernetes/base
-
-# Apply local configuration
-print_step "Applying local Kubernetes configuration..."
-kubectl apply -k kubernetes/local
-
-# Wait for pods to be ready
-print_step "Waiting for pods to be ready..."
-kubectl wait --for=condition=ready pod -l app=order-processor -n order-processor --timeout=300s
-
-# Show deployment status
-print_step "Deployment status:"
-kubectl get pods -n order-processor
+# Deploy to local Kubernetes using the K8s deploy script
+print_step "Deploying to local Kubernetes..."
+if ! ./kubernetes/scripts/deploy-local.sh; then
+    print_error "Local Kubernetes deployment failed"
+    exit 1
+fi
 
 print_success "✅ Local Kubernetes deployment complete!"
 

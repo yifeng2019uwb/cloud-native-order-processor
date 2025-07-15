@@ -30,7 +30,7 @@ spec:
           name: http
         env:
         - name: ENVIRONMENT
-          value: "development"
+          value: "dev"
         - name: USERS_TABLE
           value: "order-processor-dev-users"
         - name: ORDERS_TABLE
@@ -40,9 +40,19 @@ spec:
         - name: JWT_SECRET
           value: "local-dev-secret-key"
         - name: AWS_REGION
-          value: "${AWS_REGION}"
+          value: "us-west-2"
         - name: AWS_ROLE_ARN
-          value: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/order-processor-dev-application-service-role"
+          value: "arn:aws:iam::940482447349:role/order-processor-dev-application-service-role"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: aws-access-key-id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: aws-secret-access-key
         resources:
           requests:
             memory: "128Mi"
@@ -95,7 +105,7 @@ spec:
           name: http
         env:
         - name: ENVIRONMENT
-          value: "development"
+          value: "dev"
         - name: USERS_TABLE
           value: "order-processor-dev-users"
         - name: ORDERS_TABLE
@@ -103,9 +113,19 @@ spec:
         - name: INVENTORY_TABLE
           value: "order-processor-dev-inventory"
         - name: AWS_REGION
-          value: "${AWS_REGION}"
+          value: "us-west-2"
         - name: AWS_ROLE_ARN
-          value: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/order-processor-dev-application-service-role"
+          value: "arn:aws:iam::940482447349:role/order-processor-dev-application-service-role"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: aws-access-key-id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: aws-secret-access-key
         resources:
           requests:
             memory: "128Mi"

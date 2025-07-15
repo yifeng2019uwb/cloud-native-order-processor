@@ -14,7 +14,7 @@ spec:
     component: user-service
   ports:
   - name: http
-    port: 8000
+    port: 30001
     targetPort: 8000
     nodePort: 30001
     protocol: TCP
@@ -35,7 +35,7 @@ spec:
     component: inventory-service
   ports:
   - name: http
-    port: 8001
+    port: 30002
     targetPort: 8001
     nodePort: 30002
     protocol: TCP
