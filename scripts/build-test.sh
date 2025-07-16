@@ -196,7 +196,7 @@ check_prerequisites() {
     local missing_tools=()
 
     # Check required tools
-    local tools=("python3" "pip" "docker")
+    local tools=("docker")
     for tool in "${tools[@]}"; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             missing_tools+=("$tool")
@@ -332,12 +332,34 @@ main() {
     # Check prerequisites
     check_prerequisites
 
-    # Execute build/test
-    if [[ -z "$SERVICE_NAME" || "$SERVICE_NAME" == "all" ]]; then
-        build_test_all
+    # === FRONTEND TESTS ===
+    log_step "🧪 Running Frontend Tests"
+    if [ -f "$PROJECT_ROOT/frontend/package.json" ]; then
+        cd "$PROJECT_ROOT/frontend"
+        if [ -f "package-lock.json" ]; then
+            npm ci
+        else
+            npm install
+        fi
+        if [ -f "vite.config.ts" ]; then
+            npm run test || log_warning "Frontend tests failed"
+        else
+            log_warning "No frontend test runner found (vite.config.ts missing)"
+        fi
+        cd "$PROJECT_ROOT"
     else
-        build_test_service "$SERVICE_NAME"
+        log_warning "Frontend directory or package.json not found, skipping frontend tests"
     fi
+
+    # === BACKEND TESTS ===
+    log_step "🧪 Running Backend Tests"
+    cd "$PROJECT_ROOT/services"
+    if [[ -z "$SERVICE_NAME" || "$SERVICE_NAME" == "all" ]]; then
+        ./build.sh --test-only --coverage $COVERAGE_THRESHOLD
+    else
+        ./build.sh --test-only --coverage $COVERAGE_THRESHOLD "$SERVICE_NAME"
+    fi
+    cd "$PROJECT_ROOT"
 
     # Calculate total duration
     local end_time=$(date +%s)

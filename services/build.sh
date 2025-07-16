@@ -87,21 +87,13 @@ detect_service_name() {
 
 # Function to check if Python version is available
 check_python_version() {
-    local python_version=$1
-    local python_cmd="python${python_version}"
-
-    if ! command -v "$python_cmd" &> /dev/null; then
-        python_cmd="python3"
-        if ! command -v "$python_cmd" &> /dev/null; then
-            python_cmd="python"
-            if ! command -v "$python_cmd" &> /dev/null; then
-                print_error "Python not found. Please install Python ${python_version} or later."
-                exit 1
-            fi
-        fi
+    # Always use python3.11
+    if command -v python3.11 &> /dev/null; then
+        echo "python3.11"
+    else
+        print_error "python3.11 not found. Please install Python 3.11."
+        exit 1
     fi
-
-    echo "$python_cmd"
 }
 
 # Function to create virtual environment
@@ -470,7 +462,7 @@ main() {
     fi
 
     # Check Python version
-    local python_cmd=$(check_python_version "$python_version")
+    local python_cmd=$(check_python_version)
     print_status "Using Python: $python_cmd"
 
     # Clean if requested
