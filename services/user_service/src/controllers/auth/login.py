@@ -95,17 +95,3 @@ async def login_user(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Login failed"
         )
-
-
-@router.get("/login/health", status_code=status.HTTP_200_OK)
-async def login_health():
-    """Health check for login service"""
-    return {
-        "service": "user-login",
-        "status": "healthy",
-        "endpoints": [
-            "POST /auth/login",
-            "GET /auth/login/health"
-        ],
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }

@@ -69,20 +69,6 @@ async def logout_user(
         )
 
 
-@router.get("/logout/health", status_code=status.HTTP_200_OK)
-async def logout_health():
-    """Health check for logout service"""
-    return {
-        "service": "user-logout",
-        "status": "healthy",
-        "endpoints": [
-            "POST /auth/logout",
-            "GET /auth/logout/health"
-        ],
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
-
-
 @router.get("/logout/debug", status_code=status.HTTP_200_OK)
 async def logout_debug(
     current_user = Depends(get_current_user)

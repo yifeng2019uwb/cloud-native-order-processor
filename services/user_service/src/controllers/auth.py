@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 import logging
 import os
 
-from common.entities.user import UserCreate, UserResponse, UserLogin, TokenResponse
+from common.entities.user import UserCreate, UserResponse, UserLogin
+from common.entities.auth import TokenResponse
 from common.dao.user_dao import UserDAO
 from common.database.dynamodb_connection import get_dynamodb
 logger = logging.getLogger(__name__)
@@ -81,7 +82,7 @@ async def get_current_user(
 
     return UserResponse(
         email=user.email,
-        name=user.name,
+        username=user.username,
         phone=user.phone,
         created_at=user.created_at,
         updated_at=user.updated_at
@@ -102,7 +103,7 @@ async def register_user(
 
         return UserResponse(
             email=user.email,
-            name=user.name,
+            username=user.username,
             phone=user.phone,
             created_at=user.created_at,
             updated_at=user.updated_at
@@ -169,14 +170,3 @@ async def logout_user():
     # Note: With stateless JWT, logout is handled client-side
     # In production, you might want to implement token blacklisting
     return {"message": "Logged out successfully"}
-
-
-# Health check endpoint
-@router.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "service": "user-auth-service",
-        "timestamp": datetime.utcnow().isoformat()
-    }

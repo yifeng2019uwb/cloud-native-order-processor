@@ -199,18 +199,3 @@ async def update_profile(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update profile"
         )
-
-
-@router.get("/me/health", status_code=status.HTTP_200_OK)
-async def profile_health():
-    """Health check for profile service"""
-    return {
-        "service": "user-profile",
-        "status": "healthy",
-        "endpoints": [
-            "GET /auth/me",
-            "PUT /auth/me",
-            "GET /auth/me/health"
-        ],
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }

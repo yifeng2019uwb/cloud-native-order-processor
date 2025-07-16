@@ -215,17 +215,3 @@ async def register_user(
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
         )
-
-
-@router.get("/register/health", status_code=status.HTTP_200_OK)
-async def register_health_check():
-    """Health check for register service"""
-    return {
-        "service": "user-register",
-        "status": "healthy",
-        "endpoints": [
-            "POST /auth/register",
-            "GET /auth/register/health"
-        ],
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }

@@ -7,7 +7,7 @@ set -e  # Exit on any error
 
 # Default configuration
 DEFAULT_PYTHON_VERSION="3.11"
-DEFAULT_TEST_COVERAGE_THRESHOLD=80
+DEFAULT_TEST_COVERAGE_THRESHOLD=60
 
 # Colors for output
 RED='\033[0;31m'

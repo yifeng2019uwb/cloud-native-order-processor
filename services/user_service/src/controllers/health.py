@@ -9,7 +9,7 @@ import os
 
 # Import common DAO for database health check
 from common.dao.user_dao import UserDAO
-from common.database.dynamodb_connection import get_dynamodb, dynamodb_manager
+from common.database.dynamodb_connection import dynamodb_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["health"])
