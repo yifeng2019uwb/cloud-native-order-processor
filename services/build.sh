@@ -9,30 +9,6 @@ set -e  # Exit on any error
 DEFAULT_PYTHON_VERSION="3.11"
 DEFAULT_TEST_COVERAGE_THRESHOLD=60
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
 # Function to show usage
 show_usage() {
     cat << EOF
@@ -91,7 +67,7 @@ check_python_version() {
     if command -v python3.11 &> /dev/null; then
         echo "python3.11"
     else
-        print_error "python3.11 not found. Please install Python 3.11."
+        echo "python3.11 not found. Please install Python 3.11."
         exit 1
     fi
 }
@@ -104,69 +80,42 @@ setup_virtual_env() {
     local venv_dir=".venv-${service_name}"
 
     if [[ ! -d "$venv_dir" ]]; then
-        print_status "Creating virtual environment: $venv_dir"
+        echo "Creating virtual environment: $venv_dir"
         "$python_cmd" -m venv "$venv_dir"
     fi
 
     # Upgrade pip using the virtual environment's pip
-    print_status "Upgrading pip and tools"
+    echo "Upgrading pip and tools"
     "$venv_dir/bin/pip" install --upgrade pip setuptools wheel
 
-    print_success "Virtual environment ready: $venv_dir"
+    echo "Virtual environment ready: $venv_dir"
 }
 
 # Function to set up CI/CD environment variables
 setup_ci_environment() {
     local service_name=$1
 
-    print_status "Setting up CI/CD environment variables for $service_name"
+    echo "Setting up CI/CD environment variables for $service_name"
 
-    # Set AWS environment variables (required for tests)
-    export AWS_REGION="${AWS_REGION:-us-west-2}"
-    export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-west-2}"
+    # All environment variable setup has been removed.
 
-    # Set DynamoDB table names (required for database tests)
-    export USERS_TABLE="${USERS_TABLE:-test-users-table}"
-    export ORDERS_TABLE="${ORDERS_TABLE:-test-orders-table}"
-    export INVENTORY_TABLE="${INVENTORY_TABLE:-test-inventory-table}"
-    export ASSETS_TABLE="${ASSETS_TABLE:-test-assets-table}"
+    echo "Environment variables set:"
+    echo "  AWS_REGION: $AWS_REGION"
+    echo "  USERS_TABLE: $USERS_TABLE"
+    echo "  ORDERS_TABLE: $ORDERS_TABLE"
+    echo "  INVENTORY_TABLE: $INVENTORY_TABLE"
+    echo "  ASSETS_TABLE: $ASSETS_TABLE"
+    echo "  ENVIRONMENT: $ENVIRONMENT"
+    echo "  JWT_SECRET: [HIDDEN]"
+    echo "  PORT: $PORT"
+    echo "  HOST: $HOST"
+    echo "  SERVICE_ENVIRONMENT: $SERVICE_ENVIRONMENT"
+    echo "  LOG_LEVEL: $LOG_LEVEL"
+    echo "  PYTHONUNBUFFERED: $PYTHONUNBUFFERED"
+    echo "  TESTING: $TESTING"
+    echo "  CI: $CI"
 
-    # Set service-specific environment variables
-    export SERVICE_ENVIRONMENT="${SERVICE_ENVIRONMENT:-test}"
-    export LOG_LEVEL="${LOG_LEVEL:-INFO}"
-    export ENVIRONMENT="${ENVIRONMENT:-test}"
-    export JWT_SECRET="${JWT_SECRET:-test-jwt-secret-key-for-testing-only}"
-    export PORT="${PORT:-8000}"
-    export HOST="${HOST:-0.0.0.0}"
-
-    # Set Python environment variables
-    export PYTHONPATH="${PYTHONPATH:-}"
-    export PYTHONUNBUFFERED="1"
-
-    # Set test-specific variables
-    export TESTING="true"
-    export CI="true"
-
-    # Clear Lambda environment (tests expect this to be unset by default)
-    unset AWS_LAMBDA_FUNCTION_NAME
-
-    print_status "Environment variables set:"
-    print_status "  AWS_REGION: $AWS_REGION"
-    print_status "  USERS_TABLE: $USERS_TABLE"
-    print_status "  ORDERS_TABLE: $ORDERS_TABLE"
-    print_status "  INVENTORY_TABLE: $INVENTORY_TABLE"
-    print_status "  ASSETS_TABLE: $ASSETS_TABLE"
-    print_status "  ENVIRONMENT: $ENVIRONMENT"
-    print_status "  JWT_SECRET: [HIDDEN]"
-    print_status "  PORT: $PORT"
-    print_status "  HOST: $HOST"
-    print_status "  SERVICE_ENVIRONMENT: $SERVICE_ENVIRONMENT"
-    print_status "  LOG_LEVEL: $LOG_LEVEL"
-    print_status "  PYTHONUNBUFFERED: $PYTHONUNBUFFERED"
-    print_status "  TESTING: $TESTING"
-    print_status "  CI: $CI"
-
-    print_success "CI/CD environment setup complete"
+    echo "CI/CD environment setup complete"
 }
 
 # Function to install dependencies
@@ -175,29 +124,29 @@ install_dependencies() {
     local venv_dir=".venv-${service_name}"
     local pip_cmd="${venv_dir}/bin/pip"
 
-    print_status "Installing dependencies for $service_name"
+    echo "Installing dependencies for $service_name"
 
     # Install common package dependencies first if we're not building common itself
     if [[ "$service_name" != "common" ]]; then
         # Check for common package
         if [[ -f "../common/requirements.txt" ]]; then
-            print_status "Installing common package dependencies"
+            echo "Installing common package dependencies"
             "$pip_cmd" install -r ../common/requirements.txt
         fi
 
         # Install common package in development mode
         if [[ -f "../common/setup.py" ]]; then
-            print_status "Installing common package in development mode"
+            echo "Installing common package in development mode"
             "$pip_cmd" install -e ../common
         fi
     fi
 
     # Install service-specific dependencies
     if [[ -f "requirements.txt" ]]; then
-        print_status "Installing service requirements"
+        echo "Installing service requirements"
         "$pip_cmd" install --upgrade -r requirements.txt
     else
-        print_status "No requirements.txt found for $service_name"
+        echo "No requirements.txt found for $service_name"
     fi
 
     # Install test dependencies
@@ -209,25 +158,25 @@ install_dependencies() {
     fi
 
     if [[ -n "$test_requirements" && -f "$test_requirements" ]]; then
-        print_status "Installing test dependencies from $test_requirements"
+        echo "Installing test dependencies from $test_requirements"
         "$pip_cmd" install --upgrade -r "$test_requirements"
     else
-        print_status "Installing basic test dependencies"
+        echo "Installing basic test dependencies"
         "$pip_cmd" install pytest pytest-asyncio pytest-mock pytest-cov
     fi
 
     # Install package in development mode if setup.py exists
     if [[ -f "setup.py" ]]; then
-        print_status "Installing package in development mode"
+        echo "Installing package in development mode"
         "$pip_cmd" install -e .
     fi
 
-    print_success "Dependencies installed successfully"
+    echo "Dependencies installed successfully"
 }
 
 # Function to clean build artifacts
 clean_build() {
-    print_status "Cleaning build artifacts"
+    echo "Cleaning build artifacts"
 
     # Remove common build directories
     rm -rf build dist "*.egg-info" .pytest_cache
@@ -237,7 +186,7 @@ clean_build() {
     find . -type f -name "*.pyc" -delete 2>/dev/null || true
     find . -type f -name "*.pyo" -delete 2>/dev/null || true
 
-    print_success "Build artifacts cleaned"
+    echo "Build artifacts cleaned"
 }
 
 # Function to run tests
@@ -248,34 +197,34 @@ run_tests() {
     local service_name=$4
     local venv_dir=".venv-${service_name}"
 
-    print_status "Running tests for service: $service_name"
-    print_status "Current directory: $(pwd)"
+    echo "Running tests for service: $service_name"
+    echo "Current directory: $(pwd)"
 
     # Check for test directories
     local test_dirs=()
     if [[ -d "tests" ]]; then
         test_dirs+=("tests")
-        print_status "Found tests directory"
+        echo "Found tests directory"
     fi
 
     if [[ -d "test" ]]; then
         test_dirs+=("test")
-        print_status "Found test directory"
+        echo "Found test directory"
     fi
 
     if [[ ${#test_dirs[@]} -eq 0 ]]; then
-        print_warning "No test directories found for $service_name"
+        echo "No test directories found for $service_name"
         return 0
     fi
 
-    print_status "Test directories: ${test_dirs[*]}"
+    echo "Test directories: ${test_dirs[*]}"
 
     # Set up Python path for imports
     # Only include current service's src in PYTHONPATH for test discovery
     # Common package should be available as installed dependency, not in PYTHONPATH
     local python_paths="${PWD}/src"
     export PYTHONPATH="${python_paths}:${PYTHONPATH:-}"
-    print_status "Set PYTHONPATH: $PYTHONPATH"
+    echo "Set PYTHONPATH: $PYTHONPATH"
 
     # Build pytest command
     local pytest_cmd="${venv_dir}/bin/pytest"
@@ -313,13 +262,13 @@ run_tests() {
         fi
     fi
 
-    print_status "Running command: $pytest_cmd"
+    echo "Running command: $pytest_cmd"
 
     # Run tests
     if $pytest_cmd; then
-        print_success "All tests passed"
+        echo "All tests passed"
     else
-        print_error "Tests failed"
+        echo "Tests failed"
         return 1
     fi
 }
@@ -330,18 +279,18 @@ build_package() {
     local venv_dir=".venv-${service_name}"
 
     if [[ ! -f "setup.py" ]]; then
-        print_status "No setup.py found, skipping package build"
+        echo "No setup.py found, skipping package build"
         return 0
     fi
 
-    print_status "Building package: $service_name"
+    echo "Building package: $service_name"
 
     # Build using virtual environment's python
     "${venv_dir}/bin/python" setup.py sdist bdist_wheel
 
-    print_success "Package built successfully"
+    echo "Package built successfully"
     if [[ -d "dist" ]]; then
-        print_status "Build artifacts:"
+        echo "Build artifacts:"
         ls -la dist/ 2>/dev/null || true
     fi
 }
@@ -357,9 +306,9 @@ get_service_directory() {
     elif [[ "$(basename "$PWD")" == "$service_name" && ( -d "tests" || -f "setup.py" ) ]]; then
         echo "."
     else
-        print_error "Service directory not found: $service_name"
-        print_error "Current directory: $PWD"
-        print_error "Available services:"
+        echo "Service directory not found: $service_name"
+        echo "Current directory: $PWD"
+        echo "Available services:"
         for dir in */; do
             if [[ -d "$dir" && "$dir" != "*/" ]]; then
                 echo "  - ${dir%/}"
@@ -371,19 +320,19 @@ get_service_directory() {
 
 # Function to generate coverage summary
 generate_coverage_summary() {
-    print_status "========================================"
-    print_status "COVERAGE SUMMARY"
-    print_status "========================================"
+    echo "========================================"
+    echo "COVERAGE SUMMARY"
+    echo "========================================"
 
     for coverage_dir in htmlcov-*; do
         if [[ -d "$coverage_dir" ]]; then
             local service_name=${coverage_dir#htmlcov-}
-            print_status "Service: $service_name"
-            print_status "Coverage report: $coverage_dir/index.html"
+            echo "Service: $service_name"
+            echo "Coverage report: $coverage_dir/index.html"
         fi
     done
 
-    print_status "========================================"
+    echo "========================================"
 }
 
 # Main function
@@ -438,7 +387,7 @@ main() {
                 shift
                 ;;
             -*)
-                print_error "Unknown option: $1"
+                echo "Unknown option: $1"
                 show_usage
                 exit 1
                 ;;
@@ -453,7 +402,7 @@ main() {
     if [[ -z "$service_name" ]]; then
         service_name=$(detect_service_name)
         if [[ "$service_name" == "ALL_SERVICES" ]]; then
-            print_status "No service specified - building all services"
+            echo "No service specified - building all services"
 
             # Get list of available services
             local services=()
@@ -464,26 +413,26 @@ main() {
             done
 
             if [[ ${#services[@]} -eq 0 ]]; then
-                print_error "No services found in current directory"
+                echo "No services found in current directory"
                 exit 1
             fi
 
-            print_status "Found services: ${services[*]}"
+            echo "Found services: ${services[*]}"
 
 
             # Build each service
             local failed_services=()
             for service in "${services[@]}"; do
-                print_status ""
-                print_status "========================================"
-                print_status "Building service: $service"
-                print_status "========================================"
+                echo ""
+                echo "========================================"
+                echo "Building service: $service"
+                echo "========================================"
 
                 # Run the script recursively for each service
                 if ./build.sh "$@" "$service"; then
-                    print_success "✅ $service completed successfully"
+                    echo "✅ $service completed successfully"
                 else
-                    print_error "❌ $service failed"
+                    echo "❌ $service failed"
                     failed_services+=("$service")
                 fi
             done
@@ -492,21 +441,21 @@ main() {
             generate_coverage_summary
 
             # Report results
-            print_status ""
-            print_status "========================================"
-            print_status "BUILD SUMMARY"
-            print_status "========================================"
+            echo ""
+            echo "========================================"
+            echo "BUILD SUMMARY"
+            echo "========================================"
 
             if [[ ${#failed_services[@]} -eq 0 ]]; then
-                print_success "✅ All services built successfully: ${services[*]}"
+                echo "✅ All services built successfully: ${services[*]}"
                 exit 0
             else
-                print_error "❌ Failed services: ${failed_services[*]}"
-                print_success "✅ Successful services: $(printf '%s\n' "${services[@]}" | grep -v "$(printf '%s\n' "${failed_services[@]}")" | tr '\n' ' ')"
+                echo "❌ Failed services: ${failed_services[*]}"
+                echo "✅ Successful services: $(printf '%s\n' "${services[@]}" | grep -v "$(printf '%s\n' "${failed_services[@]}")" | tr '\n' ' ')"
                 exit 1
             fi
         else
-            print_status "Detected service: $service_name"
+            echo "Detected service: $service_name"
         fi
     fi
 
@@ -516,20 +465,20 @@ main() {
 
     # Change to service directory
     if [[ "$service_dir" != "." ]]; then
-        print_status "Changing to service directory: $service_dir"
+        echo "Changing to service directory: $service_dir"
         if cd "$service_dir"; then
-            print_status "Now in directory: $(pwd)"
+            echo "Now in directory: $(pwd)"
         else
-            print_error "Failed to change to directory: $service_dir"
+            echo "Failed to change to directory: $service_dir"
             exit 1
         fi
     else
-        print_status "Already in correct directory: $(pwd)"
+        echo "Already in correct directory: $(pwd)"
     fi
 
     # Check Python version
     local python_cmd=$(check_python_version)
-    print_status "Using Python: $python_cmd"
+    echo "Using Python: $python_cmd"
 
     # Clean if requested
     if [[ "$clean" == "true" ]]; then
@@ -545,7 +494,7 @@ main() {
 
     # If only installing dependencies, exit here
     if [[ "$install_deps_only" == "true" ]]; then
-        print_success "Dependencies installed successfully"
+        echo "Dependencies installed successfully"
         cd "$original_dir"
         exit 0
     fi
@@ -566,7 +515,7 @@ main() {
         build_package "$service_name"
     fi
 
-    print_success "Build completed successfully for: $service_name"
+    echo "Build completed successfully for: $service_name"
 
     # Return to original directory
     cd "$original_dir"
