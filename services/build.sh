@@ -278,17 +278,11 @@ run_tests() {
     print_status "Test directories: ${test_dirs[*]}"
 
     # Set up Python path for imports
-    local python_paths=""
-    if [[ -d "src" ]]; then
-        python_paths="${PWD}/src"
-    fi
-    if [[ -d "../common" ]]; then
-        python_paths="${python_paths:+${python_paths}:}${PWD}/../common"
-    fi
-    if [[ -n "$python_paths" ]]; then
-        export PYTHONPATH="${python_paths}:${PYTHONPATH:-}"
-        print_status "Set PYTHONPATH: $PYTHONPATH"
-    fi
+    # Only include current service's src in PYTHONPATH for test discovery
+    # Common package should be available as installed dependency, not in PYTHONPATH
+    local python_paths="${PWD}/src"
+    export PYTHONPATH="${python_paths}:${PYTHONPATH:-}"
+    print_status "Set PYTHONPATH: $PYTHONPATH"
 
     # Build pytest command
     local pytest_cmd="${venv_dir}/bin/pytest"

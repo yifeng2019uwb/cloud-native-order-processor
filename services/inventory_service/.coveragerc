@@ -1,0 +1,14 @@
+[run]
+omit =
+    */common/*
+    */common/src/*
+    */common/tests/*
+    */common/setup.py
+    */common/build-test.sh
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise AssertionError
+    raise NotImplementedError
