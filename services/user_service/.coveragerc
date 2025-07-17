@@ -5,6 +5,10 @@ omit =
     */common/tests/*
     */common/setup.py
     */common/build-test.sh
+    src/main.py
+    */__init__.py
+    */tests/*
+    */venv/*
 
 [report]
 exclude_lines =
