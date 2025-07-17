@@ -115,6 +115,60 @@ setup_virtual_env() {
     print_success "Virtual environment ready: $venv_dir"
 }
 
+# Function to set up CI/CD environment variables
+setup_ci_environment() {
+    local service_name=$1
+
+    print_status "Setting up CI/CD environment variables for $service_name"
+
+    # Set AWS environment variables (required for tests)
+    export AWS_REGION="${AWS_REGION:-us-west-2}"
+    export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-west-2}"
+
+    # Set DynamoDB table names (required for database tests)
+    export USERS_TABLE="${USERS_TABLE:-test-users-table}"
+    export ORDERS_TABLE="${ORDERS_TABLE:-test-orders-table}"
+    export INVENTORY_TABLE="${INVENTORY_TABLE:-test-inventory-table}"
+    export ASSETS_TABLE="${ASSETS_TABLE:-test-assets-table}"
+
+    # Set service-specific environment variables
+    export SERVICE_ENVIRONMENT="${SERVICE_ENVIRONMENT:-test}"
+    export LOG_LEVEL="${LOG_LEVEL:-INFO}"
+    export ENVIRONMENT="${ENVIRONMENT:-test}"
+    export JWT_SECRET="${JWT_SECRET:-test-jwt-secret-key-for-testing-only}"
+    export PORT="${PORT:-8000}"
+    export HOST="${HOST:-0.0.0.0}"
+
+    # Set Python environment variables
+    export PYTHONPATH="${PYTHONPATH:-}"
+    export PYTHONUNBUFFERED="1"
+
+    # Set test-specific variables
+    export TESTING="true"
+    export CI="true"
+
+    # Clear Lambda environment (tests expect this to be unset by default)
+    unset AWS_LAMBDA_FUNCTION_NAME
+
+    print_status "Environment variables set:"
+    print_status "  AWS_REGION: $AWS_REGION"
+    print_status "  USERS_TABLE: $USERS_TABLE"
+    print_status "  ORDERS_TABLE: $ORDERS_TABLE"
+    print_status "  INVENTORY_TABLE: $INVENTORY_TABLE"
+    print_status "  ASSETS_TABLE: $ASSETS_TABLE"
+    print_status "  ENVIRONMENT: $ENVIRONMENT"
+    print_status "  JWT_SECRET: [HIDDEN]"
+    print_status "  PORT: $PORT"
+    print_status "  HOST: $HOST"
+    print_status "  SERVICE_ENVIRONMENT: $SERVICE_ENVIRONMENT"
+    print_status "  LOG_LEVEL: $LOG_LEVEL"
+    print_status "  PYTHONUNBUFFERED: $PYTHONUNBUFFERED"
+    print_status "  TESTING: $TESTING"
+    print_status "  CI: $CI"
+
+    print_success "CI/CD environment setup complete"
+}
+
 # Function to install dependencies
 install_dependencies() {
     local service_name=$1
@@ -482,6 +536,9 @@ main() {
         cd "$original_dir"
         exit 0
     fi
+
+    # Set up CI/CD environment variables before running tests
+    setup_ci_environment "$service_name"
 
     # Run tests (unless build-only is specified)
     if [[ "$build_only" != "true" ]]; then
