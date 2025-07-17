@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))  # for api_models
 
 # Import the controller functions directly
-from controllers.assets import list_assets, get_asset_by_id, assets_health, assets_debug
+from controllers.assets import list_assets, get_asset_by_id
 
 
 @pytest.mark.asyncio
@@ -103,6 +103,34 @@ async def test_list_assets_with_limit():
 
 
 @pytest.mark.asyncio
+async def test_list_assets_without_limit():
+    """Test list_assets without limit parameter"""
+    with patch('controllers.assets.AssetDAO') as mock_dao_class:
+        mock_dao = AsyncMock()
+        mock_dao_class.return_value = mock_dao
+
+        # Create mock assets
+        mock_assets = []
+        for i in range(3):
+            mock_asset = MagicMock()
+            mock_asset.asset_id = f"ASSET{i}"
+            mock_asset.name = f"Asset {i}"
+            mock_asset.description = f"Description for Asset {i}"
+            mock_asset.category = "Test Category"
+            mock_asset.price_usd = 100.0 + i
+            mock_asset.is_active = True
+            mock_assets.append(mock_asset)
+
+        mock_dao.get_all_assets.return_value = mock_assets
+
+        # test without limit
+        result = await list_assets(active_only=True, limit=None, asset_dao=mock_dao)
+
+        # Verify all assets returned
+        assert len(result.assets) == 3
+
+
+@pytest.mark.asyncio
 async def test_get_asset_by_id_success():
     """Test get_asset_by_id when asset exists"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class:
@@ -150,57 +178,29 @@ async def test_get_asset_by_id_not_found():
 
 
 @pytest.mark.asyncio
-async def test_assets_health():
-    """Test assets_health function"""
-    result = await assets_health()
-
-    # Verify response structure
-    assert result["service"] == "inventory-assets"
-    assert result["status"] == "healthy"
-    assert "endpoints" in result
-    assert "timestamp" in result
-    assert len(result["endpoints"]) == 3
-
-
-@pytest.mark.asyncio
-async def test_assets_debug_success():
-    """Test assets_debug with successful database connection"""
+async def test_get_asset_by_id_case_insensitive():
+    """Test get_asset_by_id handles case insensitivity"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class:
         mock_dao = AsyncMock()
         mock_dao_class.return_value = mock_dao
 
-        # Mock asset data
-        mock_assets = [MagicMock(), MagicMock(), MagicMock()]
-        for i, asset in enumerate(mock_assets):
-            asset.asset_id = f"ASSET{i}"
+        # Mock found asset
+        mock_asset = MagicMock()
+        mock_asset.asset_id = "BTC"
+        mock_asset.name = "Bitcoin"
+        mock_asset.description = "Bitcoin cryptocurrency"
+        mock_asset.category = "Cryptocurrency"
+        mock_asset.price_usd = 45000.0
+        mock_asset.is_active = True
+        mock_asset.amount = 100.0
 
-        mock_dao.get_all_assets.return_value = mock_assets
+        mock_dao.get_asset_by_id.return_value = mock_asset
 
-        # test the function
-        result = await assets_debug(asset_dao=mock_dao)
+        # test with lowercase
+        result = await get_asset_by_id("btc", asset_dao=mock_dao)
 
-        # Verify response
-        assert result["message"] == "Assets debug endpoint working!"
-        assert result["database_connected"] is True
-        assert result["total_assets"] == 3
-        assert result["active_assets"] == 3
-        assert "sample_asset_ids" in result
+        # Verify AssetDAO was called with uppercase
+        mock_dao.get_asset_by_id.assert_called_once_with("BTC")
 
-
-@pytest.mark.asyncio
-async def test_assets_debug_failure():
-    """Test assets_debug when database connection fails"""
-    with patch('controllers.assets.AssetDAO') as mock_dao_class:
-        mock_dao = AsyncMock()
-        mock_dao_class.return_value = mock_dao
-
-        # Mock database failure
-        mock_dao.get_all_assets.side_effect = Exception("Database connection failed")
-
-        # test the function
-        result = await assets_debug(asset_dao=mock_dao)
-
-        # Verify error response
-        assert result["message"] == "Assets debug failed!"
-        assert result["database_connected"] is False
-        assert "error" in result
+        # Verify result
+        assert result is not None

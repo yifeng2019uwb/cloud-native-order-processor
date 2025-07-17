@@ -264,10 +264,11 @@ run_tests() {
     fi
 
     # For services (not common), also include common tests if available
-    if [[ "$service_name" != "common" && -d "../common/tests" ]]; then
-        test_dirs+=("../common/tests")
-        print_status "Found common tests directory"
-    fi
+    # if [[ "$service_name" != "common" && -d "../common/tests" ]]; then
+    #     test_dirs+=("../common/tests")
+    #     print_status "Found common tests directory"
+    # fi
+    # Only run common tests when building the common package itself
 
     if [[ ${#test_dirs[@]} -eq 0 ]]; then
         print_warning "No test directories found for $service_name"
@@ -303,19 +304,22 @@ run_tests() {
 
     # Add coverage options
     if [[ "$no_coverage" != "true" ]]; then
-        # Add coverage for source code
+        # Create service-specific coverage directory
+        local coverage_dir=htmlcov-${service_name}
+        # Add coverage for source code only (not common)
         if [[ -d "src" ]]; then
             pytest_cmd="$pytest_cmd --cov=src"
         elif [[ -f "setup.py" ]]; then
             pytest_cmd="$pytest_cmd --cov=."
         fi
 
-        # Add common coverage for services
-        if [[ "$service_name" != "common" && -d "../common" ]]; then
-            pytest_cmd="$pytest_cmd --cov=../common"
+        # For common package, include common coverage
+        if [[ "$service_name" == "common" ]]; then
+            pytest_cmd="$pytest_cmd --cov=src"
         fi
 
-        pytest_cmd="$pytest_cmd --cov-report=html --cov-report=term-missing"
+        # Use service-specific coverage directory to avoid conflicts
+        pytest_cmd="$pytest_cmd --cov-report=html:$coverage_dir --cov-report=term-missing"
 
         if [[ -n "$coverage_threshold" ]]; then
             pytest_cmd="$pytest_cmd --cov-fail-under=$coverage_threshold"
@@ -376,6 +380,30 @@ get_service_directory() {
         done
         exit 1
     fi
+}
+
+# Function to clean up old coverage directories
+cleanup_coverage_dirs() {
+    print_status "Cleaning up old coverage directories"
+    find . -name htmlcov*-type d -exec rm -rf {} + 2>/dev/null || true
+    find . -name .coverage* -type f -delete 2>/dev/null || true
+}
+
+# Function to generate coverage summary
+generate_coverage_summary() {
+    print_status "========================================"
+    print_status "COVERAGE SUMMARY"
+    print_status "========================================"
+
+    for coverage_dir in htmlcov-*; do
+        if [[ -d "$coverage_dir" ]]; then
+            local service_name=${coverage_dir#htmlcov-}
+            print_status "Service: $service_name"
+            print_status "Coverage report: $coverage_dir/index.html"
+        fi
+    done
+
+    print_status "========================================"
 }
 
 # Main function
@@ -462,6 +490,9 @@ main() {
 
             print_status "Found services: ${services[*]}"
 
+            # Clean up old coverage directories before building
+            cleanup_coverage_dirs
+
             # Build each service
             local failed_services=()
             for service in "${services[@]}"; do
@@ -478,6 +509,9 @@ main() {
                     failed_services+=("$service")
                 fi
             done
+
+            # Generate coverage summary
+            generate_coverage_summary
 
             # Report results
             print_status ""
@@ -523,6 +557,9 @@ main() {
     if [[ "$clean" == "true" ]]; then
         clean_build
     fi
+
+    # Clean up old coverage directories for this service
+    cleanup_coverage_dirs
 
     # Setup virtual environment
     setup_virtual_env "$python_cmd" "$service_name"
