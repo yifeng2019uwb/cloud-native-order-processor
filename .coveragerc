@@ -2,7 +2,9 @@
 source = src,../common
 omit =
     */__init__.py
-    setup.py
+    */setup.py
+    */tests/*
+    */test_*.py
 
 [report]
 exclude_lines =
