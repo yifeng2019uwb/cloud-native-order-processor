@@ -230,7 +230,7 @@ clean_build() {
     print_status "Cleaning build artifacts"
 
     # Remove common build directories
-    rm -rf build dist "*.egg-info" .pytest_cache .coverage __pycache__
+    rm -rf build dist "*.egg-info" .pytest_cache
 
     # Remove Python cache files recursively
     find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
@@ -262,13 +262,6 @@ run_tests() {
         test_dirs+=("test")
         print_status "Found test directory"
     fi
-
-    # For services (not common), also include common tests if available
-    # if [[ "$service_name" != "common" && -d "../common/tests" ]]; then
-    #     test_dirs+=("../common/tests")
-    #     print_status "Found common tests directory"
-    # fi
-    # Only run common tests when building the common package itself
 
     if [[ ${#test_dirs[@]} -eq 0 ]]; then
         print_warning "No test directories found for $service_name"
@@ -376,13 +369,6 @@ get_service_directory() {
     fi
 }
 
-# Function to clean up old coverage directories
-cleanup_coverage_dirs() {
-    print_status "Cleaning up old coverage directories"
-    find . -name htmlcov*-type d -exec rm -rf {} + 2>/dev/null || true
-    find . -name .coverage* -type f -delete 2>/dev/null || true
-}
-
 # Function to generate coverage summary
 generate_coverage_summary() {
     print_status "========================================"
@@ -484,8 +470,6 @@ main() {
 
             print_status "Found services: ${services[*]}"
 
-            # Clean up old coverage directories before building
-            cleanup_coverage_dirs
 
             # Build each service
             local failed_services=()
@@ -552,8 +536,6 @@ main() {
         clean_build
     fi
 
-    # Clean up old coverage directories for this service
-    cleanup_coverage_dirs
 
     # Setup virtual environment
     setup_virtual_env "$python_cmd" "$service_name"
