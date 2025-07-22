@@ -44,9 +44,9 @@ jobs:
 
     - name: 🧪 Run Unified Build and Tests
       run: |
-        chmod +x scripts/build-test.sh
-        # Each service manages its own coverage threshold
-        ./scripts/build-test.sh --test-only --verbose
+        cd services
+        # Test all services using the unified Makefile
+        make test-all
 
     - name: Upload test coverage
       uses: actions/upload-artifact@v4

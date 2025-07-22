@@ -265,3 +265,41 @@ resource "aws_lambda_permission" "allow_cloudwatch_snapshot" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.snapshot_rule.arn
 }
+
+# ====================
+# S3 IAM POLICY
+# ====================
+
+# S3 Access Policy (moved from iam.tf for better organization)
+resource "aws_iam_policy" "s3_access" {
+  name = "${local.resource_prefix}-s3-access"
+  description = "Access to S3 buckets for order processor"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ]
+        Resource = [
+          aws_s3_bucket.main.arn,
+          "${aws_s3_bucket.main.arn}/*",
+          aws_s3_bucket.logs.arn,
+          "${aws_s3_bucket.logs.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+# Attach S3 policy to application role
+resource "aws_iam_role_policy_attachment" "application_s3" {
+  role       = aws_iam_role.application_service.name
+  policy_arn = aws_iam_policy.s3_access.arn
+}

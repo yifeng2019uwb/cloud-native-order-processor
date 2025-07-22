@@ -44,6 +44,15 @@ spec:
               key: jwt-secret
         - name: AWS_REGION
           value: "us-east-1"
+        - name: REDIS_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: redis-endpoint
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_DB
+          value: "0"
         resources:
           requests:
             memory: "512Mi"
@@ -114,6 +123,15 @@ spec:
           value: "order-processor-prod-inventory"
         - name: AWS_REGION
           value: "us-east-1"
+        - name: REDIS_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: redis-endpoint
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_DB
+          value: "0"
         resources:
           requests:
             memory: "512Mi"

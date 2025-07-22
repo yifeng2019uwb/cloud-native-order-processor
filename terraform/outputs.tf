@@ -39,6 +39,12 @@ output "app_config" {
     # IAM Role for application services
     application_role_arn = aws_iam_role.application_service.arn
     aws_account_id = data.aws_caller_identity.current.account_id
+
+    # Redis configuration
+    redis_endpoint = local.enable_prod ? aws_elasticache_cluster.redis[0].cache_nodes[0].address : "redis.order-processor.svc.cluster.local"
+    redis_port     = 6379
+    redis_auth_required = false  # No auth for simplicity in personal project
+    redis_ssl_required = local.enable_prod  # SSL only in prod for security
   }
 }
 
@@ -46,6 +52,11 @@ output "app_config" {
 output "application_role_arn" {
   description = "ARN of the IAM role for application services"
   value       = aws_iam_role.application_service.arn
+}
+
+output "eks_oidc_provider_arn" {
+  description = "ARN of the EKS OIDC provider for IRSA"
+  value       = local.enable_prod ? aws_iam_openid_connect_provider.eks[0].arn : null
 }
 
 output "application_user_arn" {
@@ -77,4 +88,10 @@ output "application_user_access_key_secret" {
   description = "Access key secret for local K8s (only for local dev)"
   value       = local.enable_prod ? null : aws_iam_access_key.application_user[0].secret
   sensitive   = true
+}
+
+# Individual Redis outputs
+output "redis_endpoint" {
+  description = "Redis endpoint"
+  value       = local.enable_prod ? aws_elasticache_cluster.redis[0].cache_nodes[0].address : "redis.order-processor.svc.cluster.local"
 }

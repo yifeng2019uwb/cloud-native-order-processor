@@ -46,7 +46,7 @@ detect_service_name() {
     local current_dir=$(basename "$PWD")
 
     # Check if we're in a specific service directory
-    if [[ "$current_dir" == "common" || "$current_dir" == "order-service" ]] && [[ -d "tests" || -f "setup.py" ]]; then
+    if [[ "$current_dir" == "common" || "$current_dir" == "user_service" || "$current_dir" == "inventory_service" ]] && [[ -d "tests" || -f "setup.py" ]]; then
         echo "$current_dir"
         return 0
     fi

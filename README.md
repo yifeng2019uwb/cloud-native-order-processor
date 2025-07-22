@@ -90,33 +90,106 @@ flowchart TD
 - Docker Desktop
 - Git
 
-### Local Development
-```bash
-# 1. Clone and setup
-git clone <repository-url>
-cd cloud-native-order-processor
+### 🎯 Quick Commands (Recommended)
 
-# 2. Run full development cycle
+#### Using Makefile (Simplest)
+```bash
+# Setup and start development
+make dev-setup
+make dev-start
+
+# Run tests
+make test
+
+# Build and deploy
+make build
+make deploy-dev
+
+# Clean up
+make clean
+```
+
+#### Using Makefile for Focused Development
+```bash
+# Setup development environment
+make dev-setup
+
+# Start individual services (focus on what you're working on)
+make dev-user-service      # Start user service only
+make dev-inventory-service # Start inventory service only
+make dev-frontend          # Start frontend only
+
+# Test current service
+make test-current SERVICE=user_service
+make test-current SERVICE=inventory_service
+
+# Full integration test (when needed)
+make test-integration
+```
+
+#### Using Terraform Scripts
+```bash
+# Initialize and deploy infrastructure
+./terraform/scripts/terraform-ops.sh init -e dev
+./terraform/scripts/terraform-ops.sh plan -e dev
+./terraform/scripts/terraform-ops.sh apply -e dev -y
+
+# Run infrastructure tests
+./terraform/scripts/terraform-ops.sh test -e dev
+
+# Clean up
+./terraform/scripts/terraform-ops.sh destroy -e dev
+```
+
+### 🔧 Legacy Commands (Still Available)
+```bash
+# Full development cycle
 ./scripts/test-local.sh --environment dev --full-test
 
-# 3. Or run individual steps
-./scripts/deploy.sh --environment dev        # Deploy infrastructure
-./scripts/deploy-app.sh --environment dev    # Deploy application
-./scripts/test-integration.sh --environment dev  # Run tests
-./scripts/destroy.sh --environment dev --force   # Clean up
+# Individual steps
+./scripts/deploy.sh --environment dev
+./scripts/deploy-app.sh --environment dev
+./scripts/test-integration.sh --environment dev
+./scripts/destroy.sh --environment dev --force
 ```
 
 ### Run Tests Only
 ```bash
-cd services/common
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-pytest tests/test_models/ -v --cov=src/models
+# Backend tests
+make test-backend
+
+# Frontend tests (when configured)
+make test-frontend
+
+# Infrastructure tests
+make test-infra
 ```
 
 ## 🔧 Development Workflow
 
+### 🆕 New Script Architecture
+
+We've introduced a comprehensive script system for better development experience:
+
+#### **1. Makefile Commands** (`make`)
+- **Quick operations**: `make test`, `make build`, `make deploy`
+- **Development shortcuts**: `make dev-setup`, `make dev-start`
+- **Infrastructure**: `make tf-plan`, `make tf-apply`
+- **Cleanup**: `make clean`, `make clean-docker`
+
+#### **2. Focused Development** (`make`)
+- **Individual services**: Start only what you're working on
+- **Quick testing**: Test current service without full integration
+- **Microservice focus**: Each service works independently
+- **Integration when needed**: Full test cycle only when required
+
+#### **3. Terraform Operations** (`./terraform/scripts/terraform-ops.sh`)
+- **Unified interface**: Single script for all Terraform operations
+- **Environment support**: Easy switching between dev/prod
+- **Safety features**: Confirmation prompts for destructive operations
+- **Integration**: Works with existing infrastructure tests
+
+### Legacy Workflow (Still Available)
 ```bash
 # Deploy infrastructure
 ./scripts/deploy.sh --environment dev
@@ -143,6 +216,33 @@ pytest tests/test_models/ -v --cov=src/models
 - **CI/CD**: GitHub Actions
 - **Secrets**: AWS Secrets Manager, K8s secrets
 - **Monitoring**: Prometheus, Grafana
+
+## 🏗️ Infrastructure Improvements
+
+### **Enhanced Terraform Constants** (`terraform/locals.tf`)
+- **Centralized naming**: All resource names in one place
+- **Environment-specific**: Different configurations for dev/prod
+- **Easy updates**: Change project name, environment, or naming patterns
+- **Consistent patterns**: All resources follow the same naming convention
+
+### **Improved IAM Organization**
+- **Hybrid approach**: Core IAM in `iam.tf`, resource-specific policies in respective files
+- **Self-contained**: Each resource file contains its own IAM policy
+- **Easy to understand**: See exactly what permissions each resource needs
+- **Maintainable**: Changes to a resource include its permissions
+
+**Example:**
+```hcl
+# In dynamodb.tf
+resource "aws_dynamodb_table" "users" {
+  name = local.db_names.users_table  # Uses centralized constant
+}
+
+# DynamoDB-specific IAM policy in the same file
+resource "aws_iam_policy" "dynamodb_access" {
+  # Policy definition
+}
+```
 
 ## 📦 Project Structure
 ```

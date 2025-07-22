@@ -9,6 +9,7 @@ resources:
   - namespace.yaml
   - service-account.yaml
   - logging-config.yaml
+  - redis.yaml  # Add Redis
 
 commonLabels:
   app: order-processor

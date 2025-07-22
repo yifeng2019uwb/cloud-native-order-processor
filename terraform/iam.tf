@@ -34,6 +34,21 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
   role       = aws_iam_role.eks_cluster[0].name
 }
 
+# EKS OIDC Provider for service account authentication
+resource "aws_iam_openid_connect_provider" "eks" {
+  count = local.enable_prod ? 1 : 0
+
+  url = "https://oidc.eks.${data.aws_region.current.name}.amazonaws.com/id/${aws_eks_cluster.main[0].id}"
+
+  client_id_list = ["sts.amazonaws.com"]
+
+  thumbprint_list = [
+    "9e99a48a9960b14926bb7f3b02e22da2b0ab7280"
+  ]
+
+  tags = local.common_tags
+}
+
 
 
 # ====================
@@ -96,6 +111,18 @@ resource "aws_iam_role" "application_service" {
           AWS = aws_iam_user.application_user.arn
         }
         Action = "sts:AssumeRole"
+      },
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = local.enable_prod ? aws_iam_openid_connect_provider.eks[0].arn : null
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = local.enable_prod ? {
+          StringEquals = {
+            "${replace(aws_iam_openid_connect_provider.eks[0].url, "https://", "")}:sub" = "system:serviceaccount:order-processor:order-processor-sa"
+          }
+        } : null
       }
     ]
   })
@@ -106,67 +133,10 @@ resource "aws_iam_role" "application_service" {
 }
 
 # ====================
-# GRANULAR POLICIES FOR EACH RESOURCE
+# CORE APPLICATION ROLE AND USER
 # ====================
-
-# DynamoDB Access Policy
-resource "aws_iam_policy" "dynamodb_access" {
-  name = "${local.resource_prefix}-dynamodb-access"
-  description = "Access to DynamoDB tables for order processor"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:Query",
-          "dynamodb:Scan",
-          "dynamodb:BatchGetItem",
-          "dynamodb:BatchWriteItem",
-          "dynamodb:DescribeTable"
-        ]
-        Resource = [
-          aws_dynamodb_table.users.arn,
-          "${aws_dynamodb_table.users.arn}/index/EmailIndex",
-          aws_dynamodb_table.orders.arn,
-          aws_dynamodb_table.inventory.arn
-        ]
-      },
-
-    ]
-  })
-}
-
-# S3 Access Policy
-resource "aws_iam_policy" "s3_access" {
-  name = "${local.resource_prefix}-s3-access"
-  description = "Access to S3 buckets for order processor"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:GetBucketLocation"
-        ]
-        Resource = [
-          aws_s3_bucket.main.arn,
-          "${aws_s3_bucket.main.arn}/*",
-          aws_s3_bucket.logs.arn,
-          "${aws_s3_bucket.logs.arn}/*"
-        ]
-      }
-    ]
-  })
-}
+# Note: Resource-specific policies are now in their respective resource files
+# for better organization and understanding of what each policy does.
 
 # SQS Access Policy
 resource "aws_iam_policy" "sqs_access" {
@@ -269,19 +239,12 @@ resource "aws_iam_policy" "secrets_access" {
   })
 }
 
+
+
 # ====================
 # ATTACH POLICIES TO APPLICATION ROLE
 # ====================
-
-resource "aws_iam_role_policy_attachment" "application_dynamodb" {
-  role       = aws_iam_role.application_service.name
-  policy_arn = aws_iam_policy.dynamodb_access.arn
-}
-
-resource "aws_iam_role_policy_attachment" "application_s3" {
-  role       = aws_iam_role.application_service.name
-  policy_arn = aws_iam_policy.s3_access.arn
-}
+# Note: Resource-specific policy attachments are now in their respective resource files.
 
 resource "aws_iam_role_policy_attachment" "application_sqs" {
   role       = aws_iam_role.application_service.name

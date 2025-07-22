@@ -11,3 +11,18 @@ terraform apply -var="environment=dev"
 
 # Deploy prod (Kubernetes)
 terraform apply -var="environment=prod"
+```
+
+## Infrastructure Testing
+```bash
+# Run all infrastructure tests
+./run-infrastructure-tests.sh
+
+# Run specific test types
+./run-infrastructure-tests.sh --test-type aws --verbose
+
+# Test production environment
+./run-infrastructure-tests.sh --environment prod
+```
+
+See [infrastructure-tests/README.md](infrastructure-tests/README.md) for detailed testing information.

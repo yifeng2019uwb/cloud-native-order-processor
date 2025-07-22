@@ -8,6 +8,9 @@ fastapi==0.104.1
 bcrypt==4.0.1
 mangum==0.17.0
 
+# Redis support
+redis==5.0.1
+
 # Test dependencies
 pytest==7.4.3
 pytest-asyncio==0.21.1
