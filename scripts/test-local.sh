@@ -273,7 +273,7 @@ run_build_tests() {
     fi
 
     # Use the unified build-test script
-    local build_args=""
+    local build_args="--test-only"
 
     if [[ "$VERBOSE" == "true" ]]; then
         build_args="$build_args --verbose"

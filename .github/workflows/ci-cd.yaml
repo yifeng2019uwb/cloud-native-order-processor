@@ -45,7 +45,7 @@ jobs:
     - name: 🧪 Run Unified Build and Tests
       run: |
         chmod +x scripts/build-test.sh
-        # Uses 60% coverage threshold (target: 80% when all services have proper test coverage)
+        # Each service manages its own coverage threshold
         ./scripts/build-test.sh --test-only --verbose
 
     - name: Upload test coverage

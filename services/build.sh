@@ -238,26 +238,34 @@ run_tests() {
         pytest_cmd="$pytest_cmd $test_dir"
     done
 
-    # Add coverage options
+    # Add coverage options (respect service's pytest.ini)
     if [[ "$no_coverage" != "true" ]]; then
         # Create service-specific coverage directory
         local coverage_dir=htmlcov-${service_name}
-        # Add coverage for source code only (not common)
-        if [[ -d "src" ]]; then
-            pytest_cmd="$pytest_cmd --cov=src"
-        elif [[ -f "setup.py" ]]; then
-            pytest_cmd="$pytest_cmd --cov=."
+
+        # Only add coverage options if service doesn't have pytest.ini with coverage
+        if [[ ! -f "pytest.ini" ]] || ! grep -q "addopts.*--cov" pytest.ini; then
+            # Add coverage for source code only (not common)
+            if [[ -d "src" ]]; then
+                pytest_cmd="$pytest_cmd --cov=src"
+            elif [[ -f "setup.py" ]]; then
+                pytest_cmd="$pytest_cmd --cov=."
+            fi
+
+            # For common package, include common coverage
+            if [[ "$service_name" == "common" ]]; then
+                pytest_cmd="$pytest_cmd --cov=src"
+            fi
+
+            # Add basic coverage reporting
+            pytest_cmd="$pytest_cmd --cov-report=term-missing"
         fi
 
-        # For common package, include common coverage
-        if [[ "$service_name" == "common" ]]; then
-            pytest_cmd="$pytest_cmd --cov=src"
-        fi
+        # Always add HTML report with service-specific directory
+        pytest_cmd="$pytest_cmd --cov-report=html:$coverage_dir"
 
-        # Use service-specific coverage directory to avoid conflicts
-        pytest_cmd="$pytest_cmd --cov-report=html:$coverage_dir --cov-report=term-missing"
-
-        if [[ -n "$coverage_threshold" ]]; then
+        # Only add coverage threshold if explicitly provided (don't override service's pytest.ini)
+        if [[ -n "$coverage_threshold" && "$coverage_threshold" != "$DEFAULT_TEST_COVERAGE_THRESHOLD" ]]; then
             pytest_cmd="$pytest_cmd --cov-fail-under=$coverage_threshold"
         fi
     fi

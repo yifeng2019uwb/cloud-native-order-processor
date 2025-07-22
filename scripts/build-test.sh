@@ -355,9 +355,9 @@ main() {
     log_step "🧪 Running Backend Tests"
     cd "$PROJECT_ROOT/services"
     if [[ -z "$SERVICE_NAME" || "$SERVICE_NAME" == "all" ]]; then
-        ./build.sh --test-only --coverage $COVERAGE_THRESHOLD
+        ./build.sh --test-only
     else
-        ./build.sh --test-only --coverage $COVERAGE_THRESHOLD "$SERVICE_NAME"
+        ./build.sh --test-only "$SERVICE_NAME"
     fi
     cd "$PROJECT_ROOT"
 
