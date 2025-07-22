@@ -14,7 +14,6 @@ from .shared.common import (
 # Import registration models
 from .auth.registration import (
     UserRegistrationRequest,
-    UserRegistrationResponse,
     RegistrationSuccessResponse,
     RegistrationErrorResponse
 )
@@ -50,7 +49,6 @@ __all__ = [
 
     # Registration models
     "UserRegistrationRequest",
-    "UserRegistrationResponse",
     "RegistrationSuccessResponse",
     "RegistrationErrorResponse",
 

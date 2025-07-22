@@ -204,7 +204,7 @@ class UserRegistrationResponse(UserBaseInfo):
 
 
 class RegistrationSuccessResponse(SuccessResponse):
-    """Success response wrapper for registration with access token"""
+    """Success response wrapper for registration with access token and minimal user info"""
 
     message: str = Field(
         default="Account created successfully",
@@ -225,10 +225,12 @@ class RegistrationSuccessResponse(SuccessResponse):
         ...,
         description="Token expiration time in seconds"
     )
-
-    user: UserRegistrationResponse = Field(
+    username: str = Field(
         ...,
-        description="Created user information"
+        description="Just the username for confirmation"
+    )
+    is_new_user: bool = Field(
+        default=True, description="Whether this is a new user (always true for registration)"
     )
 
     class Config:
@@ -239,17 +241,8 @@ class RegistrationSuccessResponse(SuccessResponse):
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "token_type": "bearer",
                 "expires_in": 86400,
-                "user": {
-                    "username": "john_doe123",
-                    "email": "john.doe@example.com",
-                    "first_name": "John",
-                    "last_name": "Doe",
-                    "phone": "+1-555-123-4567",
-                    "date_of_birth": "1990-05-15",
-                    "marketing_emails_consent": False,
-                    "created_at": "2025-07-09T10:30:00Z",
-                    "updated_at": "2025-07-09T10:30:00Z"
-                },
+                "username": "john_doe123",
+                "is_new_user": True,
                 "timestamp": "2025-07-09T10:30:00Z"
             }
         }

@@ -178,17 +178,8 @@ async def register_user(
             access_token=token_data["access_token"],
             token_type=token_data["token_type"],
             expires_in=token_data["expires_in"],
-            user=UserRegistrationResponse(
-                username=created_user.username,
-                email=created_user.email,
-                first_name=created_user.first_name,
-                last_name=created_user.last_name,
-                phone=created_user.phone,
-                date_of_birth=created_user.date_of_birth,
-                marketing_emails_consent=created_user.marketing_emails_consent,
-                created_at=created_user.created_at,
-                updated_at=created_user.updated_at
-            )
+            username=created_user.username,
+            is_new_user=True
         )
 
     except HTTPException:

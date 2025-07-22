@@ -87,7 +87,7 @@ def verify_access_token(token: str) -> Optional[str]:
     except jwt.ExpiredSignatureError:
         logger.warning("Token has expired")
         raise JWTError("Token expired")
-    except jwt.InvalidTokenError:
+    except JWTError:
         logger.warning("Invalid token provided")
         raise JWTError("Invalid token")
     except Exception as e:
@@ -107,7 +107,7 @@ def decode_token_payload(token: str) -> dict:
     """
     try:
         # Decode without verification for debugging
-        payload = jwt.decode(token, options={"verify_signature": False})
+        payload = jwt.decode(token, key="", options={"verify_signature": False})
         return payload
     except Exception as e:
         logger.error(f"Error decoding token payload: {e}")
@@ -131,8 +131,8 @@ def is_token_expired(token: str) -> bool:
         if exp_timestamp is None:
             return True
 
-        exp_datetime = datetime.fromtimestamp(exp_timestamp)
-        return datetime.now(datetime.UTC) > exp_datetime
+        exp_datetime = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
+        return datetime.now(timezone.utc) > exp_datetime
 
     except Exception:
         return True
@@ -155,7 +155,7 @@ def get_token_expiration(token: str) -> Optional[datetime]:
         if exp_timestamp is None:
             return None
 
-        return datetime.fromtimestamp(exp_timestamp)
+        return datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
 
     except Exception:
         return None
