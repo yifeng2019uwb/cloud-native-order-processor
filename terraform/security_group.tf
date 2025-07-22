@@ -16,6 +16,6 @@ resource "aws_security_group" "eks_cluster" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-eks-cluster-sg"
+    Name = local.sg_names.eks_cluster
   })
 }

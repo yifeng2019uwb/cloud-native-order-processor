@@ -9,7 +9,7 @@
 resource "aws_iam_role" "eks_cluster" {
   count = local.enable_prod ? 1 : 0
 
-  name = "${local.resource_prefix}-eks-cluster-role"
+  name = local.iam_names.eks_cluster_role
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -57,7 +57,7 @@ resource "aws_iam_openid_connect_provider" "eks" {
 
 # IAM User for application role assumption
 resource "aws_iam_user" "application_user" {
-  name = "${local.resource_prefix}-application-user"
+  name = local.iam_names.application_user
 
   tags = merge(local.common_tags, {
     Purpose = "Application Role Assumption"
@@ -65,9 +65,9 @@ resource "aws_iam_user" "application_user" {
 }
 
 # IAM Policy for the user to assume the application role
-resource "aws_iam_policy" "assume_application_role" {
-  name = "${local.resource_prefix}-assume-application-role"
-  description = "Policy to allow assuming the application service role"
+resource "aws_iam_policy" "assume_k8s_sa_role" {
+  name = local.iam_names.k8s_sa_role
+  description = "Policy to allow assuming the Kubernetes service account role"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -75,7 +75,7 @@ resource "aws_iam_policy" "assume_application_role" {
       {
         Effect = "Allow"
         Action = "sts:AssumeRole"
-        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.resource_prefix}-application-service-role"
+        Resource = aws_iam_role.k8s_sa.arn
       }
     ]
   })
@@ -84,7 +84,7 @@ resource "aws_iam_policy" "assume_application_role" {
 # Attach the assume role policy to the user
 resource "aws_iam_user_policy_attachment" "application_user_assume_role" {
   user       = aws_iam_user.application_user.name
-  policy_arn = aws_iam_policy.assume_application_role.arn
+  policy_arn = aws_iam_policy.assume_k8s_sa_role.arn
 }
 
 # Access key for local K8s (only when not using EKS)
@@ -98,33 +98,34 @@ resource "aws_iam_access_key" "application_user" {
   }
 }
 
-# IAM Role for application services (Kubernetes pods)
-resource "aws_iam_role" "application_service" {
-  name = "${local.resource_prefix}-application-service-role"
+# IAM Role for Kubernetes Service Accounts (IRSA)
+resource "aws_iam_role" "k8s_sa" {
+  name = local.iam_names.k8s_sa_role
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
+    Statement = concat([
       {
         Effect = "Allow"
         Principal = {
           AWS = aws_iam_user.application_user.arn
         }
         Action = "sts:AssumeRole"
-      },
+      }
+    ], local.enable_prod ? [
       {
         Effect = "Allow"
         Principal = {
-          Federated = local.enable_prod ? aws_iam_openid_connect_provider.eks[0].arn : null
+          Federated = aws_iam_openid_connect_provider.eks[0].arn
         }
         Action = "sts:AssumeRoleWithWebIdentity"
-        Condition = local.enable_prod ? {
+        Condition = {
           StringEquals = {
             "${replace(aws_iam_openid_connect_provider.eks[0].url, "https://", "")}:sub" = "system:serviceaccount:order-processor:order-processor-sa"
           }
-        } : null
+        }
       }
-    ]
+    ] : [])
   })
 
   tags = merge(local.common_tags, {
@@ -140,7 +141,7 @@ resource "aws_iam_role" "application_service" {
 
 # SQS Access Policy
 resource "aws_iam_policy" "sqs_access" {
-  name = "${local.resource_prefix}-sqs-access"
+  name = local.iam_names.service_sqs_role
   description = "Access to SQS queues for order processor"
 
   policy = jsonencode({
@@ -166,7 +167,7 @@ resource "aws_iam_policy" "sqs_access" {
 
 # SNS Access Policy
 resource "aws_iam_policy" "sns_access" {
-  name = "${local.resource_prefix}-sns-access"
+  name = local.iam_names.service_sns_role
   description = "Access to SNS topics for order processor"
 
   policy = jsonencode({
@@ -188,7 +189,7 @@ resource "aws_iam_policy" "sns_access" {
 
 # ECR Access Policy (for pulling images)
 resource "aws_iam_policy" "ecr_access" {
-  name = "${local.resource_prefix}-ecr-access"
+  name = local.iam_names.service_ecr_role
   description = "Access to ECR repositories for order processor"
 
   policy = jsonencode({
@@ -219,7 +220,7 @@ resource "aws_iam_policy" "ecr_access" {
 
 # Secrets Manager Access Policy (for database credentials)
 resource "aws_iam_policy" "secrets_access" {
-  name = "${local.resource_prefix}-secrets-access"
+  name = local.iam_names.service_secrets_role
   description = "Access to Secrets Manager for order processor"
 
   policy = jsonencode({
@@ -247,21 +248,21 @@ resource "aws_iam_policy" "secrets_access" {
 # Note: Resource-specific policy attachments are now in their respective resource files.
 
 resource "aws_iam_role_policy_attachment" "application_sqs" {
-  role       = aws_iam_role.application_service.name
+  role       = aws_iam_role.k8s_sa.name
   policy_arn = aws_iam_policy.sqs_access.arn
 }
 
 resource "aws_iam_role_policy_attachment" "application_sns" {
-  role       = aws_iam_role.application_service.name
+  role       = aws_iam_role.k8s_sa.name
   policy_arn = aws_iam_policy.sns_access.arn
 }
 
 resource "aws_iam_role_policy_attachment" "application_ecr" {
-  role       = aws_iam_role.application_service.name
+  role       = aws_iam_role.k8s_sa.name
   policy_arn = aws_iam_policy.ecr_access.arn
 }
 
 resource "aws_iam_role_policy_attachment" "application_secrets" {
-  role       = aws_iam_role.application_service.name
+  role       = aws_iam_role.k8s_sa.name
   policy_arn = aws_iam_policy.secrets_access.arn
 }

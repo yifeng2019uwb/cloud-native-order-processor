@@ -106,21 +106,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
     }
   }
 
-  # Rule for frequent snapshots (every 5 minutes)
-  rule {
-    id     = "frequent-snapshots"
-    status = "Enabled"
 
-    # Keep recent snapshots for 7 days
-    expiration {
-      days = 7
-    }
-
-    # Apply to snapshot prefix
-    filter {
-      prefix = "snapshots/"
-    }
-  }
 }
 
 # Lifecycle policy for application logs
@@ -155,116 +141,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   }
 }
 
-# CloudWatch Event Rule for daily snapshots (reduced frequency for cost optimization)
-resource "aws_cloudwatch_event_rule" "snapshot_rule" {
-  name                = "${local.resource_prefix}-snapshot-rule"
-  description         = "Trigger DynamoDB snapshot once per day (reduced from every 5 minutes for cost savings)"
-  # Cost optimization: Reduce S3 and Lambda requests by running daily instead of every 5 minutes
-  schedule_expression = "rate(1 day)"
 
-  tags = local.common_tags
-}
-
-# CloudWatch Event Target (Lambda function for snapshots)
-resource "aws_cloudwatch_event_target" "snapshot_target" {
-  rule      = aws_cloudwatch_event_rule.snapshot_rule.name
-  target_id = "DynamoDBSnapshot"
-  arn       = aws_lambda_function.snapshot_function.arn
-}
-
-# Lambda function for creating snapshots
-resource "aws_lambda_function" "snapshot_function" {
-  filename         = "placeholder.zip"
-  function_name    = "${local.resource_prefix}-snapshot"
-  role            = aws_iam_role.snapshot_role.arn
-  handler         = "index.handler"
-  runtime         = "python3.11"
-  timeout         = 300
-  memory_size     = 256
-
-  environment {
-    variables = {
-      DYNAMODB_ORDERS_TABLE = aws_dynamodb_table.orders.name
-      DYNAMODB_INVENTORY_TABLE = aws_dynamodb_table.inventory.name
-      DYNAMODB_USERS_TABLE = aws_dynamodb_table.users.name
-      S3_BUCKET = aws_s3_bucket.main.bucket
-      S3_PREFIX = "snapshots/"
-    }
-  }
-
-  tags = local.common_tags
-}
-
-# IAM role for snapshot Lambda
-resource "aws_iam_role" "snapshot_role" {
-  name = "${local.resource_prefix}-snapshot-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = local.common_tags
-}
-
-# IAM policy for snapshot Lambda
-resource "aws_iam_role_policy" "snapshot_policy" {
-  name = "${local.resource_prefix}-snapshot-policy"
-  role = aws_iam_role.snapshot_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:Scan",
-          "dynamodb:GetItem",
-          "dynamodb:Query"
-        ]
-        Resource = [
-          aws_dynamodb_table.orders.arn,
-          aws_dynamodb_table.inventory.arn,
-          aws_dynamodb_table.users.arn
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:PutObject",
-          "s3:GetObject"
-        ]
-        Resource = "${aws_s3_bucket.main.arn}/*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:*"
-      }
-    ]
-  })
-}
-
-# Lambda permission for CloudWatch Events
-resource "aws_lambda_permission" "allow_cloudwatch_snapshot" {
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.snapshot_function.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.snapshot_rule.arn
-}
 
 # ====================
 # S3 IAM POLICY
@@ -272,7 +149,7 @@ resource "aws_lambda_permission" "allow_cloudwatch_snapshot" {
 
 # S3 Access Policy (moved from iam.tf for better organization)
 resource "aws_iam_policy" "s3_access" {
-  name = "${local.resource_prefix}-s3-access"
+  name = local.iam_names.service_s3_role
   description = "Access to S3 buckets for order processor"
 
   policy = jsonencode({
@@ -300,6 +177,6 @@ resource "aws_iam_policy" "s3_access" {
 
 # Attach S3 policy to application role
 resource "aws_iam_role_policy_attachment" "application_s3" {
-  role       = aws_iam_role.application_service.name
+  role       = aws_iam_role.k8s_sa.name
   policy_arn = aws_iam_policy.s3_access.arn
 }

@@ -69,9 +69,39 @@ locals {
     frontend         = "${local.resource_prefix}-frontend"
   }
 
+  # Redis naming
+  redis_names = {
+    subnet_group = "${local.resource_prefix}-redis-subnet-group"
+    security_group = "${local.resource_prefix}-redis-sg"
+    cluster = "${local.resource_prefix}-redis"
+  }
+
+  # VPC naming
+  vpc_names = {
+    public_subnet = "${local.resource_prefix}-public-subnet"
+    private_subnet = "${local.resource_prefix}-private-subnet"
+    nat_eip = "${local.resource_prefix}-nat-eip"
+    public_rt = "${local.resource_prefix}-public-rt"
+    private_rt = "${local.resource_prefix}-private-rt"
+    igw = "${local.resource_prefix}-igw"
+    nat = "${local.resource_prefix}-nat"
+  }
+
+  # Security Group naming
+  sg_names = {
+    eks_cluster = "${local.resource_prefix}-eks-cluster-sg"
+  }
+
   # IAM naming
   iam_names = {
-    application_role = "${local.resource_prefix}-application-service-role"
+    k8s_sa_role = "${local.resource_prefix}-k8s-sa-role"
+    service_db_role = "${local.resource_prefix}-db-role"
+    service_s3_role = "${local.resource_prefix}-s3-role"
+    service_sqs_role = "${local.resource_prefix}-sqs-role"
+    service_sns_role = "${local.resource_prefix}-sns-role"
+    service_ecr_role = "${local.resource_prefix}-ecr-role"
+    service_secrets_role = "${local.resource_prefix}-secrets-role"
+    service_redis_role = "${local.resource_prefix}-redis-role"
     application_user = "${local.resource_prefix}-application-user"
     eks_cluster_role = "${local.resource_prefix}-eks-cluster-role"
   }

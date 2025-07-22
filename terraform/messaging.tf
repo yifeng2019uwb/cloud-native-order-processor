@@ -3,13 +3,13 @@
 
 # SNS topic for order events
 resource "aws_sns_topic" "order_events" {
-  name = "${local.resource_prefix}-order-events"
+  name = local.topic_names.order_events
   tags = local.common_tags
 }
 
 # SQS queue for order processing
 resource "aws_sqs_queue" "order_processing" {
-  name                      = "${local.resource_prefix}-order-processing"
+  name                      = local.queue_names.order_processing
   message_retention_seconds = 345600  # 4 days
 
   redrive_policy = jsonencode({
@@ -22,7 +22,7 @@ resource "aws_sqs_queue" "order_processing" {
 
 # Dead letter queue
 resource "aws_sqs_queue" "order_dlq" {
-  name = "${local.resource_prefix}-order-dlq"
+  name = local.queue_names.order_dlq
   tags = local.common_tags
 }
 

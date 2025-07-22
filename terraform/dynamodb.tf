@@ -100,7 +100,7 @@ resource "aws_dynamodb_table" "inventory" {
 
 # DynamoDB Access Policy (moved from iam.tf for better organization)
 resource "aws_iam_policy" "dynamodb_access" {
-  name = "${local.resource_prefix}-dynamodb-access"
+  name = local.iam_names.service_db_role
   description = "Access to DynamoDB tables for order processor"
 
   policy = jsonencode({
@@ -135,6 +135,6 @@ resource "aws_iam_policy" "dynamodb_access" {
 
 # Attach DynamoDB policy to application role
 resource "aws_iam_role_policy_attachment" "application_dynamodb" {
-  role       = aws_iam_role.application_service.name
+  role       = aws_iam_role.k8s_sa.name
   policy_arn = aws_iam_policy.dynamodb_access.arn
 }

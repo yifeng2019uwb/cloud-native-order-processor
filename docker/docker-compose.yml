@@ -1,4 +1,29 @@
 services:
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: order-processor-redis
+    # No ports - Redis only accessible within Docker network
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - order-processor-network
+    # Resource limits - Redis gets 0.5 CPU, 512MB RAM
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
   frontend:
     build:
       context: ../
@@ -34,21 +59,31 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - ORDERS_TABLE=order-processor-dev-orders
-      - INVENTORY_TABLE=order-processor-dev-inventory
-      - USERS_TABLE=order-processor-dev-users
-      - AWS_REGION=us-west-2
-      - JWT_SECRET=your-development-jwt-secret-key-here
+      # Use environment variables that can be overridden
+      - ORDERS_TABLE=${ORDERS_TABLE:-order-processor-dev-orders}
+      - INVENTORY_TABLE=${INVENTORY_TABLE:-order-processor-dev-inventory}
+      - USERS_TABLE=${USERS_TABLE:-order-processor-dev-users}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
+      - JWT_SECRET=${JWT_SECRET:-your-development-jwt-secret-key-here}
       - JWT_ALGORITHM=HS256
       - JWT_EXPIRATION_HOURS=24
       - SERVICE_NAME=user_service
       - SERVICE_PORT=8000
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
+      # Redis configuration
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=
+      - REDIS_SSL=false
     volumes:
       - ~/.aws:/root/.aws:ro
       # Auto-reload for development
       - ../services:/app/services:ro
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -75,18 +110,28 @@ services:
     ports:
       - "8001:8001"
     environment:
-      - ORDERS_TABLE=order-processor-dev-orders
-      - INVENTORY_TABLE=order-processor-dev-inventory
-      - USERS_TABLE=order-processor-dev-users
-      - AWS_REGION=us-west-2
+      # Use environment variables that can be overridden
+      - ORDERS_TABLE=${ORDERS_TABLE:-order-processor-dev-orders}
+      - INVENTORY_TABLE=${INVENTORY_TABLE:-order-processor-dev-inventory}
+      - USERS_TABLE=${USERS_TABLE:-order-processor-dev-users}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
       - SERVICE_NAME=inventory_service
       - SERVICE_PORT=8001
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
+      # Redis configuration
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=
+      - REDIS_SSL=false
     volumes:
       - ~/.aws:/root/.aws:ro
       # Auto-reload for development
       - ../services:/app/services:ro
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
@@ -109,3 +154,7 @@ networks:
   order-processor-network:
     name: order-processor-network
     driver: bridge
+
+volumes:
+  redis_data:
+    driver: local

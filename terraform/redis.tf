@@ -9,7 +9,7 @@
 resource "aws_elasticache_subnet_group" "redis" {
   count = local.enable_prod ? 1 : 0
 
-  name       = "${local.resource_prefix}-redis-subnet-group"
+  name       = local.redis_names.subnet_group
   subnet_ids = aws_subnet.private[*].id
 
   tags = local.common_tags
@@ -38,7 +38,7 @@ resource "aws_security_group" "redis" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-redis-sg"
+    Name = local.redis_names.security_group
   })
 }
 
@@ -46,7 +46,7 @@ resource "aws_security_group" "redis" {
 resource "aws_elasticache_cluster" "redis" {
   count = local.enable_prod ? 1 : 0
 
-  cluster_id           = "${local.resource_prefix}-redis"
+  cluster_id           = local.redis_names.cluster
   engine               = "redis"
   node_type            = "cache.t3.micro"  # Free tier eligible
   num_cache_nodes      = 1
@@ -69,7 +69,7 @@ resource "aws_elasticache_cluster" "redis" {
 resource "aws_iam_policy" "redis_access" {
   count = local.enable_prod ? 1 : 0
 
-  name        = "${local.resource_prefix}-redis-access"
+  name        = local.iam_names.service_redis_role
   description = "Access to ElastiCache Redis for order processor"
 
   policy = jsonencode({
@@ -93,6 +93,6 @@ resource "aws_iam_policy" "redis_access" {
 resource "aws_iam_role_policy_attachment" "application_redis" {
   count = local.enable_prod ? 1 : 0
 
-  role       = aws_iam_role.application_service.name
+  role       = aws_iam_role.k8s_sa.name
   policy_arn = aws_iam_policy.redis_access[0].arn
 }

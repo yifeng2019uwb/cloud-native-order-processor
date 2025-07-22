@@ -36,8 +36,8 @@ output "app_config" {
     s3_bucket = aws_s3_bucket.main.bucket
     logs_bucket = aws_s3_bucket.logs.bucket
 
-    # IAM Role for application services
-    application_role_arn = aws_iam_role.application_service.arn
+          # IAM Role for Kubernetes service accounts (IRSA)
+      k8s_sa_role_arn = aws_iam_role.k8s_sa.arn
     aws_account_id = data.aws_caller_identity.current.account_id
 
     # Redis configuration
@@ -49,9 +49,9 @@ output "app_config" {
 }
 
 # Individual outputs for easier access
-output "application_role_arn" {
-  description = "ARN of the IAM role for application services"
-  value       = aws_iam_role.application_service.arn
+output "k8s_sa_role_arn" {
+  description = "ARN of the Kubernetes service account role"
+  value       = aws_iam_role.k8s_sa.arn
 }
 
 output "eks_oidc_provider_arn" {

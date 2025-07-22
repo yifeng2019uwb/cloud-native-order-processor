@@ -23,7 +23,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-public-subnet-${count.index + 1}"
+    Name = "${local.vpc_names.public_subnet}-${count.index + 1}"
     "kubernetes.io/role/elb" = "1"
   })
 }
@@ -37,7 +37,7 @@ resource "aws_subnet" "private" {
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-private-subnet-${count.index + 1}"
+    Name = "${local.vpc_names.private_subnet}-${count.index + 1}"
     "kubernetes.io/role/internal-elb" = "1"
   })
 }
@@ -49,7 +49,7 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main[0].id
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-igw"
+    Name = local.vpc_names.igw
   })
 }
 
@@ -60,7 +60,7 @@ resource "aws_eip" "nat" {
   domain = "vpc"
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-nat-eip"
+    Name = local.vpc_names.nat_eip
   })
 
   depends_on = [aws_internet_gateway.main]
@@ -73,7 +73,7 @@ resource "aws_nat_gateway" "main" {
   subnet_id     = aws_subnet.public[0].id
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-nat"
+    Name = local.vpc_names.nat
   })
 
   depends_on = [aws_internet_gateway.main]
@@ -91,7 +91,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-public-rt"
+    Name = local.vpc_names.public_rt
   })
 }
 
@@ -110,7 +110,7 @@ resource "aws_route_table" "private" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-private-rt"
+    Name = local.vpc_names.private_rt
   })
 }
 
