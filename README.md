@@ -163,9 +163,9 @@ cloud-native-order-processor/
 
 ## 📊 Scaling Strategy
 
-### **Fixed Components (1 Instance)**
-- **API Gateway**: High-performance Go, handles thousands of requests/second
-- **Redis**: Efficient in-memory store, handles high throughput
+### **Vertically Scalable Components (1 Instance Each)**
+- **API Gateway**: 1 instance, vertically scalable (increase CPU/memory as needed)
+- **Redis**: 1 instance, vertically scalable (increase CPU/memory as needed)
 
 ### **Auto-scaled Components**
 - **User Service**: Scale 1-3 instances based on demand
@@ -174,8 +174,8 @@ cloud-native-order-processor/
 - **Frontend**: Scale 2-3 instances for high availability
 
 ### **Scaling Triggers**
-- **CPU Usage**: Scale when > 70% CPU utilization
-- **Memory Usage**: Scale when > 80% memory utilization
+- **Gateway/Redis Vertical Scaling**: Scale up when > 80% CPU or > 85% memory
+- **Service Horizontal Scaling**: Scale out when > 70% CPU or > 80% memory
 - **Response Time**: Scale when latency > 500ms
 - **Error Rate**: Scale when error rate > 5%
 
