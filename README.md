@@ -1,45 +1,66 @@
-# 🚀 Cloud-Native Order Service
+# �� Cloud-Native Order Processor
 
-A hands-on cloud-native microservice project focused on learning Docker, Kubernetes, security, and modern DevOps practices. The stack is designed for cost efficiency and practical experimentation, using DynamoDB (not RDS/PostgreSQL) for all data storage.
+A comprehensive cloud-native microservice project demonstrating scalable, distributed architecture with security-first design. Built for learning Docker, Kubernetes, Go, Python, and modern DevOps practices with cost-efficient cloud patterns.
 
 ## 📋 Project Overview
 
-**Current Focus:** User Authentication, Docker, Kubernetes, Security, and Monitoring
-**Architecture:** Microservices, Infrastructure as Code, Cost-Efficient Cloud Patterns
-**Learning Goals:** Docker, Kubernetes, AWS IAM/Security, Monitoring, CI/CD, and Infrastructure Automation
+**Current Focus:** API Gateway, Security, Docker, Kubernetes, Monitoring, and Distributed Systems
+**Architecture:** Microservices with API Gateway, Redis Caching, Infrastructure as Code
+**Learning Goals:** Go Gateway Development, Python FastAPI, Docker, Kubernetes, AWS Security, Monitoring, CI/CD
 
 ### What This Project Teaches
-- **Docker & Kubernetes**: Containerization, orchestration, and deployment
-- **Security**: JWT, IAM, secrets management, least privilege
-- **Infrastructure as Code**: Terraform for AWS
-- **API Development**: FastAPI (Python)
-- **Monitoring**: K8s monitoring (in progress)
-- **Testing**: Unit, integration, and E2E
-- **Cost Management**: Resource cleanup, minimal AWS usage
+- **API Gateway Development**: Go-based gateway with authentication, rate limiting, caching
+- **Microservices Architecture**: Python FastAPI services with Redis integration
+- **Security**: JWT, rate limiting, token blacklisting, IAM, secrets management
+- **Infrastructure as Code**: Terraform for AWS with K8s deployment
+- **Monitoring & Observability**: Prometheus, Grafana, distributed tracing
+- **Testing**: Unit, integration, and end-to-end testing strategies
+- **Cost Management**: Resource optimization and cleanup automation
 
 ## 🏗️ Architecture
 
-### Current Implementation
+### Enhanced System Design
 ```
-┌───────────────┐    ┌───────────────┐    ┌───────────────┐
-│ Development   │    │ Production    │    │  Monitoring   │
-│               │    │               │    │               │
-│ EKS/K8s       │    │ EKS/K8s       │    │ Prometheus    │
-│ FastAPI       │    │ FastAPI       │    │ Grafana       │
-│ Docker        │    │ Docker        │    │ Dashboards    │
-└───────────────┘    └───────────────┘    └───────────────┘
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Frontend  │───▶│   Gateway   │───▶│    Redis    │───▶│   Services  │
+│   (React)   │    │   (Go)      │    │             │    │ (FastAPI)   │
+│             │    │   (K8s Pod) │    │ (K8s Pod)   │    │ (K8s Pods)  │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                              │
+                              ▼
+                       ┌─────────────┐
+                       │  DynamoDB   │
+                       │     S3      │
+                       │   (AWS)     │
+                       └─────────────┘
 ```
 
-### Services Architecture
-```
-cloud-native-order-processor/
-├── frontend/                 # Web frontend (React + Vite)
-├── services/
-│   ├── common/               # Shared Python code, models, DAOs
-│   ├── inventory-service/    # Inventory microservice (FastAPI)
-│   └── user-service/         # User authentication microservice (FastAPI)
-├── integration_tests/        # Integration and smoke tests (Python)
-```
+### Component Responsibilities
+
+#### **API Gateway (Go)**
+- **Authentication**: JWT validation, session management
+- **Rate Limiting**: Per-user request limits and abuse prevention
+- **Routing**: Intelligent request routing to appropriate services
+- **Caching**: Response caching for performance optimization
+- **Security**: Request validation, input sanitization, CORS handling
+
+#### **Redis (In-Memory Store)**
+- **Session Management**: User sessions and authentication state
+- **Rate Limit Data**: Request counting and limit enforcement
+- **Response Cache**: API response caching with TTL
+- **Token Blacklist**: Revoked JWT token management
+
+#### **Microservices (FastAPI)**
+- **User Service**: Authentication, user management, profiles
+- **Inventory Service**: Asset management, categories, pricing
+- **Order Service**: Order processing, workflows, status tracking
+- **Business Logic**: Core application functionality and data processing
+
+#### **Infrastructure (AWS)**
+- **DynamoDB**: Primary data storage for all services
+- **S3**: File storage, backups, and asset management
+- **EKS**: Kubernetes cluster for container orchestration
+- **ALB**: Application load balancer for traffic distribution
 
 ### Data Flow
 ```mermaid
@@ -47,279 +68,230 @@ flowchart TD
   subgraph User
     A["User (Frontend/Web)"]
   end
-  subgraph Ingress
-    X["K8s Ingress"]
+  subgraph Gateway
+    B["API Gateway (Go)"]
+    C["Authentication"]
+    D["Rate Limiting"]
+    E["Caching"]
   end
-  subgraph API
-    C["User Service (FastAPI)"]
-    D["Inventory Service (FastAPI)"]
+  subgraph Cache
+    F["Redis"]
+  end
+  subgraph Services
+    G["User Service (FastAPI)"]
+    H["Inventory Service (FastAPI)"]
+    I["Order Service (FastAPI)"]
   end
   subgraph Data
-    E["DynamoDB (All Envs)"]
-    F["S3 (Assets/Backups)"]
+    J["DynamoDB"]
+    K["S3"]
   end
   subgraph Monitoring
-    P["Prometheus"]
-    G["Grafana Dashboards"]
+    L["Prometheus"]
+    M["Grafana"]
+    N["Distributed Tracing"]
   end
-  A -->|HTTP/REST| X
-  X --> C
-  X --> D
-  C -->|Read/Write| E
-  D -->|Read/Write| E
-  C -->|Store/Fetch| F
-  D -->|Store/Fetch| F
-  C --> P
-  D --> P
-  P --> G
+
+  A --> B
+  B --> C
+  B --> D
+  B --> E
+  C --> F
+  D --> F
+  E --> F
+  B --> G
+  B --> H
+  B --> I
+  G --> J
+  H --> J
+  I --> J
+  G --> K
+  H --> K
+  I --> K
+  B --> L
+  G --> L
+  H --> L
+  I --> L
+  L --> M
 ```
 
-**Note:**
-- EKS (or local K8s) runs FastAPI microservices in Docker containers.
-- K8s Ingress routes traffic directly to FastAPI services (no API Gateway).
-- Monitoring uses Prometheus for metrics collection and Grafana for dashboards.
-- DynamoDB is used for all environments for cost efficiency and simplicity. RDS/PostgreSQL is not used or planned.
-- Focus is on Docker, Kubernetes, security, and monitoring best practices.
+## 📁 Project Structure
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.11+
-- AWS CLI configured
-- Terraform ≥ 1.5.0
-- Docker Desktop
-- Git
-
-### 🎯 Quick Commands (Recommended)
-
-#### Using Makefile (Simplest)
-```bash
-# Setup and start development
-make dev-setup
-make dev-start
-
-# Run tests
-make test
-
-# Build and deploy
-make build
-make deploy-dev
-
-# Clean up
-make clean
+```
+cloud-native-order-processor/
+├── frontend/                 # React frontend application
+├── gateway/                  # Go API Gateway (In Progress)
+│   ├── src/                 # Gateway source code
+│   ├── tests/               # Gateway tests
+│   └── Dockerfile           # Gateway containerization
+├── services/
+│   ├── common/              # Shared Python code, models, DAOs
+│   ├── user-service/        # User authentication microservice
+│   └── inventory-service/   # Inventory management microservice
+├── redis-service/           # Redis operations service (Planned)
+│   ├── src/                 # Redis service source code
+│   ├── tests/               # Redis service tests
+│   └── Dockerfile           # Redis service containerization
+├── integration_tests/       # End-to-end integration tests
+├── kubernetes/              # K8s deployment manifests
+├── terraform/               # Infrastructure as Code
+├── monitoring/              # Prometheus, Grafana, alerting
+└── scripts/                 # Development and deployment scripts
 ```
 
-#### Using Makefile for Focused Development
-```bash
-# Setup development environment
-make dev-setup
+## 🚀 Development Workflow
 
-# Start individual services (focus on what you're working on)
-make dev-user-service      # Start user service only
-make dev-inventory-service # Start inventory service only
-make dev-frontend          # Start frontend only
-
-# Test current service
-make test-current SERVICE=user_service
-make test-current SERVICE=inventory_service
-
-# Full integration test (when needed)
-make test-integration
-```
-
-#### Using Terraform Scripts
-```bash
-# Initialize and deploy infrastructure
-./terraform/scripts/terraform-ops.sh init -e dev
-./terraform/scripts/terraform-ops.sh plan -e dev
-./terraform/scripts/terraform-ops.sh apply -e dev -y
-
-# Run infrastructure tests
-./terraform/scripts/terraform-ops.sh test -e dev
-
-# Clean up
-./terraform/scripts/terraform-ops.sh destroy -e dev
-```
-
-### 🔧 Legacy Commands (Still Available)
-```bash
-# Full development cycle
-./scripts/test-local.sh --environment dev --full-test
-
-# Individual steps
-./scripts/deploy.sh --environment dev
-./scripts/deploy-app.sh --environment dev
-./scripts/test-integration.sh --environment dev
-./scripts/destroy.sh --environment dev --force
-```
-
-### Run Tests Only
-```bash
-# Backend tests
-make test-backend
-
-# Frontend tests (when configured)
-make test-frontend
-
-# Infrastructure tests
-make test-infra
-```
-
-## 🔧 Development Workflow
-
-### 🆕 New Script Architecture
-
-We've introduced a comprehensive script system for better development experience:
+### 🆕 Enhanced Script Architecture
 
 #### **1. Makefile Commands** (`make`)
 - **Quick operations**: `make test`, `make build`, `make deploy`
-- **Development shortcuts**: `make dev-setup`, `make dev-start`
+- **Gateway operations**: `make gateway-build`, `make gateway-test`
+- **Service operations**: `make service-build SERVICE=user`, `make service-test SERVICE=inventory`
 - **Infrastructure**: `make tf-plan`, `make tf-apply`
 - **Cleanup**: `make clean`, `make clean-docker`
 
-#### **2. Focused Development** (`make`)
-- **Individual services**: Start only what you're working on
-- **Quick testing**: Test current service without full integration
-- **Microservice focus**: Each service works independently
-- **Integration when needed**: Full test cycle only when required
+#### **2. Focused Development**
+- **Gateway development**: `make gateway-dev`
+- **Service development**: `make service-dev SERVICE=user`
+- **Integration testing**: `make test-integration`
+- **Full deployment**: `make deploy-full`
 
-#### **3. Terraform Operations** (`./terraform/scripts/terraform-ops.sh`)
-- **Unified interface**: Single script for all Terraform operations
-- **Environment support**: Easy switching between dev/prod
-- **Safety features**: Confirmation prompts for destructive operations
-- **Integration**: Works with existing infrastructure tests
+#### **3. Environment Management**
+- **Local development**: Docker Compose with gateway and Redis
+- **K8s development**: Local K8s cluster with all components
+- **Production**: EKS deployment with monitoring and scaling
 
-### Legacy Workflow (Still Available)
-```bash
-# Deploy infrastructure
-./scripts/deploy.sh --environment dev
-# Deploy app updates
-./scripts/deploy-app.sh --environment dev --skip-build
-# Run integration tests
-./scripts/test-integration.sh --environment dev
-# Clean up resources
-./scripts/destroy.sh --environment dev --force
-```
+## 📊 Scaling Strategy
 
-## 🧪 Testing Strategy
-- **Unit Tests**: Fast, isolated, core logic
-- **Integration Tests**: API/database
-- **E2E Tests**: User workflows
-- **Coverage**: >90% on business logic
+### **Fixed Components (1 Instance)**
+- **API Gateway**: High-performance Go, handles thousands of requests/second
+- **Redis**: Efficient in-memory store, handles high throughput
 
-## 🛠️ Technology Stack
-- **Backend**: FastAPI (Python 3.11)
-- **Auth**: JWT, bcrypt
-- **Frontend**: React + Vite
-- **Infra**: Terraform, AWS (DynamoDB, S3, EKS)
-- **Containers**: Docker, Kubernetes
-- **CI/CD**: GitHub Actions
-- **Secrets**: AWS Secrets Manager, K8s secrets
-- **Monitoring**: Prometheus, Grafana
+### **Auto-scaled Components**
+- **User Service**: Scale 1-3 instances based on demand
+- **Inventory Service**: Scale 2-5 instances based on demand
+- **Order Service**: Scale 3-8 instances based on demand
+- **Frontend**: Scale 2-3 instances for high availability
 
-## 🏗️ Infrastructure Improvements
+### **Scaling Triggers**
+- **CPU Usage**: Scale when > 70% CPU utilization
+- **Memory Usage**: Scale when > 80% memory utilization
+- **Response Time**: Scale when latency > 500ms
+- **Error Rate**: Scale when error rate > 5%
 
-### **Enhanced Terraform Constants** (`terraform/locals.tf`)
-- **Centralized naming**: All resource names in one place
-- **Environment-specific**: Different configurations for dev/prod
-- **Easy updates**: Change project name, environment, or naming patterns
-- **Consistent patterns**: All resources follow the same naming convention
+## 🔒 Security Architecture
 
-### **Improved IAM Organization**
-- **Hybrid approach**: Core IAM in `iam.tf`, resource-specific policies in respective files
-- **Self-contained**: Each resource file contains its own IAM policy
-- **Easy to understand**: See exactly what permissions each resource needs
-- **Maintainable**: Changes to a resource include its permissions
+### **Network Security**
+- **VPC**: Isolated network environment with private subnets
+- **Security Groups**: Granular service-to-service communication rules
+- **ALB**: Public entry point with SSL termination and WAF integration
+- **Private Services**: All services run in private subnets
 
-**Example:**
-```hcl
-# In dynamodb.tf
-resource "aws_dynamodb_table" "users" {
-  name = local.db_names.users_table  # Uses centralized constant
-}
+### **Application Security**
+- **JWT Authentication**: Stateless token-based authentication
+- **Rate Limiting**: Per-user and per-endpoint request limits
+- **Token Blacklisting**: Secure logout with token invalidation
+- **Input Validation**: Comprehensive request sanitization
+- **CORS**: Cross-origin request handling and security
 
-# DynamoDB-specific IAM policy in the same file
-resource "aws_iam_policy" "dynamodb_access" {
-  # Policy definition
-}
-```
+### **Data Security**
+- **Encryption**: Data encrypted in transit and at rest
+- **Secrets Management**: K8s secrets for sensitive configuration
+- **IAM**: Least privilege access with service-specific roles
+- **Audit Logging**: Comprehensive security event tracking
 
-## 📦 Project Structure
-```
-cloud-native-order-processor/
-├── config/                   # Environment configurations
-├── docker/                   # Docker and container configs
-├── docs/                     # Documentation
-├── frontend/                 # Web frontend (React + Vite)
-├── integration_tests/        # Integration and smoke tests (Python)
-├── kubernetes/               # K8s manifests, scripts, secrets
-├── logs/
-├── scripts/                  # Deployment, build, and utility scripts
-│   └── shared/
-├── services/                 # Microservices code
-│   ├── common/               # Shared Python code, models, DAOs
-│   ├── inventory-service/    # Inventory microservice (FastAPI)
-│   └── user-service/         # User authentication microservice (FastAPI)
-├── terraform/                # Infrastructure as code (Terraform)
-│   └── scripts/
-├── venv/                     # Python virtual environment (local)
-├── Makefile, README.md, etc.
-```
+## 📈 Monitoring & Observability
 
-## 🎯 Roadmap & Learning Plan
+### **Infrastructure Monitoring**
+- **Cluster Health**: K8s cluster status and resource utilization
+- **Node Metrics**: CPU, memory, disk, and network performance
+- **Pod Health**: Service availability and resource consumption
+- **Network**: Traffic patterns and bandwidth analysis
 
-### Foundation
-- [x] User authentication (JWT)
-- [x] Unit testing & coverage
-- [x] Terraform automation
-- [x] CI/CD pipeline
+### **Application Monitoring**
+- **Gateway Metrics**: Request rate, response time, error rate, cache hit rate
+- **Redis Metrics**: Memory usage, connection count, command rate, hit rate
+- **Service Metrics**: Health status, resource usage, business metrics
+- **Dependencies**: Database and external service health monitoring
+
+### **Business Monitoring**
+- **User Activity**: Active users, session duration, user journeys
+- **Performance**: Response times, throughput, SLA compliance
+- **Errors**: Error rates, failure patterns, impact analysis
+- **Usage Patterns**: Peak times, traffic distribution, feature usage
+
+## 🔧 Technology Stack
+
+### **Frontend**
+- **React**: Modern web application framework
+- **TypeScript**: Type-safe JavaScript development
+- **Vite**: Fast build tool and development server
+
+### **Backend**
+- **Go**: High-performance API Gateway
+- **Python**: FastAPI microservices
+- **Redis**: In-memory caching and session storage
+
+### **Infrastructure**
+- **Docker**: Containerization and development
+- **Kubernetes**: Container orchestration and scaling
+- **Terraform**: Infrastructure as Code
+- **AWS**: Cloud infrastructure and managed services
+
+### **Monitoring**
+- **Prometheus**: Metrics collection and storage
+- **Grafana**: Visualization and dashboards
+- **Jaeger**: Distributed tracing
+- **ELK Stack**: Log aggregation and analysis
+
+## 📋 Implementation Status
+
+### ✅ Completed
+- [x] Basic microservices (user, inventory)
 - [x] Docker containerization
+- [x] Kubernetes deployment
+- [x] Terraform infrastructure
+- [x] Unit testing and coverage
+- [x] CI/CD pipeline
+- [x] Integration testing framework
 
-### Core Services
-- [ ] Trading/order endpoints
-- [ ] Integration testing
-- [ ] Kubernetes deployment
-- [ ] API rate limiting/caching
+### 🔄 In Progress
+- [ ] **API Gateway (Go)**: Core gateway functionality
+- [ ] **Redis Integration**: Session management and caching
+- [ ] **Security Enhancement**: Rate limiting and token blacklisting
+- [ ] **Monitoring Setup**: Prometheus and Grafana deployment
 
-### Production Features
-- [ ] Security hardening
-- [ ] Monitoring/alerting
-- [ ] Load/performance testing
-- [ ] Multi-environment deployment
+### 📋 Planned
+- [ ] **Redis Service**: Dedicated Redis operations service
+- [ ] **Order Service**: Order processing microservice
+- [ ] **Advanced Caching**: Multi-level caching strategies
+- [ ] **Distributed Tracing**: Request tracing across services
+- [ ] **Load Testing**: Performance and scalability testing
+- [ ] **Security Hardening**: Advanced security features
+- [ ] **Multi-environment**: Staging and production environments
 
-### Advanced/Scale
-- [ ] Real-time/WebSocket support
-- [ ] Compliance features
-- [ ] Advanced analytics
-- [ ] Multi-region/service mesh
+### 🚀 Future Enhancements
+- [ ] **Real-time Features**: WebSocket support
+- [ ] **Advanced Analytics**: Business intelligence and reporting
+- [ ] **Compliance Features**: GDPR, SOC2 compliance
+- [ ] **Multi-region**: Geographic distribution
+- [ ] **Service Mesh**: Advanced service communication
+- [ ] **Machine Learning**: Predictive analytics and automation
 
 ## 💰 Cost Management
-- DynamoDB and other AWS resources are used for cost efficiency.
-- Always run `destroy.sh --force` after development to avoid charges.
-- Monitor AWS billing regularly.
+- **Resource Optimization**: Right-sized instances and auto-scaling
+- **Cost Monitoring**: AWS cost tracking and alerting
+- **Cleanup Automation**: Automatic resource cleanup scripts
+- **Development Efficiency**: Local development to reduce cloud costs
 
-## 🤝 Contributing
-Personal learning project. Feedback on architecture, security, and DevOps is welcome.
+## 🎯 Learning Outcomes
+- **API Gateway Patterns**: Industry-standard gateway architecture
+- **Microservices Security**: Distributed security best practices
+- **Performance Optimization**: Caching and scaling strategies
+- **Observability**: Comprehensive monitoring and debugging
+- **Cloud-Native Development**: Modern development practices
+- **DevOps Automation**: CI/CD and infrastructure automation
 
-## 📚 Learning Resources
-- [FastAPI](https://fastapi.tiangolo.com/)
-- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [Kubernetes Docs](https://kubernetes.io/docs/)
-- [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected/)
+---
 
-## 🔐 Security Considerations
-- JWT tokens, secret management
-- Password hashing (bcrypt)
-- IAM least privilege
-- Container security scanning
-- Input validation (Pydantic)
-
-## 📄 License
-Educational use only. Learn and adapt freely.
-
-You can run it from your project root with:
-```bash
-python services/inventory_service/src/services/fetch_coingecko.py
-```
-
-Let me know if you need help running it or want to move it elsewhere!
+**This project demonstrates a production-ready, scalable microservices architecture with security-first design and comprehensive monitoring.** 🚀
