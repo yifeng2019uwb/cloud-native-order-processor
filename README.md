@@ -1,4 +1,4 @@
-# �� Cloud-Native Order Processor
+# 🚀 Cloud-Native Order Processor
 
 A comprehensive cloud-native microservice project demonstrating scalable, distributed architecture with security-first design. Built for learning Docker, Kubernetes, Go, Python, and modern DevOps practices with cost-efficient cloud patterns.
 
