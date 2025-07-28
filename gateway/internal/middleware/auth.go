@@ -31,7 +31,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		token := tokenParts[1]
+		_ = tokenParts[1] // token variable - TODO: Validate JWT token
 
 		// TODO: Validate JWT token
 		// TODO: Extract user claims from token
