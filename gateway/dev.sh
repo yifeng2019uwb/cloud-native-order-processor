@@ -30,27 +30,19 @@ Usage: $0 [COMMAND] [OPTIONS]
 
 COMMANDS:
     help                    Show this help message
-    install                 Install Go dependencies (go mod tidy)
+    install                 Install Go dependencies
     build                   Build the gateway binary
     run                     Run the gateway server
-    dev                     Run in development mode with hot reload
-    test                    Run tests
-    test-coverage           Run tests with coverage report
+    dev                     Run in development mode
+    test                    Run tests with coverage
     lint                    Run linting checks
     format                  Format Go code
     clean                   Clean build artifacts
-    docker-build            Build Docker image
-    docker-run              Run in Docker container
-    health-check            Check if gateway is running
-    logs                    Show gateway logs (if running in background)
 
 OPTIONS:
     -p, --port PORT         Set server port (default: ${DEFAULT_PORT})
     -h, --host HOST         Set server host (default: ${DEFAULT_HOST})
-    --redis-host HOST       Set Redis host (default: ${DEFAULT_REDIS_HOST})
-    --redis-port PORT       Set Redis port (default: ${DEFAULT_REDIS_PORT})
     -v, --verbose           Enable verbose output
-    --no-redis              Run without Redis (for testing)
 
 EXAMPLES:
     $0 install              # Install dependencies
@@ -59,7 +51,6 @@ EXAMPLES:
     $0 dev                  # Run in development mode
     $0 test                 # Run tests
     $0 --port 9090 run      # Run on port 9090
-    $0 --no-redis run       # Run without Redis
 
 ENVIRONMENT VARIABLES:
     GATEWAY_PORT            Server port
@@ -139,30 +130,13 @@ build_gateway() {
 run_tests() {
     print_info "Running tests..."
 
-    # Run all tests
-    go test ./... -v
+    # Run all tests with coverage display (Go standard - tests alongside source)
+    go test -cover ./...
 
     print_success "Tests completed"
 }
 
-# Function to run tests with coverage
-run_tests_coverage() {
-    print_info "Running tests with coverage..."
 
-    # Create coverage directory
-    mkdir -p coverage
-
-    # Run tests with coverage
-    go test ./... -v -coverprofile=coverage/coverage.out
-
-    # Generate coverage report
-    go tool cover -html=coverage/coverage.out -o coverage/coverage.html
-
-    # Show coverage summary
-    go tool cover -func=coverage/coverage.out
-
-    print_success "Coverage report generated: coverage/coverage.html"
-}
 
 # Function to run linting
 run_lint() {
@@ -213,20 +187,7 @@ clean_build() {
     print_success "Cleanup completed"
 }
 
-# Function to check if gateway is running
-health_check() {
-    local port=${GATEWAY_PORT:-$DEFAULT_PORT}
 
-    print_info "Checking gateway health on port $port..."
-
-    if curl -s http://localhost:$port/health > /dev/null 2>&1; then
-        print_success "Gateway is running and healthy"
-        curl -s http://localhost:$port/health | jq . 2>/dev/null || curl -s http://localhost:$port/health
-    else
-        print_error "Gateway is not running or not responding"
-        exit 1
-    fi
-}
 
 # Function to run the gateway
 run_gateway() {
@@ -277,58 +238,11 @@ run_dev() {
     fi
 }
 
-# Function to build Docker image
-docker_build() {
-    print_info "Building Docker image..."
 
-    # Check if Dockerfile exists
-    if [ ! -f "Dockerfile" ]; then
-        print_error "Dockerfile not found"
-        exit 1
-    fi
-
-    # Build image
-    docker build -t order-processor-gateway:latest .
-
-    print_success "Docker image built: order-processor-gateway:latest"
-}
-
-# Function to run in Docker
-docker_run() {
-    local port=${GATEWAY_PORT:-$DEFAULT_PORT}
-
-    print_info "Running gateway in Docker on port $port..."
-
-    # Run container
-    docker run -d \
-        --name gateway \
-        -p $port:8080 \
-        -e REDIS_HOST=${REDIS_HOST:-$DEFAULT_REDIS_HOST} \
-        -e REDIS_PORT=${REDIS_PORT:-$DEFAULT_REDIS_PORT} \
-        -e USER_SERVICE_URL=${USER_SERVICE_URL:-http://user-service:8000} \
-        -e INVENTORY_SERVICE_URL=${INVENTORY_SERVICE_URL:-http://inventory-service:8001} \
-        order-processor-gateway:latest
-
-    print_success "Gateway running in Docker container"
-    print_info "Access at: http://localhost:$port"
-}
-
-# Function to show logs
-show_logs() {
-    print_info "Showing gateway logs..."
-
-    # Check if running in Docker
-    if docker ps | grep -q gateway; then
-        docker logs -f gateway
-    else
-        print_warning "Gateway not running in Docker. Check if it's running locally."
-    fi
-}
 
 # Parse command line arguments
 COMMAND=""
 VERBOSE=false
-NO_REDIS=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -336,7 +250,7 @@ while [[ $# -gt 0 ]]; do
             show_usage
             exit 0
             ;;
-        install|build|run|dev|test|test-coverage|lint|format|clean|docker-build|docker-run|health-check|logs)
+        install|build|run|dev|test|lint|format|clean)
             COMMAND="$1"
             shift
             ;;
@@ -348,20 +262,8 @@ while [[ $# -gt 0 ]]; do
             GATEWAY_HOST="$2"
             shift 2
             ;;
-        --redis-host)
-            REDIS_HOST="$2"
-            shift 2
-            ;;
-        --redis-port)
-            REDIS_PORT="$2"
-            shift 2
-            ;;
         -v|--verbose)
             VERBOSE=true
-            shift
-            ;;
-        --no-redis)
-            NO_REDIS=true
             shift
             ;;
         *)
@@ -399,9 +301,6 @@ case $COMMAND in
     test)
         run_tests
         ;;
-    test-coverage)
-        run_tests_coverage
-        ;;
     lint)
         run_lint
         ;;
@@ -411,18 +310,7 @@ case $COMMAND in
     clean)
         clean_build
         ;;
-    docker-build)
-        docker_build
-        ;;
-    docker-run)
-        docker_run
-        ;;
-    health-check)
-        health_check
-        ;;
-    logs)
-        show_logs
-        ;;
+
     "")
         print_error "No command specified"
         show_usage
