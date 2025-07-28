@@ -41,6 +41,27 @@ const (
 	DefaultHost      = "0.0.0.0"
 	DefaultRedisHost = "localhost"
 	DefaultRedisPort = 6379
+	DefaultRedisDB   = 0
+	DefaultRedisSSL  = false
+)
+
+// Environment variable names
+const (
+	EnvGatewayPort        = "GATEWAY_PORT"
+	EnvGatewayHost        = "GATEWAY_HOST"
+	EnvRedisHost          = "REDIS_HOST"
+	EnvRedisPort          = "REDIS_PORT"
+	EnvRedisPassword      = "REDIS_PASSWORD"
+	EnvRedisDB            = "REDIS_DB"
+	EnvRedisSSL           = "REDIS_SSL"
+	EnvUserServiceURL     = "USER_SERVICE_URL"
+	EnvInventoryServiceURL = "INVENTORY_SERVICE_URL"
+)
+
+// Default service URLs
+const (
+	DefaultUserServiceURL     = "http://user-service:8000"
+	DefaultInventoryServiceURL = "http://inventory-service:8001"
 )
 
 // Time constants
@@ -74,4 +95,21 @@ const (
 	ErrorCodeRateLimit      = "RATE_LIMIT_EXCEEDED"
 	ErrorCodeInternal       = "INTERNAL_ERROR"
 	ErrorCodeServiceUnavailable = "SERVICE_UNAVAILABLE"
+)
+
+// Application constants
+const (
+	AppName    = "order-processor-gateway"
+	AppVersion = "1.0.0"
+)
+
+// Log messages
+const (
+	LogConfigLoadFailed     = "Failed to load configuration"
+	LogRedisConnectFailed   = "Failed to connect to Redis"
+	LogRedisConnectSuccess  = "Connected to Redis"
+	LogRedisContinueWithout = "Continuing without Redis (some features will be disabled)"
+	LogProxyInitSuccess     = "Proxy service initialized"
+	LogServerStart          = "Starting Gateway server on port"
+	LogServerStartFailed    = "Failed to start server"
 )

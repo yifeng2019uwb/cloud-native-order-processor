@@ -6,36 +6,39 @@ import (
 	"order-processor-gateway/internal/api"
 	"order-processor-gateway/internal/config"
 	"order-processor-gateway/internal/services"
+	"order-processor-gateway/pkg/constants"
 )
 
 func main() {
+	// Log application startup
+	log.Printf("🚀 Starting %s v%s", constants.AppName, constants.AppVersion)
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		log.Fatalf("%s: %v", constants.LogConfigLoadFailed, err)
 	}
 
 	// Initialize Redis service
-	// TODO: Add proper error handling and connection pooling
 	redisService, err := services.NewRedisService(&cfg.Redis)
 	if err != nil {
-		log.Printf("Warning: Failed to connect to Redis: %v", err)
-		log.Println("Continuing without Redis (some features will be disabled)")
+		log.Printf("Warning: %s: %v", constants.LogRedisConnectFailed, err)
+		log.Println(constants.LogRedisContinueWithout)
 		redisService = nil
 	} else {
 		defer redisService.Close()
-		log.Println("✅ Connected to Redis")
+		log.Printf("✅ %s", constants.LogRedisConnectSuccess)
 	}
 
 	// Initialize proxy service
 	proxyService := services.NewProxyService(cfg)
-	log.Println("✅ Proxy service initialized")
+	log.Printf("✅ %s", constants.LogProxyInitSuccess)
 
 	// Initialize and start the API server
 	server := api.NewServer(cfg, redisService, proxyService)
 
-	log.Printf("🚀 Starting Gateway server on port %s", cfg.Server.Port)
+	log.Printf("🚀 %s %s", constants.LogServerStart, cfg.Server.Port)
 	if err := server.Start(); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		log.Fatalf("%s: %v", constants.LogServerStartFailed, err)
 	}
 }

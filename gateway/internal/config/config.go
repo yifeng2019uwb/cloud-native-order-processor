@@ -3,12 +3,14 @@ package config
 import (
 	"os"
 	"strconv"
+
+	"order-processor-gateway/pkg/constants"
 )
 
 // Config holds all configuration for the gateway
 type Config struct {
-	Server ServerConfig
-	Redis  RedisConfig
+	Server   ServerConfig
+	Redis    RedisConfig
 	Services ServicesConfig
 }
 
@@ -29,30 +31,30 @@ type RedisConfig struct {
 
 // ServicesConfig holds backend service URLs
 type ServicesConfig struct {
-	UserService     string
+	UserService      string
 	InventoryService string
 }
 
 // Load loads configuration from environment variables
 func Load() (*Config, error) {
-	redisDB, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
-	redisSSL, _ := strconv.ParseBool(getEnv("REDIS_SSL", "false"))
+	redisDB, _ := strconv.Atoi(getEnv(constants.EnvRedisDB, strconv.Itoa(constants.DefaultRedisDB)))
+	redisSSL, _ := strconv.ParseBool(getEnv(constants.EnvRedisSSL, strconv.FormatBool(constants.DefaultRedisSSL)))
 
 	return &Config{
 		Server: ServerConfig{
-			Port: getEnv("GATEWAY_PORT", "8080"),
-			Host: getEnv("GATEWAY_HOST", "0.0.0.0"),
+			Port: getEnv(constants.EnvGatewayPort, strconv.Itoa(constants.DefaultPort)),
+			Host: getEnv(constants.EnvGatewayHost, constants.DefaultHost),
 		},
 		Redis: RedisConfig{
-			Host:     getEnv("REDIS_HOST", "localhost"),
-			Port:     getEnv("REDIS_PORT", "6379"),
-			Password: getEnv("REDIS_PASSWORD", ""),
+			Host:     getEnv(constants.EnvRedisHost, constants.DefaultRedisHost),
+			Port:     getEnv(constants.EnvRedisPort, strconv.Itoa(constants.DefaultRedisPort)),
+			Password: getEnv(constants.EnvRedisPassword, ""),
 			DB:       redisDB,
 			SSL:      redisSSL,
 		},
 		Services: ServicesConfig{
-			UserService:     getEnv("USER_SERVICE_URL", "http://user-service:8000"),
-			InventoryService: getEnv("INVENTORY_SERVICE_URL", "http://inventory-service:8001"),
+			UserService:      getEnv(constants.EnvUserServiceURL, constants.DefaultUserServiceURL),
+			InventoryService: getEnv(constants.EnvInventoryServiceURL, constants.DefaultInventoryServiceURL),
 		},
 	}, nil
 }

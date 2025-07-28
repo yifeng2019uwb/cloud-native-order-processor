@@ -33,11 +33,8 @@ COMMANDS:
     install                 Install Go dependencies
     build                   Build the gateway binary
     run                     Run the gateway server
-    dev                     Run in development mode
     test                    Run tests with coverage
-    lint                    Run linting checks
-    format                  Format Go code
-    clean                   Clean build artifacts
+    stop                    Stop running gateway
 
 OPTIONS:
     -p, --port PORT         Set server port (default: ${DEFAULT_PORT})
@@ -48,18 +45,18 @@ EXAMPLES:
     $0 install              # Install dependencies
     $0 build                # Build binary
     $0 run                  # Run server
-    $0 dev                  # Run in development mode
     $0 test                 # Run tests
+    $0 stop                 # Stop running gateway
     $0 --port 9090 run      # Run on port 9090
 
 ENVIRONMENT VARIABLES:
-    GATEWAY_PORT            Server port
-    GATEWAY_HOST            Server host
-    REDIS_HOST              Redis host
-    REDIS_PORT              Redis port
+    GATEWAY_PORT            Server port (default: 8080)
+    GATEWAY_HOST            Server host (default: 0.0.0.0)
+    REDIS_HOST              Redis host (default: localhost)
+    REDIS_PORT              Redis port (default: 6379)
     REDIS_PASSWORD          Redis password
-    REDIS_DB                Redis database number
-    REDIS_SSL               Redis SSL (true/false)
+    REDIS_DB                Redis database number (default: 0)
+    REDIS_SSL               Redis SSL (default: false)
     USER_SERVICE_URL        User service URL
     INVENTORY_SERVICE_URL   Inventory service URL
 
@@ -138,54 +135,7 @@ run_tests() {
 
 
 
-# Function to run linting
-run_lint() {
-    print_info "Running linting checks..."
 
-    # Check if golangci-lint is installed
-    if ! command -v golangci-lint &> /dev/null; then
-        print_warning "golangci-lint not found. Installing..."
-        go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-    fi
-
-    # Run linting
-    golangci-lint run
-
-    print_success "Linting completed"
-}
-
-# Function to format code
-format_code() {
-    print_info "Formatting Go code..."
-
-    # Format all Go files
-    go fmt ./...
-
-    # Run goimports if available
-    if command -v goimports &> /dev/null; then
-        find . -name "*.go" -not -path "./vendor/*" -exec goimports -w {} \;
-    else
-        print_warning "goimports not found. Install with: go install golang.org/x/tools/cmd/goimports@latest"
-    fi
-
-    print_success "Code formatting completed"
-}
-
-# Function to clean build artifacts
-clean_build() {
-    print_info "Cleaning build artifacts..."
-
-    # Remove binary
-    rm -f gateway
-
-    # Remove coverage files
-    rm -rf coverage/
-
-    # Clean Go cache
-    go clean -cache -testcache
-
-    print_success "Cleanup completed"
-}
 
 
 
@@ -223,18 +173,17 @@ run_gateway() {
     ./gateway
 }
 
-# Function to run in development mode
-run_dev() {
-    print_info "Starting gateway in development mode..."
+# Function to stop gateway
+stop_gateway() {
+    print_info "Stopping gateway..."
 
-    # Check if air is installed for hot reload
-    if command -v air &> /dev/null; then
-        print_info "Using air for hot reload..."
-        air
+    # Find and kill gateway process
+    local pids=$(pgrep -f "./gateway")
+    if [ -n "$pids" ]; then
+        echo "$pids" | xargs kill
+        print_success "Gateway stopped"
     else
-        print_warning "air not found. Install with: go install github.com/cosmtrek/air@latest"
-        print_info "Running without hot reload..."
-        run_gateway
+        print_warning "Gateway is not running"
     fi
 }
 
@@ -250,7 +199,7 @@ while [[ $# -gt 0 ]]; do
             show_usage
             exit 0
             ;;
-        install|build|run|dev|test|lint|format|clean)
+        install|build|run|test|stop)
             COMMAND="$1"
             shift
             ;;
@@ -294,21 +243,11 @@ case $COMMAND in
         build_gateway
         run_gateway
         ;;
-    dev)
-        build_gateway
-        run_dev
-        ;;
     test)
         run_tests
         ;;
-    lint)
-        run_lint
-        ;;
-    format)
-        format_code
-        ;;
-    clean)
-        clean_build
+    stop)
+        stop_gateway
         ;;
 
     "")
