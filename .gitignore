@@ -98,6 +98,23 @@ venv.bak/
 # OS
 .DS_Store
 Thumbs.db
+
+# Go build artifacts
+gateway/gateway
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go test artifacts
+*.test
+*.out
+coverage/
+
+# Go workspace file
+go.work
+
 EOF
 
 # Lambda Package Dependencies (IMPORTANT!)
