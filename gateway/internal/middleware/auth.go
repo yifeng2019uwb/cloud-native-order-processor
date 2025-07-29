@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"order-processor-gateway/internal/config"
 	"order-processor-gateway/pkg/constants"
 	"order-processor-gateway/pkg/models"
 
@@ -24,7 +25,7 @@ type JWTClaims struct {
 
 // AuthMiddleware validates JWT tokens and extracts user information
 // Phase 1: Simple JWT validation with basic error handling
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract token from Authorization header
 		authHeader := c.GetHeader(constants.AuthorizationHeader)
@@ -46,7 +47,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		tokenString := tokenParts[1]
 
 		// Validate JWT token
-		userContext, err := validateJWT(tokenString)
+		userContext, err := validateJWT(tokenString, cfg)
 		if err != nil {
 			handleAuthError(c, models.ErrAuthInvalidToken, fmt.Sprintf("Token validation failed: %v", err))
 			return
@@ -64,14 +65,14 @@ func AuthMiddleware() gin.HandlerFunc {
 // validateJWT validates a JWT token and returns user context
 // Phase 1: Simple JWT validation
 // Phase 2: Add Redis blacklist check
-func validateJWT(tokenString string) (*models.UserContext, error) {
+func validateJWT(tokenString string, cfg *config.Config) (*models.UserContext, error) {
 	// Parse and validate token
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// Validate signing method
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte(constants.JWTSecretKey), nil
+		return []byte(cfg.JWT.SecretKey), nil
 	})
 
 	if err != nil {

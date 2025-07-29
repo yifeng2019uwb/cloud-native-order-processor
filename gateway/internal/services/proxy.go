@@ -193,7 +193,10 @@ func generateRequestID() string {
 // GetRouteConfig returns the route configuration for a given path
 func (p *ProxyService) GetRouteConfig(path string) (*constants.RouteConfig, bool) {
 	config, exists := constants.RouteConfigs[path]
-	return &config, exists
+	if !exists {
+		return nil, false
+	}
+	return &config, true
 }
 
 // GetTargetService determines the target service for a given path

@@ -58,6 +58,8 @@ const (
 	EnvRedisSSL            = "REDIS_SSL"
 	EnvUserServiceURL      = "USER_SERVICE_URL"
 	EnvInventoryServiceURL = "INVENTORY_SERVICE_URL"
+	EnvJWTSecretKey        = "JWT_SECRET_KEY"
+	EnvJWTAlgorithm        = "JWT_ALGORITHM"
 )
 
 // Default service URLs
@@ -222,8 +224,8 @@ const (
 
 // Phase 1: JWT configuration
 const (
-	JWTSecretKey = "dev-secret-key-change-in-production" // TODO: Use environment variable
-	JWTAlgorithm = "HS256"
+	DefaultJWTSecretKey = "dev-secret-key-change-in-production" // TODO: Use environment variable
+	DefaultJWTAlgorithm = "HS256"
 )
 
 // Phase 1: Circuit breaker configuration (TODO - Phase 2)
