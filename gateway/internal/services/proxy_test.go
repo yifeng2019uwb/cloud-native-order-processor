@@ -343,6 +343,92 @@ func TestProxyRequestWithUserContext(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
+// TestProxyRequestWithQueryParams tests proxy request with query parameters
+func TestProxyRequestWithQueryParams(t *testing.T) {
+	cfg := &config.Config{
+		Services: config.ServicesConfig{
+			UserService:      "http://user-service:8000",
+			InventoryService: "http://inventory-service:8001",
+		},
+	}
+
+	service := NewProxyService(cfg)
+	ctx := context.Background()
+
+	queryParams := map[string]string{
+		"limit":       "10",
+		"active_only": "true",
+		"test":        "value",
+	}
+
+	proxyReq := &models.ProxyRequest{
+		Method:        "GET",
+		Path:          "/assets",
+		Headers:       nil,
+		Body:          nil,
+		QueryParams:   queryParams,
+		TargetService: "inventory_service",
+		TargetPath:    "/assets",
+		Context: &models.RequestContext{
+			RequestID:   "test-123",
+			Timestamp:   time.Now(),
+			ServiceName: "inventory_service",
+		},
+	}
+
+	resp, err := service.ProxyRequest(ctx, proxyReq)
+
+	// Expected to fail without real backend service
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+}
+
+// TestBuildTargetURLWithQueryParams tests URL building with query parameters
+func TestBuildTargetURLWithQueryParams(t *testing.T) {
+	cfg := &config.Config{
+		Services: config.ServicesConfig{
+			UserService:      "http://user-service:8000",
+			InventoryService: "http://inventory-service:8001",
+		},
+	}
+
+	service := NewProxyService(cfg)
+
+	// Test inventory service with query parameters
+	proxyReq := &models.ProxyRequest{
+		Method:  "GET",
+		Path:    "/assets",
+		Headers: nil,
+		Body:    nil,
+		QueryParams: map[string]string{
+			"limit":       "10",
+			"active_only": "true",
+		},
+		TargetService: "inventory_service",
+		TargetPath:    "/assets",
+		Context: &models.RequestContext{
+			RequestID:   "test-123",
+			Timestamp:   time.Now(),
+			ServiceName: "inventory_service",
+		},
+	}
+
+	targetURL, err := service.buildTargetURL(proxyReq)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://inventory-service:8001/assets?active_only=true&limit=10", targetURL)
+
+	// Test user service with query parameters
+	proxyReq.TargetService = "user_service"
+	proxyReq.TargetPath = "/profile"
+	proxyReq.QueryParams = map[string]string{
+		"include_details": "true",
+	}
+
+	targetURL, err = service.buildTargetURL(proxyReq)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://user-service:8000/profile?include_details=true", targetURL)
+}
+
 // BenchmarkProxyRequest benchmarks the proxy request performance
 func BenchmarkProxyRequest(b *testing.B) {
 	cfg := &config.Config{

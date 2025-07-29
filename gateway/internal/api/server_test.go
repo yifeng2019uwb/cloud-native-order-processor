@@ -206,6 +206,68 @@ func TestServerStart(t *testing.T) {
 	assert.NotNil(t, server.proxyService)
 }
 
+func TestQueryParametersHandling(t *testing.T) {
+	server, _ := setupTestServer()
+
+	t.Run("Assets with limit parameter", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", constants.APIV1Path+constants.InventoryAssetsPath+"?limit=10&active_only=true", nil)
+		server.router.ServeHTTP(w, req)
+
+		// Expected to fail with 403 due to insufficient permissions
+		// But the query parameters should be properly handled
+		assert.Equal(t, http.StatusForbidden, w.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+
+		// Check for error response structure
+		assert.Contains(t, response, "error")
+		assert.Contains(t, response, "message")
+		assert.Contains(t, response, "code")
+		assert.Contains(t, response, "timestamp")
+	})
+
+	t.Run("Assets with active_only parameter", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", constants.APIV1Path+constants.InventoryAssetsPath+"?active_only=false", nil)
+		server.router.ServeHTTP(w, req)
+
+		// Expected to fail with 403 due to insufficient permissions
+		assert.Equal(t, http.StatusForbidden, w.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+
+		// Check for error response structure
+		assert.Contains(t, response, "error")
+		assert.Contains(t, response, "message")
+		assert.Contains(t, response, "code")
+		assert.Contains(t, response, "timestamp")
+	})
+
+	t.Run("Assets with multiple parameters", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", constants.APIV1Path+constants.InventoryAssetsPath+"?limit=50&active_only=true&test=value", nil)
+		server.router.ServeHTTP(w, req)
+
+		// Expected to fail with 403 due to insufficient permissions
+		assert.Equal(t, http.StatusForbidden, w.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+
+		// Check for error response structure
+		assert.Contains(t, response, "error")
+		assert.Contains(t, response, "message")
+		assert.Contains(t, response, "code")
+		assert.Contains(t, response, "timestamp")
+	})
+}
+
 func BenchmarkHealthCheck(b *testing.B) {
 	server, _ := setupTestServer()
 

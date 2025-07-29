@@ -167,12 +167,21 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		headers[key] = values[0] // Take first value
 	}
 
+	// Prepare query parameters
+	queryParams := make(map[string]string)
+	for key, values := range c.Request.URL.Query() {
+		if len(values) > 0 {
+			queryParams[key] = values[0] // Take first value
+		}
+	}
+
 	// Create proxy request
 	proxyReq := &models.ProxyRequest{
 		Method:        c.Request.Method,
 		Path:          path,
 		Headers:       headers,
 		Body:          body,
+		QueryParams:   queryParams,
 		TargetService: targetService,
 		TargetPath:    s.stripAPIPrefix(path),
 		Context: &models.RequestContext{
