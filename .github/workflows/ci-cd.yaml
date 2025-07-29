@@ -4,13 +4,14 @@ name: CI/CD Pipeline
 # Additional jobs can be enabled via environment variables
 #
 # HOW TO ENABLE JOBS:
-# 1. Terraform Plan: Set ENABLE_TERRAFORM_PLAN=true (default: enabled)
-# 2. Integration Tests: Set ENABLE_INTEGRATION_TESTS=true (default: disabled)
-# 3. Terraform Apply: Set ENABLE_TERRAFORM_APPLY=true (default: disabled)
+# 1. Terraform Plan: Set ENABLE_TERRAFORM_PLAN=true in repository variables
+# 2. Integration Tests: Set ENABLE_INTEGRATION_TESTS=true in repository variables
+# 3. Terraform Apply: Set ENABLE_TERRAFORM_APPLY=true in repository variables
 #
-# To enable jobs, either:
-# - Set environment variables in GitHub repository settings
-# - Or modify the env section below
+# To enable jobs:
+# - Go to Settings → Secrets and variables → Actions → Variables
+# - Add repository variables with the names above
+# - Set values to 'true' to enable, 'false' or leave unset to disable
 #
 # COST AWARENESS:
 # - Test job: $0 (free)
@@ -28,10 +29,10 @@ env:
   PYTHON_VERSION: '3.11'
   GO_VERSION: '1.24'
   NODE_VERSION: '18'
-  # Control flags for additional jobs
-  ENABLE_TERRAFORM_PLAN: 'true'      # Always validate infrastructure changes
-  ENABLE_INTEGRATION_TESTS: 'false'  # Disabled - enable when ready
-  ENABLE_TERRAFORM_APPLY: 'false'    # Disabled - enable when ready
+  # Control flags for additional jobs (set in repository settings)
+  # ENABLE_TERRAFORM_PLAN: 'true'      # Always validate infrastructure changes
+  # ENABLE_INTEGRATION_TESTS: 'false'  # Disabled - enable when ready
+  # ENABLE_TERRAFORM_APPLY: 'false'    # Disabled - enable when ready
 
 jobs:
   # Job 1: CI - Always runs (FREE) - Tests and validation only
@@ -114,7 +115,7 @@ jobs:
   terraform-plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
-    if: ${{ env.ENABLE_TERRAFORM_PLAN == 'true' }}
+    if: ${{ vars.ENABLE_TERRAFORM_PLAN == 'true' }}
     needs: test
 
     steps:
@@ -164,7 +165,7 @@ jobs:
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
-    if: ${{ env.ENABLE_INTEGRATION_TESTS == 'true' }}
+    if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
     needs: [test, terraform-plan]
 
     steps:
@@ -201,7 +202,7 @@ jobs:
   terraform-apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    if: ${{ env.ENABLE_TERRAFORM_APPLY == 'true' }}
+    if: ${{ vars.ENABLE_TERRAFORM_APPLY == 'true' }}
     needs: [test, terraform-plan, integration-tests]
     environment: production
 
