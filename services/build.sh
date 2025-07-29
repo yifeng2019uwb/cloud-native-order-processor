@@ -12,31 +12,21 @@ DEFAULT_TEST_COVERAGE_THRESHOLD=60
 # Function to show usage
 show_usage() {
     cat << EOF
-Universal Build Script for Python Microservices
+Services Build Script
 
-Usage: $0 [OPTIONS] [SERVICE_NAME]
+Usage: $0 [OPTIONS]
 
 OPTIONS:
     -h, --help              Show this help message
-    -c, --clean             Clean build artifacts before building
-    -t, --test-only         Run tests only, skip building
     -b, --build-only        Build only, skip tests
+    -t, --test-only         Run tests only, skip building
     -v, --verbose           Enable verbose output
-    -p, --python VERSION    Specify Python version (default: ${DEFAULT_PYTHON_VERSION})
-    --coverage THRESHOLD    Set test coverage threshold (default: ${DEFAULT_TEST_COVERAGE_THRESHOLD})
-    --no-coverage           Skip coverage reporting
-    --install-deps          Install dependencies only
-
-SERVICE_NAME:
-    Name of the service to build (e.g., order-service, common)
-    If not specified, will attempt to detect from current directory
 
 Examples:
-    $0                                  # Build current service/package
-    $0 order-service                    # Build order-service
-    $0 common                           # Build common package
-    $0 --clean --verbose order-service  # Clean build with verbose output
-    $0 --test-only                      # Run tests only
+    $0                      # Build and test all services (default)
+    $0 --build-only         # Build only
+    $0 --test-only          # Run tests only
+    $0 -v                   # Verbose output
 
 EOF
 }
@@ -345,15 +335,9 @@ generate_coverage_summary() {
 
 # Main function
 main() {
-    local service_name=""
-    local clean=false
     local test_only=false
     local build_only=false
     local verbose=false
-    local python_version="$DEFAULT_PYTHON_VERSION"
-    local coverage_threshold="$DEFAULT_TEST_COVERAGE_THRESHOLD"
-    local no_coverage=false
-    local install_deps_only=false
 
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
@@ -361,10 +345,6 @@ main() {
             -h|--help)
                 show_usage
                 exit 0
-                ;;
-            -c|--clean)
-                clean=true
-                shift
                 ;;
             -t|--test-only)
                 test_only=true
@@ -378,155 +358,115 @@ main() {
                 verbose=true
                 shift
                 ;;
-            -p|--python)
-                python_version="$2"
-                shift 2
-                ;;
-            --coverage)
-                coverage_threshold="$2"
-                shift 2
-                ;;
-            --no-coverage)
-                no_coverage=true
-                shift
-                ;;
-            --install-deps)
-                install_deps_only=true
-                shift
-                ;;
             -*)
                 echo "Unknown option: $1"
                 show_usage
                 exit 1
                 ;;
             *)
-                service_name="$1"
-                shift
+                echo "Unknown argument: $1"
+                show_usage
+                exit 1
                 ;;
         esac
     done
 
-    # Detect service name if not provided
-    if [[ -z "$service_name" ]]; then
-        service_name=$(detect_service_name)
-        if [[ "$service_name" == "ALL_SERVICES" ]]; then
-            echo "No service specified - building all services"
-
-            # Get list of available services
-            local services=()
-            for dir in */; do
-                if [[ -d "$dir" && "$dir" != "*/" ]]; then
-                    services+=("${dir%/}")
-                fi
-            done
-
-            if [[ ${#services[@]} -eq 0 ]]; then
-                echo "No services found in current directory"
-                exit 1
-            fi
-
-            echo "Found services: ${services[*]}"
-
-
-            # Build each service
-            local failed_services=()
-            for service in "${services[@]}"; do
-                echo ""
-                echo "========================================"
-                echo "Building service: $service"
-                echo "========================================"
-
-                # Run the script recursively for each service
-                if ./build.sh "$@" "$service"; then
-                    echo "✅ $service completed successfully"
-                else
-                    echo "❌ $service failed"
-                    failed_services+=("$service")
-                fi
-            done
-
-            # Generate coverage summary
-            generate_coverage_summary
-
-            # Report results
-            echo ""
-            echo "========================================"
-            echo "BUILD SUMMARY"
-            echo "========================================"
-
-            if [[ ${#failed_services[@]} -eq 0 ]]; then
-                echo "✅ All services built successfully: ${services[*]}"
-                exit 0
-            else
-                echo "❌ Failed services: ${failed_services[*]}"
-                echo "✅ Successful services: $(printf '%s\n' "${services[@]}" | grep -v "$(printf '%s\n' "${failed_services[@]}")" | tr '\n' ' ')"
-                exit 1
-            fi
-        else
-            echo "Detected service: $service_name"
-        fi
+    # Set verbose mode
+    if [[ "$verbose" == "true" ]]; then
+        set -x
     fi
 
-    # Get service directory
-    local service_dir=$(get_service_directory "$service_name")
-    local original_dir="$PWD"
+    # Change to services directory
+    cd "$(dirname "$0")"
+    echo "Working directory: $(pwd)"
 
-    # Change to service directory
-    if [[ "$service_dir" != "." ]]; then
-        echo "Changing to service directory: $service_dir"
-        if cd "$service_dir"; then
-            echo "Now in directory: $(pwd)"
-        else
-            echo "Failed to change to directory: $service_dir"
-            exit 1
+    # Get list of available services
+    local services=()
+    for dir in */; do
+        if [[ -d "$dir" && "$dir" != "*/" ]]; then
+            services+=("${dir%/}")
         fi
-    else
-        echo "Already in correct directory: $(pwd)"
+    done
+
+    if [[ ${#services[@]} -eq 0 ]]; then
+        echo "No services found in current directory"
+        exit 1
     fi
+
+    echo "Found services: ${services[*]}"
 
     # Check Python version
     local python_cmd=$(check_python_version)
     echo "Using Python: $python_cmd"
 
-    # Clean if requested
-    if [[ "$clean" == "true" ]]; then
-        clean_build
-    fi
-
-
-    # Setup virtual environment
-    setup_virtual_env "$python_cmd" "$service_name"
-
-    # Install dependencies
-    install_dependencies "$service_name"
-
-    # If only installing dependencies, exit here
-    if [[ "$install_deps_only" == "true" ]]; then
-        echo "Dependencies installed successfully"
-        cd "$original_dir"
+    # Main execution logic
+    if [[ "$test_only" == "true" ]]; then
+        # For test-only, assume code is already built, just run tests
+        echo "Running tests only for all services"
+        for service in "${services[@]}"; do
+            echo "Testing service: $service"
+            cd "$service"
+            setup_virtual_env "$python_cmd" "$service"
+            install_dependencies "$service"
+            run_tests "" "false" "$verbose" "$service"
+            cd ..
+        done
         exit 0
     fi
 
-    # Set up CI/CD environment variables before running tests
-    setup_ci_environment "$service_name"
+    if [[ "$build_only" == "true" ]]; then
+        # For build-only, install deps and build
+        echo "Building only for all services"
+        for service in "${services[@]}"; do
+            echo "Building service: $service"
+            cd "$service"
+            setup_virtual_env "$python_cmd" "$service"
+            install_dependencies "$service"
+            build_package "$service"
+            cd ..
+        done
+        exit 0
+    fi
 
-    # Run tests (unless build-only is specified)
-    if [[ "$build_only" != "true" ]]; then
-        if ! run_tests "$coverage_threshold" "$no_coverage" "$verbose" "$service_name"; then
-            cd "$original_dir"
-            exit 1
+    # Default: build and test all services
+    echo "Building and testing all services"
+    local failed_services=()
+    for service in "${services[@]}"; do
+        echo ""
+        echo "========================================"
+        echo "Building service: $service"
+        echo "========================================"
+
+        cd "$service"
+        setup_virtual_env "$python_cmd" "$service"
+        install_dependencies "$service"
+
+        if run_tests "" "false" "$verbose" "$service"; then
+            build_package "$service"
+            echo "✅ $service completed successfully"
+        else
+            echo "❌ $service failed"
+            failed_services+=("$service")
         fi
+
+        cd ..
+    done
+
+    # Report results
+    echo ""
+    echo "========================================"
+    echo "BUILD SUMMARY"
+    echo "========================================"
+
+    if [[ ${#failed_services[@]} -eq 0 ]]; then
+        echo "✅ All services built successfully: ${services[*]}"
+        echo "Services build and test completed successfully!"
+        exit 0
+    else
+        echo "❌ Failed services: ${failed_services[*]}"
+        echo "✅ Successful services: $(printf '%s\n' "${services[@]}" | grep -v "$(printf '%s\n' "${failed_services[@]}")" | tr '\n' ' ')"
+        exit 1
     fi
-
-    # Build package (unless test-only is specified)
-    if [[ "$test_only" != "true" ]]; then
-        build_package "$service_name"
-    fi
-
-    echo "Build completed successfully for: $service_name"
-
-    # Return to original directory
-    cd "$original_dir"
 }
 
 # Run main function with all arguments

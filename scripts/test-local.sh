@@ -36,6 +36,12 @@ RUN_INTEGRATION_TESTS=false
 RUN_DESTROY=false
 RUN_ALL=false
 
+# Component flags
+RUN_FRONTEND=false
+RUN_GATEWAY=false
+RUN_SERVICES=false
+COMPONENT=""
+
 # Workflow flags
 APP_ONLY=false
 DEV_CYCLE=false
@@ -62,6 +68,12 @@ JOB OPTIONS:
     --destroy                      Only destroy infrastructure
     --all                          Full pipeline: build → deploy → app → test → destroy
 
+COMPONENT OPTIONS:
+    --frontend                     Build and test frontend only
+    --gateway                      Build and test gateway only
+    --services                     Build and test backend services only
+    --component COMPONENT          Build and test specific component (frontend|gateway|services)
+
 WORKFLOW OPTIONS:
     --dev-cycle                    Deploy → App → Test (skip destroy for iteration)
     --keep-environment             Don't destroy after testing
@@ -83,6 +95,12 @@ EXAMPLES:
     $0 --environment dev --build       # Build tests only
     $0 --environment dev --deploy      # Deploy infra only
     $0 --environment dev --destroy     # Cleanup only
+
+    # Component-level testing
+    $0 --frontend                     # Build and test frontend only
+    $0 --gateway                      # Build and test gateway only
+    $0 --services                     # Build and test backend services only
+    $0 --component frontend           # Build and test specific component
 
 COST AWARENESS:
     - Default environmentis 'dev' for cost control
@@ -162,6 +180,22 @@ parse_arguments() {
                 RUN_ALL=true
                 shift
                 ;;
+            --frontend)
+                RUN_FRONTEND=true
+                shift
+                ;;
+            --gateway)
+                RUN_GATEWAY=true
+                shift
+                ;;
+            --services)
+                RUN_SERVICES=true
+                shift
+                ;;
+            --component)
+                COMPONENT="$2"
+                shift 2
+                ;;
             --dev-cycle)
                 DEV_CYCLE=true
                 shift
@@ -195,8 +229,8 @@ validate_arguments() {
     fi
 
     # Check that at least one job is selected
-    if [[ "$RUN_BUILD_TESTS" == "false" && "$RUN_DEPLOY" == "false" && "$RUN_APP_DEPLOY" == "false" && "$RUN_INTEGRATION_TESTS" == "false" && "$RUN_DESTROY" == "false" && "$RUN_ALL" == "false" && "$DEV_CYCLE" == "false" ]]; then
-        errors+=("At least one job must be selected (--build, --deploy, --app, --test, --destroy, --all, or --dev-cycle)")
+    if [[ "$RUN_BUILD_TESTS" == "false" && "$RUN_DEPLOY" == "false" && "$RUN_APP_DEPLOY" == "false" && "$RUN_INTEGRATION_TESTS" == "false" && "$RUN_DESTROY" == "false" && "$RUN_ALL" == "false" && "$DEV_CYCLE" == "false" && "$RUN_FRONTEND" == "false" && "$RUN_GATEWAY" == "false" && "$RUN_SERVICES" == "false" && -z "$COMPONENT" ]]; then
+        errors+=("At least one job must be selected (--build, --deploy, --app, --test, --destroy, --all, --dev-cycle, --frontend, --gateway, --services, or --component)")
     fi
 
     # Validate combinations
@@ -288,6 +322,104 @@ run_build_tests() {
 
     log_success "Build and validation tests completed successfully"
     return 0
+}
+
+# Build and test frontend
+run_frontend_tests() {
+    log_step "🎨 Frontend Build and Test"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "Dry-run: Would run frontend build and test"
+        return 0
+    fi
+
+    local build_args=""
+
+    if [[ "$VERBOSE" == "true" ]]; then
+        build_args="$build_args -v"
+    fi
+
+    log_info "Calling: ./frontend/build.sh $build_args"
+
+    if ! ./frontend/build.sh $build_args; then
+        log_error "Frontend build and test failed"
+        return 1
+    fi
+
+    log_success "Frontend build and test completed successfully"
+    return 0
+}
+
+# Build and test gateway
+run_gateway_tests() {
+    log_step "🚪 Gateway Build and Test"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "Dry-run: Would run gateway build and test"
+        return 0
+    fi
+
+    local build_args=""
+
+    if [[ "$VERBOSE" == "true" ]]; then
+        build_args="$build_args -v"
+    fi
+
+    log_info "Calling: ./gateway/build.sh $build_args"
+
+    if ! ./gateway/build.sh $build_args; then
+        log_error "Gateway build and test failed"
+        return 1
+    fi
+
+    log_success "Gateway build and test completed successfully"
+    return 0
+}
+
+# Build and test backend services
+run_services_tests() {
+    log_step "🔧 Backend Services Build and Test"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "Dry-run: Would run backend services build and test"
+        return 0
+    fi
+
+    local build_args=""
+
+    if [[ "$VERBOSE" == "true" ]]; then
+        build_args="$build_args --verbose"
+    fi
+
+    log_info "Calling: cd services && ./build.sh $build_args"
+
+    if ! (cd services && ./build.sh $build_args); then
+        log_error "Backend services build and test failed"
+        return 1
+    fi
+
+    log_success "Backend services build and test completed successfully"
+    return 0
+}
+
+# Run component-specific tests
+run_component_tests() {
+    case "$COMPONENT" in
+        frontend)
+            run_frontend_tests
+            ;;
+        gateway)
+            run_gateway_tests
+            ;;
+        services)
+            run_services_tests
+            ;;
+        *)
+            log_error "Unknown component: $COMPONENT"
+            log_info "Valid components: frontend, gateway, services"
+            return 1
+            ;;
+    esac
 }
 
 # Deploy infrastructure
@@ -433,7 +565,34 @@ execute_workflow() {
     fi
 
     # Execute jobs in sequence
-    if [[ "$RUN_BUILD_TESTS" == "true" ]]; then
+
+    # Component-specific testing (takes precedence over full build tests)
+    if [[ "$RUN_FRONTEND" == "true" ]]; then
+        if ! run_frontend_tests; then
+            failed_jobs+=("Frontend Tests")
+        fi
+    fi
+
+    if [[ "$RUN_GATEWAY" == "true" ]]; then
+        if ! run_gateway_tests; then
+            failed_jobs+=("Gateway Tests")
+        fi
+    fi
+
+    if [[ "$RUN_SERVICES" == "true" ]]; then
+        if ! run_services_tests; then
+            failed_jobs+=("Services Tests")
+        fi
+    fi
+
+    if [[ -n "$COMPONENT" ]]; then
+        if ! run_component_tests; then
+            failed_jobs+=("Component Tests ($COMPONENT)")
+        fi
+    fi
+
+    # Full build tests (only if no component-specific tests are running)
+    if [[ "$RUN_BUILD_TESTS" == "true" && "$RUN_FRONTEND" != "true" && "$RUN_GATEWAY" != "true" && "$RUN_SERVICES" != "true" && -z "$COMPONENT" ]]; then
         if ! run_build_tests; then
             failed_jobs+=("Build Tests")
         fi
@@ -517,6 +676,10 @@ main() {
     [[ "$RUN_APP_DEPLOY" == "true" ]] && selected_jobs+=("App")
     [[ "$RUN_INTEGRATION_TESTS" == "true" ]] && selected_jobs+=("Test")
     [[ "$RUN_DESTROY" == "true" ]] && selected_jobs+=("Destroy")
+    [[ "$RUN_FRONTEND" == "true" ]] && selected_jobs+=("Frontend")
+    [[ "$RUN_GATEWAY" == "true" ]] && selected_jobs+=("Gateway")
+    [[ "$RUN_SERVICES" == "true" ]] && selected_jobs+=("Services")
+    [[ -n "$COMPONENT" ]] && selected_jobs+=("Component($COMPONENT)")
     [[ "$RUN_ALL" == "true" ]] && selected_jobs=("All")
     [[ "$DEV_CYCLE" == "true" ]] && selected_jobs=("Dev-Cycle")
 

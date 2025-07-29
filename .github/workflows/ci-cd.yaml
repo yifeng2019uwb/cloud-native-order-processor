@@ -1,6 +1,23 @@
 name: CI/CD Pipeline
 
 # CI runs automatically (free) - tests and builds only
+# Additional jobs can be enabled via environment variables
+#
+# HOW TO ENABLE JOBS:
+# 1. Terraform Plan: Set ENABLE_TERRAFORM_PLAN=true (default: enabled)
+# 2. Integration Tests: Set ENABLE_INTEGRATION_TESTS=true (default: disabled)
+# 3. Terraform Apply: Set ENABLE_TERRAFORM_APPLY=true (default: disabled)
+#
+# To enable jobs, either:
+# - Set environment variables in GitHub repository settings
+# - Or modify the env section below
+#
+# COST AWARENESS:
+# - Test job: $0 (free)
+# - Terraform Plan: $0 (free)
+# - Integration Tests: ~$5-10 per run
+# - Terraform Apply: ~$20-50/day ongoing
+
 on:
   push:
     branches: [ main, develop ]
@@ -9,6 +26,12 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
+  GO_VERSION: '1.24'
+  NODE_VERSION: '18'
+  # Control flags for additional jobs
+  ENABLE_TERRAFORM_PLAN: 'true'      # Always validate infrastructure changes
+  ENABLE_INTEGRATION_TESTS: 'false'  # Disabled - enable when ready
+  ENABLE_TERRAFORM_APPLY: 'false'    # Disabled - enable when ready
 
 jobs:
   # Job 1: CI - Always runs (FREE) - Tests and validation only
@@ -20,9 +43,24 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # Setup Node.js for frontend
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
     # Main frontend build step for CI/CD
     - name: Build and Test Frontend
-      run: scripts/build-test-frontend.sh -v
+      run: ./frontend/build.sh -v
+
+    # Setup Go for gateway
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -42,11 +80,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest pytest-cov
 
-    - name: 🧪 Run Unified Build and Tests
-      run: |
-        cd services
-        # Test all services using the unified Makefile
-        make test-all
+    # Build and test gateway
+    - name: Build and Test Gateway
+      run: ./gateway/build.sh -v
+
+    # Build and test backend services
+    - name: Build and Test Backend Services
+      run: ./services/build.sh -v
 
     - name: Upload test coverage
       uses: actions/upload-artifact@v4
@@ -55,6 +95,7 @@ jobs:
         path: |
           services/*/htmlcov/
           services/*/coverage.xml
+          gateway/coverage.out
         retention-days: 7
 
     - name: 📊 Test Summary
@@ -62,8 +103,140 @@ jobs:
         echo "=== 🧪 CI Pipeline Summary ==="
         echo ""
         echo "✅ Frontend: Built and tested"
+        echo "✅ Gateway: Built and tested"
         echo "✅ Backend Services: Built and tested"
         echo "✅ Coverage: Reports uploaded"
         echo ""
         echo "🎉 CI pipeline completed successfully!"
         echo "💰 Cost: $0 (no AWS resources used)"
+
+  # Job 2: Terraform Plan - Validates infrastructure changes
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    if: ${{ env.ENABLE_TERRAFORM_PLAN == 'true' }}
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: "1.5.0"
+
+    - name: Setup AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-2
+
+    - name: Terraform Init
+      run: |
+        cd terraform
+        terraform init
+
+    - name: Terraform Plan
+      run: |
+        cd terraform
+        terraform plan -out=tfplan
+      env:
+        TF_VAR_environment: dev
+
+    - name: Upload Terraform Plan
+      uses: actions/upload-artifact@v4
+      with:
+        name: terraform-plan
+        path: terraform/tfplan
+        retention-days: 1
+
+    - name: Terraform Plan Summary
+      run: |
+        echo "=== 🏗️ Terraform Plan Summary ==="
+        echo ""
+        echo "✅ Infrastructure changes validated"
+        echo "✅ Plan artifact uploaded"
+        echo "💰 Cost: $0 (plan only, no resources created)"
+
+  # Job 3: Integration Tests - End-to-end testing (DISABLED)
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    if: ${{ env.ENABLE_INTEGRATION_TESTS == 'true' }}
+    needs: [test, terraform-plan]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        cd integration_tests
+        pip install -r requirements.txt
+
+    - name: Run Integration Tests
+      run: |
+        cd integration_tests
+        python -m pytest -v
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-west-2
+
+    - name: Integration Tests Summary
+      run: |
+        echo "=== 🧪 Integration Tests Summary ==="
+        echo ""
+        echo "✅ End-to-end tests completed"
+        echo "💰 Cost: ~$5-10 (AWS resources for testing)"
+
+  # Job 4: Terraform Apply - Deploy infrastructure (DISABLED)
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    if: ${{ env.ENABLE_TERRAFORM_APPLY == 'true' }}
+    needs: [test, terraform-plan, integration-tests]
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: "1.5.0"
+
+    - name: Setup AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-2
+
+    - name: Download Terraform Plan
+      uses: actions/download-artifact@v4
+      with:
+        name: terraform-plan
+        path: terraform/
+
+    - name: Terraform Apply
+      run: |
+        cd terraform
+        terraform apply tfplan
+      env:
+        TF_VAR_environment: prod
+
+    - name: Terraform Apply Summary
+      run: |
+        echo "=== 🚀 Terraform Apply Summary ==="
+        echo ""
+        echo "✅ Infrastructure deployed successfully"
+        echo "💰 Cost: ~$20-50/day (production resources)"

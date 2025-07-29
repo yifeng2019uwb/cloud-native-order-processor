@@ -33,16 +33,17 @@ help:
 	@echo "$(GREEN)Development Cycle:$(NC)"
 	@echo "  dev-cycle          - Complete cycle: clean → build → test → deploy → integration-test"
 	@echo "  quick-cycle        - Fast cycle: build → deploy → smoke-test"
+	@echo "  test-local         - Local testing (mirrors CI/CD workflow)"
 	@echo ""
 	@echo "$(GREEN)Individual Steps:$(NC)"
 	@echo "  clean              - Clean all build artifacts and containers"
-	@echo "  build              - Build all Docker images"
-	@echo "  test               - Run unit tests for all services"
+	@echo "  build              - Build all components using new build scripts"
+	@echo "  test               - Run unit tests for all components"
 	@echo "  deploy             - Deploy to Kubernetes"
 	@echo "  test-integration   - Run integration tests"
 	@echo "  test-e2e           - Run end-to-end tests"
 	@echo ""
-	@echo "$(GREEN)Service-specific:$(NC)"
+	@echo "$(GREEN)Component-specific:$(NC)"
 	@echo "  build-frontend     - Build frontend only"
 	@echo "  build-gateway      - Build gateway only"
 	@echo "  build-services     - Build backend services only"
@@ -50,8 +51,10 @@ help:
 	@echo "$(GREEN)Testing:$(NC)"
 	@echo "  test-frontend      - Run frontend tests"
 	@echo "  test-gateway       - Run gateway tests"
-	@echo "  test-user-service  - Run user service tests"
-	@echo "  test-inventory     - Run inventory service tests"
+	@echo "  test-services      - Run backend services tests"
+	@echo "  test-local-frontend - Local frontend testing"
+	@echo "  test-local-gateway  - Local gateway testing"
+	@echo "  test-local-services - Local backend services testing"
 	@echo ""
 	@echo "$(GREEN)Deployment:$(NC)"
 	@echo "  deploy-docker      - Deploy using Docker Compose"
@@ -92,6 +95,25 @@ quick-cycle: build deploy test-smoke
 	@echo "  Frontend: http://localhost:30004"
 	@echo "  CLI: ./scripts/cli-client.sh help"
 
+# Local testing using test-local.sh script (mirrors CI/CD)
+test-local:
+	$(call log_info,"Running local tests (mirrors CI/CD)...")
+	@./scripts/test-local.sh --environment dev --build
+	$(call log_success,"Local tests completed")
+
+# Component-specific local testing
+test-local-frontend:
+	$(call log_info,"Running local frontend tests...")
+	@./scripts/test-local.sh --environment dev --frontend
+
+test-local-gateway:
+	$(call log_info,"Running local gateway tests...")
+	@./scripts/test-local.sh --environment dev --gateway
+
+test-local-services:
+	$(call log_info,"Running local backend services tests...")
+	@./scripts/test-local.sh --environment dev --services
+
 # Clean everything
 clean:
 	$(call log_info,"Cleaning build artifacts and containers...")
@@ -105,61 +127,66 @@ clean:
 	@find . -name "htmlcov*" -type d -exec rm -rf {} + 2>/dev/null || true
 	$(call log_success,"Clean completed")
 
-# Build all Docker images
+# Build all components using new build scripts
 build: build-frontend build-gateway build-services
-	$(call log_success,"All images built successfully")
+	$(call log_success,"All components built successfully")
 
-# Build frontend
+# Build frontend using new build script
 build-frontend:
-	$(call log_info,"Building frontend image...")
-	@docker build -t order-processor-frontend:latest -f docker/frontend/Dockerfile .
-	$(call log_success,"Frontend image built")
+	$(call log_info,"Building frontend...")
+	@./frontend/build.sh -v
+	$(call log_success,"Frontend built")
 
-# Build gateway
+# Build gateway using new build script
 build-gateway:
-	$(call log_info,"Building gateway image...")
-	@docker build -t order-processor-gateway:latest -f docker/gateway/Dockerfile .
-	$(call log_success,"Gateway image built")
+	$(call log_info,"Building gateway...")
+	@./gateway/build.sh -v
+	$(call log_success,"Gateway built")
 
-# Build backend services
-build-services: build-user-service build-inventory-service
-	$(call log_success,"All backend services built")
+# Build backend services using new build script
+build-services:
+	$(call log_info,"Building backend services...")
+	@./services/build.sh -v
+	$(call log_success,"Backend services built")
 
-# Build user service
+# Individual service builds (for compatibility)
 build-user-service:
-	$(call log_info,"Building user service image...")
-	@docker build -t order-processor-user_service:latest -f docker/user-service/Dockerfile .
-	$(call log_success,"User service image built")
+	$(call log_info,"Building user service...")
+	@cd services && ./build.sh -v
+	$(call log_success,"User service built")
 
-# Build inventory service
 build-inventory-service:
-	$(call log_info,"Building inventory service image...")
-	@docker build -t order-processor-inventory_service:latest -f docker/inventory-service/Dockerfile .
-	$(call log_success,"Inventory service image built")
+	$(call log_info,"Building inventory service...")
+	@cd services && ./build.sh -v
+	$(call log_success,"Inventory service built")
 
-# Run all unit tests
-test: test-frontend test-gateway test-user-service test-inventory-service
+# Run all unit tests using new build scripts
+test: test-frontend test-gateway test-services
 	$(call log_success,"All unit tests passed")
 
-# Test frontend
+# Test frontend using new build script
 test-frontend:
 	$(call log_info,"Running frontend tests...")
-	@cd frontend && npm test -- --watchAll=false --passWithNoTests
+	@./frontend/build.sh --test-only -v
 
-# Test gateway
+# Test gateway using new build script
 test-gateway:
 	$(call log_info,"Running gateway tests...")
-	@cd gateway && go test ./... -v
+	@./gateway/build.sh --test-only -v
 
-# Test user service
+# Test backend services using new build script
+test-services:
+	$(call log_info,"Running backend services tests...")
+	@./services/build.sh --test-only -v
+
+# Individual service tests (for compatibility)
 test-user-service:
 	$(call log_info,"Running user service tests...")
-	@cd services/user_service && python -m pytest tests/ -v
+	@cd services && ./build.sh --test-only -v
 
-# Test inventory service
 test-inventory-service:
 	$(call log_info,"Running inventory service tests...")
-	@cd services/inventory_service && python -m pytest tests/ -v
+	@cd services && ./build.sh --test-only -v
 
 # Deploy to Kubernetes
 deploy: deploy-k8s
@@ -278,20 +305,20 @@ cli-test:
 # Backward compatibility for services Makefile
 test-all:
 	@echo "$(BLUE)[INFO]$(NC) Running all service tests (compatibility mode)..."
-	@cd services && make test-all
+	@./services/build.sh --test-only -v
 
 build-all:
 	@echo "$(BLUE)[INFO]$(NC) Building all services (compatibility mode)..."
-	@cd services && make build-all
+	@./services/build.sh -v
 
 # Backward compatibility for old root Makefile commands
 gateway-build:
 	@echo "$(BLUE)[INFO]$(NC) Building gateway (compatibility mode)..."
-	@make build-gateway
+	@./gateway/build.sh -v
 
 gateway-test:
 	@echo "$(BLUE)[INFO]$(NC) Testing gateway (compatibility mode)..."
-	@make test-gateway
+	@./gateway/build.sh --test-only -v
 
 gateway-dev:
 	@echo "$(BLUE)[INFO]$(NC) Starting gateway development (compatibility mode)..."
@@ -299,11 +326,11 @@ gateway-dev:
 
 service-build:
 	@echo "$(BLUE)[INFO]$(NC) Building service $(SERVICE) (compatibility mode)..."
-	@cd services && make build SERVICE=$(SERVICE)
+	@cd services && ./build.sh -v
 
 service-test:
 	@echo "$(BLUE)[INFO]$(NC) Testing service $(SERVICE) (compatibility mode)..."
-	@cd services && make test SERVICE=$(SERVICE)
+	@cd services && ./build.sh --test-only -v
 
 service-dev:
 	@echo "$(BLUE)[INFO]$(NC) Starting service $(SERVICE) development (compatibility mode)..."

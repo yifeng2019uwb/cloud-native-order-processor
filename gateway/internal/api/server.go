@@ -112,7 +112,7 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	fmt.Printf("🔍 STEP 2.1: handleProxyRequest - Looking up route config for path: %s\n", path)
 	routeConfig, exists := s.proxyService.GetRouteConfig(path)
 
-		if !exists {
+	if !exists {
 		// Handle dynamic routes (like /assets/:id)
 		fmt.Printf("🔍 STEP 2.2: handleProxyRequest - Route not found, trying basePath\n")
 		basePath := s.getBasePath(path)
@@ -134,7 +134,7 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		return
 	}
 
-		fmt.Printf("🔍 STEP 2.6: handleProxyRequest - About to check authentication requirements. RequiresAuth=%t\n", routeConfig.RequiresAuth)
+	fmt.Printf("🔍 STEP 2.6: handleProxyRequest - About to check authentication requirements. RequiresAuth=%t\n", routeConfig.RequiresAuth)
 
 	// Check authentication requirements
 	if routeConfig.RequiresAuth {
