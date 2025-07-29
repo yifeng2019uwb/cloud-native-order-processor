@@ -92,7 +92,7 @@ const useAuthState = () => {
       const response: AuthResponse = await apiService.login(credentials);
       console.log('Registration response:', response);
 
-      if (response.success === true) {
+      if (response.success === true && response.user) {
         authUtils.saveAuthData(response.access_token, response.user);
 
         setState({
@@ -122,15 +122,47 @@ const useAuthState = () => {
       const response: AuthResponse = await apiService.register(userData);
 
       if (response.success === true && response.access_token) {
-        authUtils.saveAuthData(response.access_token, response.user);
+        // For registration, we need to fetch the user profile since response doesn't include user data
+        let user: User | null = null;
 
-        setState({
-          user: response.user,
-          token: response.access_token,
-          isAuthenticated: true,
-          isLoading: false,
-          error: null
-        });
+        if (response.user) {
+          // If user data is included in response (login case)
+          user = response.user;
+        } else if (response.username) {
+          // For registration, fetch user profile using the token
+          try {
+            const profileResponse = await apiService.getProfile();
+            user = profileResponse.user;
+          } catch (profileError) {
+            console.warn('Failed to fetch user profile after registration:', profileError);
+            // Create minimal user object from registration data
+            user = {
+              username: response.username!,
+              email: userData.email,
+              first_name: userData.first_name,
+              last_name: userData.last_name,
+              phone: userData.phone || undefined,
+              date_of_birth: userData.date_of_birth || undefined,
+              marketing_emails_consent: userData.marketing_emails_consent || false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+          }
+        }
+
+        if (user) {
+          authUtils.saveAuthData(response.access_token, user);
+
+          setState({
+            user,
+            token: response.access_token,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null
+          });
+        } else {
+          throw new Error('Failed to get user data after registration');
+        }
       } else {
         throw new Error('Invalid registration response');
       }

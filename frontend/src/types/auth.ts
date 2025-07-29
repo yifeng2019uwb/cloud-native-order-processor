@@ -26,13 +26,39 @@ export interface RegisterRequest {
   marketing_emails_consent?: boolean;
 }
 
+// Backend validation rules
+export const BACKEND_VALIDATION_RULES = {
+  username: {
+    minLength: 6,
+    maxLength: 30,
+    pattern: /^[a-zA-Z0-9][a-zA-Z0-9_]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$/,
+    message: "Username can only contain letters, numbers, and underscores. Cannot start/end with underscore."
+  },
+  password: {
+    minLength: 12,
+    maxLength: 20,
+    pattern: /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+])/,
+    message: "Password must contain uppercase, lowercase, number, and special character (!@#$%^&*()-_=+)"
+  },
+  firstName: {
+    pattern: /^[a-zA-Z]+$/,
+    message: "First name can only contain letters"
+  },
+  lastName: {
+    pattern: /^[a-zA-Z]+$/,
+    message: "Last name can only contain letters"
+  }
+};
+
 export interface AuthResponse {
   success: boolean;
   message: string;
   access_token: string;
   token_type: string;
   expires_in: number;
-  user: User;
+  user?: User; // Optional for registration response
+  username?: string; // For registration response
+  is_new_user?: boolean; // For registration response
   timestamp: string;
 }
 
