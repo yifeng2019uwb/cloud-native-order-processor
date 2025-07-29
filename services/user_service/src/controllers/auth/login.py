@@ -65,8 +65,8 @@ async def login_user(
 
         logger.info(f"User authenticated successfully: {login_data.username}")
 
-        # Create JWT token using username (primary key)
-        token_data = create_access_token(user.username)
+        # Create JWT token using username and role
+        token_data = create_access_token(user.username, user.role)
 
         # Use proper response model with all required fields
         return LoginSuccessResponse(

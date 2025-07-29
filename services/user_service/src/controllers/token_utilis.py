@@ -10,17 +10,18 @@ import logging
 logger = logging.getLogger(__name__)
 
 # JWT Configuration
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-key-change-in-production")
+JWT_SECRET = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
 
-def create_access_token(username: str, expires_delta: Optional[timedelta] = None) -> dict:
+def create_access_token(username: str, role: str = "customer", expires_delta: Optional[timedelta] = None) -> dict:
     """
     Create JWT access token for authenticated user
 
     Args:
         username: User's username
+        role: User's role (default: "customer")
         expires_delta: Optional custom expiration time
 
     Returns:
@@ -33,6 +34,7 @@ def create_access_token(username: str, expires_delta: Optional[timedelta] = None
 
     payload = {
         "sub": username,
+        "role": role,  # Include role in JWT payload
         "exp": expire,
         "iat": datetime.now(timezone.utc),
         "type": "access_token"
@@ -40,7 +42,7 @@ def create_access_token(username: str, expires_delta: Optional[timedelta] = None
 
     try:
         token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-        logger.info(f"Access token created for user: {username}")
+        logger.info(f"Access token created for user: {username} with role: {role}")
 
         return {
             "access_token": token,
@@ -51,7 +53,6 @@ def create_access_token(username: str, expires_delta: Optional[timedelta] = None
     except Exception as e:
         logger.error(f"Error creating access token: {username}")
         raise
-
 
 
 def verify_access_token(token: str) -> Optional[str]:
@@ -106,8 +107,8 @@ def decode_token_payload(token: str) -> dict:
         Token payload as dictionary
     """
     try:
-        # Decode without verification for debugging
-        payload = jwt.decode(token, key="", options={"verify_signature": False})
+        # Decode without verification (for debugging only)
+        payload = jwt.decode(token, JWT_SECRET, options={"verify_signature": False}, algorithms=[JWT_ALGORITHM])
         return payload
     except Exception as e:
         logger.error(f"Error decoding token payload: {e}")
@@ -116,7 +117,7 @@ def decode_token_payload(token: str) -> dict:
 
 def is_token_expired(token: str) -> bool:
     """
-    Check if token is expired without full verification
+    Check if token is expired without verification
 
     Args:
         token: JWT token string
@@ -131,22 +132,23 @@ def is_token_expired(token: str) -> bool:
         if exp_timestamp is None:
             return True
 
-        exp_datetime = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
-        return datetime.now(timezone.utc) > exp_datetime
+        current_timestamp = datetime.now(timezone.utc).timestamp()
+        return current_timestamp > exp_timestamp
 
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error checking token expiration: {e}")
         return True
 
 
 def get_token_expiration(token: str) -> Optional[datetime]:
     """
-    Get token expiration datetime
+    Get token expiration time without verification
 
     Args:
         token: JWT token string
 
     Returns:
-        Expiration datetime or None if invalid
+        Expiration datetime if available, None otherwise
     """
     try:
         payload = decode_token_payload(token)
@@ -157,5 +159,6 @@ def get_token_expiration(token: str) -> Optional[datetime]:
 
         return datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
 
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error getting token expiration: {e}")
         return None

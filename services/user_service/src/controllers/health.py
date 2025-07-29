@@ -32,7 +32,7 @@ async def basic_health_check():
         "checks": {
             "api": "ok",
             "service": "running",
-            "jwt": "ok" if os.getenv('JWT_SECRET') else "using_default"
+            "jwt": "ok" if os.getenv('JWT_SECRET_KEY') else "using_default"
         }
     }
 
@@ -63,7 +63,7 @@ async def readiness_check():
             "checks": {
                 "api": "ok",
                 "database": "ok",
-                "jwt": "ok" if os.getenv('JWT_SECRET') else "using_default",
+                "jwt": "ok" if os.getenv('JWT_SECRET_KEY') else "using_default",
                 "service": "ready"
             }
         }

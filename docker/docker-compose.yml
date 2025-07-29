@@ -64,7 +64,7 @@ services:
       - INVENTORY_TABLE=${INVENTORY_TABLE:-order-processor-dev-inventory}
       - USERS_TABLE=${USERS_TABLE:-order-processor-dev-users}
       - AWS_REGION=${AWS_REGION:-us-west-2}
-      - JWT_SECRET=${JWT_SECRET:-your-development-jwt-secret-key-here}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-development-jwt-secret-key-here}
       - JWT_ALGORITHM=HS256
       - JWT_EXPIRATION_HOURS=24
       - SERVICE_NAME=user_service

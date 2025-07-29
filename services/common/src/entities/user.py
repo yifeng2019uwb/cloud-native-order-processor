@@ -13,6 +13,7 @@ class UserCreate(BaseModel):
     phone: Optional[str] = None
     date_of_birth: Optional[date] = None
     marketing_emails_consent: bool = False
+    role: str = "customer"  # Default role for new users
 
     @field_validator("username")
     @classmethod
@@ -83,6 +84,15 @@ class UserCreate(BaseModel):
             raise ValueError("Phone number must be 10-15 digits")
         return v
 
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v):
+        """Validate user role"""
+        valid_roles = ["public", "customer", "vip", "admin"]
+        if v not in valid_roles:
+            raise ValueError(f"Role must be one of: {', '.join(valid_roles)}")
+        return v
+
 
 class UserLogin(BaseModel):
     username: str
@@ -104,13 +114,14 @@ class User(BaseModel):
     phone: Optional[str] = None
     date_of_birth: Optional[date] = None
     marketing_emails_consent: bool = False
+    role: str = "customer"  # Default role
     created_at: datetime
     updated_at: datetime
 
     @property
     def name(self) -> str:
-        """Computed full name for backward compatibility"""
-        return f"{self.first_name} {self.last_name}".strip()
+        """Get full name"""
+        return f"{self.first_name} {self.last_name}"
 
 
 class UserResponse(BaseModel):
@@ -119,10 +130,11 @@ class UserResponse(BaseModel):
     first_name: str
     last_name: str
     phone: Optional[str] = None
+    role: str = "customer"  # Include role in response
     created_at: datetime
     updated_at: datetime
 
     @property
     def name(self) -> str:
-        """Computed full name for backward compatibility"""
-        return f"{self.first_name} {self.last_name}".strip()
+        """Get full name"""
+        return f"{self.first_name} {self.last_name}"

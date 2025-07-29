@@ -53,6 +53,7 @@ class UserDAO(BaseDAO):
                 'first_name': user_create.first_name,  # FIXED: Split field
                 'last_name': user_create.last_name,    # FIXED: Split field
                 'phone': user_create.phone,
+                'role': user_create.role,  # Add role field
                 'created_at': now,
                 'updated_at': now
             }
@@ -66,6 +67,7 @@ class UserDAO(BaseDAO):
                 first_name=user_create.first_name,  # FIXED: Split field
                 last_name=user_create.last_name,    # FIXED: Split field
                 phone=user_create.phone,
+                role=user_create.role,  # Add role field
                 created_at=datetime.fromisoformat(created_item['created_at']),
                 updated_at=datetime.fromisoformat(created_item['updated_at'])
             )
@@ -98,6 +100,7 @@ class UserDAO(BaseDAO):
                 first_name=item.get('first_name', ''),  # FIXED: Split field with fallback
                 last_name=item.get('last_name', ''),    # FIXED: Split field with fallback
                 phone=item.get('phone'),
+                role=item.get('role', 'customer'),  # Add role field with default
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
@@ -127,6 +130,7 @@ class UserDAO(BaseDAO):
                 first_name=item.get('first_name', ''),  # FIXED: Split field with fallback
                 last_name=item.get('last_name', ''),    # FIXED: Split field with fallback
                 phone=item.get('phone'),
+                role=item.get('role', 'customer'),  # Add role field with default
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )

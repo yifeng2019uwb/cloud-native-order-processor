@@ -250,7 +250,7 @@ class TestStartupEvent:
             "USERS_TABLE": "users-table",
             "ORDERS_TABLE": "orders-table",
             "INVENTORY_TABLE": "inventory-table",
-            "JWT_SECRET": "test-secret"
+            "JWT_SECRET_KEY": "test-secret"
         }.get(key, default)
 
         mock_path_instance = MagicMock()
@@ -304,7 +304,7 @@ class TestStartupEvent:
             "USERS_TABLE": "users-table",
             "ORDERS_TABLE": "orders-table",
             "INVENTORY_TABLE": "inventory-table",
-            "JWT_SECRET": "test-secret"
+            "JWT_SECRET_KEY": "test-secret"
         }.get(key, default)
 
         mock_path_instance = MagicMock()

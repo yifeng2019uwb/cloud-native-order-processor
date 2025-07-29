@@ -13,7 +13,8 @@ os.environ.setdefault('ORDERS_TABLE', 'test-orders-table')
 os.environ.setdefault('INVENTORY_TABLE', 'test-inventory-table')
 os.environ.setdefault('ASSETS_TABLE', 'test-assets-table')
 os.environ.setdefault('ENVIRONMENT', 'test')
-os.environ.setdefault('JWT_SECRET', 'test-jwt-secret')
+os.environ.setdefault('JWT_SECRET_KEY', 'test-jwt-secret-key')
+os.environ.setdefault('JWT_ALGORITHM', 'HS256')
 os.environ.setdefault('LOG_LEVEL', 'INFO')
 os.environ.setdefault('PYTHONUNBUFFERED', '1')
 os.environ.setdefault('TESTING', 'true')
@@ -98,6 +99,50 @@ def sample_inventory_data():
         "created_at": datetime(2024, 1, 1, 12, 0, 0),
         "updated_at": datetime(2024, 1, 1, 12, 0, 0),
     }
+
+
+@pytest.fixture(autouse=True)
+def mock_environment_variables():
+    """Ensure all tests use mock environment variables."""
+    # Set additional environment variables that might be needed
+    test_env_vars = {
+        'AWS_REGION': 'us-west-2',
+        'USERS_TABLE': 'test-users-table',
+        'ORDERS_TABLE': 'test-orders-table',
+        'INVENTORY_TABLE': 'test-inventory-table',
+        'ASSETS_TABLE': 'test-assets-table',
+        'ENVIRONMENT': 'test',
+        'JWT_SECRET_KEY': 'test-jwt-secret-key',
+        'JWT_ALGORITHM': 'HS256',
+        'LOG_LEVEL': 'INFO',
+        'PYTHONUNBUFFERED': '1',
+        'TESTING': 'true',
+        'CI': 'true',
+        'PORT': '8000',
+        'HOST': '0.0.0.0',
+        'SERVICE_ENVIRONMENT': 'test',
+        'REDIS_URL': 'redis://localhost:6379',
+        'REDIS_HOST': 'localhost',
+        'REDIS_PORT': '6379',
+        'REDIS_DB': '0',
+        'REDIS_PASSWORD': '',
+    }
+
+    # Store original environment variables
+    original_env = {}
+    for key, value in test_env_vars.items():
+        if key in os.environ:
+            original_env[key] = os.environ[key]
+        os.environ[key] = value
+
+    yield test_env_vars
+
+    # Restore original environment variables
+    for key, value in test_env_vars.items():
+        if key in original_env:
+            os.environ[key] = original_env[key]
+        else:
+            os.environ.pop(key, None)
 
 
 @pytest.fixture(autouse=True)
