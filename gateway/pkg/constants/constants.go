@@ -115,7 +115,7 @@ const (
 // Phase 1: User roles and permissions
 const (
 	// User roles
-	RolePublic   = "public"   // No authentication required
+	RolePublic   = "public"   // Unauthenticated user
 	RoleCustomer = "customer" // Basic authenticated user
 	RoleVIP      = "vip"      // Premium user (future)
 	RoleAdmin    = "admin"    // System administrator
@@ -241,13 +241,13 @@ var (
 		// Auth service routes
 		APIV1AuthLogin: {
 			Path:         APIV1AuthLogin,
-			RequiresAuth: false, // Login doesn't require authentication
-			AllowedRoles: []string{RolePublic},
+			RequiresAuth: false,                // Login doesn't require authentication
+			AllowedRoles: []string{RolePublic}, // Only public (unauthenticated) users can access
 		},
 		APIV1AuthRegister: {
 			Path:         APIV1AuthRegister,
-			RequiresAuth: false, // Registration doesn't require authentication
-			AllowedRoles: []string{RolePublic},
+			RequiresAuth: false,                // Registration doesn't require authentication
+			AllowedRoles: []string{RolePublic}, // Only public (unauthenticated) users can access
 		},
 		APIV1AuthProfile: {
 			Path:         APIV1AuthProfile,
@@ -263,13 +263,13 @@ var (
 		// Inventory service routes
 		APIV1InventoryAssets: {
 			Path:         APIV1InventoryAssets,
-			RequiresAuth: false, // Public inventory browsing
-			AllowedRoles: []string{RolePublic, RoleCustomer, RoleVIP, RoleAdmin},
+			RequiresAuth: false,      // Public inventory browsing
+			AllowedRoles: []string{}, // Empty means public access (no role required)
 		},
 		APIV1InventoryAssetID: {
 			Path:         APIV1InventoryAssetID,
-			RequiresAuth: false, // Public asset details
-			AllowedRoles: []string{RolePublic, RoleCustomer, RoleVIP, RoleAdmin},
+			RequiresAuth: false,      // Public asset details
+			AllowedRoles: []string{}, // Empty means public access (no role required)
 		},
 	}
 )

@@ -192,10 +192,14 @@ func generateRequestID() string {
 
 // GetRouteConfig returns the route configuration for a given path
 func (p *ProxyService) GetRouteConfig(path string) (*constants.RouteConfig, bool) {
+	fmt.Printf("🔍 STEP 3: GetRouteConfig - Looking up path: %s\n", path)
 	config, exists := constants.RouteConfigs[path]
 	if !exists {
+		fmt.Printf("🔍 STEP 3.1: GetRouteConfig - Route config not found for path: %s\n", path)
+		fmt.Printf("🔍 STEP 3.2: GetRouteConfig - Available routes: %v\n", constants.RouteConfigs)
 		return nil, false
 	}
+	fmt.Printf("🔍 STEP 3.3: GetRouteConfig - Route config found for path: %s\n", path)
 	return &config, true
 }
 

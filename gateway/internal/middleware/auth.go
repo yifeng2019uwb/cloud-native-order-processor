@@ -27,13 +27,19 @@ type JWTClaims struct {
 // Phase 1: Simple JWT validation with basic error handling
 func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		fmt.Printf("🔍 STEP 1: AuthMiddleware START - Path: %s, Method: %s\n", c.Request.URL.Path, c.Request.Method)
+
 		// Extract token from Authorization header
 		authHeader := c.GetHeader(constants.AuthorizationHeader)
+		fmt.Printf("🔍 STEP 1.1: AuthMiddleware - authHeader: '%s'\n", authHeader)
+
 		if authHeader == "" {
-			// No auth header - treat as public user
-			c.Set(constants.ContextKeyUserID, "")
+			// No auth header - set public role for unauthenticated users
+			fmt.Printf("🔍 STEP 1.2: AuthMiddleware - No auth header, setting RolePublic\n")
 			c.Set(constants.ContextKeyUserRole, constants.RolePublic)
+			fmt.Printf("🔍 STEP 1.3: AuthMiddleware - RolePublic set, calling c.Next()\n")
 			c.Next()
+			fmt.Printf("🔍 STEP 1.4: AuthMiddleware END\n")
 			return
 		}
 
@@ -54,11 +60,14 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		}
 
 		// Add user information to context
+		fmt.Printf("🔍 STEP 1.5: AuthMiddleware - Setting user context: username=%s, role=%s\n", userContext.Username, userContext.Role)
 		c.Set(constants.ContextKeyUserID, userContext.Username)
 		c.Set(constants.ContextKeyUserRole, userContext.Role)
 		c.Set("user_context", userContext)
 
+		fmt.Printf("🔍 STEP 1.6: AuthMiddleware - User context set, calling c.Next()\n")
 		c.Next()
+		fmt.Printf("🔍 STEP 1.7: AuthMiddleware END\n")
 	}
 }
 
@@ -114,9 +123,22 @@ func validateJWT(tokenString string, cfg *config.Config) (*models.UserContext, e
 // Phase 1: Simple role-based access control
 func RoleMiddleware(requiredRoles []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		fmt.Printf("DEBUG: RoleMiddleware called for path: %s\n", c.Request.URL.Path)
 		userRole := c.GetString(constants.ContextKeyUserRole)
+		fmt.Printf("DEBUG: RoleMiddleware - userRole: '%s', requiredRoles: %v\n", userRole, requiredRoles)
+
+		// If no role restrictions, allow access
+		if len(requiredRoles) == 0 {
+			fmt.Printf("DEBUG: RoleMiddleware - No role restrictions, allowing access\n")
+			c.Next()
+			return
+		}
+
+		// If user has no role but roles are required, deny access
 		if userRole == "" {
-			userRole = constants.RolePublic
+			fmt.Printf("DEBUG: RoleMiddleware - User has no role but roles are required, denying access\n")
+			handleAuthError(c, models.ErrPermInsufficient, fmt.Sprintf("Insufficient permissions. Required roles: %v, User role: none", requiredRoles))
+			return
 		}
 
 		// Check if user has required role
@@ -129,10 +151,12 @@ func RoleMiddleware(requiredRoles []string) gin.HandlerFunc {
 		}
 
 		if !hasRole {
+			fmt.Printf("DEBUG: RoleMiddleware - User role '%s' not found in required roles, denying access\n", userRole)
 			handleAuthError(c, models.ErrPermInsufficient, fmt.Sprintf("Insufficient permissions. Required roles: %v, User role: %s", requiredRoles, userRole))
 			return
 		}
 
+		fmt.Printf("DEBUG: RoleMiddleware - User role '%s' found in required roles, allowing access\n", userRole)
 		c.Next()
 	}
 }

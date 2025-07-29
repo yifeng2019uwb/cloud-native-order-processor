@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -44,6 +45,9 @@ func (s *Server) setupRoutes() {
 	s.router.Use(middleware.Logger())
 	s.router.Use(middleware.Recovery())
 
+	// Add auth middleware globally to set user roles for all routes
+	s.router.Use(middleware.AuthMiddleware(s.config))
+
 	// Add Redis-based middleware if Redis is available
 	if s.redisService != nil {
 		// Phase 2: Add rate limiting middleware
@@ -68,7 +72,6 @@ func (s *Server) setupRoutes() {
 
 			// Protected auth routes (auth required)
 			protectedAuth := auth.Group("")
-			protectedAuth.Use(middleware.AuthMiddleware(s.config))
 			{
 				protectedAuth.GET("/profile", s.handleProxyRequest)
 				protectedAuth.POST("/logout", s.handleProxyRequest)
@@ -102,32 +105,56 @@ func (s *Server) healthCheck(c *gin.Context) {
 // handleProxyRequest handles all proxy requests with routing and error handling
 // Phase 1: Basic proxy logic with simple error handling
 func (s *Server) handleProxyRequest(c *gin.Context) {
+	fmt.Printf("🔍 STEP 2: handleProxyRequest START - Path: %s, Method: %s\n", c.Request.URL.Path, c.Request.Method)
+
 	// Get route configuration
 	path := c.Request.URL.Path
+	fmt.Printf("🔍 STEP 2.1: handleProxyRequest - Looking up route config for path: %s\n", path)
 	routeConfig, exists := s.proxyService.GetRouteConfig(path)
 
-	if !exists {
+		if !exists {
 		// Handle dynamic routes (like /assets/:id)
+		fmt.Printf("🔍 STEP 2.2: handleProxyRequest - Route not found, trying basePath\n")
 		basePath := s.getBasePath(path)
 		routeConfig, exists = s.proxyService.GetRouteConfig(basePath)
 		if !exists {
+			fmt.Printf("🔍 STEP 2.3: handleProxyRequest - Route not found, returning 404\n")
 			s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, "Route not found")
 			return
 		}
 	}
 
+	fmt.Printf("🔍 STEP 2.4: handleProxyRequest - Route config found: Path=%s, RequiresAuth=%t, AllowedRoles=%v\n",
+		routeConfig.Path, routeConfig.RequiresAuth, routeConfig.AllowedRoles)
+
+	// Check if routeConfig is nil
+	if routeConfig == nil {
+		fmt.Printf("🔍 STEP 2.5: handleProxyRequest - routeConfig is nil!\n")
+		s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, "Route config is nil")
+		return
+	}
+
+		fmt.Printf("🔍 STEP 2.6: handleProxyRequest - About to check authentication requirements. RequiresAuth=%t\n", routeConfig.RequiresAuth)
+
 	// Check authentication requirements
 	if routeConfig.RequiresAuth {
 		userRole := c.GetString(constants.ContextKeyUserRole)
-		if userRole == constants.RolePublic {
+		fmt.Printf("🔍 STEP 2.7: handleProxyRequest - Authentication required, userRole='%s'\n", userRole)
+		if userRole == "" {
+			fmt.Printf("🔍 STEP 2.8: handleProxyRequest - No userRole, returning 401\n")
 			s.handleError(c, http.StatusUnauthorized, models.ErrAuthInvalidToken, "Authentication required")
 			return
 		}
+	} else {
+		fmt.Printf("🔍 STEP 2.9: handleProxyRequest - No authentication required\n")
 	}
+
+	fmt.Printf("🔍 STEP 2.10: handleProxyRequest - About to check role permissions. AllowedRoles=%v\n", routeConfig.AllowedRoles)
 
 	// Check role permissions
 	if len(routeConfig.AllowedRoles) > 0 {
 		userRole := c.GetString(constants.ContextKeyUserRole)
+		fmt.Printf("🔍 STEP 2.11: handleProxyRequest - userRole='%s', allowedRoles=%v\n", userRole, routeConfig.AllowedRoles)
 		hasPermission := false
 		for _, role := range routeConfig.AllowedRoles {
 			if role == userRole {
@@ -136,10 +163,15 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 			}
 		}
 		if !hasPermission {
+			fmt.Printf("🔍 STEP 2.12: handleProxyRequest - Permission denied - userRole '%s' not in allowedRoles %v\n", userRole, routeConfig.AllowedRoles)
 			s.handleError(c, http.StatusForbidden, models.ErrPermInsufficient, "Insufficient permissions")
 			return
 		}
+		fmt.Printf("🔍 STEP 2.13: handleProxyRequest - Permission granted for userRole '%s'\n", userRole)
+	} else {
+		fmt.Printf("🔍 STEP 2.14: handleProxyRequest - No role restrictions, allowing access\n")
 	}
+	// If AllowedRoles is empty, allow access (any role including public)
 
 	// Determine target service
 	targetService := s.proxyService.GetTargetService(path)
@@ -157,7 +189,11 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 			return
 		}
 		if len(bodyBytes) > 0 {
-			body = string(bodyBytes)
+			// Parse JSON body to preserve structure
+			if err := json.Unmarshal(bodyBytes, &body); err != nil {
+				s.handleError(c, http.StatusBadRequest, models.ErrSvcUnavailable, "Invalid JSON body")
+				return
+			}
 		}
 	}
 
@@ -236,7 +272,7 @@ func (s *Server) getUserContext(c *gin.Context) *models.UserContext {
 	if !exists {
 		return &models.UserContext{
 			Username:        "",
-			Role:            constants.RolePublic,
+			Role:            "", // No role for unauthenticated users
 			IsAuthenticated: false,
 		}
 	}
