@@ -6,6 +6,7 @@ import "time"
 const (
 	UserService      = "user_service"
 	InventoryService = "inventory_service"
+	GatewayService   = "gateway"
 )
 
 // Rate limiting constants
@@ -33,6 +34,7 @@ const (
 	StatusNotFound            = 404
 	StatusTooManyRequests     = 429
 	StatusInternalServerError = 500
+	StatusNoContent           = 204
 )
 
 // Gateway configuration
@@ -47,20 +49,20 @@ const (
 
 // Environment variable names
 const (
-	EnvGatewayPort        = "GATEWAY_PORT"
-	EnvGatewayHost        = "GATEWAY_HOST"
-	EnvRedisHost          = "REDIS_HOST"
-	EnvRedisPort          = "REDIS_PORT"
-	EnvRedisPassword      = "REDIS_PASSWORD"
-	EnvRedisDB            = "REDIS_DB"
-	EnvRedisSSL           = "REDIS_SSL"
-	EnvUserServiceURL     = "USER_SERVICE_URL"
+	EnvGatewayPort         = "GATEWAY_PORT"
+	EnvGatewayHost         = "GATEWAY_HOST"
+	EnvRedisHost           = "REDIS_HOST"
+	EnvRedisPort           = "REDIS_PORT"
+	EnvRedisPassword       = "REDIS_PASSWORD"
+	EnvRedisDB             = "REDIS_DB"
+	EnvRedisSSL            = "REDIS_SSL"
+	EnvUserServiceURL      = "USER_SERVICE_URL"
 	EnvInventoryServiceURL = "INVENTORY_SERVICE_URL"
 )
 
 // Default service URLs
 const (
-	DefaultUserServiceURL     = "http://user-service:8000"
+	DefaultUserServiceURL      = "http://user-service:8000"
 	DefaultInventoryServiceURL = "http://inventory-service:8001"
 )
 
@@ -69,6 +71,7 @@ const (
 	DefaultTimeout = 30 * time.Second
 	CacheTTL       = 5 * time.Minute
 	SessionTTL     = 24 * time.Hour
+	RedisTimeout   = 5 * time.Second
 )
 
 // API paths
@@ -76,6 +79,17 @@ const (
 	HealthPath       = "/health"
 	UserAPIPath      = "/api/users"
 	InventoryAPIPath = "/api/inventory"
+	APIV1Path        = "/api/v1"
+)
+
+// API route paths
+const (
+	AuthLoginPath          = "/auth/login"
+	AuthRegisterPath       = "/auth/register"
+	AuthProfilePath        = "/auth/profile"
+	AuthLogoutPath         = "/auth/logout"
+	InventoryAssetsPath    = "/inventory/assets"
+	InventoryAssetByIDPath = "/inventory/assets/:id"
 )
 
 // Headers
@@ -84,16 +98,17 @@ const (
 	AuthorizationHeader = "Authorization"
 	UserAgentHeader     = "User-Agent"
 	XRequestIDHeader    = "X-Request-ID"
+	XSessionIDHeader    = "X-Session-ID"
 )
 
 // Error codes
 const (
-	ErrorCodeValidation     = "VALIDATION_ERROR"
-	ErrorCodeAuthentication = "AUTH_ERROR"
-	ErrorCodeAuthorization  = "FORBIDDEN"
-	ErrorCodeNotFound       = "NOT_FOUND"
-	ErrorCodeRateLimit      = "RATE_LIMIT_EXCEEDED"
-	ErrorCodeInternal       = "INTERNAL_ERROR"
+	ErrorCodeValidation         = "VALIDATION_ERROR"
+	ErrorCodeAuthentication     = "AUTH_ERROR"
+	ErrorCodeAuthorization      = "FORBIDDEN"
+	ErrorCodeNotFound           = "NOT_FOUND"
+	ErrorCodeRateLimit          = "RATE_LIMIT_EXCEEDED"
+	ErrorCodeInternal           = "INTERNAL_ERROR"
 	ErrorCodeServiceUnavailable = "SERVICE_UNAVAILABLE"
 )
 
@@ -112,4 +127,59 @@ const (
 	LogProxyInitSuccess     = "Proxy service initialized"
 	LogServerStart          = "Starting Gateway server on port"
 	LogServerStartFailed    = "Failed to start server"
+)
+
+// Service status messages
+const (
+	StatusHealthy         = "healthy"
+	StatusDegradedNoRedis = "degraded (no Redis)"
+)
+
+// Service names for responses
+const (
+	ServiceNameUser      = "user-service"
+	ServiceNameInventory = "inventory-service"
+)
+
+// Proxy messages
+const (
+	ProxyUserServiceNotImplemented      = "User service proxy - not implemented yet"
+	ProxyInventoryServiceNotImplemented = "Inventory service proxy - not implemented yet"
+	ProxyNotImplemented                 = "Proxy not implemented yet"
+)
+
+// CORS configuration
+const (
+	CORSAllowOrigin  = "*"
+	CORSAllowMethods = "GET, POST, PUT, DELETE, OPTIONS"
+	CORSAllowHeaders = "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization"
+)
+
+// Authentication constants
+const (
+	AuthSchemeBearer      = "Bearer"
+	AuthPlaceholderUserID = "placeholder_user_id"
+	AuthDefaultRole       = "user"
+)
+
+// Error messages
+const (
+	ErrorAuthHeaderRequired    = "Authorization header required"
+	ErrorAuthHeaderInvalid     = "Invalid authorization header format"
+	ErrorRateLimitExceeded     = "Rate limit exceeded"
+	ErrorSessionInvalid        = "Invalid or expired session"
+	ErrorRedisConnectionFailed = "failed to connect to Redis:"
+)
+
+// Redis key prefixes
+const (
+	RedisKeyPrefixSession   = "session:"
+	RedisKeyPrefixRateLimit = "rate_limit:"
+)
+
+// Context keys
+const (
+	ContextKeyUserID   = "user_id"
+	ContextKeyUserRole = "user_role"
+	ContextKeySession  = "session"
 )

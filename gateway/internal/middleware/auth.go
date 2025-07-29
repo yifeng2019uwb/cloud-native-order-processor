@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	"order-processor-gateway/pkg/constants"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,10 +14,10 @@ import (
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract token from Authorization header
-		authHeader := c.GetHeader("Authorization")
+		authHeader := c.GetHeader(constants.AuthorizationHeader)
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authorization header required",
+				"error": constants.ErrorAuthHeaderRequired,
 			})
 			c.Abort()
 			return
@@ -23,9 +25,9 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// Check if token starts with "Bearer "
 		tokenParts := strings.Split(authHeader, " ")
-		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+		if len(tokenParts) != 2 || tokenParts[0] != constants.AuthSchemeBearer {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Invalid authorization header format",
+				"error": constants.ErrorAuthHeaderInvalid,
 			})
 			c.Abort()
 			return
@@ -39,8 +41,8 @@ func AuthMiddleware() gin.HandlerFunc {
 		// TODO: Add user information to context
 
 		// Placeholder: Always allow for now
-		c.Set("user_id", "placeholder_user_id")
-		c.Set("user_role", "user")
+		c.Set(constants.ContextKeyUserID, constants.AuthPlaceholderUserID)
+		c.Set(constants.ContextKeyUserRole, constants.AuthDefaultRole)
 
 		c.Next()
 	}

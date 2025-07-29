@@ -7,6 +7,7 @@ import (
 	"order-processor-gateway/internal/config"
 	"order-processor-gateway/internal/middleware"
 	"order-processor-gateway/internal/services"
+	"order-processor-gateway/pkg/constants"
 
 	"github.com/gin-gonic/gin"
 )
@@ -49,38 +50,38 @@ func (s *Server) setupRoutes() {
 	}
 
 	// Health check endpoint
-	s.router.GET("/health", s.healthCheck)
+	s.router.GET(constants.HealthPath, s.healthCheck)
 
 	// API routes
-	api := s.router.Group("/api/v1")
+	api := s.router.Group(constants.APIV1Path)
 	{
 		// Public routes (no auth required)
-		api.POST("/auth/login", s.proxyToUserService)
-		api.POST("/auth/register", s.proxyToUserService)
+		api.POST(constants.AuthLoginPath, s.proxyToUserService)
+		api.POST(constants.AuthRegisterPath, s.proxyToUserService)
 
 		// Protected routes (auth required)
 		protected := api.Group("")
 		// TODO: Add authentication middleware
 		// protected.Use(middleware.AuthMiddleware())
 		{
-			protected.GET("/auth/profile", s.proxyToUserService)
-			protected.POST("/auth/logout", s.proxyToUserService)
-			protected.GET("/inventory/assets", s.proxyToInventoryService)
-			protected.GET("/inventory/assets/:id", s.proxyToInventoryService)
+			protected.GET(constants.AuthProfilePath, s.proxyToUserService)
+			protected.POST(constants.AuthLogoutPath, s.proxyToUserService)
+			protected.GET(constants.InventoryAssetsPath, s.proxyToInventoryService)
+			protected.GET(constants.InventoryAssetByIDPath, s.proxyToInventoryService)
 		}
 	}
 }
 
 // healthCheck handles health check requests
 func (s *Server) healthCheck(c *gin.Context) {
-	status := "healthy"
+	status := constants.StatusHealthy
 	if s.redisService == nil {
-		status = "degraded (no Redis)"
+		status = constants.StatusDegradedNoRedis
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  status,
-		"service": "gateway",
+		"service": constants.GatewayService,
 		"redis":   s.redisService != nil,
 	})
 }
@@ -93,8 +94,8 @@ func (s *Server) proxyToUserService(c *gin.Context) {
 	// TODO: Add error handling and circuit breaker
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "User service proxy - not implemented yet",
-		"service": "user-service",
+		"message": constants.ProxyUserServiceNotImplemented,
+		"service": constants.ServiceNameUser,
 		"path":    c.Request.URL.Path,
 	})
 }
@@ -107,8 +108,8 @@ func (s *Server) proxyToInventoryService(c *gin.Context) {
 	// TODO: Add error handling and circuit breaker
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Inventory service proxy - not implemented yet",
-		"service": "inventory-service",
+		"message": constants.ProxyInventoryServiceNotImplemented,
+		"service": constants.ServiceNameInventory,
 		"path":    c.Request.URL.Path,
 	})
 }

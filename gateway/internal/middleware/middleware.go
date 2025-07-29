@@ -4,23 +4,25 @@ import (
 	"fmt"
 	"time"
 
+	"order-processor-gateway/pkg/constants"
+
 	"github.com/gin-gonic/gin"
 )
 
 // CORS middleware for handling cross-origin requests
 func CORS() gin.HandlerFunc {
-	return gin.HandlerFunc(func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	return func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", constants.CORSAllowOrigin)
+		c.Header("Access-Control-Allow-Methods", constants.CORSAllowMethods)
+		c.Header("Access-Control-Allow-Headers", constants.CORSAllowHeaders)
 
 		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
+			c.AbortWithStatus(constants.StatusNoContent)
 			return
 		}
 
 		c.Next()
-	})
+	}
 }
 
 // Logger middleware for request logging

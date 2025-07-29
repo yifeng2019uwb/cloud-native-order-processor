@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -37,8 +38,16 @@ type ServicesConfig struct {
 
 // Load loads configuration from environment variables
 func Load() (*Config, error) {
-	redisDB, _ := strconv.Atoi(getEnv(constants.EnvRedisDB, strconv.Itoa(constants.DefaultRedisDB)))
-	redisSSL, _ := strconv.ParseBool(getEnv(constants.EnvRedisSSL, strconv.FormatBool(constants.DefaultRedisSSL)))
+	// Parse Redis configuration with error handling
+	redisDB, err := strconv.Atoi(getEnv(constants.EnvRedisDB, strconv.Itoa(constants.DefaultRedisDB)))
+	if err != nil {
+		return nil, fmt.Errorf("invalid Redis DB configuration: %w", err)
+	}
+
+	redisSSL, err := strconv.ParseBool(getEnv(constants.EnvRedisSSL, strconv.FormatBool(constants.DefaultRedisSSL)))
+	if err != nil {
+		return nil, fmt.Errorf("invalid Redis SSL configuration: %w", err)
+	}
 
 	return &Config{
 		Server: ServerConfig{

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"order-processor-gateway/internal/config"
+	"order-processor-gateway/pkg/constants"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -25,11 +26,11 @@ func NewRedisService(cfg *config.RedisConfig) (*RedisService, error) {
 	})
 
 	// Test connection
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), constants.RedisTimeout)
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
+		return nil, fmt.Errorf("%s %w", constants.ErrorRedisConnectionFailed, err)
 	}
 
 	return &RedisService{client: client}, nil
@@ -42,12 +43,12 @@ func (r *RedisService) StoreSession(ctx context.Context, sessionID string, data 
 		return err
 	}
 
-	return r.client.Set(ctx, fmt.Sprintf("session:%s", sessionID), jsonData, ttl).Err()
+	return r.client.Set(ctx, constants.RedisKeyPrefixSession+sessionID, jsonData, ttl).Err()
 }
 
 // GetSession retrieves user session data
 func (r *RedisService) GetSession(ctx context.Context, sessionID string) (map[string]interface{}, error) {
-	key := fmt.Sprintf("session:%s", sessionID)
+	key := constants.RedisKeyPrefixSession + sessionID
 	data, err := r.client.Get(ctx, key).Result()
 	if err != nil {
 		return nil, err
