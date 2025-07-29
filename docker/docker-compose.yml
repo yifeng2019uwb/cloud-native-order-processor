@@ -150,6 +150,57 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  gateway:
+    build:
+      context: ../
+      dockerfile: docker/gateway/Dockerfile
+    container_name: order-processor-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      # Gateway configuration
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-development-jwt-secret-key-here}
+      - JWT_ALGORITHM=HS256
+      - SERVICE_NAME=gateway
+      - SERVICE_PORT=8080
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+      # Service discovery - internal Docker network
+      - USER_SERVICE_URL=http://user_service:8000
+      - INVENTORY_SERVICE_URL=http://inventory_service:8001
+      # Redis configuration for rate limiting and session management
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=
+      - REDIS_SSL=false
+    volumes:
+      - ~/.aws:/root/.aws:ro
+    depends_on:
+      user_service:
+        condition: service_healthy
+      inventory_service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - order-processor-network
+    # Resource limits - Gateway gets 1 CPU, 512MB RAM
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
 networks:
   order-processor-network:
     name: order-processor-network

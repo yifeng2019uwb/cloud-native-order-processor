@@ -120,6 +120,51 @@ services:
     networks:
       - order-processor-network
 
+  gateway:
+    build:
+      context: ../
+      dockerfile: docker/gateway/Dockerfile
+    image: order-processor-gateway:latest
+    container_name: order-processor-gateway-dev
+    ports:
+      - "8080:8080"
+    environment:
+      # Gateway configuration
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-development-jwt-secret-key-here}
+      - JWT_ALGORITHM=HS256
+      - SERVICE_NAME=gateway
+      - SERVICE_PORT=8080
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+      # Service discovery - internal Docker network
+      - USER_SERVICE_URL=http://user_service:8000
+      - INVENTORY_SERVICE_URL=http://inventory_service:8001
+      # Redis configuration for rate limiting and session management
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=
+      - REDIS_SSL=false
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      # Development volume for hot reloading (if needed)
+      - ../gateway:/app/gateway:ro
+    depends_on:
+      user_service:
+        condition: service_healthy
+      inventory_service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - order-processor-network
+
 networks:
   order-processor-network:
     name: order-processor-network

@@ -224,6 +224,27 @@ docker-logs:
 	@echo "🐳 Showing Docker logs..."
 	docker-compose -f docker/docker-compose.yml logs -f
 
+# Development Docker commands
+docker-dev-build:
+	@echo "🐳 Building Docker images for development..."
+	docker-compose -f docker/docker-compose.dev.yml build
+
+docker-dev-up:
+	@echo "🐳 Starting Docker Compose for development..."
+	docker-compose -f docker/docker-compose.dev.yml up -d
+
+docker-dev-down:
+	@echo "🐳 Stopping Docker Compose for development..."
+	docker-compose -f docker/docker-compose.dev.yml down
+
+docker-dev-logs:
+	@echo "🐳 Showing Docker logs for development..."
+	docker-compose -f docker/docker-compose.dev.yml logs -f
+
+docker-gateway-logs:
+	@echo "🐳 Showing Gateway logs..."
+	docker-compose -f docker/docker-compose.dev.yml logs -f gateway
+
 # ====================
 # KUBERNETES
 # ====================
@@ -384,12 +405,13 @@ quick-run:
 # ====================
 
 # Quick development workflow
-dev: dev-setup dev-start
+dev: dev-setup docker-dev-up
 	@echo "🎉 Development environment started!"
 	@echo "Frontend: http://localhost:3000"
-	@echo "User Service: http://localhost:8001"
-	@echo "Inventory Service: http://localhost:8002"
+	@echo "User Service: http://localhost:8000"
+	@echo "Inventory Service: http://localhost:8001"
 	@echo "Gateway: http://localhost:8080"
+	@echo "API Gateway: http://localhost:8080/api/v1/*"
 
 # Full deployment workflow
 full-deploy: test build deploy
