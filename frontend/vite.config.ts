@@ -18,18 +18,13 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/auth': {
-        target: process.env.NODE_ENV === 'production' ? 'http://user-service:8000' : 'http://localhost:8000',
+      '/api': {
+        target: 'http://localhost:30000', // Gateway
         changeOrigin: true,
         secure: false
       },
       '/health': {
-        target: process.env.NODE_ENV === 'production' ? 'http://user-service:8000' : 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false
-      },
-      '/inventory': {
-        target: process.env.NODE_ENV === 'production' ? 'http://inventory-service:8001' : 'http://localhost:8001',
+        target: 'http://localhost:30000', // Gateway health
         changeOrigin: true,
         secure: false
       }

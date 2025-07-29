@@ -13,7 +13,7 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: '/auth', // Uses Vite proxy in development
+      baseURL: '/api/v1/auth', // Uses gateway in both dev and prod
       headers: {
         'Content-Type': 'application/json',
       },

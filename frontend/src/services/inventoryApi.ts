@@ -11,7 +11,7 @@ class InventoryApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: '/inventory', // Uses Vite proxy in development
+      baseURL: '/api/v1/inventory', // Uses gateway in both dev and prod
       headers: {
         'Content-Type': 'application/json',
       },
