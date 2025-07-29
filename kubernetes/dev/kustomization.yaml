@@ -16,3 +16,5 @@ images:
   newTag: latest
 - name: order-processor-frontend
   newTag: latest
+- name: order-processor-gateway
+  newTag: latest

@@ -330,6 +330,13 @@ deploy_kubernetes() {
         exit 1
     fi
 
+    # Check if Kubernetes cluster is accessible
+    if ! kubectl cluster-info &> /dev/null; then
+        log_error "No Kubernetes cluster is accessible"
+        log_info "Please start a local cluster (e.g., kind create cluster --name order-processor)"
+        exit 1
+    fi
+
     # Check if Docker is installed
     if ! command -v docker &> /dev/null; then
         log_error "Docker is not installed"
@@ -345,21 +352,28 @@ deploy_kubernetes() {
 
     # Build frontend
     log_info "Building frontend image..."
-    docker build $docker_args -t order-processor-frontend:latest ../frontend/
+    docker build $docker_args -t order-processor-frontend:latest -f ../docker/frontend/Dockerfile ../
 
     # Build services
     log_info "Building user service image..."
-    docker build $docker_args -t order-processor-user-service:latest ../services/user_service/
+    docker build $docker_args -t order-processor-user_service:latest -f ../docker/user-service/Dockerfile ../
 
     log_info "Building inventory service image..."
-    docker build $docker_args -t order-processor-inventory-service:latest ../services/inventory_service/
+    docker build $docker_args -t order-processor-inventory_service:latest -f ../docker/inventory-service/Dockerfile ../
 
     # Build gateway
     log_info "Building gateway image..."
-    docker build $docker_args -t order-processor-gateway:latest ../gateway/
+    docker build $docker_args -t order-processor-gateway:latest -f ../docker/gateway/Dockerfile ../
 
     # Deploy to Kubernetes
     log_info "Deploying to Kubernetes..."
+
+    # Apply base configuration first (creates namespace and other base resources)
+    log_info "Applying base configuration..."
+    kubectl apply -k base/
+
+    # Deploy environment-specific configuration
+    log_info "Deploying $ENVIRONMENT configuration..."
     kubectl apply -k "$ENVIRONMENT/"
 
     log_success "Kubernetes deployment completed"

@@ -73,7 +73,7 @@ func (s *Server) setupRoutes() {
 			// Protected auth routes (auth required)
 			protectedAuth := auth.Group("")
 			{
-				protectedAuth.GET("/profile", s.handleProxyRequest)
+				protectedAuth.GET("/me", s.handleProxyRequest)
 				protectedAuth.POST("/logout", s.handleProxyRequest)
 			}
 		}

@@ -64,5 +64,26 @@ spec:
   - name: http
     port: 3000
     targetPort: 3000
+    nodePort: 30004
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: gateway
+    environment: dev
+spec:
+  type: NodePort
+  selector:
+    app: order-processor
+    component: gateway
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
     nodePort: 30000
     protocol: TCP

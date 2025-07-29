@@ -103,7 +103,7 @@ const (
 	APIV1AuthPath     = "/api/v1/auth"
 	APIV1AuthLogin    = "/api/v1/auth/login"
 	APIV1AuthRegister = "/api/v1/auth/register"
-	APIV1AuthProfile  = "/api/v1/auth/profile"
+	APIV1AuthProfile  = "/api/v1/auth/me"
 	APIV1AuthLogout   = "/api/v1/auth/logout"
 
 	// Inventory service paths
