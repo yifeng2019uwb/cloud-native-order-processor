@@ -30,9 +30,10 @@ env:
   GO_VERSION: '1.24'
   NODE_VERSION: '18'
   # Control flags for additional jobs (set in repository settings)
-  # ENABLE_TERRAFORM_PLAN: 'true'      # Always validate infrastructure changes
-  # ENABLE_INTEGRATION_TESTS: 'false'  # Disabled - enable when ready
-  # ENABLE_TERRAFORM_APPLY: 'false'    # Disabled - enable when ready
+  ENABLE_TERRAFORM_PLAN: 'true'      # Always validate infrastructure changes
+  ENABLE_INTEGRATION_TESTS: 'false'  # Disabled - enable when ready
+  ENABLE_TERRAFORM_APPLY: 'false'    # Disabled - enable when ready
+  ENABLE_TERRAFORM_CLEANUP: 'false'  # Disabled - enable when ready
 
 jobs:
   # Job 1: CI - Always runs (FREE) - Tests and validation only
@@ -161,49 +162,14 @@ jobs:
         echo "✅ Plan artifact uploaded"
         echo "💰 Cost: $0 (plan only, no resources created)"
 
-  # Job 3: Integration Tests - End-to-end testing (DISABLED)
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
-    needs: [test, terraform-plan]
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Install dependencies
-      run: |
-        cd integration_tests
-        pip install -r requirements.txt
-
-    - name: Run Integration Tests
-      run: |
-        cd integration_tests
-        python -m pytest -v
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: us-west-2
-
-    - name: Integration Tests Summary
-      run: |
-        echo "=== 🧪 Integration Tests Summary ==="
-        echo ""
-        echo "✅ End-to-end tests completed"
-        echo "💰 Cost: ~$5-10 (AWS resources for testing)"
-
-  # Job 4: Terraform Apply - Deploy infrastructure (DISABLED)
+  # Job 3: Terraform Apply - Deploy infrastructure (DISABLED)
   terraform-apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
     if: ${{ vars.ENABLE_TERRAFORM_APPLY == 'true' }}
-    needs: [test, terraform-plan, integration-tests]
+    needs: [test, terraform-plan]
     environment: production
 
     steps:
@@ -241,3 +207,42 @@ jobs:
         echo ""
         echo "✅ Infrastructure deployed successfully"
         echo "💰 Cost: ~$20-50/day (production resources)"
+
+  # Job 4: Integration Tests - End-to-end testing (DISABLED)
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    if: ${{ vars.ENABLE_INTEGRATION_TESTS == 'true' }}
+    needs: [test, terraform-plan]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        cd integration_tests
+        pip install -r requirements.txt
+
+    - name: Run Integration Tests
+      run: |
+        cd integration_tests
+        python -m pytest -v
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-west-2
+
+    - name: Integration Tests Summary
+      run: |
+        echo "=== 🧪 Integration Tests Summary ==="
+        echo ""
+        echo "✅ End-to-end tests completed"
+        echo "💰 Cost: ~$5-10 (AWS resources for testing)"
+
+   # Job 5: Terraform destroy - Destroy all infrastructure (DISABLED)

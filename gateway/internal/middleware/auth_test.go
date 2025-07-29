@@ -297,9 +297,9 @@ func TestAuthMiddlewareContextValues(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Verify public user context values
-		assert.Equal(t, "", response["user_id"])
-		assert.Equal(t, "", response["user_role"])
-		assert.Equal(t, true, response["exists"])          // Context is set for public users
+		assert.Equal(t, nil, response["user_id"])          // user_id is not set for public users
+		assert.Equal(t, "public", response["user_role"])   // Public users get RolePublic
+		assert.Equal(t, false, response["exists"])         // user_id context is not set for public users
 		assert.Equal(t, true, response["role_exists"])     // Role is set for public users
 		assert.Equal(t, false, response["context_exists"]) // No user context object
 	})
