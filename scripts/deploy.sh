@@ -1,7 +1,7 @@
 #!/bin/bash
 # scripts/deploy.sh
-# Enhanced Infrastructure Deployment Script
-# Supports environments (dev/prod)
+# Universal Deployment Script - Consolidates all deployment operations
+# Handles: Service deployment, Infrastructure deployment, Kubernetes deployment
 
 set -e
 
@@ -14,33 +14,52 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
 # Default values
-ENVIRONMENT=""
+ENVIRONMENT="dev"
+DEPLOY_TYPE=""
+SERVICE_NAME=""
 VERBOSE=false
 DRY_RUN=false
+NO_CACHE=false
 
 # Usage function
 show_usage() {
     cat << EOF
-$(printf "${BLUE}🚀 Infrastructure Deployment Script${NC}")
+$(printf "${BLUE}🚀 Universal Deployment Script${NC}")
 
-Usage: $0 --environment {dev|prod} [OPTIONS]
+Usage: $0 --type {service|infra|k8s|all} [OPTIONS]
 
-Deploy AWS infrastructure using Terraform with environment support.
+Deploy services, infrastructure, or Kubernetes resources.
 
 REQUIRED:
-    --environment {dev|prod}           Target environment
+    --type {service|infra|k8s|all}     Deployment type
 
 OPTIONS:
+    --environment {dev|prod}           Target environment (default: dev)
+    --service {user|inventory}         Service name (for service deployment)
     -v, --verbose                      Enable verbose output
-    --dry-run                         Show what would happen (terraform plan only)
-    -h, --help                        Show this help message
+    --dry-run                          Show what would happen (terraform plan only)
+    --no-cache                         Build Docker images without cache (k8s only)
+    -h, --help                         Show this help message
 
 EXAMPLES:
-    $0 --environment dev     # Deploy development setup
-    $0 --environment prod    # Deploy production setup
+    # Deploy specific service
+    $0 --type service --service user
+    $0 --type service --service inventory
+
+    # Deploy infrastructure
+    $0 --type infra --environment dev
+    $0 --type infra --environment prod --dry-run
+
+    # Deploy to Kubernetes
+    $0 --type k8s --environment dev
+    $0 --type k8s --environment prod --no-cache
+
+    # Deploy everything
+    $0 --type all --environment dev
 
 EOF
 }
@@ -63,15 +82,23 @@ log_error() {
 }
 
 log_step() {
-    printf "\n${BLUE}=== %s ===${NC}\n" "$1"
+    printf "\n${PURPLE}=== %s ===${NC}\n" "$1"
 }
 
 # Parse command line arguments
 parse_arguments() {
     while [[ $# -gt 0 ]]; do
         case $1 in
+            --type)
+                DEPLOY_TYPE="$2"
+                shift 2
+                ;;
             --environment)
                 ENVIRONMENT="$2"
+                shift 2
+                ;;
+            --service)
+                SERVICE_NAME="$2"
                 shift 2
                 ;;
             -v|--verbose)
@@ -80,6 +107,10 @@ parse_arguments() {
                 ;;
             --dry-run)
                 DRY_RUN=true
+                shift
+                ;;
+            --no-cache)
+                NO_CACHE=true
                 shift
                 ;;
             -h|--help)
@@ -100,329 +131,268 @@ validate_arguments() {
     local errors=()
 
     # Check required arguments
-    if [[ -z "$ENVIRONMENT" ]]; then
-        errors+=("--environment is required")
-    elif [[ "$ENVIRONMENT" != "dev" && "$ENVIRONMENT" != "prod" ]]; then
-        errors+=("--environment must be 'dev' or 'prod'")
+    if [[ -z "$DEPLOY_TYPE" ]]; then
+        errors+=("--type is required")
     fi
 
+    # Validate deployment type
+    if [[ -n "$DEPLOY_TYPE" ]]; then
+        case $DEPLOY_TYPE in
+            service|infra|k8s|all)
+                ;;
+            *)
+                errors+=("Invalid deployment type: $DEPLOY_TYPE")
+                ;;
+        esac
+    fi
 
+    # Validate environment
+    if [[ -n "$ENVIRONMENT" ]]; then
+        case $ENVIRONMENT in
+            dev|prod)
+                ;;
+            *)
+                errors+=("Environment must be 'dev' or 'prod'")
+                ;;
+        esac
+    fi
+
+    # Validate service name for service deployment
+    if [[ "$DEPLOY_TYPE" == "service" ]]; then
+        if [[ -z "$SERVICE_NAME" ]]; then
+            errors+=("--service is required for service deployment")
+        elif [[ "$SERVICE_NAME" != "user" && "$SERVICE_NAME" != "inventory" ]]; then
+            errors+=("Service must be 'user' or 'inventory'")
+        fi
+    fi
+
+    # Show errors if any
     if [[ ${#errors[@]} -gt 0 ]]; then
-        log_error "Validation failed:"
         for error in "${errors[@]}"; do
-            log_error "  - $error"
+            log_error "$error"
         done
-        echo
         show_usage
         exit 1
     fi
 }
 
-# Set environment variables based on environment
-setup_environment() {
-    log_step "🔧 Setting up environment: $ENVIRONMENT"
+# Deploy service function
+deploy_service() {
+    local service=$1
+    log_step "Deploying $service service"
 
-    # Set base environment variables
-    export ENVIRONMENT="$ENVIRONMENT"
-    export TF_VAR_environment="$ENVIRONMENT"
-
-    # Load environment-specific configuration
-    local env_config="$PROJECT_ROOT/config/environments/.env.defaults"
-    if [[ -f "$env_config" ]]; then
-        log_info "Loading default configuration: $env_config"
-        source "$env_config"
-    else
-        log_warning "Default configuration not found: $env_config"
+    local service_dir="$PROJECT_ROOT/services/${service}_service"
+    if [[ ! -d "$service_dir" ]]; then
+        log_error "Service directory not found: $service_dir"
+        exit 1
     fi
 
-    # Load environment-specific overrides
-    local env_override="$PROJECT_ROOT/config/environments/.env.${ENVIRONMENT}"
-    if [[ -f "$env_override" ]]; then
-        log_info "Loading environment overrides: $env_override"
-        source "$env_override"
+    cd "$service_dir"
+
+    # Check if main.py exists
+    if [[ ! -f "src/main.py" ]]; then
+        log_error "src/main.py not found in $service_dir"
+        exit 1
     fi
 
-
-    # Set additional Terraform variables
-    export TF_VAR_region="${AWS_REGION:-us-west-2}"
-    export TF_IN_AUTOMATION=true
-
-    if [[ "$VERBOSE" == "true" ]]; then
-        log_info "Environment variables set:"
-        log_info "  ENVIRONMENT: $ENVIRONMENT"
-        log_info "  AWS_REGION: ${TF_VAR_region}"
-    fi
-}
-
-# Install Terraform if not already installed
-install_terraform() {
-    log_step "🔧 Installing Terraform"
-
-    # Check if terraform is already installed
-    if command -v terraform &> /dev/null; then
-        local terraform_version=$(terraform version -json | jq -r '.terraform_version' 2>/dev/null || terraform version | head -1 | cut -d' ' -f2 | sed 's/v//')
-        log_info "Terraform already installed: $terraform_version"
-        return 0
-    fi
-
-    log_info "Terraform not found, installing..."
-
-    # Detect OS and architecture
-    local os=$(uname -s | tr '[:upper:]' '[:lower:]')
-    local arch=$(uname -m)
-
-    # Map architecture names
-    case $arch in
-        x86_64) arch="amd64" ;;
-        aarch64|arm64) arch="arm64" ;;
-        armv7l) arch="arm" ;;
-        *)
-            log_error "Unsupported architecture: $arch"
-            exit 1
+    # Set service-specific variables
+    local port=""
+    case $service in
+        user)
+            port=8000
+            ;;
+        inventory)
+            port=8001
             ;;
     esac
 
-    # Set Terraform version
-    local terraform_version="1.7.5"
-    local download_url="https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_${os}_${arch}.zip"
-    local install_dir="/usr/local/bin"
-
-    # For CI environments, use local bin directory
-    if [[ "$CI" == "true" || "$GITHUB_ACTIONS" == "true" ]]; then
-        install_dir="$HOME/.local/bin"
-        mkdir -p "$install_dir"
-        export PATH="$install_dir:$PATH"
-    fi
-
-    log_info "Downloading Terraform $terraform_version for $os/$arch..."
-
-    # Create temporary directory
-    local temp_dir=$(mktemp -d)
-    cd "$temp_dir"
-
-    # Download and install
-    if command -v curl &> /dev/null; then
-        curl -sL "$download_url" -o terraform.zip
-    elif command -v wget &> /dev/null; then
-        wget -q "$download_url" -O terraform.zip
-    else
-        log_error "Neither curl nor wget found. Cannot download Terraform."
+    # Check Python version
+    local python_version="3.11"
+    if ! command -v python${python_version} &> /dev/null; then
+        log_error "Python ${python_version} is not installed"
         exit 1
     fi
 
-    # Verify download succeeded
-    if [[ ! -f terraform.zip ]]; then
-        log_error "Failed to download Terraform"
-        exit 1
+    log_info "Python ${python_version} found"
+
+    # Create virtual environment if it doesn't exist
+    local venv_name=".venv-${service}_service"
+    if [[ ! -d "$venv_name" ]]; then
+        log_info "Creating virtual environment..."
+        python${python_version} -m venv "$venv_name"
     fi
 
-    # Extract and install
-    unzip -q terraform.zip
+    # Activate virtual environment
+    log_info "Activating virtual environment..."
+    source "$venv_name/bin/activate"
 
-    # Install with appropriate permissions
-    if [[ "$install_dir" == "/usr/local/bin" ]]; then
-        sudo mv terraform "$install_dir/"
-        sudo chmod +x "$install_dir/terraform"
-    else
-        mv terraform "$install_dir/"
-        chmod +x "$install_dir/terraform"
+    # Install dependencies
+    if [[ -f "requirements.txt" ]]; then
+        log_info "Installing dependencies..."
+        pip install -r requirements.txt
     fi
 
-    # Cleanup
-    cd - > /dev/null
-    rm -rf "$temp_dir"
-
-    # Verify installation
-    if command -v terraform &> /dev/null; then
-        local installed_version=$(terraform version -json | jq -r '.terraform_version' 2>/dev/null || terraform version | head -1 | cut -d' ' -f2 | sed 's/v//')
-        log_info "✅ Terraform installed successfully: $installed_version"
-    else
-        log_error "❌ Terraform installation failed"
-        exit 1
-    fi
-}
-
-# Check prerequisites
-check_prerequisites() {
-    log_step "🔍 Checking Prerequisites"
-
-    # Debug: Show current PATH and terraform status
-    if [[ "$VERBOSE" == "true" ]]; then
-        log_info "Current PATH: $PATH"
-        log_info "Checking terraform availability..."
+    # Install common package if it exists
+    if [[ -d "../common" ]]; then
+        log_info "Installing common package..."
+        pip install -e ../common
     fi
 
-    if ! command -v terraform &> /dev/null; then
-        log_info "Terraform not found, installing..."
-        install_terraform
-
-        # Verify terraform is now available
-        if command -v terraform &> /dev/null; then
-            log_success "✅ Terraform now available at: $(which terraform)"
+    # Check if port is available
+    if lsof -Pi :${port} -sTCP:LISTEN -t >/dev/null ; then
+        log_warning "Port ${port} is already in use"
+        local pid=$(lsof -Pi :${port} -sTCP:LISTEN -t)
+        if ps -p $pid | grep -q "uvicorn"; then
+            log_success "Service already running on port ${port} (PID: ${pid})"
+            log_info "Service URL: http://localhost:${port}"
+            log_info "API Docs: http://localhost:${port}/docs"
+            log_info "Health Check: http://localhost:${port}/health"
+            return 0
         else
-            log_error "❌ Terraform still not found after installation"
+            log_error "Port ${port} is in use by another process (PID: ${pid})"
             exit 1
         fi
-    else
-        log_success "✅ Terraform available at: $(which terraform)"
     fi
 
-    local missing_tools=()
+    # Set environment variables
+    export PYTHONPATH="${service_dir}/src:${PYTHONPATH}"
 
-    # Check required tools
-    local tools=("terraform" "aws" "jq")
-    for tool in "${tools[@]}"; do
-        if ! command -v "$tool" >/dev/null 2>&1; then
-            missing_tools+=("$tool")
-        fi
-    done
-
-    if [[ ${#missing_tools[@]} -gt 0 ]]; then
-        log_error "Missing required tools: ${missing_tools[*]}"
-        log_info "Install missing tools:"
-        log_info "  - AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
-        log_info "  - jq: apt install jq / brew install jq"
-        exit 1
+    # Load environment variables from .env if it exists
+    if [[ -f "../.env" ]]; then
+        log_info "Loading environment variables from ../.env"
+        export $(grep -v '^#' ../.env | xargs)
     fi
 
-    # Check AWS credentials
-    if ! aws sts get-caller-identity >/dev/null 2>&1; then
-        log_error "AWS credentials not configured or invalid"
-        log_info "Configure AWS credentials:"
-        log_info "  - aws configure"
-        log_info "  - or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
-        exit 1
-    fi
+    # Start the service
+    log_success "Starting ${service}_service on port ${port}..."
+    log_info "Service URL: http://localhost:${port}"
+    log_info "API Docs: http://localhost:${port}/docs"
+    log_info "Health Check: http://localhost:${port}/health"
 
-    # Check Terraform directory
-    if [[ ! -d "$PROJECT_ROOT/terraform" ]]; then
-        log_error "Terraform directory not found: $PROJECT_ROOT/terraform"
-        exit 1
-    fi
-
-    log_success "Prerequisites check passed"
+    # Start in background
+    nohup uvicorn src.main:app --host 0.0.0.0 --port ${port} --reload > "${service}_service.log" 2>&1 &
+    local pid=$!
+    echo $pid > "${service}_service.pid"
+    log_success "${service}_service started with PID: $pid"
 }
 
-# Show cost estimate
-show_cost_estimate() {
-    log_step "💰 Cost Estimate"
-
-    if [[ "$DRY_RUN" == "false" ]]; then
-        echo
-        log_info "💡 Cost Control Tips:"
-        log_info "  - Use --dry-run to preview changes"
-        log_info "  - Run destroy.sh --force when done testing"
-        log_info "  - Use devfor daily development"
-    fi
-}
-
-# Deploy infrastructure
+# Deploy infrastructure function
 deploy_infrastructure() {
-    log_step "🚀 Deploying Infrastructure with Terraform"
+    log_step "Deploying infrastructure (Terraform)"
 
-    cd "$PROJECT_ROOT/terraform"
+    local terraform_dir="$PROJECT_ROOT/terraform"
+    if [[ ! -d "$terraform_dir" ]]; then
+        log_error "Terraform directory not found: $terraform_dir"
+        exit 1
+    fi
+
+    cd "$terraform_dir"
+
+    # Check if Terraform is installed
+    if ! command -v terraform &> /dev/null; then
+        log_error "Terraform is not installed"
+        exit 1
+    fi
 
     # Initialize Terraform
     log_info "Initializing Terraform..."
-    if [[ "$VERBOSE" == "true" ]]; then
-        terraform init
-    else
-        terraform init > /dev/null
-    fi
+    terraform init
 
-    # Validate configuration
-    log_info "Validating Terraform configuration..."
-    terraform validate
+    # Set environment variables
+    export TF_VAR_environment="$ENVIRONMENT"
 
-    # Create execution plan
-    log_info "Creating Terraform execution plan..."
-    local plan_args="-var=environment=$ENVIRONMENT"
-
-    if [[ "$VERBOSE" == "true" ]]; then
-        terraform plan $plan_args
-    else
-        terraform plan $plan_args > /dev/null
-    fi
-
-    # Apply changes (unless dry-run)
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run mode: Terraform plan completed, skipping apply"
-        log_success "Infrastructure plan validation completed"
-        return 0
-    fi
-
-    log_info "Applying Terraform changes..."
-    if [[ "$VERBOSE" == "true" ]]; then
-        terraform apply -auto-approve $plan_args
+        log_info "Running Terraform plan (dry run)..."
+        terraform plan -var-file="terraform.tfvars"
     else
-        terraform apply -auto-approve $plan_args
+        log_info "Running Terraform apply..."
+        terraform apply -var-file="terraform.tfvars" -auto-approve
     fi
 
     log_success "Infrastructure deployment completed"
 }
 
-# Generate deployment summary
-generate_summary() {
-    log_step "📊 Deployment Summary"
+# Deploy Kubernetes function
+deploy_kubernetes() {
+    log_step "Deploying to Kubernetes"
 
-    cd "$PROJECT_ROOT/terraform"
-
-    log_info "Deployment Details:"
-    log_info "  Environment: $ENVIRONMENT"
-    log_info "  Region: ${TF_VAR_region}"
-    log_info "  Terraform State: $(pwd)/terraform.tfstate"
-
-    # Show key outputs if available
-    if terraform output >/dev/null 2>&1; then
-        echo
-        log_info "Key Infrastructure Outputs:"
-
-        # Common outputs
-        if terraform output database_endpoint >/dev/null 2>&1; then
-            local db_endpoint=$(terraform output -raw database_endpoint)
-            log_info "  Database: $db_endpoint"
-        fi
+    local k8s_dir="$PROJECT_ROOT/kubernetes"
+    if [[ ! -d "$k8s_dir" ]]; then
+        log_error "Kubernetes directory not found: $k8s_dir"
+        exit 1
     fi
 
-    if [[ "$DRY_RUN" == "false" ]]; then
-        log_success "✅ Infrastructure deployment completed successfully!"
-        log_info "Next steps:"
-        log_info "  3. Run integration tests: ./scripts/test-integration.sh --environment $ENVIRONMENT"
-        log_info "  4. When done, cleanup: ./scripts/destroy.sh --environment $ENVIRONMENT --force"
-    else
-        log_success "✅ Infrastructure plan validation completed!"
-        log_info "Remove --dry-run flag to apply changes"
+    cd "$k8s_dir"
+
+    # Check if kubectl is installed
+    if ! command -v kubectl &> /dev/null; then
+        log_error "kubectl is not installed"
+        exit 1
     fi
+
+    # Check if Docker is installed
+    if ! command -v docker &> /dev/null; then
+        log_error "Docker is not installed"
+        exit 1
+    fi
+
+    # Build Docker images
+    log_info "Building Docker images..."
+    local docker_args=""
+    if [[ "$NO_CACHE" == "true" ]]; then
+        docker_args="--no-cache"
+    fi
+
+    # Build frontend
+    log_info "Building frontend image..."
+    docker build $docker_args -t order-processor-frontend:latest ../frontend/
+
+    # Build services
+    log_info "Building user service image..."
+    docker build $docker_args -t order-processor-user-service:latest ../services/user_service/
+
+    log_info "Building inventory service image..."
+    docker build $docker_args -t order-processor-inventory-service:latest ../services/inventory_service/
+
+    # Build gateway
+    log_info "Building gateway image..."
+    docker build $docker_args -t order-processor-gateway:latest ../gateway/
+
+    # Deploy to Kubernetes
+    log_info "Deploying to Kubernetes..."
+    kubectl apply -k "$ENVIRONMENT/"
+
+    log_success "Kubernetes deployment completed"
 }
 
-# Main execution
+# Main deployment function
 main() {
-    # Parse arguments
-    parse_arguments "$@"
+    log_info "Starting deployment process..."
+    log_info "Deployment type: $DEPLOY_TYPE"
+    log_info "Environment: $ENVIRONMENT"
 
-    # Validate arguments
-    validate_arguments
+    case $DEPLOY_TYPE in
+        service)
+            deploy_service "$SERVICE_NAME"
+            ;;
+        infra)
+            deploy_infrastructure
+            ;;
+        k8s)
+            deploy_kubernetes
+            ;;
+        all)
+            log_step "Deploying everything"
+            deploy_infrastructure
+            deploy_kubernetes
+            log_info "Note: Services are deployed via Kubernetes"
+            ;;
+    esac
 
-    # Print header
-    echo
-    printf "${BLUE}🚀 Infrastructure Deployment Script${NC}\n"
-    printf "${BLUE}===================================${NC}\n"
-    echo
-    log_info "Deploying to: $ENVIRONMENT environment"
-    echo
-
-    # Show cost estimate
-    show_cost_estimate
-
-    # Execute deployment steps
-    setup_environment
-    check_prerequisites
-    deploy_infrastructure
-    generate_summary
-
-    # Return to original directory
-    cd "$PROJECT_ROOT"
+    log_success "Deployment completed successfully!"
 }
 
-# Run main function
-main "$@"
+# Script execution
+parse_arguments "$@"
+validate_arguments
+main
