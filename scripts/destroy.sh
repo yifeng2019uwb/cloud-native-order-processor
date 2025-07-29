@@ -1,7 +1,7 @@
 #!/bin/bash
 # scripts/destroy.sh
-# Infrastructure Cleanup Script
-# Destroys AWS infrastructure and cleans up resources
+# Simplified Infrastructure Cleanup Script
+# Destroys ALL AWS resources for this project only
 
 set -e
 
@@ -29,7 +29,7 @@ $(printf "${RED}🧹 Infrastructure Destroy Script${NC}")
 
 Usage: $0 --environment {dev|prod} [OPTIONS]
 
-Destroy AWS infrastructure and cleanup resources based on environment.
+Destroy ALL AWS resources for this project only.
 
 REQUIRED:
     --environment {dev|prod}           Target environment
@@ -107,56 +107,26 @@ parse_arguments() {
 
 # Validate arguments
 validate_arguments() {
-    local errors=()
-
-    # Check required arguments
     if [[ -z "$ENVIRONMENT" ]]; then
-        errors+=("--environment is required")
-    elif [[ "$ENVIRONMENT" != "dev" && "$ENVIRONMENT" != "prod" ]]; then
-        errors+=("--environment must be 'dev' or 'prod'")
+        log_error "--environment is required"
+        show_usage
+        exit 1
     fi
 
-
-    if [[ ${#errors[@]} -gt 0 ]]; then
-        log_error "Validation failed:"
-        for error in "${errors[@]}"; do
-            log_error "  - $error"
-        done
-        echo
+    if [[ "$ENVIRONMENT" != "dev" && "$ENVIRONMENT" != "prod" ]]; then
+        log_error "--environment must be 'dev' or 'prod'"
         show_usage
         exit 1
     fi
 }
 
-# Setup environment
-setup_environment() {
-    log_step "🔧 Setting up destroy environment"
-
-    # Set base environment variables
-    export ENVIRONMENT="$ENVIRONMENT"
-    export TF_VAR_environment="$ENVIRONMENT"
-
-    # Load environment-specific configuration
-    local env_config="$PROJECT_ROOT/config/environments/.env.defaults"
-    if [[ -f "$env_config" ]]; then
-        log_info "Loading configuration: $env_config"
-        source "$env_config"
-    fi
-
-    if [[ "$VERBOSE" == "true" ]]; then
-        log_info "Environment variables set:"
-        log_info "  ENVIRONMENT: $ENVIRONMENT"
-        log_info "  AWS_REGION: ${AWS_REGION:-us-west-2}"
-    fi
-}
-
 # Check prerequisites
 check_prerequisites() {
-    log_step "🔍 Checking Prerequisites"
+    log_step "Checking Prerequisites"
 
     # Check required tools
     local missing_tools=()
-    local tools=("terraform" "aws" "jq")
+    local tools=("terraform" "aws")
     for tool in "${tools[@]}"; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             missing_tools+=("$tool")
@@ -177,29 +147,22 @@ check_prerequisites() {
     log_success "Prerequisites check passed"
 }
 
-# Show destruction impact
-show_destruction_impact() {
-    log_step "💥 Destruction Impact"
-
-    echo
-    log_warning "⚠️  ALL DATA WILL BE PERMANENTLY LOST!"
-    log_warning "⚠️  This action cannot be undone!"
-}
-
 # Confirm destruction
 confirm_destruction() {
     if [[ "$FORCE" == "true" || "$DRY_RUN" == "true" ]]; then
         return 0
     fi
 
-    log_step "⚠️ Destruction Confirmation"
+    log_step "Destruction Confirmation"
 
     echo
-    printf "${RED}WARNING: This will permanently destroy the following:${NC}\n"
+    printf "${RED}WARNING: This will permanently destroy:${NC}\n"
     printf "${RED}  - Environment: $ENVIRONMENT${NC}\n"
     printf "${RED}  - All AWS resources managed by Terraform${NC}\n"
     printf "${RED}  - All data in databases${NC}\n"
     printf "${RED}  - All data in S3 buckets${NC}\n"
+    printf "${RED}  - All EKS clusters and node groups${NC}\n"
+    printf "${RED}  - All IAM roles and policies for this project${NC}\n"
 
     read -p "Are you absolutely sure you want to continue? (type 'yes' to confirm): " confirmation
 
@@ -211,74 +174,41 @@ confirm_destruction() {
     log_warning "Proceeding with infrastructure destruction..."
 }
 
-# pre-cleanup
-
-# Standard pre-cleanup tasks
-standard_pre_cleanup() {
-    log_step "🧹 Standard Pre-Cleanup Tasks"
+# Pre-cleanup: Empty S3 buckets
+pre_cleanup_s3() {
+    log_step "Pre-cleanup: Emptying S3 Buckets"
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run mode: Would perform standard pre-cleanup tasks"
+        log_info "Dry-run mode: Would empty S3 buckets"
         return 0
     fi
 
-    # Empty S3 buckets first (they must be empty to delete)
-    log_info "Checking for S3 buckets to empty..."
-
-    local bucket_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
+    local resource_prefix="order-processor-$ENVIRONMENT"
     local buckets
     buckets=$(aws s3api list-buckets \
-        --query "Buckets[?contains(Name, '${bucket_prefix}')].Name" \
+        --query "Buckets[?contains(Name, '${resource_prefix}')].Name" \
         --output text 2>/dev/null || echo "")
 
     if [[ -n "$buckets" ]]; then
         for bucket in $buckets; do
             log_info "Emptying S3 bucket: $bucket"
-
-            # Remove all objects
             aws s3 rm "s3://$bucket" --recursive 2>/dev/null || true
-
-            # Remove versioned objects if versioning enabled
-            aws s3api list-object-versions --bucket "$bucket" --output json 2>/dev/null | \
-            jq -r '.Versions[]? | "\(.Key) \(.VersionId)"' | \
-            while read -r key version; do
-                if [[ -n "$key" && -n "$version" ]]; then
-                    aws s3api delete-object --bucket "$bucket" --key "$key" --version-id "$version" 2>/dev/null || true
-                fi
-            done || true
-
-            # Remove delete markers
-            aws s3api list-object-versions --bucket "$bucket" --output json 2>/dev/null | \
-            jq -r '.DeleteMarkers[]? | "\(.Key) \(.VersionId)"' | \
-            while read -r key version; do
-                if [[ -n "$key" && -n "$version" ]]; then
-                    aws s3api delete-object --bucket "$bucket" --key "$key" --version-id "$version" 2>/dev/null || true
-                fi
-            done || true
-
-            log_info "Bucket $bucket emptied"
         done
     fi
-
-    log_success "Standard pre-cleanup tasks completed"
 }
 
-# API Gateway specific cleanup
-cleanup_api_gateway() {
-    log_info "Cleaning up API Gateway resources..."
+# Pre-cleanup: Delete KMS aliases and secrets
+pre_cleanup_kms_secrets() {
+    log_step "Pre-cleanup: KMS and Secrets"
 
-    local api_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "Dry-run mode: Would cleanup KMS and secrets"
+        return 0
+    fi
 
+    local resource_prefix="order-processor-$ENVIRONMENT"
 
-}
-
-# KMS and Secrets cleanup
-cleanup_kms_secrets() {
-    log_info "Cleaning up KMS and Secrets Manager resources..."
-
-    local resource_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
-
-    # Clean up KMS aliases first (they block key deletion)
+    # Delete KMS aliases
     local aliases
     aliases=$(aws kms list-aliases \
         --query "Aliases[?contains(AliasName, '${resource_prefix}')].AliasName" \
@@ -291,21 +221,7 @@ cleanup_kms_secrets() {
         fi
     done
 
-    # Schedule KMS key deletion
-    local keys
-    keys=$(aws kms list-keys --query 'Keys[].KeyId' --output text 2>/dev/null || echo "")
-    for key_id in $keys; do
-        local key_description
-        key_description=$(aws kms describe-key --key-id "$key_id" \
-            --query 'KeyMetadata.Description' --output text 2>/dev/null || echo "")
-
-        if [[ "$key_description" == *"$resource_prefix"* ]]; then
-            log_info "Scheduling KMS key deletion: $key_id"
-            aws kms schedule-key-deletion --key-id "$key_id" --pending-window-in-days 7 2>/dev/null || true
-        fi
-    done
-
-    # Force delete secrets (remove deletion protection)
+    # Force delete secrets
     local secrets
     secrets=$(aws secretsmanager list-secrets \
         --query "SecretList[?contains(Name, '${resource_prefix}')].Name" \
@@ -319,168 +235,63 @@ cleanup_kms_secrets() {
     done
 }
 
-# IAM roles and policies cleanup
-cleanup_iam_resources() {
-    log_info "Cleaning up IAM roles and policies..."
+# Pre-cleanup: IAM roles and policies
+pre_cleanup_iam() {
+    log_step "Pre-cleanup: IAM Resources"
 
-    local resource_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "Dry-run mode: Would cleanup IAM resources"
+        return 0
+    fi
 
-    # Only include patterns for roles we actually created/manage
-    # DO NOT include AWSServiceRole patterns - these are managed by AWS
-    local role_patterns=(
-        "*${resource_prefix}*"
-        "*eks-cluster-service-role*"
-        "*eks-nodegroup-*"
-        "*codebuild-*"
-        "*codepipeline-*"
-    )
+    local resource_prefix="order-processor-$ENVIRONMENT"
 
-    # Get all roles and filter by patterns
+    # Get all roles and filter by our prefix
     local all_roles
     all_roles=$(aws iam list-roles --query 'Roles[].RoleName' --output text 2>/dev/null || echo "")
 
     for role_name in $all_roles; do
-        # Always skip AWS service-linked roles (they're managed by AWS)
+        # Skip AWS service-linked roles
         if [[ "$role_name" == *"AWSServiceRole"* ]]; then
-            log_info "Skipping AWS service-linked role: $role_name (managed by AWS)"
             continue
         fi
 
-        # Check if role matches our patterns
-        local should_delete=false
-        for pattern in "${role_patterns[@]}"; do
-            if [[ "$role_name" == $pattern ]] || [[ "$role_name" == *"$resource_prefix"* ]]; then
-                should_delete=true
-                break
-            fi
-        done
+        # Check if role matches our project
+        if [[ "$role_name" == *"$resource_prefix"* ]]; then
+            log_info "Cleaning up IAM role: $role_name"
 
-        if [[ "$should_delete" == "true" ]]; then
-            cleanup_single_role "$role_name"
-        fi
-    done
-
-    # Clean up orphaned policies
-    cleanup_orphaned_policies
-
-    # Log remaining service-linked roles for informational purposes
-    log_remaining_service_roles
-}
-
-# Optional: Add this function to show remaining service-linked roles
-log_remaining_service_roles() {
-    log_info "Checking for remaining AWS service-linked roles..."
-
-    local service_roles
-    service_roles=$(aws iam list-roles --query 'Roles[?contains(RoleName, `AWSServiceRole`)].RoleName' --output text 2>/dev/null || echo "")
-
-    if [[ -n "$service_roles" ]]; then
-        log_info "Remaining AWS service-linked roles (these are normal and managed by AWS):"
-        for role in $service_roles; do
-            log_info "  - $role"
-        done
-        log_info "Note: These roles will be automatically cleaned up by AWS when the associated services are no longer used."
-    else
-        log_info "No AWS service-linked roles found."
-    fi
-}
-
-# Clean up a single IAM role
-cleanup_single_role() {
-    local role_name="$1"
-
-    if [[ -z "$role_name" ]]; then
-        return
-    fi
-
-    log_info "Cleaning up IAM role: $role_name"
-
-    # Detach managed policies
-    local attached_policies
-    attached_policies=$(aws iam list-attached-role-policies \
-        --role-name "$role_name" \
-        --query 'AttachedPolicies[].PolicyArn' \
-        --output text 2>/dev/null || echo "")
-
-    for policy_arn in $attached_policies; do
-        if [[ -n "$policy_arn" ]]; then
-            log_info "  Detaching managed policy: $policy_arn"
-            aws iam detach-role-policy \
+            # Detach managed policies
+            local attached_policies
+            attached_policies=$(aws iam list-attached-role-policies \
                 --role-name "$role_name" \
-                --policy-arn "$policy_arn" 2>/dev/null || true
-        fi
-    done
+                --query 'AttachedPolicies[].PolicyArn' \
+                --output text 2>/dev/null || echo "")
 
-    # Delete inline policies
-    local inline_policies
-    inline_policies=$(aws iam list-role-policies \
-        --role-name "$role_name" \
-        --query 'PolicyNames' \
-        --output text 2>/dev/null || echo "")
+            for policy_arn in $attached_policies; do
+                if [[ -n "$policy_arn" ]]; then
+                    aws iam detach-role-policy --role-name "$role_name" --policy-arn "$policy_arn" 2>/dev/null || true
+                fi
+            done
 
-    for policy_name in $inline_policies; do
-        if [[ -n "$policy_name" ]]; then
-            log_info "  Deleting inline policy: $policy_name"
-            aws iam delete-role-policy \
+            # Delete inline policies
+            local inline_policies
+            inline_policies=$(aws iam list-role-policies \
                 --role-name "$role_name" \
-                --policy-name "$policy_name" 2>/dev/null || true
+                --query 'PolicyNames' \
+                --output text 2>/dev/null || echo "")
+
+            for policy_name in $inline_policies; do
+                if [[ -n "$policy_name" ]]; then
+                    aws iam delete-role-policy --role-name "$role_name" --policy-name "$policy_name" 2>/dev/null || true
+                fi
+            done
+
+            # Delete the role
+            aws iam delete-role --role-name "$role_name" 2>/dev/null || true
         fi
     done
 
-    # Finally delete the role
-    log_info "  Deleting role: $role_name"
-    aws iam delete-role --role-name "$role_name" 2>/dev/null || true
-}
-
-# EKS specific cleanup
-cleanup_eks_roles() {
-    log_info "Cleaning up EKS-specific resources..."
-
-    local cluster_name="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}-cluster"
-
-    # Get EKS cluster service role
-    local cluster_role
-    cluster_role=$(aws eks describe-cluster \
-        --name "$cluster_name" \
-        --query 'cluster.roleArn' \
-        --output text 2>/dev/null | cut -d'/' -f2 || echo "")
-
-    if [[ -n "$cluster_role" && "$cluster_role" != "None" ]]; then
-        log_info "Found EKS cluster role: $cluster_role"
-        cleanup_single_role "$cluster_role"
-    fi
-
-    # Get node group roles
-    local nodegroups
-    nodegroups=$(aws eks list-nodegroups \
-        --cluster-name "$cluster_name" \
-        --query 'nodegroups' \
-        --output text 2>/dev/null || echo "")
-
-    for nodegroup in $nodegroups; do
-        if [[ -n "$nodegroup" ]]; then
-            local nodegroup_role
-            nodegroup_role=$(aws eks describe-nodegroup \
-                --cluster-name "$cluster_name" \
-                --nodegroup-name "$nodegroup" \
-                --query 'nodegroup.nodeRole' \
-                --output text 2>/dev/null | cut -d'/' -f2 || echo "")
-
-            if [[ -n "$nodegroup_role" && "$nodegroup_role" != "None" ]]; then
-                log_info "Found EKS nodegroup role: $nodegroup_role"
-                cleanup_single_role "$nodegroup_role"
-            fi
-        fi
-    done
-}
-
-# Clean up orphaned policies
-cleanup_orphaned_policies() {
-    log_info "Cleaning up orphaned customer-managed policies..."
-
-    local resource_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
-
-    # Get customer-managed policies
+    # Clean up customer-managed policies
     local policies
     policies=$(aws iam list-policies \
         --scope Local \
@@ -489,24 +300,7 @@ cleanup_orphaned_policies() {
 
     for policy_arn in $policies; do
         if [[ "$policy_arn" == *"$resource_prefix"* ]]; then
-            log_info "Attempting to delete policy: $policy_arn"
-
-            # Get policy versions and delete non-default versions first
-            local versions
-            versions=$(aws iam list-policy-versions \
-                --policy-arn "$policy_arn" \
-                --query 'Versions[?IsDefaultVersion==`false`].VersionId' \
-                --output text 2>/dev/null || echo "")
-
-            for version in $versions; do
-                if [[ -n "$version" ]]; then
-                    aws iam delete-policy-version \
-                        --policy-arn "$policy_arn" \
-                        --version-id "$version" 2>/dev/null || true
-                fi
-            done
-
-            # Delete the policy
+            log_info "Deleting policy: $policy_arn"
             aws iam delete-policy --policy-arn "$policy_arn" 2>/dev/null || true
         fi
     done
@@ -514,14 +308,13 @@ cleanup_orphaned_policies() {
 
 # Terraform destroy
 terraform_destroy() {
-    log_step "💥 Destroying Infrastructure with Terraform"
+    log_step "Destroying Infrastructure with Terraform"
 
     cd "$PROJECT_ROOT/terraform"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "Dry-run mode: Would run terraform destroy"
-        terraform plan -destroy \
-            -var="environment=$ENVIRONMENT" \
+        terraform plan -destroy -var="environment=$ENVIRONMENT"
         return 0
     fi
 
@@ -531,92 +324,29 @@ terraform_destroy() {
         terraform init
     fi
 
-    # Pre-cleanup AWS resources that block Terraform destroy
-    cleanup_api_gateway
-    cleanup_kms_secrets
-
     # Destroy with auto-approve
-    local destroy_args="-var=environment=$ENVIRONMENT -auto-approve"
-
     log_info "Running terraform destroy..."
-    if terraform destroy $destroy_args; then
+    if terraform destroy -var="environment=$ENVIRONMENT" -auto-approve; then
         log_success "Terraform destroy completed successfully"
     else
-        log_error "Terraform destroy failed, attempting cleanup of remaining resources"
-        cleanup_remaining_resources
-    fi
-
-    # Post-cleanup for resources that might not be handled by Terraform
-    log_info "Running post-destroy cleanup..."
-    cleanup_eks_roles
-    cleanup_iam_resources
-    cleanup_remaining_resources
-}
-
-# Cleanup remaining resources
-cleanup_remaining_resources() {
-    log_warning "Attempting to cleanup remaining resources..."
-
-    cd "$PROJECT_ROOT/terraform"
-
-    # Get list of remaining resources
-    if terraform state list >/dev/null 2>&1; then
-        local remaining_resources
-        remaining_resources=$(terraform state list 2>/dev/null || echo "")
-
-        if [[ -n "$remaining_resources" ]]; then
-            log_warning "Remaining resources in state:"
-            echo "$remaining_resources"
-
-            # Try destroy again with individual resource targeting
-            log_info "Attempting targeted resource destruction..."
-            echo "$remaining_resources" | while read -r resource; do
-                if [[ -n "$resource" ]]; then
-                    log_info "Attempting to destroy: $resource"
-                    terraform destroy -target="$resource" \
-                        -var="environment=$ENVIRONMENT" \
-                        -auto-approve || true
-                fi
-            done
-        fi
+        log_error "Terraform destroy failed"
+        return 1
     fi
 }
 
-# Verify complete cleanup
+# Verify cleanup
 verify_cleanup() {
-    log_step "✅ Verifying Complete Cleanup"
+    log_step "Verifying Complete Cleanup"
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry-run mode: Would verify cleanup completion"
+        log_info "Dry-run mode: Would verify cleanup"
         return 0
     fi
 
+    local resource_prefix="order-processor-$ENVIRONMENT"
     local warnings=()
-    local resource_prefix="${RESOURCE_PREFIX:-order-processor-$ENVIRONMENT}"
 
-    # Check for remaining resources by tags
-    log_info "Checking for remaining tagged resources..."
-    local tagged_resources
-    tagged_resources=$(aws resourcegroupstaggingapi get-resources \
-        --tag-filters Key=Project,Values=order-processor \
-        --region "${AWS_REGION:-us-west-2}" \
-        --query 'ResourceTagMappingList | length' \
-        --output text 2>/dev/null || echo "0")
-
-    if [[ "$tagged_resources" -gt 0 ]]; then
-        warnings+=("$tagged_resources tagged resources still exist")
-
-        # Show details if verbose
-        if [[ "$VERBOSE" == "true" ]]; then
-            aws resourcegroupstaggingapi get-resources \
-                --tag-filters Key=Project,Values=order-processor \
-                --region "${AWS_REGION:-us-west-2}" \
-                --query 'ResourceTagMappingList[].ResourceARN' \
-                --output table 2>/dev/null || true
-        fi
-    fi
-
-    # Check for common resources
+    # Check for remaining S3 buckets
     local remaining_s3
     remaining_s3=$(aws s3api list-buckets \
         --query "Buckets[?contains(Name, '${resource_prefix}')].Name" \
@@ -625,12 +355,22 @@ verify_cleanup() {
         warnings+=("S3 buckets still exist: $remaining_s3")
     fi
 
+    # Check for remaining RDS instances
     local remaining_rds
     remaining_rds=$(aws rds describe-db-instances \
         --query "DBInstances[?contains(DBInstanceIdentifier, '${resource_prefix}')].DBInstanceIdentifier" \
         --output text 2>/dev/null || echo "")
     if [[ -n "$remaining_rds" ]]; then
         warnings+=("RDS instances still exist: $remaining_rds")
+    fi
+
+    # Check for remaining EKS clusters
+    local remaining_eks
+    remaining_eks=$(aws eks list-clusters \
+        --query "clusters[?contains(@, '${resource_prefix}')]" \
+        --output text 2>/dev/null || echo "")
+    if [[ -n "$remaining_eks" ]]; then
+        warnings+=("EKS clusters still exist: $remaining_eks")
     fi
 
     if [[ ${#warnings[@]} -eq 0 ]]; then
@@ -642,39 +382,14 @@ verify_cleanup() {
             log_warning "  - $warning"
         done
         log_info "Manual cleanup may be required in AWS Console"
-        log_warning "💰 Some costs may still be incurred"
-    fi
-}
-
-# Generate cleanup summary
-generate_summary() {
-    log_step "📊 Complete Cleanup Summary"
-
-    log_info "Destruction Details:"
-    log_info "  Environment: $ENVIRONMENT"
-    log_info "  Region: ${AWS_REGION:-us-west-2}"
-
-    if [[ "$DRY_RUN" == "false" ]]; then
-        log_success "✅ Complete infrastructure destruction completed!"
-
-        log_info "All AWS resources have been cleaned up"
-        log_info "Check AWS Console and billing dashboard to verify"
-        log_success "💰 Expected cost reduction: ~$0.50-20/day"
-    else
-        log_success "✅ Destruction plan validated!"
-        log_info "Remove --dry-run flag to destroy all infrastructure"
     fi
 }
 
 # Main execution
 main() {
-    # Parse arguments
     parse_arguments "$@"
-
-    # Validate arguments
     validate_arguments
 
-    # Print header
     echo
     printf "${RED}🧹 Infrastructure Destroy Script${NC}\n"
     printf "${RED}================================${NC}\n"
@@ -682,17 +397,18 @@ main() {
     log_warning "Destroying: $ENVIRONMENT environment"
     echo
 
-    # Execute destruction steps
-    setup_environment
     check_prerequisites
-    show_destruction_impact
     confirm_destruction
-    standard_pre_cleanup
+    pre_cleanup_s3
+    pre_cleanup_kms_secrets
+    pre_cleanup_iam
     terraform_destroy
     verify_cleanup
-    generate_summary
 
-    # Return to original directory
+    log_success "✅ Infrastructure destruction completed!"
+    log_info "Check AWS Console and billing dashboard to verify"
+    log_success "💰 Expected cost reduction: ~$0.50-20/day"
+
     cd "$PROJECT_ROOT"
 }
 
