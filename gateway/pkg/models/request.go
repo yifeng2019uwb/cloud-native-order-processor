@@ -12,6 +12,17 @@ type RequestContext struct {
 	ServiceName string          `json:"service_name"`
 	Security    SecurityContext `json:"security"`
 	Audit       AuditContext    `json:"audit"`
+
+	// Phase 1: Simple user context
+	User *UserContext `json:"user,omitempty"`
+}
+
+// UserContext holds user information extracted from JWT
+// Phase 1: Simple user context with basic role system
+type UserContext struct {
+	Username        string `json:"username"`
+	Role            string `json:"role"` // "public", "customer", "vip", "admin"
+	IsAuthenticated bool   `json:"is_authenticated"`
 }
 
 // SecurityContext holds security-related information
@@ -30,13 +41,24 @@ type AuditContext struct {
 }
 
 // ProxyRequest represents a request to be proxied to backend services
+// Phase 1: Simple proxy request structure
 type ProxyRequest struct {
+	// Core request information
 	Method      string            `json:"method"`
-	Path        string            `json:"path"`
+	Path        string            `json:"path"` // e.g., "/api/v1/auth/login"
 	Headers     map[string]string `json:"headers"`
 	Body        interface{}       `json:"body,omitempty"`
 	QueryParams map[string]string `json:"query_params,omitempty"`
-	Context     *RequestContext   `json:"context"`
+
+	// Simple routing information
+	TargetService string `json:"target_service"` // "user_service" or "inventory_service"
+	TargetPath    string `json:"target_path"`    // "/login" (stripped version)
+
+	// Request context
+	Context *RequestContext `json:"context"`
+
+	// Phase 2: Circuit breaker information (TODO)
+	// CircuitBreaker *CircuitBreakerInfo `json:"circuit_breaker,omitempty"`
 }
 
 // RateLimitInfo holds rate limiting information
@@ -57,3 +79,58 @@ type SessionInfo struct {
 	Data       map[string]interface{} `json:"data"`
 	LastAccess time.Time              `json:"last_access"`
 }
+
+// ErrorResponse represents standardized error responses
+// Phase 1: Simple error response structure
+type ErrorResponse struct {
+	Error     string            `json:"error"`
+	Message   string            `json:"message"`
+	Code      string            `json:"code"`
+	Timestamp time.Time         `json:"timestamp"`
+	Details   map[string]string `json:"details,omitempty"`
+}
+
+// ErrorCode represents different types of errors
+type ErrorCode string
+
+const (
+	// Authentication Errors
+	ErrAuthInvalidToken ErrorCode = "AUTH_001"
+	ErrAuthExpiredToken ErrorCode = "AUTH_002"
+	ErrAuthBlacklisted  ErrorCode = "AUTH_003"
+
+	// Authorization Errors
+	ErrPermInsufficient ErrorCode = "PERM_001"
+	ErrPermForbidden    ErrorCode = "PERM_002"
+
+	// Service Errors
+	ErrSvcUnavailable ErrorCode = "SVC_001"
+	ErrSvcTimeout     ErrorCode = "SVC_002"
+	ErrSvcCircuitOpen ErrorCode = "SVC_003"
+
+	// Rate Limiting
+	ErrRateLimitExceeded ErrorCode = "RATE_001"
+)
+
+// RouteConfig defines routing configuration for API endpoints
+// Phase 1: Simple route configuration
+type RouteConfig struct {
+	Path         string   `json:"path"`
+	RequiresAuth bool     `json:"requires_auth"`
+	AllowedRoles []string `json:"allowed_roles"`
+}
+
+// Phase 2: Circuit breaker information (TODO)
+// type CircuitBreakerInfo struct {
+//     ServiceName string    `json:"service_name"`
+//     IsOpen      bool      `json:"is_open"`
+//     Failures    int       `json:"failures"`
+//     LastFailure time.Time `json:"last_failure"`
+// }
+
+// Phase 3: Advanced features (Future - simple comments)
+// - Service discovery integration
+// - Load balancing
+// - Advanced monitoring and metrics
+// - Retry logic with exponential backoff
+// - Advanced caching strategies

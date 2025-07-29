@@ -92,6 +92,36 @@ const (
 	InventoryAssetByIDPath = "/inventory/assets/:id"
 )
 
+// Phase 1: API routing paths
+const (
+	// API v1 base path
+	APIV1BasePath = "/api/v1"
+
+	// Auth service paths
+	APIV1AuthPath     = "/api/v1/auth"
+	APIV1AuthLogin    = "/api/v1/auth/login"
+	APIV1AuthRegister = "/api/v1/auth/register"
+	APIV1AuthProfile  = "/api/v1/auth/profile"
+	APIV1AuthLogout   = "/api/v1/auth/logout"
+
+	// Inventory service paths
+	APIV1InventoryPath    = "/api/v1/inventory"
+	APIV1InventoryAssets  = "/api/v1/inventory/assets"
+	APIV1InventoryAssetID = "/api/v1/inventory/assets/:id"
+)
+
+// Phase 1: User roles and permissions
+const (
+	// User roles
+	RolePublic   = "public"   // No authentication required
+	RoleCustomer = "customer" // Basic authenticated user
+	RoleVIP      = "vip"      // Premium user (future)
+	RoleAdmin    = "admin"    // System administrator
+
+	// Default role for new users
+	DefaultUserRole = RoleCustomer
+)
+
 // Headers
 const (
 	ContentTypeJSON     = "application/json"
@@ -99,6 +129,12 @@ const (
 	UserAgentHeader     = "User-Agent"
 	XRequestIDHeader    = "X-Request-ID"
 	XSessionIDHeader    = "X-Session-ID"
+
+	// Phase 1: User context headers (added to backend requests)
+	XUserIDHeader        = "X-User-ID"
+	XUserRoleHeader      = "X-User-Role"
+	XAuthenticatedHeader = "X-Authenticated"
+	XSourceHeader        = "X-Source"
 )
 
 // Error codes
@@ -183,3 +219,62 @@ const (
 	ContextKeyUserRole = "user_role"
 	ContextKeySession  = "session"
 )
+
+// Phase 1: JWT configuration
+const (
+	JWTSecretKey = "dev-secret-key-change-in-production" // TODO: Use environment variable
+	JWTAlgorithm = "HS256"
+)
+
+// Phase 1: Circuit breaker configuration (TODO - Phase 2)
+const (
+// CircuitBreakerFailureThreshold = 5  // Number of failures before opening circuit
+// CircuitBreakerTimeout          = 60 * time.Second // Time to wait before trying again
+)
+
+// Phase 1: Route configuration
+var (
+	// RouteConfigs defines the routing configuration for API endpoints
+	RouteConfigs = map[string]RouteConfig{
+		// Auth service routes
+		APIV1AuthLogin: {
+			Path:         APIV1AuthLogin,
+			RequiresAuth: false, // Login doesn't require authentication
+			AllowedRoles: []string{RolePublic},
+		},
+		APIV1AuthRegister: {
+			Path:         APIV1AuthRegister,
+			RequiresAuth: false, // Registration doesn't require authentication
+			AllowedRoles: []string{RolePublic},
+		},
+		APIV1AuthProfile: {
+			Path:         APIV1AuthProfile,
+			RequiresAuth: true, // Profile requires authentication
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+		APIV1AuthLogout: {
+			Path:         APIV1AuthLogout,
+			RequiresAuth: true, // Logout requires authentication
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+
+		// Inventory service routes
+		APIV1InventoryAssets: {
+			Path:         APIV1InventoryAssets,
+			RequiresAuth: false, // Public inventory browsing
+			AllowedRoles: []string{RolePublic, RoleCustomer, RoleVIP, RoleAdmin},
+		},
+		APIV1InventoryAssetID: {
+			Path:         APIV1InventoryAssetID,
+			RequiresAuth: false, // Public asset details
+			AllowedRoles: []string{RolePublic, RoleCustomer, RoleVIP, RoleAdmin},
+		},
+	}
+)
+
+// RouteConfig defines routing configuration for API endpoints
+type RouteConfig struct {
+	Path         string   `json:"path"`
+	RequiresAuth bool     `json:"requires_auth"`
+	AllowedRoles []string `json:"allowed_roles"`
+}

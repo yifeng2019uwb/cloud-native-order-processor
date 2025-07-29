@@ -3,9 +3,11 @@ package services
 import (
 	"context"
 	"testing"
+	"time"
 
 	"order-processor-gateway/internal/config"
 	"order-processor-gateway/pkg/constants"
+	"order-processor-gateway/pkg/models"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -38,7 +40,20 @@ func TestProxyRequest(t *testing.T) {
 	ctx := context.Background()
 
 	// Test placeholder implementation
-	resp, err := service.ProxyRequest(ctx, "http://test-service:8000", "/test", "GET", nil, nil)
+	proxyReq := &models.ProxyRequest{
+		Method:        "GET",
+		Path:          "/test",
+		Headers:       nil,
+		Body:          nil,
+		TargetService: "test_service",
+		TargetPath:    "/test",
+		Context: &models.RequestContext{
+			RequestID:   "test-123",
+			Timestamp:   time.Now(),
+			ServiceName: "test_service",
+		},
+	}
+	resp, err := service.ProxyRequest(ctx, proxyReq)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
