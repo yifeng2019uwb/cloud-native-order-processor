@@ -57,6 +57,35 @@ func TestCORS(t *testing.T) {
 		assert.Equal(t, constants.CORSAllowMethods, w.Header().Get("Access-Control-Allow-Methods"))
 		assert.Equal(t, constants.CORSAllowHeaders, w.Header().Get("Access-Control-Allow-Headers"))
 	})
+
+	t.Run("Multiple CORS Requests", func(t *testing.T) {
+		methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"}
+
+		for _, method := range methods {
+			t.Run("Method: "+method, func(t *testing.T) {
+				w := httptest.NewRecorder()
+				req, _ := http.NewRequest(method, "/test", nil)
+				router.ServeHTTP(w, req)
+
+				// CORS headers should be set regardless of method
+				assert.Equal(t, constants.CORSAllowOrigin, w.Header().Get("Access-Control-Allow-Origin"))
+				assert.Equal(t, constants.CORSAllowMethods, w.Header().Get("Access-Control-Allow-Methods"))
+				assert.Equal(t, constants.CORSAllowHeaders, w.Header().Get("Access-Control-Allow-Headers"))
+			})
+		}
+	})
+
+	t.Run("CORS with Custom Headers", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("OPTIONS", "/test", nil)
+		req.Header.Set("Access-Control-Request-Headers", "Content-Type, Authorization")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, constants.StatusNoContent, w.Code)
+		assert.Equal(t, constants.CORSAllowOrigin, w.Header().Get("Access-Control-Allow-Origin"))
+		assert.Equal(t, constants.CORSAllowMethods, w.Header().Get("Access-Control-Allow-Methods"))
+		assert.Equal(t, constants.CORSAllowHeaders, w.Header().Get("Access-Control-Allow-Headers"))
+	})
 }
 
 func TestLogger(t *testing.T) {
