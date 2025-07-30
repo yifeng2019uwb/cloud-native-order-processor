@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from .base_dao import BaseDAO
 from ..entities.user import User, UserCreate, UserLogin
+from ..entities.roles import DEFAULT_USER_ROLE
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ class UserDAO(BaseDAO):
                 first_name=item.get('first_name', ''),  # FIXED: Split field with fallback
                 last_name=item.get('last_name', ''),    # FIXED: Split field with fallback
                 phone=item.get('phone'),
-                role=item.get('role', 'customer'),  # Add role field with default
+                role=item.get('role', DEFAULT_USER_ROLE),  # Add role field with default
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
@@ -130,7 +131,7 @@ class UserDAO(BaseDAO):
                 first_name=item.get('first_name', ''),  # FIXED: Split field with fallback
                 last_name=item.get('last_name', ''),    # FIXED: Split field with fallback
                 phone=item.get('phone'),
-                role=item.get('role', 'customer'),  # Add role field with default
+                role=item.get('role', DEFAULT_USER_ROLE),  # Add role field with default
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
@@ -140,17 +141,10 @@ class UserDAO(BaseDAO):
             raise
 
     async def authenticate_user(self, username: str, password: str) -> Optional[User]:
-        """Authenticate user with username/email and password"""
+        """Authenticate user with username and password"""
         try:
-            # Determine if identifier is email or username
-            user = None
-
-            if '@' in username:
-                # Identifier looks like email
-                user = await self.get_user_by_email(username)
-            else:
-                # Identifier looks like username
-                user = await self.get_user_by_username(username)
+            # Get user by username only
+            user = await self.get_user_by_username(username)
 
             if not user:
                 return None

@@ -23,7 +23,7 @@ DEPLOY_TYPE=""
 SERVICE_NAME=""
 VERBOSE=false
 DRY_RUN=false
-NO_CACHE=false
+NO_CACHE=true
 
 # Usage function
 show_usage() {
@@ -42,7 +42,7 @@ OPTIONS:
     --service {user|inventory}         Service name (for service deployment)
     -v, --verbose                      Enable verbose output
     --dry-run                          Show what would happen (terraform plan only)
-    --no-cache                         Build Docker images without cache (k8s only)
+    --cache                            Build Docker images with cache (k8s only, default: no-cache)
     -h, --help                         Show this help message
 
 EXAMPLES:
@@ -56,7 +56,7 @@ EXAMPLES:
 
     # Deploy to Kubernetes
     $0 --type k8s --environment dev
-    $0 --type k8s --environment prod --no-cache
+    $0 --type k8s --environment prod --cache
 
     # Deploy everything
     $0 --type all --environment dev
@@ -109,8 +109,8 @@ parse_arguments() {
                 DRY_RUN=true
                 shift
                 ;;
-            --no-cache)
-                NO_CACHE=true
+            --cache)
+                NO_CACHE=false
                 shift
                 ;;
             -h|--help)
@@ -345,9 +345,9 @@ deploy_kubernetes() {
 
     # Build Docker images
     log_info "Building Docker images..."
-    local docker_args=""
-    if [[ "$NO_CACHE" == "true" ]]; then
-        docker_args="--no-cache"
+    local docker_args="--no-cache"
+    if [[ "$NO_CACHE" == "false" ]]; then
+        docker_args=""
     fi
 
     # Build frontend

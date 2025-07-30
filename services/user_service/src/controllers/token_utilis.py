@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import jwt, JWTError
 import logging
+from common.entities.roles import DEFAULT_USER_ROLE
 
 logger = logging.getLogger(__name__)
 
@@ -15,13 +16,13 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
 
-def create_access_token(username: str, role: str = "customer", expires_delta: Optional[timedelta] = None) -> dict:
+def create_access_token(username: str, role: str = DEFAULT_USER_ROLE, expires_delta: Optional[timedelta] = None) -> dict:
     """
     Create JWT access token for authenticated user
 
     Args:
         username: User's username
-        role: User's role (default: "customer")
+        role: User's role (default: "customer" from enum)
         expires_delta: Optional custom expiration time
 
     Returns:

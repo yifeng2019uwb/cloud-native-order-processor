@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from datetime import date, datetime
 import re
+from .roles import UserRole, DEFAULT_USER_ROLE, VALID_ROLES
 
 
 class UserCreate(BaseModel):
@@ -13,7 +14,7 @@ class UserCreate(BaseModel):
     phone: Optional[str] = None
     date_of_birth: Optional[date] = None
     marketing_emails_consent: bool = False
-    role: str = "customer"  # Default role for new users
+    role: str = DEFAULT_USER_ROLE  # Default role for new users
 
     @field_validator("username")
     @classmethod
@@ -88,9 +89,8 @@ class UserCreate(BaseModel):
     @classmethod
     def validate_role(cls, v):
         """Validate user role"""
-        valid_roles = ["public", "customer", "vip", "admin"]
-        if v not in valid_roles:
-            raise ValueError(f"Role must be one of: {', '.join(valid_roles)}")
+        if v not in VALID_ROLES:
+            raise ValueError(f"Role must be one of: {', '.join(VALID_ROLES)}")
         return v
 
 
@@ -102,7 +102,7 @@ class UserLogin(BaseModel):
     @classmethod
     def validate_username(cls, v):
         if not v or not v.strip():
-            raise ValueError("Username or email cannot be empty")
+            raise ValueError("Username cannot be empty")
         return v.strip()
 
 
@@ -114,7 +114,7 @@ class User(BaseModel):
     phone: Optional[str] = None
     date_of_birth: Optional[date] = None
     marketing_emails_consent: bool = False
-    role: str = "customer"  # Default role
+    role: str = DEFAULT_USER_ROLE  # Default role
     created_at: datetime
     updated_at: datetime
 
@@ -130,7 +130,7 @@ class UserResponse(BaseModel):
     first_name: str
     last_name: str
     phone: Optional[str] = None
-    role: str = "customer"  # Include role in response
+    role: str = DEFAULT_USER_ROLE  # Include role in response
     created_at: datetime
     updated_at: datetime
 
