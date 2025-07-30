@@ -6,6 +6,7 @@ from src.controllers.token_utilis import (
 from jose import jwt
 from datetime import datetime, timedelta, timezone
 import time
+from exceptions import TokenExpiredException
 
 
 def test_create_access_token_returns_valid_jwt():
@@ -36,7 +37,7 @@ def test_verify_access_token_expired():
     token_data = create_access_token(username, expires_delta=timedelta(seconds=1))
     token = token_data["access_token"]
     time.sleep(2)  # Wait for token to expire
-    with pytest.raises(JWTError):
+    with pytest.raises(TokenExpiredException):
         verify_access_token(token)
 
 

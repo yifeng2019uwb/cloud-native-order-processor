@@ -8,6 +8,9 @@ from jose import jwt, JWTError
 import logging
 from common.entities.roles import DEFAULT_USER_ROLE
 
+# Import exceptions
+from exceptions import TokenExpiredException
+
 logger = logging.getLogger(__name__)
 
 # JWT Configuration
@@ -67,7 +70,8 @@ def verify_access_token(token: str) -> Optional[str]:
         Username if token is valid, None otherwise
 
     Raises:
-        JWTError: If token is invalid or expired
+        TokenExpiredException: If token is expired
+        JWTError: If token is invalid
     """
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
@@ -88,7 +92,7 @@ def verify_access_token(token: str) -> Optional[str]:
 
     except jwt.ExpiredSignatureError:
         logger.warning("Token has expired")
-        raise JWTError("Token expired")
+        raise TokenExpiredException()
     except JWTError:
         logger.warning("Invalid token provided")
         raise JWTError("Invalid token")

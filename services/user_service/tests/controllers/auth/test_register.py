@@ -52,7 +52,7 @@ async def test_register_username_exists():
     with pytest.raises(HTTPException) as exc_info:
         await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
     assert exc_info.value.status_code == status.HTTP_409_CONFLICT
-    assert "Username already exists" in str(exc_info.value.detail)
+    assert "Username 'newuser' already exists" in str(exc_info.value.detail)
 
 @pytest.mark.asyncio
 async def test_register_email_exists():
@@ -73,7 +73,7 @@ async def test_register_email_exists():
     with pytest.raises(HTTPException) as exc_info:
         await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
     assert exc_info.value.status_code == status.HTTP_409_CONFLICT
-    assert "Email already exists" in str(exc_info.value.detail)
+    assert "Email 'newuser@example.com' already exists" in str(exc_info.value.detail)
 
 @pytest.mark.asyncio
 async def test_register_validation_error():
@@ -98,11 +98,11 @@ async def test_register_validation_error():
     assert "Some validation error" in str(exc_info.value.detail)
 
 @pytest.mark.asyncio
-async def test_register_db_error():
+async def test_register_unexpected_error():
     mock_user_dao = AsyncMock()
     mock_user_dao.get_user_by_username = AsyncMock(return_value=None)
     mock_user_dao.get_user_by_email = AsyncMock(return_value=None)
-    mock_user_dao.create_user = AsyncMock(side_effect=Exception("DB error"))
+    mock_user_dao.create_user = AsyncMock(side_effect=Exception("Unexpected error"))
     mock_request = MagicMock()
     mock_request.client = MagicMock(host="127.0.0.1")
     mock_request.headers = {"user-agent": "pytest"}
@@ -120,22 +120,59 @@ async def test_register_db_error():
     assert "Service is temporarily unavailable" in str(exc_info.value.detail)
 
 @pytest.mark.asyncio
-async def test_register_unexpected_error():
-    mock_user_dao = AsyncMock()
-    mock_user_dao.get_user_by_username = AsyncMock(side_effect=Exception("Unexpected"))
-    mock_user_dao.get_user_by_email = AsyncMock(return_value=None)
-    mock_request = MagicMock()
-    mock_request.client = MagicMock(host="127.0.0.1")
-    mock_request.headers = {"user-agent": "pytest"}
-    reg_data = UserRegistrationRequest(
-        username="newuser",
-        email="newuser@example.com",
-        password="ValidPass123!@#",
-        first_name="New",
-        last_name="User",
-        phone="+1-555-123-4567"
-    )
-    with pytest.raises(HTTPException) as exc_info:
-        await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
-    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-    assert "An unexpected error occurred" in str(exc_info.value.detail)
+async def test_register_missing_input():
+    # Missing required fields
+    with pytest.raises(pydantic.ValidationError):
+        UserRegistrationRequest(
+            username="newuser",
+            # Missing email and password
+        )
+
+@pytest.mark.asyncio
+async def test_register_invalid_email():
+    with pytest.raises(pydantic.ValidationError):
+        UserRegistrationRequest(
+            username="newuser",
+            email="invalid-email",
+            password="ValidPass123!@#",
+            first_name="New",
+            last_name="User",
+            phone="+1-555-123-4567"
+        )
+
+@pytest.mark.asyncio
+async def test_register_weak_password():
+    with pytest.raises(pydantic.ValidationError):
+        UserRegistrationRequest(
+            username="newuser",
+            email="newuser@example.com",
+            password="weak",
+            first_name="New",
+            last_name="User",
+            phone="+1-555-123-4567"
+        )
+
+@pytest.mark.asyncio
+async def test_register_invalid_phone():
+    with pytest.raises(pydantic.ValidationError):
+        UserRegistrationRequest(
+            username="newuser",
+            email="newuser@example.com",
+            password="ValidPass123!@#",
+            first_name="New",
+            last_name="User",
+            phone="invalid-phone"
+        )
+
+@pytest.mark.asyncio
+async def test_register_future_date_of_birth():
+    with pytest.raises(pydantic.ValidationError):
+        UserRegistrationRequest(
+            username="newuser",
+            email="newuser@example.com",
+            password="ValidPass123!@#",
+            first_name="New",
+            last_name="User",
+            phone="+1-555-123-4567",
+            date_of_birth="2030-01-01"
+        )

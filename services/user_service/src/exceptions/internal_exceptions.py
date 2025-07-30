@@ -96,7 +96,40 @@ class InternalValidationError(InternalAuthError):
         self.rule = rule
 
 
-# Helper functions to raise internal exceptions (used in endpoints)
+# ========================================
+# SIMPLE EXTERNAL EXCEPTIONS
+# ========================================
+
+class UserNotFoundException(Exception):
+    """
+    User not found exception - safe to expose to client
+    """
+    def __init__(self, user_id: str):
+        self.message = f"User '{user_id}' not found"
+        super().__init__(self.message)
+
+
+class InvalidCredentialsException(Exception):
+    """
+    Invalid credentials exception - safe to expose to client
+    """
+    def __init__(self, username: str):
+        self.message = f"Invalid credentials for user '{username}'"
+        super().__init__(self.message)
+
+
+class TokenExpiredException(Exception):
+    """
+    Token expired exception - safe to expose to client
+    """
+    def __init__(self):
+        self.message = "Authentication token has expired"
+        super().__init__(self.message)
+
+
+# ========================================
+# HELPER FUNCTIONS
+# ========================================
 
 def raise_user_exists(email: str, existing_user_id: str = None):
     """

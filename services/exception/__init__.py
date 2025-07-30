@@ -1,43 +1,60 @@
 """
-Standardized exception models for external API responses
-Path: services/exception/__init__.py
+Standardized Exception Handling Package
 
-This package defines the standard error responses that are returned to external clients
-(frontend, API consumers) across all services.
+This package provides RFC 7807 Problem Details compliant error handling
+for all services in the Order Processor system.
+
+RFC 7807: https://tools.ietf.org/html/rfc7807
 """
 
+from .error_codes import ErrorCode, HTTP_STATUS_MAPPING
 from .error_models import (
-    StandardErrorResponse,
+    ProblemDetails,
     ValidationError,
     ErrorDetails,
-    create_standard_error_response,
-    create_validation_error_response,
-    create_resource_not_found_response,
-    create_resource_exists_response,
-    create_authentication_failed_response,
-    create_internal_error_response
+    create_validation_error,
+    create_problem_details
 )
-
-from .error_codes import (
-    StandardErrorCode,
-    get_http_status_code,
-    map_service_error_to_standard
+from .exception_handlers import (
+    ExceptionHandler,
+    handle_validation_error,
+    handle_authentication_error,
+    handle_resource_not_found,
+    handle_resource_exists,
+    handle_internal_error
+)
+from .exception_mapping import (
+    ExceptionMapper,
+    exception_mapper,
+    map_service_exception,
+    map_database_exception
 )
 
 __all__ = [
     # Error codes
-    "StandardErrorCode",
-    "get_http_status_code",
-    "map_service_error_to_standard",
+    'ErrorCode',
+    'HTTP_STATUS_MAPPING',
 
     # Error models
-    "StandardErrorResponse",
-    "ValidationError",
-    "ErrorDetails",
-    "create_standard_error_response",
-    "create_validation_error_response",
-    "create_resource_not_found_response",
-    "create_resource_exists_response",
-    "create_authentication_failed_response",
-    "create_internal_error_response"
+    'ProblemDetails',
+    'ValidationError',
+    'ErrorDetails',
+    'create_validation_error',
+    'create_problem_details',
+
+    # Exception handlers
+    'ExceptionHandler',
+    'handle_validation_error',
+    'handle_authentication_error',
+    'handle_resource_not_found',
+    'handle_resource_exists',
+    'handle_internal_error',
+
+    # Exception mapping
+    'ExceptionMapper',
+    'exception_mapper',
+    'map_service_exception',
+    'map_database_exception'
 ]
+
+__version__ = "1.0.0"

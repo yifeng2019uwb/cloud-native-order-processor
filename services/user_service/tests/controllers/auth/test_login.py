@@ -3,6 +3,7 @@ from fastapi import HTTPException, status
 from unittest.mock import AsyncMock, patch, MagicMock
 from src.controllers.auth.login import login_user
 from api_models.auth.login import UserLoginRequest
+from exceptions import InvalidCredentialsException
 import pydantic
 
 @pytest.mark.asyncio
@@ -41,9 +42,9 @@ async def test_login_invalid_credentials():
     mock_user_dao = AsyncMock()
     mock_user_dao.authenticate_user = AsyncMock(return_value=None)
     login_data = UserLoginRequest(username="john_doe", password="WrongPassword1!")
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(InvalidCredentialsException) as exc_info:
         await login_user(login_data, user_dao=mock_user_dao)
-    assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "Invalid credentials for user 'john_doe'" in str(exc_info.value)
 
 @pytest.mark.asyncio
 async def test_login_missing_input():

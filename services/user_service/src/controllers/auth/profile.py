@@ -7,9 +7,6 @@ from typing import Union
 import logging
 from datetime import datetime, timezone
 
-
-
-
 # Import user-service API models
 from api_models.auth.profile import (
     UserProfileResponse,
@@ -26,6 +23,9 @@ from common.entities.user import User
 from .dependencies import get_user_dao
 from controllers.token_utilis import verify_access_token
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+# Import exceptions
+from exceptions import UserNotFoundException, TokenExpiredException
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["profile"])
@@ -44,24 +44,16 @@ async def get_current_user(
         username = verify_access_token(credentials.credentials)
 
         if not username:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
+            raise TokenExpiredException()
 
         # Get user from database using username from token
         user = await user_dao.get_user_by_username(username)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
+            raise UserNotFoundException(username)
 
         return user
 
-    except HTTPException:
+    except (TokenExpiredException, UserNotFoundException):
         raise
     except Exception as e:
         logger.error(f"Token validation failed: {str(e)}")
@@ -161,10 +153,7 @@ async def update_profile(
         )
 
         if not updated_user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
+            raise UserNotFoundException(profile_data.username)
 
         logger.info(f"Profile updated successfully for user: {current_user.username}")
 
@@ -184,7 +173,7 @@ async def update_profile(
             )
         )
 
-    except HTTPException:
+    except (UserNotFoundException, TokenExpiredException, HTTPException):
         raise
     except ValueError as e:
         # Handle email already in use or other validation errors

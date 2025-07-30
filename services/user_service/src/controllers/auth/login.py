@@ -24,6 +24,9 @@ from common.entities.user import User
 from .dependencies import get_user_dao
 from controllers.token_utilis import create_access_token
 
+# Import exceptions
+from exceptions import InvalidCredentialsException
+
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["authentication"])
 
@@ -58,10 +61,7 @@ async def login_user(
         user = await user_dao.authenticate_user(login_data.username, login_data.password)
         if not user:
             logger.warning(f"Authentication failed for: {login_data.username}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
-            )
+            raise InvalidCredentialsException(login_data.username)
 
         logger.info(f"User authenticated successfully: {login_data.username}")
 
@@ -87,7 +87,7 @@ async def login_user(
             )
         )
 
-    except HTTPException:
+    except InvalidCredentialsException:
         raise
     except Exception as e:
         logger.error(f"Login failed for {login_data.username}: {str(e)}", exc_info=True)

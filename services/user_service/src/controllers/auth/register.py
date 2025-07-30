@@ -26,6 +26,7 @@ from exceptions.internal_exceptions import (
     raise_database_error,
     raise_validation_error
 )
+from exceptions import UserNotFoundException
 from controllers.token_utilis import create_access_token
 
 logger = logging.getLogger(__name__)
@@ -76,28 +77,12 @@ async def register_user(
         # Check if username already exists
         existing_user_by_username = await user_dao.get_user_by_username(user_data.username)
         if existing_user_by_username:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "success": False,
-                    "error": "USER_EXISTS",
-                    "message": "Username already exists. Please choose a different username.",
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }
-            )
+            raise UserNotFoundException(f"Username '{user_data.username}' already exists")
 
         # Check if email already exists
         existing_user_by_email = await user_dao.get_user_by_email(user_data.email)
         if existing_user_by_email:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "success": False,
-                    "error": "USER_EXISTS",
-                    "message": "Email already exists. Please use a different email address.",
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }
-            )
+            raise UserNotFoundException(f"Email '{user_data.email}' already exists")
 
         # Transform API model to DAO model - proper field mapping
         user_create = UserCreate(
@@ -116,47 +101,21 @@ async def register_user(
             # Handle specific DAO validation errors
             error_message = str(ve)
             if "username" in error_message.lower() and "already exists" in error_message.lower():
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail={
-                        "success": False,
-                        "error": "USER_EXISTS",
-                        "message": "Username already exists. Please choose a different username.",
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    }
-                )
+                raise UserNotFoundException(f"Username '{user_data.username}' already exists")
             elif "email" in error_message.lower() and "already exists" in error_message.lower():
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail={
-                        "success": False,
-                        "error": "USER_EXISTS",
-                        "message": "Email already exists. Please use a different email address.",
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    }
-                )
+                raise UserNotFoundException(f"Email '{user_data.email}' already exists")
             else:
                 # Re-raise as generic error for other validation issues
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail={
-                        "success": False,
-                        "error": "VALIDATION_ERROR",
-                        "message": error_message,
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    }
+                    detail=error_message
                 )
         except Exception as db_error:
             # Log the detailed error for debugging
             logger.error(f"Database error during user creation: {db_error}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail={
-                    "success": False,
-                    "error": "SERVICE_UNAVAILABLE",
-                    "message": "Service is temporarily unavailable. Please try again later.",
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }
+                detail="Service is temporarily unavailable. Please try again later."
             )
 
         # Log successful register
@@ -180,6 +139,12 @@ async def register_user(
             success=True
         )
 
+    except UserNotFoundException as e:
+        # Re-raise UserNotFoundException as HTTP 409 Conflict
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
     except HTTPException:
         # Re-raise HTTP exceptions as-is
         raise
@@ -197,10 +162,5 @@ async def register_user(
         # Return generic error for unexpected issues
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "success": False,
-                "error": "INTERNAL_ERROR",
-                "message": "An unexpected error occurred. Please try again later.",
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }
+            detail="An unexpected error occurred. Please try again later."
         )
