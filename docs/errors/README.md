@@ -18,7 +18,7 @@ All errors follow this RFC 7807 format:
 
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/{error-type}.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/{error-type}.md",
   "title": "Error Title",
   "status": 422,
   "detail": "Human-readable error message",

@@ -1,6 +1,6 @@
 # Validation Error
 
-**Type:** `https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/validation-error.md`
+**Type:** `https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/validation-error.md`
 
 **HTTP Status:** `422 Unprocessable Entity`
 
@@ -21,7 +21,7 @@ This error occurs when the request data fails validation rules. The request body
 
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/validation-error.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/validation-error.md",
   "title": "Validation Error",
   "status": 422,
   "detail": "The request body contains invalid data",
@@ -62,7 +62,7 @@ The `errors` array contains detailed information about each validation failure:
 ### Missing Required Field
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/validation-error.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/validation-error.md",
   "title": "Validation Error",
   "status": 422,
   "detail": "Missing required field: email",
@@ -79,7 +79,7 @@ The `errors` array contains detailed information about each validation failure:
 ### Invalid Email Format
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/validation-error.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/validation-error.md",
   "title": "Validation Error",
   "status": 422,
   "detail": "Invalid email format",

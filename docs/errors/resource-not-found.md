@@ -1,6 +1,6 @@
 # Resource Not Found Error
 
-**Type:** `https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/resource-not-found.md`
+**Type:** `https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/resource-not-found.md`
 
 **HTTP Status:** `404 Not Found`
 
@@ -20,7 +20,7 @@ This error occurs when the requested resource does not exist. The resource may h
 
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/resource-not-found.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/resource-not-found.md",
   "title": "Resource Not Found",
   "status": 404,
   "detail": "The requested resource was not found",
@@ -50,7 +50,7 @@ This error occurs when the requested resource does not exist. The resource may h
 ### User Not Found
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/resource-not-found.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/resource-not-found.md",
   "title": "Resource Not Found",
   "status": 404,
   "detail": "User '12345' not found",
@@ -61,7 +61,7 @@ This error occurs when the requested resource does not exist. The resource may h
 ### Asset Not Found
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/resource-not-found.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/resource-not-found.md",
   "title": "Resource Not Found",
   "status": 404,
   "detail": "Asset 'BTC' not found",

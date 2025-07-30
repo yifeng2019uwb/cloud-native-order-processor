@@ -1,6 +1,6 @@
 # Resource Exists Error
 
-**Type:** `https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/resource-exists.md`
+**Type:** `https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/resource-exists.md`
 
 **HTTP Status:** `409 Conflict`
 
@@ -20,7 +20,7 @@ This error occurs when trying to create a resource that already exists. The reso
 
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/resource-exists.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/resource-exists.md",
   "title": "Resource Already Exists",
   "status": 409,
   "detail": "A resource with this identifier already exists",
@@ -45,7 +45,7 @@ This error occurs when trying to create a resource that already exists. The reso
 ### Username Already Exists
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/resource-exists.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/resource-exists.md",
   "title": "Resource Already Exists",
   "status": 409,
   "detail": "Username 'john_doe' already exists",
@@ -56,7 +56,7 @@ This error occurs when trying to create a resource that already exists. The reso
 ### Email Already Registered
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/resource-exists.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/resource-exists.md",
   "title": "Resource Already Exists",
   "status": 409,
   "detail": "Email 'john@example.com' is already registered",

@@ -346,10 +346,10 @@ class TestUserLogin:
         assert login.username == "john_doe123"
         assert login.password == "ValidPass123!"
 
-    def test_valid_login_with_email(self):
-        """Test valid login with email"""
+    def test_valid_login_with_email_like_username(self):
+        """Test valid login with email-like username (email as username)"""
         login = UserLogin(
-            username="test@example.com",  # Email in username field
+            username="test@example.com",  # Email-like string as username
             password="ValidPass123!"
         )
         assert login.username == "test@example.com"
@@ -370,7 +370,7 @@ class TestUserLogin:
                 username="",
                 password="ValidPass123!"
             )
-        assert "Username or email cannot be empty" in str(exc_info.value)
+        assert "Username cannot be empty" in str(exc_info.value)
 
     def test_whitespace_username(self):
         """Test login with whitespace username"""
@@ -379,7 +379,7 @@ class TestUserLogin:
                 username="   ",
                 password="ValidPass123!"
             )
-        assert "Username or email cannot be empty" in str(exc_info.value)
+        assert "Username cannot be empty" in str(exc_info.value)
 
     def test_missing_username(self):
         """Test login missing username field"""

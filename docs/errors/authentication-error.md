@@ -1,6 +1,6 @@
 # Authentication Error
 
-**Type:** `https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/authentication-error.md`
+**Type:** `https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/authentication-error.md`
 
 **HTTP Status:** `401 Unauthorized`
 
@@ -20,7 +20,7 @@ This error occurs when authentication fails. The user's credentials are invalid,
 
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/authentication-error.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/authentication-error.md",
   "title": "Authentication Error",
   "status": 401,
   "detail": "Invalid credentials",
@@ -46,7 +46,7 @@ This error occurs when authentication fails. The user's credentials are invalid,
 ### Invalid Credentials
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/authentication-error.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/authentication-error.md",
   "title": "Authentication Error",
   "status": 401,
   "detail": "Invalid username or password",
@@ -57,7 +57,7 @@ This error occurs when authentication fails. The user's credentials are invalid,
 ### Missing Token
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/authentication-error.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/authentication-error.md",
   "title": "Authentication Error",
   "status": 401,
   "detail": "Missing or invalid authorization token",
@@ -68,7 +68,7 @@ This error occurs when authentication fails. The user's credentials are invalid,
 ### Expired Token
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/authentication-error.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/authentication-error.md",
   "title": "Authentication Error",
   "status": 401,
   "detail": "Token has expired",

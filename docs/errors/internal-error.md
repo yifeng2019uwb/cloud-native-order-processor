@@ -1,6 +1,6 @@
 # Internal Server Error
 
-**Type:** `https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/internal-error.md`
+**Type:** `https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/internal-error.md`
 
 **HTTP Status:** `500 Internal Server Error`
 
@@ -20,7 +20,7 @@ This error occurs when an unexpected internal error happens on the server. This 
 
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/internal-error.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/internal-error.md",
   "title": "Internal Server Error",
   "status": 500,
   "detail": "An unexpected error occurred",
@@ -46,7 +46,7 @@ This error occurs when an unexpected internal error happens on the server. This 
 ### Generic Internal Error
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/internal-error.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/internal-error.md",
   "title": "Internal Server Error",
   "status": 500,
   "detail": "An unexpected error occurred",
@@ -57,7 +57,7 @@ This error occurs when an unexpected internal error happens on the server. This 
 ### Service Unavailable
 ```json
 {
-  "type": "https://github.com/yourusername/cloud-native-order-processor/blob/main/docs/errors/internal-error.md",
+  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/internal-error.md",
   "title": "Internal Server Error",
   "status": 500,
   "detail": "Service temporarily unavailable",

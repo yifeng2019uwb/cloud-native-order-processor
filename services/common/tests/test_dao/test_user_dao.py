@@ -252,15 +252,15 @@ class TestUserDAO:
         assert result.username == 'john_doe123'
 
     @pytest.mark.asyncio
-    async def test_authenticate_user_with_email_success(self, user_dao, mock_db_connection):
-        """Test successful authentication with email"""
+    async def test_authenticate_user_with_email_like_username(self, user_dao, mock_db_connection):
+        """Test authentication with email-like username (treats email as username)"""
         # Create a real password hash
         password = "TestPassword123!"
         password_hash = user_dao._hash_password(password)
 
-        # Mock user lookup by email
+        # Mock user lookup by username (even if it looks like an email)
         mock_user = User(
-            username='john_doe123',
+            username='test@example.com',  # Username that happens to look like email
             email='test@example.com',
             first_name='Test',
             last_name='User',
@@ -268,11 +268,11 @@ class TestUserDAO:
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
-        user_dao.get_user_by_email = AsyncMock(return_value=mock_user)
+        user_dao.get_user_by_username = AsyncMock(return_value=mock_user)
 
         # Mock database response with password hash
         mock_item = {
-            'username': 'john_doe123',
+            'username': 'test@example.com',
             'email': 'test@example.com',
             'first_name': 'Test',
             'last_name': 'User',
@@ -282,12 +282,12 @@ class TestUserDAO:
         }
         mock_db_connection.users_table.get_item.return_value = {'Item': mock_item}
 
-        # Authenticate user with email
+        # Authenticate user with email-like username
         result = await user_dao.authenticate_user('test@example.com', password)
 
         # Verify result
         assert isinstance(result, User)
-        assert result.username == 'john_doe123'
+        assert result.username == 'test@example.com'
 
     @pytest.mark.asyncio
     async def test_authenticate_user_wrong_password(self, user_dao, mock_db_connection):
@@ -474,26 +474,26 @@ class TestUserDAO:
     @pytest.mark.asyncio
     async def test_authenticate_user_get_user_by_username_exception(self, user_dao):
         """Test authenticate user when get_user_by_username raises exception"""
-        # Mock get_user_by_username to raise exception (line 161)
-        user_dao.get_user_by_username = AsyncMock(side_effect=Exception("User lookup failed"))
+        # Mock get_user_by_username to raise exception
+        user_dao.get_user_by_username = AsyncMock(side_effect=Exception("Username lookup failed"))
 
         # Should raise exception and be caught/logged
         with pytest.raises(Exception) as exc_info:
-            await user_dao.authenticate_user("test_user", "password")
+            await user_dao.authenticate_user("john_doe123", "password")
 
-        assert "User lookup failed" in str(exc_info.value)
+        assert "Username lookup failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_authenticate_user_get_user_by_email_exception(self, user_dao):
-        """Test authenticate user when get_user_by_email raises exception"""
-        # Mock get_user_by_email to raise exception (lines 169-171)
-        user_dao.get_user_by_email = AsyncMock(side_effect=Exception("Email lookup failed"))
+    async def test_authenticate_user_get_user_by_username_exception_with_email(self, user_dao):
+        """Test authenticate user when get_user_by_username raises exception (even with email-like input)"""
+        # Mock get_user_by_username to raise exception
+        user_dao.get_user_by_username = AsyncMock(side_effect=Exception("Username lookup failed"))
 
-        # Should raise exception and be caught/logged
+        # Should raise exception and be caught/logged (even if input looks like email)
         with pytest.raises(Exception) as exc_info:
             await user_dao.authenticate_user("test@example.com", "password")
 
-        assert "Email lookup failed" in str(exc_info.value)
+        assert "Username lookup failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_authenticate_user_database_get_item_exception(self, user_dao, mock_db_connection):
