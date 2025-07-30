@@ -14,14 +14,7 @@ from .internal_exceptions import (
     TokenExpiredException,
     raise_user_exists,
     raise_database_error,
-    raise_validation_error,
-    # Common package exception wrappers
-    wrap_common_database_connection_error,
-    wrap_common_database_operation_error,
-    wrap_common_entity_already_exists_error,
-    wrap_common_entity_validation_error,
-    wrap_common_configuration_error,
-    wrap_common_aws_error
+    raise_validation_error
 )
 
 # Import secure exception handlers
@@ -47,14 +40,6 @@ __all__ = [
     "raise_user_exists",
     "raise_database_error",
     "raise_validation_error",
-
-    # Common package exception wrappers
-    "wrap_common_database_connection_error",
-    "wrap_common_database_operation_error",
-    "wrap_common_entity_already_exists_error",
-    "wrap_common_entity_validation_error",
-    "wrap_common_configuration_error",
-    "wrap_common_aws_error",
 
     # Secure exception handlers
     "secure_internal_exception_handler",

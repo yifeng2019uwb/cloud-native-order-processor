@@ -16,26 +16,19 @@ from .internal_exceptions import (
     InternalAuthError,
     InternalUserExistsError,
     InternalDatabaseError,
-    InternalValidationError,
-    # Common package exception wrappers
-    wrap_common_database_connection_error,
-    wrap_common_database_operation_error,
-    wrap_common_entity_already_exists_error,
-    wrap_common_entity_validation_error,
-    wrap_common_configuration_error,
-    wrap_common_aws_error
+    InternalValidationError
 )
 
 # Import common package exceptions
 from common.exceptions import (
-    InternalDatabaseConnectionError,
-    InternalDatabaseOperationError,
-    InternalConfigurationError,
-    InternalEntityValidationError,
-    InternalEntityAlreadyExistsError,
-    InternalEntityNotFoundError,
-    InternalBusinessRuleError,
-    InternalAWSError
+    DatabaseConnectionError,
+    DatabaseOperationError,
+    ConfigurationError,
+    EntityValidationError,
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
+    BusinessRuleError,
+    AWSError
 )
 
 logger = logging.getLogger(__name__)
@@ -182,26 +175,50 @@ async def secure_common_exception_handler(request: Request, exc):
     and then handles it through the secure exception system
     """
     # Determine the type of common package exception and convert appropriately
-    if isinstance(exc, InternalDatabaseConnectionError):
-        internal_error = wrap_common_database_connection_error(exc)
-    elif isinstance(exc, InternalDatabaseOperationError):
-        internal_error = wrap_common_database_operation_error(exc)
-    elif isinstance(exc, InternalEntityAlreadyExistsError):
-        internal_error = wrap_common_entity_already_exists_error(exc)
-    elif isinstance(exc, InternalEntityValidationError):
-        internal_error = wrap_common_entity_validation_error(exc)
-    elif isinstance(exc, InternalConfigurationError):
-        internal_error = wrap_common_configuration_error(exc)
-    elif isinstance(exc, InternalAWSError):
-        internal_error = wrap_common_aws_error(exc)
-    elif isinstance(exc, InternalEntityNotFoundError):
+    if isinstance(exc, DatabaseConnectionError):
+        internal_error = InternalDatabaseError(
+            operation="connection",
+            table_name="users",
+            original_error=exc
+        )
+    elif isinstance(exc, DatabaseOperationError):
+        internal_error = InternalDatabaseError(
+            operation="operation",
+            table_name="users",
+            original_error=exc
+        )
+    elif isinstance(exc, EntityAlreadyExistsError):
+        internal_error = InternalUserExistsError(
+            email=exc.context.get("email", "unknown"),
+            existing_user_id=exc.context.get("existing_user_id")
+        )
+    elif isinstance(exc, EntityValidationError):
+        internal_error = InternalValidationError(
+            field=exc.context.get("field", "unknown"),
+            value=exc.context.get("value"),
+            rule=exc.context.get("rule", "validation"),
+            details=exc.message
+        )
+    elif isinstance(exc, ConfigurationError):
+        internal_error = InternalDatabaseError(
+            operation="configuration",
+            table_name="users",
+            original_error=exc
+        )
+    elif isinstance(exc, AWSError):
+        internal_error = InternalDatabaseError(
+            operation="aws_operation",
+            table_name="users",
+            original_error=exc
+        )
+    elif isinstance(exc, EntityNotFoundError):
         # Convert to database error since it's likely a database lookup failure
         internal_error = InternalDatabaseError(
             operation="get",
             table_name="users",
             original_error=exc
         )
-    elif isinstance(exc, InternalBusinessRuleError):
+    elif isinstance(exc, BusinessRuleError):
         # Convert to validation error since it's likely a business rule violation
         internal_error = InternalValidationError(
             field="business_rule",

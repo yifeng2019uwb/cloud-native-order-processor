@@ -2,7 +2,7 @@
 Health check controller for inventory service
 Path: services/inventory-service/src/controllers/health.py
 """
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status
 import logging
 from datetime import datetime, timezone
 import os
@@ -10,6 +10,9 @@ import os
 # Import common DAO for database health check
 from common.dao.asset_dao import AssetDAO
 from common.database.dynamodb_connection import get_dynamodb, dynamodb_manager
+
+# Import internal exceptions
+from exceptions import raise_database_error
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["health"])
@@ -39,9 +42,10 @@ async def readiness_check():
         db_healthy = await check_database_health()
 
         if not db_healthy:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Database not ready"
+            raise_database_error(
+                operation="health_check",
+                table_name="assets",
+                original_error=Exception("Database not ready")
             )
 
         return {
@@ -56,13 +60,12 @@ async def readiness_check():
             }
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Readiness check failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Service not ready"
+        raise_database_error(
+            operation="readiness_check",
+            table_name="assets",
+            original_error=e
         )
 
 
@@ -98,9 +101,10 @@ async def database_health_check(asset_dao: AssetDAO = Depends(lambda: AssetDAO(N
         db_status = await detailed_database_check()
 
         if db_status["status"] != "healthy":
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Database unhealthy: {db_status.get('error', 'Unknown error')}"
+            raise_database_error(
+                operation="detailed_health_check",
+                table_name="assets",
+                original_error=Exception(f"Database unhealthy: {db_status.get('error', 'Unknown error')}")
             )
 
         return {
@@ -110,13 +114,12 @@ async def database_health_check(asset_dao: AssetDAO = Depends(lambda: AssetDAO(N
             "database": db_status
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database health check failed"
+        raise_database_error(
+            operation="database_health_check",
+            table_name="assets",
+            original_error=e
         )
 
 

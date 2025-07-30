@@ -1,5 +1,5 @@
 """
-Internal exceptions for detailed logging and debugging (Common package functions)
+Common package exceptions for detailed logging and debugging
 Path: services/common/src/exceptions/internal_exceptions.py
 """
 from typing import Dict, Any, Optional
@@ -7,9 +7,9 @@ import uuid
 from datetime import datetime
 
 
-class InternalCommonError(Exception):
+class CommonError(Exception):
     """
-    Base internal common package error - detailed for logging, never exposed to client
+    Base common package error - detailed for logging, never exposed to client
 
     Contains sensitive debugging information that should only be logged internally
     """
@@ -21,41 +21,41 @@ class InternalCommonError(Exception):
         super().__init__(self.message)
 
 
-class InternalDatabaseConnectionError(InternalCommonError):
+class DatabaseConnectionError(CommonError):
     """Database connection failures (DynamoDB, Redis)"""
     pass
 
 
-class InternalDatabaseOperationError(InternalCommonError):
+class DatabaseOperationError(CommonError):
     """Database operation failures (CRUD operations)"""
     pass
 
 
-class InternalConfigurationError(InternalCommonError):
+class ConfigurationError(CommonError):
     """Configuration issues (missing env vars, invalid config)"""
     pass
 
 
-class InternalEntityValidationError(InternalCommonError):
+class EntityValidationError(CommonError):
     """Entity validation failures (user, asset validation)"""
     pass
 
 
-class InternalAWSError(InternalCommonError):
+class AWSError(CommonError):
     """AWS service errors (STS, credentials, etc.)"""
     pass
 
 
-class InternalEntityAlreadyExistsError(InternalCommonError):
+class EntityAlreadyExistsError(CommonError):
     """Entity already exists (duplicate username, email, asset_id)"""
     pass
 
 
-class InternalEntityNotFoundError(InternalCommonError):
+class EntityNotFoundError(CommonError):
     """Entity not found (user not found, asset not found)"""
     pass
 
 
-class InternalBusinessRuleError(InternalCommonError):
+class BusinessRuleError(CommonError):
     """Business rule violations (invalid price, invalid state)"""
     pass

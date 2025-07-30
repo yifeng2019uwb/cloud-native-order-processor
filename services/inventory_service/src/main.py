@@ -85,7 +85,21 @@ try:
     from exceptions.secure_exceptions import (
         secure_validation_exception_handler,
         secure_general_exception_handler,
-        secure_http_exception_handler
+        secure_http_exception_handler,
+        # Single generic handler for all common package exceptions
+        secure_common_exception_handler
+    )
+
+    # Import common package exceptions
+    from common.exceptions import (
+        DatabaseConnectionError,
+        DatabaseOperationError,
+        ConfigurationError,
+        EntityValidationError,
+        EntityAlreadyExistsError,
+        EntityNotFoundError,
+        BusinessRuleError,
+        AWSError
     )
 
     # Register secure exception handlers
@@ -93,7 +107,18 @@ try:
     app.add_exception_handler(HTTPException, secure_http_exception_handler)
     app.add_exception_handler(Exception, secure_general_exception_handler)
 
+    # Register single generic handler for all common package exceptions
+    app.add_exception_handler(DatabaseConnectionError, secure_common_exception_handler)
+    app.add_exception_handler(DatabaseOperationError, secure_common_exception_handler)
+    app.add_exception_handler(EntityAlreadyExistsError, secure_common_exception_handler)
+    app.add_exception_handler(EntityValidationError, secure_common_exception_handler)
+    app.add_exception_handler(EntityNotFoundError, secure_common_exception_handler)
+    app.add_exception_handler(BusinessRuleError, secure_common_exception_handler)
+    app.add_exception_handler(ConfigurationError, secure_common_exception_handler)
+    app.add_exception_handler(AWSError, secure_common_exception_handler)
+
     logger.info("✅ Secure exception handlers registered successfully")
+    logger.info("✅ Common package exception handlers registered successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Could not import secure exception handlers: {e}")
     logger.info("Using fallback global exception handler")

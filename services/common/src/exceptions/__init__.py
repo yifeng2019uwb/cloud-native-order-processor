@@ -4,27 +4,27 @@ Path: services/common/src/exceptions/__init__.py
 """
 
 from .internal_exceptions import (
-    # Internal exceptions for detailed logging
-    InternalCommonError,
-    InternalDatabaseConnectionError,
-    InternalDatabaseOperationError,
-    InternalConfigurationError,
-    InternalEntityValidationError,
-    InternalAWSError,
-    InternalEntityAlreadyExistsError,
-    InternalEntityNotFoundError,
-    InternalBusinessRuleError
+    # Common package exceptions for detailed logging
+    CommonError,
+    DatabaseConnectionError,
+    DatabaseOperationError,
+    ConfigurationError,
+    EntityValidationError,
+    AWSError,
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
+    BusinessRuleError
 )
 
 __all__ = [
-    # Internal exceptions only
-    "InternalCommonError",
-    "InternalDatabaseConnectionError",
-    "InternalDatabaseOperationError",
-    "InternalConfigurationError",
-    "InternalEntityValidationError",
-    "InternalAWSError",
-    "InternalEntityAlreadyExistsError",
-    "InternalEntityNotFoundError",
-    "InternalBusinessRuleError"
+    # Common package exceptions only
+    "CommonError",
+    "DatabaseConnectionError",
+    "DatabaseOperationError",
+    "ConfigurationError",
+    "EntityValidationError",
+    "AWSError",
+    "EntityAlreadyExistsError",
+    "EntityNotFoundError",
+    "BusinessRuleError"
 ]

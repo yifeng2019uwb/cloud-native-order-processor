@@ -2,7 +2,7 @@
 Assets controller for inventory service
 Path: services/inventory-service/src/controllers/assets.py
 """
-from fastapi import APIRouter, HTTPException, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from typing import Optional
 import logging
 from datetime import datetime, timezone
@@ -21,6 +21,9 @@ from api_models.inventory.asset_list import (
 # Import common DAO
 from common.dao.asset_dao import AssetDAO
 from common.database.dynamodb_connection import get_dynamodb
+
+# Import internal exceptions
+from exceptions import raise_asset_not_found, raise_database_error
 
 # Import metrics
 try:
@@ -115,8 +118,12 @@ async def list_assets(
 
     except Exception as e:
         logger.error(f"Failed to list assets: {str(e)}", exc_info=True)
-        # Let the global exception handler deal with this
-        raise
+        # Convert to internal database error for proper handling
+        raise_database_error(
+            operation="get_all_assets",
+            table_name="assets",
+            original_error=e
+        )
 
 
 @router.get(
@@ -152,10 +159,10 @@ async def get_asset_by_id(
 
         if not asset:
             logger.warning(f"Asset not found: {asset_id}")
-            # Use HTTPException - our secure handler will format it properly
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Asset '{asset_id}' not found"
+            # Use internal exception for proper handling
+            raise_asset_not_found(
+                asset_id=asset_id,
+                search_criteria={"requested_asset_id": asset_id}
             )
 
         logger.info(f"Asset found: {asset.name} ({asset.asset_id})")
@@ -167,10 +174,11 @@ async def get_asset_by_id(
         # Convert to detailed response model
         return asset_to_detail_response(asset)
 
-    except HTTPException:
-        # Re-raise HTTP exceptions to be handled by secure_http_exception_handler
-        raise
     except Exception as e:
         logger.error(f"Failed to get asset {asset_id}: {str(e)}", exc_info=True)
-        # Let the global exception handler deal with this
-        raise
+        # Convert to internal database error for proper handling
+        raise_database_error(
+            operation="get_asset_by_id",
+            table_name="assets",
+            original_error=e
+        )
