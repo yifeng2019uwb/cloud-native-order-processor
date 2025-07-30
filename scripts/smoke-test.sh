@@ -9,8 +9,8 @@ set -e
 API_BASE_URL="${API_BASE_URL:-http://localhost:30000}"
 FRONTEND_URL="${FRONTEND_URL:-http://localhost:30004}"
 GATEWAY_URL="${GATEWAY_URL:-http://localhost:30000}"
-USER_SERVICE_URL="${USER_SERVICE_URL:-http://localhost:30001}"
-INVENTORY_SERVICE_URL="${INVENTORY_SERVICE_URL:-http://localhost:30002}"
+USER_SERVICE_URL="${USER_SERVICE_URL:-http://localhost:8000}"
+INVENTORY_SERVICE_URL="${INVENTORY_SERVICE_URL:-http://localhost:8001}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -96,8 +96,8 @@ setup_port_forwarding() {
         pkill -f "kubectl port-forward" || true
         kubectl port-forward svc/gateway 30000:8080 -n order-processor &
         kubectl port-forward svc/frontend 30004:80 -n order-processor &
-        kubectl port-forward svc/user-service 30001:30001 -n order-processor &
-        kubectl port-forward svc/inventory-service 30002:30002 -n order-processor &
+        kubectl port-forward svc/user-service 8000:8000 -n order-processor &
+        kubectl port-forward svc/inventory-service 8001:8001 -n order-processor &
         sleep 5
         log_success "Port forwarding set up"
     else
