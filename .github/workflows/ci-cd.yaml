@@ -30,7 +30,6 @@ env:
   GO_VERSION: '1.24'
   NODE_VERSION: '18'
   # Control flags for additional jobs (set in repository settings)
-  ENABLE_TERRAFORM_PLAN: 'true'      # Always validate infrastructure changes
   ENABLE_INTEGRATION_TESTS: 'false'  # Disabled - enable when ready
   ENABLE_TERRAFORM_APPLY: 'false'    # Disabled - enable when ready
   ENABLE_TERRAFORM_CLEANUP: 'false'  # Disabled - enable when ready
@@ -116,7 +115,6 @@ jobs:
   terraform-plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
-    if: ${{ env.ENABLE_TERRAFORM_PLAN == 'true' }}
     needs: test
 
     steps:
@@ -168,7 +166,7 @@ jobs:
   terraform-apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    if: ${{ env.ENABLE_TERRAFORM_APPLY == 'true' }}
+    if: env.ENABLE_TERRAFORM_APPLY == 'true'
     needs: [test, terraform-plan]
     environment: production
 
@@ -212,7 +210,7 @@ jobs:
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
-    if: ${{ env.ENABLE_INTEGRATION_TESTS == 'true' }}
+    if: env.ENABLE_INTEGRATION_TESTS == 'true'
     needs: [test, terraform-plan]
 
     steps:
@@ -245,4 +243,4 @@ jobs:
         echo "✅ End-to-end tests completed"
         echo "💰 Cost: ~$5-10 (AWS resources for testing)"
 
-   # Job 5: Terraform destroy - Destroy all infrastructure (DISABLED)
+  # Job 5: Terraform destroy - Destroy all infrastructure (DISABLED)
