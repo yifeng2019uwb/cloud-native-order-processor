@@ -12,7 +12,7 @@ This directory contains comprehensive scripts for building, testing, deploying, 
 ./scripts/test-local.sh --environment dev --all
 
 # Quick build and deploy
-./scripts/quick_build.sh
+./scripts/deploy.sh --type k8s --environment dev
 ```
 
 ## 🚀 Service Management
@@ -47,7 +47,7 @@ A comprehensive script to start, stop, restart, and monitor all services locally
 
 ## 🧪 Testing & Validation
 
-### test-local.sh
+### test-local.sh ✅ **NEW - MIRRORS CI/CD**
 
 Mirrors the CI/CD pipeline locally for pre-push validation.
 
@@ -60,11 +60,22 @@ Mirrors the CI/CD pipeline locally for pre-push validation.
 
 # App-only deployment (assumes infra exists)
 ./scripts/test-local.sh --environment dev --app-only
+
+# Component-level testing
+./scripts/test-local.sh --frontend
+./scripts/test-local.sh --gateway
+./scripts/test-local.sh --services
 ```
 
 **Environments:**
 - **`dev`** - Local FastAPI services (development)
 - **`prod`** - EKS + Kubernetes (full infrastructure)
+
+**Component Testing:**
+- **`--frontend`** - Build and test frontend only
+- **`--gateway`** - Build and test gateway only
+- **`--services`** - Build and test all Python services
+- **`--component <name>`** - Test specific component
 
 ### test-integration.sh
 
@@ -84,6 +95,47 @@ Build and test the frontend application.
 
 ## 🏗️ Build & Deploy
 
+### deploy.sh ✅ **UPDATED**
+
+Universal deployment script for services, infrastructure, and Kubernetes.
+
+```bash
+# Deploy to Kubernetes (development)
+./scripts/deploy.sh --type k8s --environment dev
+
+# Deploy infrastructure only
+./scripts/deploy.sh --type infra --environment dev
+
+# Deploy specific service
+./scripts/deploy.sh --type service --service user
+```
+
+**What it does:**
+- **k8s**: Builds Docker images, loads to Kind, deploys to Kubernetes
+- **infra**: Deploys AWS infrastructure with Terraform
+- **service**: Deploys specific service (user/inventory)
+
+### Component Build Scripts ✅ **NEW**
+
+Each component now has its own dedicated build script:
+
+```bash
+# Frontend
+./frontend/build.sh              # Build and test
+./frontend/build.sh --test-only  # Test only
+./frontend/build.sh --build-only # Build only
+
+# Gateway
+./gateway/build.sh               # Build and test
+./gateway/build.sh --test-only   # Test only
+./gateway/build.sh --build-only  # Build only
+
+# Services
+./services/build.sh              # Build and test all services
+./services/build.sh --test-only  # Test only
+./services/build.sh --build-only # Build only
+```
+
 ### quick_build.sh
 
 Quick ECR build and push for immediate deployment.
@@ -96,19 +148,6 @@ Quick ECR build and push for immediate deployment.
 - Creates ECR repository if needed
 - Builds Docker image
 - Pushes to ECR with timestamped and latest tags
-
-### deploy.sh
-
-Deploy infrastructure using Terraform.
-
-```bash
-./scripts/deploy.sh --environment dev
-./scripts/deploy.sh --environment prod
-```
-
-**What it deploys:**
-- **dev**: Local FastAPI services + DynamoDB
-- **prod**: EKS + RDS + S3 + SNS/SQS
 
 ### deploy-app.sh
 
@@ -230,6 +269,7 @@ Complete guide for the full build → deploy → test → destroy cycle.
 - Docker (running daemon)
 - Node.js and npm
 - Python 3.11+
+- Go 1.24+
 - jq (for JSON parsing)
 
 ### AWS Setup:
@@ -250,6 +290,9 @@ aws sts get-caller-identity
 
 # Or use Docker
 ./scripts/deploy-docker.sh
+
+# Or use Kubernetes
+./scripts/deploy.sh --type k8s --environment dev
 ```
 
 ### Pre-Push Validation
@@ -259,15 +302,20 @@ aws sts get-caller-identity
 
 # Production simulation
 ./scripts/test-local.sh --environment prod --all
+
+# Component testing
+./scripts/test-local.sh --frontend
+./scripts/test-local.sh --gateway
+./scripts/test-local.sh --services
 ```
 
 ### Infrastructure Deployment
 ```bash
 # Deploy infrastructure
-./scripts/deploy.sh --environment dev
+./scripts/deploy.sh --type infra --environment dev
 
 # Deploy application
-./scripts/deploy-app.sh --environment dev
+./scripts/deploy.sh --type k8s --environment dev
 
 # Clean up when done
 ./scripts/destroy.sh --environment dev --force
@@ -275,8 +323,10 @@ aws sts get-caller-identity
 
 ### Quick Iteration
 ```bash
-# App-only deployment (assumes infra exists)
-./scripts/deploy-app.sh --environment dev --skip-build
+# Component-level development
+./frontend/build.sh --test-only
+./gateway/build.sh --test-only
+./services/build.sh --test-only
 
 # Or use development cycle
 ./scripts/test-local.sh --environment dev --dev-cycle
@@ -299,7 +349,7 @@ terraform destroy -auto-approve
 
 **Docker build failures:**
 ```bash
-./scripts/deploy-app.sh --environment dev --skip-build
+./scripts/deploy.sh --type k8s --environment dev --no-cache
 ```
 
 **AWS credential issues:**
@@ -314,18 +364,75 @@ aws sts get-caller-identity
 ./scripts/manage-services.sh logs [service-name]
 ```
 
+**Component build issues:**
+```bash
+# Check individual component builds
+./frontend/build.sh -v
+./gateway/build.sh -v
+./services/build.sh -v
+```
+
 ## 📋 Script Summary
 
 | Script | Purpose | Use Case |
 |--------|---------|----------|
 | `manage-services.sh` | Local service management | Daily development |
 | `test-local.sh` | CI/CD pipeline mirror | Pre-push validation |
-| `deploy.sh` | Infrastructure deployment | Environment setup |
-| `deploy-app.sh` | Application deployment | Code deployment |
+| `deploy.sh` | Universal deployment | Infrastructure & app deployment |
 | `destroy.sh` | Resource cleanup | Cost control |
 | `quick_build.sh` | Fast ECR build | Quick iteration |
 | `validate-environment.sh` | Environment validation | Setup verification |
 | `workspace-cleanup.sh` | Emergency cleanup | Troubleshooting |
+
+### Component Build Scripts ✅ **NEW**
+
+| Script | Purpose | Use Case |
+|--------|---------|----------|
+| `frontend/build.sh` | Frontend build & test | Frontend development |
+| `gateway/build.sh` | Gateway build & test | Gateway development |
+| `services/build.sh` | Services build & test | Backend development |
+
+## 🚀 Makefile Integration ✅ **NEW**
+
+The Makefile provides convenient shortcuts for common operations:
+
+```bash
+# Quick development cycle
+make dev-cycle
+
+# Build all components
+make build
+
+# Test all components
+make test
+
+# Deploy to Kubernetes
+make deploy-k8s
+
+# Port forwarding
+make port-forward
+
+# Cleanup
+make cleanup-dev
+```
+
+### Makefile Targets:
+
+**Development:**
+- `make dev-cycle` - Complete development cycle
+- `make quick-cycle` - Quick build and test cycle
+
+**Build & Test:**
+- `make build` - Build all components
+- `make test` - Test all components
+- `make test-local` - Run local tests
+
+**Deployment:**
+- `make deploy-k8s` - Deploy to Kubernetes
+- `make port-forward` - Set up port forwarding
+
+**Cleanup:**
+- `make cleanup-dev` - Clean up development environment
 
 ---
 

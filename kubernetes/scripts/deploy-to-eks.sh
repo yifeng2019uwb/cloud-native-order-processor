@@ -69,7 +69,7 @@ if ! kubectl get deployment -n kube-system aws-load-balancer-controller &>/dev/n
         --namespace=kube-system \
         --name=aws-load-balancer-controller \
         --role-name AmazonEKSLoadBalancerControllerRole \
-        --attach-policy-arn=arn:aws:iam::940482447349:policy/AWSLoadBalancerControllerIAMPolicy \
+        --attach-policy-arn=arn:aws:iam::<your-account-id>:policy/AWSLoadBalancerControllerIAMPolicy \
         --approve
 
     # Install controller using Helm

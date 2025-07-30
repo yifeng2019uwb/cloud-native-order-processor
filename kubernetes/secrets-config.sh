@@ -41,7 +41,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Extract specific values using jq
-AWS_ACCOUNT_ID=$(echo $TERRAFORM_OUTPUT | jq -r '.aws_account_id.value // "940482447349"')
+AWS_ACCOUNT_ID=$(echo $TERRAFORM_OUTPUT | jq -r '.aws_account_id.value // "<your-account-id>"')
 AWS_REGION=$(echo $TERRAFORM_OUTPUT | jq -r '.aws_region.value // "us-west-2"')
 
 # SNS Topics
