@@ -29,14 +29,9 @@ async def test_register_success():
         "token_type": "bearer",
         "expires_in": 3600
     }
-    with patch("src.controllers.auth.register.create_access_token", return_value=token_dict):
-        result = await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
-        assert result.access_token == "token123"
-        assert result.token_type == "bearer"
-        assert result.expires_in == 3600
-        assert result.username == "newuser"
-        assert result.is_new_user is True
-        assert result.message == "Account created successfully"
+    result = await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
+    assert result.message == "Account created successfully. Please login to continue."
+    assert result.success is True
 
 @pytest.mark.asyncio
 async def test_register_username_exists():

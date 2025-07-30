@@ -204,45 +204,25 @@ class UserRegistrationResponse(UserBaseInfo):
 
 
 class RegistrationSuccessResponse(SuccessResponse):
-    """Success response wrapper for registration with access token and minimal user info"""
+    """Success response wrapper for registration - simple success message only
 
+    Design Decision: Registration returns minimal response (no token/user data)
+    - Registration = Account creation only
+    - Login = Authentication + basic user data
+    - Profile = Full user details
+
+    Future Enhancement: Email verification will be added between registration and login
+    """
     message: str = Field(
-        default="Account created successfully",
+        default="Account created successfully. Please login to continue.",
         description="Registration success message"
-    )
-
-    access_token: str = Field(
-        ...,
-        description="JWT access token"
-    )
-
-    token_type: str = Field(
-        default="bearer",
-        description="Token type (always 'bearer')"
-    )
-
-    expires_in: int = Field(
-        ...,
-        description="Token expiration time in seconds"
-    )
-    username: str = Field(
-        ...,
-        description="Just the username for confirmation"
-    )
-    is_new_user: bool = Field(
-        default=True, description="Whether this is a new user (always true for registration)"
     )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "success": True,
-                "message": "Account created successfully",
-                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                "token_type": "bearer",
-                "expires_in": 86400,
-                "username": "john_doe123",
-                "is_new_user": True,
+                "message": "Account created successfully. Please login to continue.",
                 "timestamp": "2025-07-09T10:30:00Z"
             }
         }

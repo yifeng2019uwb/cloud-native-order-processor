@@ -169,17 +169,15 @@ async def register_user(
             }
         )
 
-        # Create JWT token for the newly registered user
-        token_data = create_access_token(created_user.username)
-
-        # Build response with token and user data
+        # Build simple success response (no token or user data)
+        # TODO: Future Enhancement - Add email verification step
+        # 1. Send confirmation email to user's email address
+        # 2. User clicks link to confirm email
+        # 3. Account becomes active only after email confirmation
+        # 4. User then logs in normally
         return RegistrationSuccessResponse(
-            message="Account created successfully",
-            access_token=token_data["access_token"],
-            token_type=token_data["token_type"],
-            expires_in=token_data["expires_in"],
-            username=created_user.username,
-            is_new_user=True
+            message="Account created successfully. Please login to continue.",
+            success=True
         )
 
     except HTTPException:

@@ -342,20 +342,12 @@ def test_user_registration_response_serialization():
 # --- RegistrationSuccessResponse serialization ---
 def test_registration_success_response_serialization():
     resp = RegistrationSuccessResponse(
-        message="Account created successfully",
-        access_token="token123",
-        token_type="bearer",
-        expires_in=86400,
-        username="john_doe123",
-        is_new_user=True
+        message="Account created successfully. Please login to continue."
     )
     data = resp.dict()
-    assert data["message"] == "Account created successfully"
-    assert data["access_token"] == "token123"
-    assert data["token_type"] == "bearer"
-    assert data["expires_in"] == 86400
-    assert data["username"] == "john_doe123"
-    assert data["is_new_user"] is True
+    assert data["message"] == "Account created successfully. Please login to continue."
+    assert data["success"] is True
+    assert "timestamp" in data
 
 # --- RegistrationErrorResponse serialization ---
 def test_registration_error_response_serialization():
