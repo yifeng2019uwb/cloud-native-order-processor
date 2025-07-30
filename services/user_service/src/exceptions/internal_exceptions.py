@@ -6,6 +6,18 @@ from typing import Dict, Any, Optional
 import uuid
 from datetime import datetime
 
+# Import common package internal exceptions
+from common.exceptions import (
+    InternalDatabaseConnectionError,
+    InternalDatabaseOperationError,
+    InternalConfigurationError,
+    InternalEntityValidationError,
+    InternalEntityAlreadyExistsError,
+    InternalEntityNotFoundError,
+    InternalBusinessRuleError,
+    InternalAWSError
+)
+
 
 class InternalAuthError(Exception):
     """
@@ -94,6 +106,66 @@ class InternalValidationError(InternalAuthError):
         self.field = field
         self.value = value
         self.rule = rule
+
+
+# ========================================
+# COMMON PACKAGE EXCEPTION WRAPPERS
+# ========================================
+
+def wrap_common_database_connection_error(common_exc: InternalDatabaseConnectionError) -> InternalDatabaseError:
+    """Convert common package database connection error to user service internal error"""
+    return InternalDatabaseError(
+        operation="connection",
+        table_name="users",
+        original_error=common_exc
+    )
+
+
+def wrap_common_database_operation_error(common_exc: InternalDatabaseOperationError) -> InternalDatabaseError:
+    """Convert common package database operation error to user service internal error"""
+    return InternalDatabaseError(
+        operation="operation",
+        table_name="users",
+        original_error=common_exc
+    )
+
+
+def wrap_common_entity_already_exists_error(common_exc: InternalEntityAlreadyExistsError) -> InternalUserExistsError:
+    """Convert common package entity already exists error to user service internal error"""
+    # Extract email from common exception context if available
+    email = common_exc.context.get("email", "unknown")
+    return InternalUserExistsError(
+        email=email,
+        existing_user_id=common_exc.context.get("existing_user_id")
+    )
+
+
+def wrap_common_entity_validation_error(common_exc: InternalEntityValidationError) -> InternalValidationError:
+    """Convert common package entity validation error to user service internal error"""
+    return InternalValidationError(
+        field=common_exc.context.get("field", "unknown"),
+        value=common_exc.context.get("value"),
+        rule=common_exc.context.get("rule", "validation"),
+        details=common_exc.message
+    )
+
+
+def wrap_common_configuration_error(common_exc: InternalConfigurationError) -> InternalDatabaseError:
+    """Convert common package configuration error to user service internal error"""
+    return InternalDatabaseError(
+        operation="configuration",
+        table_name="users",
+        original_error=common_exc
+    )
+
+
+def wrap_common_aws_error(common_exc: InternalAWSError) -> InternalDatabaseError:
+    """Convert common package AWS error to user service internal error"""
+    return InternalDatabaseError(
+        operation="aws_operation",
+        table_name="users",
+        original_error=common_exc
+    )
 
 
 # ========================================

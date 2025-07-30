@@ -1,74 +1,88 @@
 """
-Secure exception handlers that map internal exceptions to safe client responses
-Path: cloud-native-order-processor/services/user-service/src/exceptions/secure_exceptions.py
+Secure exception handling for user authentication service
+Path: services/user_service/src/exceptions/secure_exceptions.py
 """
+import uuid
+import traceback
+from datetime import datetime
+from typing import Dict, Any, List
+
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from typing import Dict, Any, List
 import logging
-from datetime import datetime
-import traceback
-import uuid
 
-from .internal_exceptions import InternalAuthError
+from .internal_exceptions import (
+    InternalAuthError,
+    InternalUserExistsError,
+    InternalDatabaseError,
+    InternalValidationError,
+    # Common package exception wrappers
+    wrap_common_database_connection_error,
+    wrap_common_database_operation_error,
+    wrap_common_entity_already_exists_error,
+    wrap_common_entity_validation_error,
+    wrap_common_configuration_error,
+    wrap_common_aws_error
+)
+
+# Import common package exceptions
+from common.exceptions import (
+    InternalDatabaseConnectionError,
+    InternalDatabaseOperationError,
+    InternalConfigurationError,
+    InternalEntityValidationError,
+    InternalEntityAlreadyExistsError,
+    InternalEntityNotFoundError,
+    InternalBusinessRuleError,
+    InternalAWSError
+)
 
 logger = logging.getLogger(__name__)
 
 
 class StandardErrorResponse:
-    """Standard error responses that are safe to send to clients"""
+    """Standard error responses for client consumption"""
 
     @staticmethod
     def validation_error(validation_errors: List[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Validation error response with optional field-specific errors"""
-        if validation_errors:
-            return {
-                "success": False,
-                "error": "VALIDATION_ERROR",
-                "message": "Please correct the following errors:",
-                "validation_errors": validation_errors,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        else:
-            return {
-                "success": False,
-                "error": "INVALID_INPUT",
-                "message": "The provided information is invalid. Please check your input and try again.",
-                "timestamp": datetime.utcnow().isoformat()
-            }
+        """Validation error response"""
+        return {
+            "success": False,
+            "error": "VALIDATION_ERROR",
+            "message": "Invalid input data provided",
+            "validation_errors": validation_errors or [],
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
     @staticmethod
     def user_exists_error(field: str = None) -> Dict[str, Any]:
-        """User exists error response - can be specific about which field exists"""
+        """User already exists error response"""
         if field:
-            return {
-                "success": False,
-                "error": "USER_EXISTS",
-                "message": f"{field.capitalize()} already exists. Please choose a different {field}.",
-                "timestamp": datetime.utcnow().isoformat()
-            }
+            message = f"{field} is already taken"
         else:
-            return {
-                "success": False,
-                "error": "REGISTRATION_FAILED",
-                "message": "Unable to create account. Please try again or contact support.",
-                "timestamp": datetime.utcnow().isoformat()
-            }
+            message = "Unable to create account"
+
+        return {
+            "success": False,
+            "error": "USER_EXISTS",
+            "message": message,
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
     @staticmethod
     def authentication_failed() -> Dict[str, Any]:
-        """Generic authentication failure"""
+        """Authentication failed error response"""
         return {
             "success": False,
             "error": "AUTHENTICATION_FAILED",
-            "message": "Invalid credentials. Please check your information and try again.",
+            "message": "Invalid credentials",
             "timestamp": datetime.utcnow().isoformat()
         }
 
     @staticmethod
     def service_unavailable() -> Dict[str, Any]:
-        """Generic service unavailable"""
+        """Service unavailable error response"""
         return {
             "success": False,
             "error": "SERVICE_UNAVAILABLE",
@@ -76,15 +90,7 @@ class StandardErrorResponse:
             "timestamp": datetime.utcnow().isoformat()
         }
 
-    @staticmethod
-    def rate_limited() -> Dict[str, Any]:
-        """Generic rate limit response"""
-        return {
-            "success": False,
-            "error": "TOO_MANY_REQUESTS",
-            "message": "Too many requests. Please wait before trying again.",
-            "timestamp": datetime.utcnow().isoformat()
-        }
+
 
     @staticmethod
     def internal_error() -> Dict[str, Any]:
@@ -127,7 +133,6 @@ class SecureExceptionMapper:
             "USER_EXISTS_DETAILED": (status.HTTP_409_CONFLICT, StandardErrorResponse.user_exists_error()),
             "DATABASE_ERROR_DETAILED": (status.HTTP_503_SERVICE_UNAVAILABLE, StandardErrorResponse.service_unavailable()),
             "VALIDATION_ERROR_DETAILED": (status.HTTP_422_UNPROCESSABLE_ENTITY, StandardErrorResponse.validation_error()),
-            "SECURITY_VIOLATION_DETAILED": (status.HTTP_429_TOO_MANY_REQUESTS, StandardErrorResponse.rate_limited()),
         }
 
         return mapping.get(
@@ -163,6 +168,57 @@ async def secure_internal_exception_handler(request: Request, exc: InternalAuthE
         status_code=status_code,
         content=response_content
     )
+
+
+# ========================================
+# COMMON PACKAGE EXCEPTION HANDLERS
+# ========================================
+
+async def secure_common_exception_handler(request: Request, exc):
+    """
+    Generic handler for all common package internal exceptions
+
+    Converts any common package exception to user service internal exception
+    and then handles it through the secure exception system
+    """
+    # Determine the type of common package exception and convert appropriately
+    if isinstance(exc, InternalDatabaseConnectionError):
+        internal_error = wrap_common_database_connection_error(exc)
+    elif isinstance(exc, InternalDatabaseOperationError):
+        internal_error = wrap_common_database_operation_error(exc)
+    elif isinstance(exc, InternalEntityAlreadyExistsError):
+        internal_error = wrap_common_entity_already_exists_error(exc)
+    elif isinstance(exc, InternalEntityValidationError):
+        internal_error = wrap_common_entity_validation_error(exc)
+    elif isinstance(exc, InternalConfigurationError):
+        internal_error = wrap_common_configuration_error(exc)
+    elif isinstance(exc, InternalAWSError):
+        internal_error = wrap_common_aws_error(exc)
+    elif isinstance(exc, InternalEntityNotFoundError):
+        # Convert to database error since it's likely a database lookup failure
+        internal_error = InternalDatabaseError(
+            operation="get",
+            table_name="users",
+            original_error=exc
+        )
+    elif isinstance(exc, InternalBusinessRuleError):
+        # Convert to validation error since it's likely a business rule violation
+        internal_error = InternalValidationError(
+            field="business_rule",
+            value="unknown",
+            rule="business_validation",
+            details=exc.message
+        )
+    else:
+        # Fallback for any other common package exception
+        internal_error = InternalDatabaseError(
+            operation="unknown",
+            table_name="users",
+            original_error=exc
+        )
+
+    # Handle through the secure exception system
+    return await secure_internal_exception_handler(request, internal_error)
 
 
 async def secure_validation_exception_handler(request: Request, exc: RequestValidationError):

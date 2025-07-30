@@ -156,7 +156,21 @@ try:
     from exceptions.secure_exceptions import (
         secure_validation_exception_handler,
         secure_general_exception_handler,
-        secure_http_exception_handler
+        secure_http_exception_handler,
+        # Single generic handler for all common package exceptions
+        secure_common_exception_handler
+    )
+
+    # Import common package exceptions
+    from common.exceptions import (
+        InternalDatabaseConnectionError,
+        InternalDatabaseOperationError,
+        InternalConfigurationError,
+        InternalEntityValidationError,
+        InternalEntityAlreadyExistsError,
+        InternalEntityNotFoundError,
+        InternalBusinessRuleError,
+        InternalAWSError
     )
 
     # Register secure exception handlers
@@ -164,7 +178,18 @@ try:
     app.add_exception_handler(HTTPException, secure_http_exception_handler)
     app.add_exception_handler(Exception, secure_general_exception_handler)
 
+    # Register single generic handler for all common package exceptions
+    app.add_exception_handler(InternalDatabaseConnectionError, secure_common_exception_handler)
+    app.add_exception_handler(InternalDatabaseOperationError, secure_common_exception_handler)
+    app.add_exception_handler(InternalEntityAlreadyExistsError, secure_common_exception_handler)
+    app.add_exception_handler(InternalEntityValidationError, secure_common_exception_handler)
+    app.add_exception_handler(InternalEntityNotFoundError, secure_common_exception_handler)
+    app.add_exception_handler(InternalBusinessRuleError, secure_common_exception_handler)
+    app.add_exception_handler(InternalConfigurationError, secure_common_exception_handler)
+    app.add_exception_handler(InternalAWSError, secure_common_exception_handler)
+
     logger.info("✅ Secure exception handlers registered successfully")
+    logger.info("✅ Common package exception handlers registered successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Could not import secure exception handlers: {e}")
     logger.info("Using fallback global exception handler")

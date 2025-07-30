@@ -37,14 +37,12 @@ class ErrorCode(str, Enum):
     USERNAME_TAKEN = "username_taken"
     EMAIL_TAKEN = "email_taken"
 
-    # Server Errors (500)
+    # Server Errors (500) - Simplified to avoid internal details
     INTERNAL_SERVER_ERROR = "internal_server_error"
     SERVICE_UNAVAILABLE = "service_unavailable"
-    DATABASE_ERROR = "database_error"
-    EXTERNAL_SERVICE_ERROR = "external_service_error"
 
 
-# HTTP Status Code Mapping
+# HTTP Status Code Mapping - Simplified for external consumption
 HTTP_STATUS_MAPPING: Dict[ErrorCode, int] = {
     # Validation Errors
     ErrorCode.VALIDATION_ERROR: 422,
@@ -71,11 +69,9 @@ HTTP_STATUS_MAPPING: Dict[ErrorCode, int] = {
     ErrorCode.USERNAME_TAKEN: 409,
     ErrorCode.EMAIL_TAKEN: 409,
 
-    # Server Errors
+    # Server Errors - All internal errors map to 500
     ErrorCode.INTERNAL_SERVER_ERROR: 500,
     ErrorCode.SERVICE_UNAVAILABLE: 503,
-    ErrorCode.DATABASE_ERROR: 500,
-    ErrorCode.EXTERNAL_SERVICE_ERROR: 502,
 }
 
 
@@ -103,10 +99,34 @@ def get_error_title(error_code: ErrorCode) -> str:
         ErrorCode.ASSET_NOT_FOUND: "Asset Not Found",
         ErrorCode.RESOURCE_ALREADY_EXISTS: "Resource Already Exists",
         ErrorCode.USERNAME_TAKEN: "Username Already Taken",
-        ErrorCode.EMAIL_TAKEN: "Email Already Registered",
+        ErrorCode.EMAIL_TAKEN: "Email Already Taken",
         ErrorCode.INTERNAL_SERVER_ERROR: "Internal Server Error",
         ErrorCode.SERVICE_UNAVAILABLE: "Service Unavailable",
-        ErrorCode.DATABASE_ERROR: "Database Error",
-        ErrorCode.EXTERNAL_SERVICE_ERROR: "External Service Error",
     }
     return title_mapping.get(error_code, "Unknown Error")
+
+
+def get_error_detail(error_code: ErrorCode) -> str:
+    """Get human-readable detail message for an error code"""
+    detail_mapping = {
+        ErrorCode.VALIDATION_ERROR: "The provided data is invalid",
+        ErrorCode.INVALID_INPUT: "Invalid input provided",
+        ErrorCode.MISSING_REQUIRED_FIELD: "Required field is missing",
+        ErrorCode.INVALID_FORMAT: "Data format is invalid",
+        ErrorCode.AUTHENTICATION_FAILED: "Authentication failed",
+        ErrorCode.INVALID_CREDENTIALS: "Invalid username or password",
+        ErrorCode.TOKEN_EXPIRED: "Authentication token has expired",
+        ErrorCode.TOKEN_INVALID: "Invalid authentication token",
+        ErrorCode.MISSING_TOKEN: "Authentication token is required",
+        ErrorCode.INSUFFICIENT_PERMISSIONS: "Insufficient permissions to access this resource",
+        ErrorCode.ACCESS_DENIED: "Access to this resource is denied",
+        ErrorCode.RESOURCE_NOT_FOUND: "The requested resource was not found",
+        ErrorCode.USER_NOT_FOUND: "User not found",
+        ErrorCode.ASSET_NOT_FOUND: "Asset not found",
+        ErrorCode.RESOURCE_ALREADY_EXISTS: "A resource with this identifier already exists",
+        ErrorCode.USERNAME_TAKEN: "Username is already taken",
+        ErrorCode.EMAIL_TAKEN: "Email address is already registered",
+        ErrorCode.INTERNAL_SERVER_ERROR: "An unexpected error occurred",
+        ErrorCode.SERVICE_UNAVAILABLE: "Service is temporarily unavailable",
+    }
+    return detail_mapping.get(error_code, "An unknown error occurred")

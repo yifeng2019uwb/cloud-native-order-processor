@@ -24,7 +24,7 @@ class TestSecureExceptions:
         response = StandardErrorResponse.validation_error()
 
         assert response["success"] is False
-        assert response["error"] == "INVALID_INPUT"
+        assert response["error"] == "VALIDATION_ERROR"
         assert "message" in response
         assert "timestamp" in response
 
@@ -34,7 +34,7 @@ class TestSecureExceptions:
 
         assert response["success"] is False
         assert response["error"] == "USER_EXISTS"
-        assert "Username already exists" in response["message"]
+        assert "username is already taken" in response["message"]
         assert "timestamp" in response
 
     def test_standard_error_response_authentication_failed(self):
@@ -67,7 +67,7 @@ class TestSecureExceptions:
 
         assert status_code == 409  # HTTP_409_CONFLICT
         assert response["success"] is False
-        assert response["error"] == "REGISTRATION_FAILED"
+        assert response["error"] == "USER_EXISTS"
 
     def test_secure_exception_mapper_unknown_error(self):
         """Test mapping unknown internal error to generic response"""
@@ -84,12 +84,6 @@ class TestSecureExceptions:
         assert response["error"] == "INTERNAL_ERROR"
 
 # --- Additional StandardErrorResponse tests ---
-def test_standard_error_response_rate_limited():
-    resp = StandardErrorResponse.rate_limited()
-    assert resp["error"] == "TOO_MANY_REQUESTS"
-    assert resp["success"] is False
-    assert "Too many requests" in resp["message"]
-    assert "timestamp" in resp
 
 def test_standard_error_response_internal_error():
     resp = StandardErrorResponse.internal_error()
@@ -100,7 +94,7 @@ def test_standard_error_response_internal_error():
 
 def test_standard_error_response_user_exists_error_no_field():
     resp = StandardErrorResponse.user_exists_error()
-    assert resp["error"] == "REGISTRATION_FAILED"
+    assert resp["error"] == "USER_EXISTS"
     assert resp["success"] is False
     assert "Unable to create account" in resp["message"]
     assert "timestamp" in resp
@@ -131,13 +125,13 @@ def test_secure_exception_mapper_validation_error():
     err = make_internal_error("VALIDATION_ERROR_DETAILED")
     status_code, resp = SecureExceptionMapper.map_to_client_response(err)
     assert status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-    assert resp["error"] == "INVALID_INPUT"
+    assert resp["error"] == "VALIDATION_ERROR"
 
 def test_secure_exception_mapper_security_violation():
     err = make_internal_error("SECURITY_VIOLATION_DETAILED")
     status_code, resp = SecureExceptionMapper.map_to_client_response(err)
-    assert status_code == status.HTTP_429_TOO_MANY_REQUESTS
-    assert resp["error"] == "TOO_MANY_REQUESTS"
+    assert status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert resp["error"] == "INTERNAL_ERROR"
 
 def test_secure_exception_mapper_unknown_code():
     err = make_internal_error("SOMETHING_UNKNOWN")
@@ -396,7 +390,7 @@ def test_secure_general_exception_handler_custom_exception():
 # --- Edge case: validation_error with empty list ---
 def test_standard_error_response_validation_error_empty_list():
     resp = StandardErrorResponse.validation_error([])
-    assert resp["error"] == "INVALID_INPUT"
+    assert resp["error"] == "VALIDATION_ERROR"
     assert resp["success"] is False
     assert "timestamp" in resp
 
