@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from datetime import date, datetime
 import re
-from .roles import UserRole, DEFAULT_USER_ROLE, VALID_ROLES
+from .user_enums import UserRole, DEFAULT_USER_ROLE, VALID_ROLES
 
 
 class UserCreate(BaseModel):

@@ -1,5 +1,5 @@
 """
-Simple role definitions for the Order Processor system.
+User-related enums for the Order Processor system.
 """
 
 from enum import Enum
