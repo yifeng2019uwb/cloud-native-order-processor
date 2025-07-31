@@ -11,8 +11,6 @@ class OrderType(str, Enum):
     MARKET_SELL = "market_sell"
     LIMIT_BUY = "limit_buy"
     LIMIT_SELL = "limit_sell"
-    STOP_LOSS = "stop_loss"
-    TAKE_PROFIT = "take_profit"
 
 
 class OrderStatus(str, Enum):

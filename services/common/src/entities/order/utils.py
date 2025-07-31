@@ -179,12 +179,11 @@ class OrderValidationUtils:
 
     @classmethod
     def validate_order_value(cls, order_type: OrderType, quantity: Decimal,
-                           limit_price: Optional[Decimal] = None,
-                           price_per_unit: Optional[Decimal] = None) -> Tuple[bool, Optional[str]]:
+                           order_price: Optional[Decimal] = None) -> Tuple[bool, Optional[str]]:
         """Validate minimum order value for buy orders"""
         if order_type in [OrderType.MARKET_BUY, OrderType.LIMIT_BUY]:
             # Estimate value using available price
-            estimated_price = limit_price or price_per_unit or Decimal("50000")  # Default BTC price
+            estimated_price = order_price or Decimal("50000")  # Default BTC price
             estimated_value = quantity * estimated_price
 
             if estimated_value < cls.MIN_ORDER_VALUE:
@@ -218,26 +217,16 @@ class OrderValidationUtils:
 
     @classmethod
     def validate_order_type_requirements(cls, order_type: OrderType,
-                                       limit_price: Optional[Decimal] = None,
-                                       price_per_unit: Optional[Decimal] = None,
-                                       stop_price: Optional[Decimal] = None) -> Tuple[bool, Optional[str]]:
+                                       order_price: Optional[Decimal] = None) -> Tuple[bool, Optional[str]]:
         """Validate order type specific requirements"""
 
         if order_type in [OrderType.LIMIT_BUY, OrderType.LIMIT_SELL]:
-            if limit_price is None:
-                return False, f"{order_type} orders require a limit_price"
-            if price_per_unit is None:
-                return False, f"{order_type} orders require a price_per_unit"
-
-        elif order_type in [OrderType.STOP_LOSS, OrderType.TAKE_PROFIT]:
-            if stop_price is None:
-                return False, f"{order_type} orders require a stop_price"
+            if order_price is None:
+                return False, f"{order_type} orders require an order_price"
 
         elif order_type in [OrderType.MARKET_BUY, OrderType.MARKET_SELL]:
-            if price_per_unit is not None:
-                return False, f"{order_type} orders should not specify price_per_unit"
-            if limit_price is not None:
-                return False, f"{order_type} orders should not specify limit_price"
+            if order_price is not None:
+                return False, f"{order_type} orders should not specify order_price"
 
         return True, None
 
@@ -247,9 +236,7 @@ class OrderBusinessRules:
 
     @classmethod
     def validate_all_business_rules(cls, order_type: OrderType, quantity: Decimal,
-                                  limit_price: Optional[Decimal] = None,
-                                  price_per_unit: Optional[Decimal] = None,
-                                  stop_price: Optional[Decimal] = None,
+                                  order_price: Optional[Decimal] = None,
                                   expires_at: Optional[datetime] = None,
                                   currency: str = "USD") -> List[str]:
         """
@@ -268,26 +255,21 @@ class OrderBusinessRules:
             errors.append(error)
 
         # Price validations
-        if limit_price:
-            is_valid, error = OrderValidationUtils.validate_price_precision(limit_price)
-            if not is_valid:
-                errors.append(error)
-
-        if price_per_unit:
-            is_valid, error = OrderValidationUtils.validate_price_precision(price_per_unit)
+        if order_price:
+            is_valid, error = OrderValidationUtils.validate_price_precision(order_price)
             if not is_valid:
                 errors.append(error)
 
         # Order type requirements
         is_valid, error = OrderValidationUtils.validate_order_type_requirements(
-            order_type, limit_price, price_per_unit, stop_price
+            order_type, order_price
         )
         if not is_valid:
             errors.append(error)
 
         # Order value validation
         is_valid, error = OrderValidationUtils.validate_order_value(
-            order_type, quantity, limit_price, price_per_unit
+            order_type, quantity, order_price
         )
         if not is_valid:
             errors.append(error)

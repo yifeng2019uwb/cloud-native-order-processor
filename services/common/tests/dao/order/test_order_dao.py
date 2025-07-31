@@ -49,7 +49,7 @@ class TestOrderDAO:
             order_type=OrderType.MARKET_BUY,
             asset_id="BTC",
             quantity=Decimal("1.5"),
-            price_per_unit=None,  # MARKET_BUY orders don't have price_per_unit
+            order_price=None,  # MARKET_BUY orders don't have order_price
             total_amount=Decimal("67500.00"),
             currency="USD",
             status=OrderStatus.PENDING,
@@ -67,7 +67,7 @@ class TestOrderDAO:
             'order_type': 'market_buy',
             'asset_id': 'BTC',
             'quantity': Decimal("1.5"),
-            'price_per_unit': None,  # MARKET_BUY orders don't have price_per_unit
+            'order_price': None,  # MARKET_BUY orders don't have order_price
             'total_amount': Decimal("67500.00"),
             'currency': 'USD',
             'status': 'pending',
@@ -95,7 +95,7 @@ class TestOrderDAO:
         assert result.order_type == sample_order.order_type
         assert result.asset_id == sample_order.asset_id
         assert result.quantity == sample_order.quantity
-        assert result.price_per_unit == sample_order.price_per_unit
+        assert result.order_price == sample_order.order_price
         assert result.currency == sample_order.currency
         assert result.status == sample_order.status
 
@@ -142,7 +142,7 @@ class TestOrderDAO:
         assert result.order_type == OrderType.MARKET_BUY
         assert result.asset_id == sample_db_item['asset_id']
         assert result.quantity == sample_db_item['quantity']
-        assert result.price_per_unit == sample_db_item['price_per_unit']
+        assert result.order_price == sample_db_item['order_price']
         assert result.currency == sample_db_item['currency']
         assert result.status == OrderStatus.PENDING
 
@@ -187,7 +187,7 @@ class TestOrderDAO:
                 'order_type': sample_order.order_type.value,
                 'asset_id': sample_order.asset_id,
                 'quantity': sample_order.quantity,
-                'price_per_unit': sample_order.price_per_unit,
+                'order_price': sample_order.order_price,
                 'total_amount': sample_order.total_amount,
                 'currency': sample_order.currency,
                 'status': 'completed',
@@ -250,7 +250,7 @@ class TestOrderDAO:
                     'order_type': 'market_buy',
                     'asset_id': 'BTC',
                     'quantity': Decimal("1.5"),
-                    'price_per_unit': None,
+                    'order_price': None,
                     'total_amount': Decimal("67500.00"),
                     'currency': 'USD',
                     'status': 'pending',
@@ -308,7 +308,7 @@ class TestOrderDAO:
                     'order_type': 'market_buy',
                     'asset_id': 'BTC',
                     'quantity': Decimal("1.5"),
-                    'price_per_unit': None,
+                    'order_price': None,
                     'total_amount': Decimal("67500.00"),
                     'currency': 'USD',
                     'status': 'pending',
@@ -355,7 +355,7 @@ class TestOrderDAO:
                     'order_type': 'market_buy',
                     'asset_id': 'BTC',
                     'quantity': Decimal("1.5"),
-                    'price_per_unit': None,
+                    'order_price': None,
                     'total_amount': Decimal("67500.00"),
                     'currency': 'USD',
                     'status': 'pending',

@@ -1,18 +1,14 @@
 """
-Unit tests for Order enums.
-Tests cover OrderType and OrderStatus enums.
+Tests for Order enums.
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'src')))
-
 import pytest
+
 from src.entities.order.enums import OrderType, OrderStatus
 
 
 class TestOrderEnums:
-    """Test OrderType and OrderStatus enums."""
+    """Test cases for Order enums."""
 
     def test_order_type_values(self):
         """Test OrderType enum values."""
@@ -20,8 +16,6 @@ class TestOrderEnums:
         assert OrderType.MARKET_SELL.value == "market_sell"
         assert OrderType.LIMIT_BUY.value == "limit_buy"
         assert OrderType.LIMIT_SELL.value == "limit_sell"
-        assert OrderType.STOP_LOSS.value == "stop_loss"
-        assert OrderType.TAKE_PROFIT.value == "take_profit"
 
     def test_order_status_values(self):
         """Test OrderStatus enum values."""
@@ -34,3 +28,22 @@ class TestOrderEnums:
         assert OrderStatus.CANCELLED.value == "cancelled"
         assert OrderStatus.FAILED.value == "failed"
         assert OrderStatus.EXPIRED.value == "expired"
+
+    def test_order_type_enum_members(self):
+        """Test OrderType enum members."""
+        assert OrderType.MARKET_BUY in OrderType
+        assert OrderType.MARKET_SELL in OrderType
+        assert OrderType.LIMIT_BUY in OrderType
+        assert OrderType.LIMIT_SELL in OrderType
+
+    def test_order_status_enum_members(self):
+        """Test OrderStatus enum members."""
+        assert OrderStatus.PENDING in OrderStatus
+        assert OrderStatus.CONFIRMED in OrderStatus
+        assert OrderStatus.QUEUED in OrderStatus
+        assert OrderStatus.TRIGGERED in OrderStatus
+        assert OrderStatus.PROCESSING in OrderStatus
+        assert OrderStatus.COMPLETED in OrderStatus
+        assert OrderStatus.CANCELLED in OrderStatus
+        assert OrderStatus.FAILED in OrderStatus
+        assert OrderStatus.EXPIRED in OrderStatus

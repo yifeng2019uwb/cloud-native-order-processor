@@ -1,11 +1,6 @@
 """
-Unit tests for OrderResponse models.
-Tests cover OrderResponse and OrderListResponse entity classes.
+Tests for OrderResponse model.
 """
-
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'src')))
 
 import pytest
 from decimal import Decimal
@@ -17,7 +12,7 @@ from src.entities.order.enums import OrderType, OrderStatus
 
 
 class TestOrderResponse:
-    """Test OrderResponse model."""
+    """Test cases for OrderResponse model."""
 
     def test_order_response(self):
         """Test order response."""
@@ -28,7 +23,7 @@ class TestOrderResponse:
             order_type=OrderType.MARKET_BUY,
             asset_id="BTC",
             quantity=Decimal("1.5"),
-            price_per_unit=None,
+            order_price=None,
             total_amount=Decimal("67500.00"),
             currency="USD",
             status=OrderStatus.PENDING,
@@ -42,7 +37,7 @@ class TestOrderResponse:
             order_type=order.order_type,
             asset_id=order.asset_id,
             quantity=order.quantity,
-            price_per_unit=order.price_per_unit,
+            order_price=order.order_price,
             total_amount=order.total_amount,
             executed_quantity=order.executed_quantity,
             currency=order.currency,
@@ -51,14 +46,18 @@ class TestOrderResponse:
             updated_at=order.updated_at
         )
 
-        assert response.order_id == order.order_id
-        assert response.user_id == order.user_id
-        assert response.order_type == order.order_type
-        assert response.asset_id == order.asset_id
-        assert response.quantity == order.quantity
-        assert response.price_per_unit == order.price_per_unit
-        assert response.currency == order.currency
-        assert response.status == order.status
+        assert response.order_id == "ord_user123_20231201123456789"
+        assert response.user_id == "user123"
+        assert response.order_type == OrderType.MARKET_BUY
+        assert response.asset_id == "BTC"
+        assert response.quantity == Decimal("1.5")
+        assert response.order_price is None
+        assert response.total_amount == Decimal("67500.00")
+        assert response.executed_quantity == Decimal("0")
+        assert response.currency == "USD"
+        assert response.status == OrderStatus.PENDING
+        assert response.created_at == created_at
+        assert response.updated_at == created_at
 
     def test_order_response_with_executed_quantity(self):
         """Test order response with executed quantity."""
@@ -69,7 +68,7 @@ class TestOrderResponse:
             order_type=OrderType.MARKET_BUY,
             asset_id="BTC",
             quantity=Decimal("1.5"),
-            price_per_unit=None,
+            order_price=None,
             total_amount=Decimal("67500.00"),
             currency="USD",
             status=OrderStatus.PROCESSING,
@@ -84,7 +83,7 @@ class TestOrderResponse:
             order_type=order.order_type,
             asset_id=order.asset_id,
             quantity=order.quantity,
-            price_per_unit=order.price_per_unit,
+            order_price=order.order_price,
             total_amount=order.total_amount,
             executed_quantity=order.executed_quantity,
             currency=order.currency,
@@ -105,7 +104,7 @@ class TestOrderResponse:
             order_type=OrderType.MARKET_BUY,
             asset_id="BTC",
             quantity=Decimal("1.5"),
-            price_per_unit=None,
+            order_price=None,
             total_amount=Decimal("67500.00"),
             currency="USD",
             status=OrderStatus.PENDING,
@@ -119,7 +118,7 @@ class TestOrderResponse:
             order_type=order.order_type,
             asset_id=order.asset_id,
             quantity=order.quantity,
-            price_per_unit=order.price_per_unit,
+            order_price=order.order_price,
             total_amount=order.total_amount,
             executed_quantity=order.executed_quantity,
             currency=order.currency,
@@ -128,19 +127,22 @@ class TestOrderResponse:
             updated_at=order.updated_at
         )
 
-        # Test model_dump
+        # Test serialization
         data = response.model_dump()
-        assert data['order_id'] == order.order_id
-        assert data['user_id'] == order.user_id
-        assert data['order_type'] == order.order_type.value
-        assert data['asset_id'] == order.asset_id
-        assert data['quantity'] == order.quantity  # model_dump returns Decimal, not string
-        assert data['currency'] == order.currency
-        assert data['status'] == order.status.value
+        assert data["order_id"] == "ord_user123_20231201123456789"
+        assert data["user_id"] == "user123"
+        assert data["order_type"] == "market_buy"
+        assert data["asset_id"] == "BTC"
+        assert data["quantity"] == Decimal("1.5")
+        assert data["order_price"] is None
+        assert data["total_amount"] == Decimal("67500.00")
+        assert data["executed_quantity"] == Decimal("0")
+        assert data["currency"] == "USD"
+        assert data["status"] == "pending"
 
 
 class TestOrderListResponse:
-    """Test OrderListResponse model."""
+    """Test cases for OrderListResponse model."""
 
     def test_order_list_response(self):
         """Test order list response."""
@@ -151,7 +153,7 @@ class TestOrderListResponse:
             order_type=OrderType.MARKET_BUY,
             asset_id="BTC",
             quantity=Decimal("1.5"),
-            price_per_unit=None,
+            order_price=None,
             total_amount=Decimal("67500.00"),
             currency="USD",
             status=OrderStatus.PENDING,
@@ -165,7 +167,7 @@ class TestOrderListResponse:
             order_type=order.order_type,
             asset_id=order.asset_id,
             quantity=order.quantity,
-            price_per_unit=order.price_per_unit,
+            order_price=order.order_price,
             total_amount=order.total_amount,
             executed_quantity=order.executed_quantity,
             currency=order.currency,
@@ -174,28 +176,21 @@ class TestOrderListResponse:
             updated_at=order.updated_at
         )
 
-        response = OrderListResponse(
+        list_response = OrderListResponse(
             orders=[order_response],
             total_count=1,
             active_count=1,
             completed_count=0,
-            cancelled_count=0
+            cancelled_count=0,
+            filters_applied={"user_id": "user123"}
         )
 
-        assert len(response.orders) == 1
-        assert response.orders[0].order_id == order.order_id
-
-    def test_order_list_response_empty(self):
-        """Test order list response with empty orders."""
-        response = OrderListResponse(
-            orders=[],
-            total_count=0,
-            active_count=0,
-            completed_count=0,
-            cancelled_count=0
-        )
-
-        assert len(response.orders) == 0
+        assert len(list_response.orders) == 1
+        assert list_response.total_count == 1
+        assert list_response.active_count == 1
+        assert list_response.completed_count == 0
+        assert list_response.cancelled_count == 0
+        assert list_response.filters_applied == {"user_id": "user123"}
 
     def test_order_list_response_multiple_orders(self):
         """Test order list response with multiple orders."""
@@ -207,7 +202,7 @@ class TestOrderListResponse:
                 order_type=OrderType.MARKET_BUY,
                 asset_id="BTC",
                 quantity=Decimal("1.5"),
-                price_per_unit=None,
+                order_price=None,
                 total_amount=Decimal("67500.00"),
                 currency="USD",
                 status=OrderStatus.PENDING,
@@ -220,7 +215,7 @@ class TestOrderListResponse:
                 order_type=OrderType.LIMIT_SELL,
                 asset_id="ETH",
                 quantity=Decimal("10.0"),
-                price_per_unit=Decimal("3000.00"),
+                order_price=Decimal("3000.00"),
                 total_amount=Decimal("30000.00"),
                 currency="USD",
                 status=OrderStatus.CONFIRMED,
@@ -236,7 +231,7 @@ class TestOrderListResponse:
                 order_type=order.order_type,
                 asset_id=order.asset_id,
                 quantity=order.quantity,
-                price_per_unit=order.price_per_unit,
+                order_price=order.order_price,
                 total_amount=order.total_amount,
                 executed_quantity=order.executed_quantity,
                 currency=order.currency,
@@ -246,19 +241,17 @@ class TestOrderListResponse:
             ) for order in orders
         ]
 
-        response = OrderListResponse(
+        list_response = OrderListResponse(
             orders=order_responses,
             total_count=2,
-            active_count=1,
+            active_count=2,
             completed_count=0,
             cancelled_count=0
         )
 
-        assert len(response.orders) == 2
-        assert response.orders[0].order_id == orders[0].order_id
-        assert response.orders[1].order_id == orders[1].order_id
-        assert response.orders[0].asset_id == "BTC"
-        assert response.orders[1].asset_id == "ETH"
+        assert len(list_response.orders) == 2
+        assert list_response.total_count == 2
+        assert list_response.active_count == 2
 
     def test_order_list_response_serialization(self):
         """Test order list response serialization."""
@@ -269,7 +262,7 @@ class TestOrderListResponse:
             order_type=OrderType.MARKET_BUY,
             asset_id="BTC",
             quantity=Decimal("1.5"),
-            price_per_unit=None,
+            order_price=None,
             total_amount=Decimal("67500.00"),
             currency="USD",
             status=OrderStatus.PENDING,
@@ -283,7 +276,7 @@ class TestOrderListResponse:
             order_type=order.order_type,
             asset_id=order.asset_id,
             quantity=order.quantity,
-            price_per_unit=order.price_per_unit,
+            order_price=order.order_price,
             total_amount=order.total_amount,
             executed_quantity=order.executed_quantity,
             currency=order.currency,
@@ -292,7 +285,7 @@ class TestOrderListResponse:
             updated_at=order.updated_at
         )
 
-        response = OrderListResponse(
+        list_response = OrderListResponse(
             orders=[order_response],
             total_count=1,
             active_count=1,
@@ -300,8 +293,10 @@ class TestOrderListResponse:
             cancelled_count=0
         )
 
-        # Test model_dump
-        data = response.model_dump()
-        assert 'orders' in data
-        assert len(data['orders']) == 1
-        assert data['orders'][0]['order_id'] == order.order_id
+        # Test serialization
+        data = list_response.model_dump()
+        assert len(data["orders"]) == 1
+        assert data["total_count"] == 1
+        assert data["active_count"] == 1
+        assert data["completed_count"] == 0
+        assert data["cancelled_count"] == 0

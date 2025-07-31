@@ -44,19 +44,9 @@ class OrderResponse(BaseModel):
         description="Amount of asset to trade"
     )
 
-    price_per_unit: Optional[Decimal] = Field(
+    order_price: Optional[Decimal] = Field(
         None,
-        description="Price per unit (None for market orders)"
-    )
-
-    limit_price: Optional[Decimal] = Field(
-        None,
-        description="Limit price for limit orders"
-    )
-
-    stop_price: Optional[Decimal] = Field(
-        None,
-        description="Stop price for stop orders"
+        description="Price for limit orders, None for market orders"
     )
 
     total_amount: Decimal = Field(
@@ -131,6 +121,7 @@ class OrderResponse(BaseModel):
                 "status": "completed",
                 "asset_id": "BTC",
                 "quantity": 0.5,
+                "order_price": None,
                 "total_amount": 22500.00,
                 "executed_quantity": 0.5,
                 "executed_price": 45000.00,
@@ -186,6 +177,7 @@ class OrderListResponse(BaseModel):
                         "status": "completed",
                         "asset_id": "BTC",
                         "quantity": 0.5,
+                        "order_price": None,
                         "total_amount": 22500.00,
                         "executed_quantity": 0.5,
                         "executed_price": 45000.00,

@@ -34,22 +34,10 @@ class OrderCreate(BaseModel):
         description="Amount of asset to trade"
     )
 
-    price_per_unit: Optional[Decimal] = Field(
+    order_price: Optional[Decimal] = Field(
         None,
         gt=0,
-        description="Price per unit (required for limit orders)"
-    )
-
-    limit_price: Optional[Decimal] = Field(
-        None,
-        gt=0,
-        description="Limit price for limit orders"
-    )
-
-    stop_price: Optional[Decimal] = Field(
-        None,
-        gt=0,
-        description="Stop price for stop orders"
+        description="Price for limit orders, None for market orders"
     )
 
     currency: str = Field(
@@ -85,28 +73,12 @@ class OrderCreate(BaseModel):
             raise ValueError("Quantity must be greater than 0")
         return v
 
-    @field_validator("price_per_unit")
+    @field_validator("order_price")
     @classmethod
-    def validate_price_per_unit(cls, v):
+    def validate_order_price(cls, v):
         """Validate price is positive if provided"""
         if v is not None and v <= 0:
-            raise ValueError("Price per unit must be greater than 0")
-        return v
-
-    @field_validator("limit_price")
-    @classmethod
-    def validate_limit_price(cls, v):
-        """Validate limit price is positive if provided"""
-        if v is not None and v <= 0:
-            raise ValueError("Limit price must be greater than 0")
-        return v
-
-    @field_validator("stop_price")
-    @classmethod
-    def validate_stop_price(cls, v):
-        """Validate stop price is positive if provided"""
-        if v is not None and v <= 0:
-            raise ValueError("Stop price must be greater than 0")
+            raise ValueError("Order price must be greater than 0")
         return v
 
     @field_validator("currency")
@@ -130,9 +102,7 @@ class OrderCreate(BaseModel):
         errors = OrderBusinessRules.validate_all_business_rules(
             order_type=self.order_type,
             quantity=self.quantity,
-            limit_price=self.limit_price,
-            price_per_unit=self.price_per_unit,
-            stop_price=self.stop_price,
+            order_price=self.order_price,
             expires_at=self.expires_at,
             currency=self.currency
         )

@@ -162,7 +162,7 @@ class TestOrderBusinessRules:
         errors = OrderBusinessRules.validate_all_business_rules(
             order_type=OrderType.MARKET_BUY,
             quantity=Decimal("1.0"),
-            price_per_unit=None,  # Market orders shouldn't specify price_per_unit
+            order_price=None,  # Market orders shouldn't specify order_price
             currency="USD"
         )
 
@@ -173,8 +173,7 @@ class TestOrderBusinessRules:
         errors = OrderBusinessRules.validate_all_business_rules(
             order_type=OrderType.LIMIT_BUY,
             quantity=Decimal("1.0"),
-            limit_price=Decimal("45000.00"),
-            price_per_unit=Decimal("45000.00"),
+            order_price=Decimal("45000.00"),
             currency="USD"
         )
 
@@ -185,8 +184,10 @@ class TestOrderBusinessRules:
         errors = OrderBusinessRules.validate_all_business_rules(
             order_type=OrderType.MARKET_BUY,
             quantity=Decimal("0.0001"),  # Too small
-            price_per_unit=None,
+            order_price=None,
             currency="INVALID"  # Invalid currency
         )
 
         assert len(errors) > 0
+        assert any("quantity" in error.lower() for error in errors)
+        assert any("currency" in error.lower() for error in errors)
