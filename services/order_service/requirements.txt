@@ -11,8 +11,7 @@ botocore>=1.29.7
 # Environment and Configuration
 python-dotenv>=1.0.0
 
-# Common Package (local dependency)
--e ../common
+# Common Package (installed separately by build script)
 
 # Testing Dependencies
 pytest>=7.4.0
