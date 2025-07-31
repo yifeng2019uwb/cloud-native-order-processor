@@ -262,7 +262,7 @@ class Order(BaseModel):
     @property
     def gsi2_sort_key(self) -> str:
         """Generate GSI2 sort key for DynamoDB queries"""
-        return f"{self.asset_id}#{self.status}#{self.created_at.isoformat()}"
+        return f"{self.asset_id}#{self.status.value}#{self.created_at.isoformat()}"
 
     @property
     def gsi2_asset_prefix(self) -> str:
@@ -272,7 +272,7 @@ class Order(BaseModel):
     @property
     def gsi2_asset_status_prefix(self) -> str:
         """Generate asset+status prefix for GSI2 queries (e.g., 'BTC#pending#')"""
-        return f"{self.asset_id}#{self.status}#"
+        return f"{self.asset_id}#{self.status.value}#"
 
     class Config:
         json_encoders = {
