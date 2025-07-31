@@ -9,6 +9,7 @@ from .order import Order
 from .orderResponse import OrderResponse, OrderListResponse
 from .orderUpdate import OrderUpdate
 from .utils import (
+    OrderIdGenerator,
     OrderStatusTransition,
     OrderStatusManager,
     OrderValidationUtils,
@@ -28,6 +29,7 @@ __all__ = [
     "OrderListResponse",
 
     # Utilities
+    "OrderIdGenerator",
     "OrderStatusTransition",
     "OrderStatusManager",
     "OrderValidationUtils",

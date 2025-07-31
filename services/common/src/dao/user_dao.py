@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from .base_dao import BaseDAO
 from ..entities.user import User, UserCreate, UserLogin
-from ..entities.roles import DEFAULT_USER_ROLE
+from ..entities.user_enums import DEFAULT_USER_ROLE
 
 logger = logging.getLogger(__name__)
 

@@ -3,6 +3,8 @@ Order utility functions and status management.
 Keeps order models clean by separating business logic.
 """
 
+import uuid
+import time
 from enum import Enum
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Set, Tuple
@@ -301,3 +303,181 @@ class OrderBusinessRules:
             errors.append(error)
 
         return errors
+
+
+class OrderIdGenerator:
+    """Generates unique order IDs with consistent format"""
+
+    # Order ID prefix
+    ORDER_PREFIX = "ord"
+
+    # Separator for different ID components
+    SEPARATOR = "_"
+
+    @classmethod
+    def generate_order_id(cls, user_id: Optional[str] = None) -> str:
+        """
+        Generate a unique order ID.
+
+        Format: ord_YYYYMMDD_HHMMSS_UUID_SHORT
+        Example: ord_20250730_143052_a1b2c3d4e5f6
+
+        Args:
+            user_id: Optional user ID for additional uniqueness
+
+        Returns:
+            Unique order ID string
+        """
+        # Get current timestamp
+        now = datetime.now(timezone.utc)
+        timestamp = now.strftime("%Y%m%d_%H%M%S")
+
+        # Generate UUID and take first 12 characters
+        unique_id = uuid.uuid4().hex[:12]
+
+        # Build order ID
+        order_id = f"{cls.ORDER_PREFIX}{cls.SEPARATOR}{timestamp}{cls.SEPARATOR}{unique_id}"
+
+        # Add user ID if provided (for additional uniqueness)
+        if user_id:
+            order_id = f"{order_id}{cls.SEPARATOR}{user_id[:8]}"
+
+        return order_id
+
+    @classmethod
+    def generate_simple_order_id(cls) -> str:
+        """
+        Generate a simple order ID without timestamp.
+
+        Format: ord_UUID_SHORT
+        Example: ord_a1b2c3d4e5f6
+
+        Returns:
+            Simple unique order ID string
+        """
+        unique_id = uuid.uuid4().hex[:12]
+        return f"{cls.ORDER_PREFIX}{cls.SEPARATOR}{unique_id}"
+
+    @classmethod
+    def generate_timestamped_order_id(cls, user_id: Optional[str] = None) -> str:
+        """
+        Generate order ID with timestamp for better traceability.
+
+        Format: ord_TIMESTAMP_UUID_SHORT
+        Example: ord_1732891852_a1b2c3d4e5f6
+
+        Args:
+            user_id: Optional user ID for additional uniqueness
+
+        Returns:
+            Timestamped unique order ID string
+        """
+        # Unix timestamp
+        timestamp = str(int(time.time()))
+
+        # Generate UUID and take first 12 characters
+        unique_id = uuid.uuid4().hex[:12]
+
+        # Build order ID
+        order_id = f"{cls.ORDER_PREFIX}{cls.SEPARATOR}{timestamp}{cls.SEPARATOR}{unique_id}"
+
+        # Add user ID if provided
+        if user_id:
+            order_id = f"{order_id}{cls.SEPARATOR}{user_id[:8]}"
+
+        return order_id
+
+    @classmethod
+    def parse_order_id(cls, order_id: str) -> dict:
+        """
+        Parse order ID to extract components.
+
+        Args:
+            order_id: Order ID to parse
+
+        Returns:
+            Dictionary with parsed components
+        """
+        if not order_id.startswith(cls.ORDER_PREFIX):
+            raise ValueError(f"Invalid order ID format: {order_id}")
+
+        parts = order_id.split(cls.SEPARATOR)
+
+        if len(parts) < 3:
+            raise ValueError(f"Invalid order ID format: {order_id}")
+
+        result = {
+            "prefix": parts[0],
+            "unique_id": parts[-1] if len(parts) >= 3 else None
+        }
+
+        # Try to parse timestamp
+        if len(parts) >= 3:
+            try:
+                # Check if it's a date format (YYYYMMDD_HHMMSS)
+                if len(parts[1]) == 15 and parts[1].replace("_", "").isdigit():
+                    date_str = parts[1]
+                    result["date"] = date_str[:8]  # YYYYMMDD
+                    result["time"] = date_str[9:]  # HHMMSS
+                # Check if it's a unix timestamp
+                elif parts[1].isdigit():
+                    result["unix_timestamp"] = int(parts[1])
+            except (ValueError, IndexError):
+                pass
+
+        # Check for user ID
+        if len(parts) >= 4:
+            result["user_id"] = parts[3]
+
+        return result
+
+    @classmethod
+    def is_valid_order_id(cls, order_id: str) -> bool:
+        """
+        Validate order ID format.
+
+        Args:
+            order_id: Order ID to validate
+
+        Returns:
+            True if valid, False otherwise
+        """
+        try:
+            cls.parse_order_id(order_id)
+            return True
+        except ValueError:
+            return False
+
+    @classmethod
+    def get_order_id_info(cls, order_id: str) -> dict:
+        """
+        Get information about an order ID.
+
+        Args:
+            order_id: Order ID to analyze
+
+        Returns:
+            Dictionary with order ID information
+        """
+        if not cls.is_valid_order_id(order_id):
+            return {"valid": False, "error": "Invalid order ID format"}
+
+        try:
+            parsed = cls.parse_order_id(order_id)
+            info = {
+                "valid": True,
+                "format": "standard",
+                "components": parsed
+            }
+
+            # Determine format type
+            if "date" in parsed and "time" in parsed:
+                info["format"] = "date_time"
+            elif "unix_timestamp" in parsed:
+                info["format"] = "timestamp"
+            else:
+                info["format"] = "simple"
+
+            return info
+        except Exception as e:
+            return {"valid": False, "error": str(e)}
