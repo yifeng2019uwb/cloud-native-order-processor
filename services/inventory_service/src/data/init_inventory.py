@@ -40,12 +40,18 @@ def get_category(coin: dict) -> str:
     return Constants.CATEGORY_MAP.get(coin.get("id"), "altcoin")
 
 async def fetch_top_coins() -> List[dict]:
-    async with httpx.AsyncClient() as client:
-        response = await client.get(Constants.COINGECKO_API, params=Constants.PARAMS)
-        response.raise_for_status()
-        coins = response.json()
-        logger.info(f"Fetched {len(coins)} coins from CoinGecko.")
-        return coins
+    """Fetch top coins from CoinGecko with timeout and error handling"""
+    try:
+        # This doesn't block other requests
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(Constants.COINGECKO_API, params=Constants.PARAMS)
+            response.raise_for_status()
+            coins = response.json()
+            logger.info(f"Fetched {len(coins)} coins from CoinGecko.")
+            return coins
+    except Exception as e:
+        logger.error(f"Failed to fetch coins from CoinGecko: {e}")
+        return []
 
 async def upsert_coins_to_inventory(coins: List[dict]) -> int:
     updated_count = 0
@@ -84,9 +90,7 @@ async def upsert_coins_to_inventory(coins: List[dict]) -> int:
     return updated_count
 
 async def initialize_inventory_data(force_recreate: bool = False) -> dict:
-    """
-    Initialize inventory data on service startup by fetching from CoinGecko
-    """
+    """Initialize inventory data on service startup by fetching from CoinGecko"""
     logger.info("🚀 Starting inventory data initialization from CoinGecko...")
     try:
         coins = await fetch_top_coins()
@@ -107,4 +111,8 @@ async def initialize_inventory_data(force_recreate: bool = False) -> dict:
 
 # Convenience function for startup
 async def startup_inventory_initialization():
+    """
+    Non-blocking startup initialization
+    This function is designed to not block service startup
+    """
     return await initialize_inventory_data()

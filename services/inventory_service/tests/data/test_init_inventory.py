@@ -115,8 +115,8 @@ class TestFetchTopCoins:
             mock_response.json.return_value = []
             mock_client.get.return_value = mock_response
 
-            with pytest.raises(httpx.HTTPStatusError):
-                await fetch_top_coins()
+            result = await fetch_top_coins()
+            assert result == []
 
     @pytest.mark.asyncio
     async def test_fetch_top_coins_network_error(self):
@@ -127,8 +127,8 @@ class TestFetchTopCoins:
 
             mock_client.get.side_effect = httpx.ConnectError("Connection failed")
 
-            with pytest.raises(httpx.ConnectError):
-                await fetch_top_coins()
+            result = await fetch_top_coins()
+            assert result == []
 
     @pytest.mark.asyncio
     async def test_fetch_top_coins_empty_response(self):
