@@ -193,7 +193,7 @@ def configure_service_exceptions():
 
     try:
         # Import shared exceptions (mapped to external error codes)
-        from shared_exceptions import (
+        from common.exceptions.shared_exceptions import (
             # Authentication exceptions (shared)
             InvalidCredentialsException,
             TokenExpiredException,
@@ -247,6 +247,31 @@ def configure_service_exceptions():
 
         # Register internal server exception (shared)
         exception_mapper.register_exception_mapping(InternalServerException, ErrorCode.INTERNAL_SERVER_ERROR)
+
+        # Import and register service-specific exceptions
+        try:
+            # User service exceptions
+            from user_service.exceptions import UserAlreadyExistsException
+            exception_mapper.register_exception_mapping(UserAlreadyExistsException, ErrorCode.RESOURCE_ALREADY_EXISTS)
+        except ImportError as e:
+            logger.debug(f"Could not import user service exceptions: {e}")
+
+        try:
+            # Inventory service exceptions
+            from inventory_service.exceptions import AssetAlreadyExistsException, AssetCreationException
+            exception_mapper.register_exception_mapping(AssetAlreadyExistsException, ErrorCode.RESOURCE_ALREADY_EXISTS)
+            exception_mapper.register_exception_mapping(AssetCreationException, ErrorCode.INTERNAL_SERVER_ERROR)
+        except ImportError as e:
+            logger.debug(f"Could not import inventory service exceptions: {e}")
+
+        try:
+            # Order service exceptions
+            from order_service.exceptions import OrderAlreadyExistsException, OrderCreationException, OrderStatusException
+            exception_mapper.register_exception_mapping(OrderAlreadyExistsException, ErrorCode.RESOURCE_ALREADY_EXISTS)
+            exception_mapper.register_exception_mapping(OrderCreationException, ErrorCode.INTERNAL_SERVER_ERROR)
+            exception_mapper.register_exception_mapping(OrderStatusException, ErrorCode.VALIDATION_ERROR)
+        except ImportError as e:
+            logger.debug(f"Could not import order service exceptions: {e}")
 
         # Common exceptions are NOT mapped - they should be handled internally
         # by each service and converted to InternalServerException

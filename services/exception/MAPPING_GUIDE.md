@@ -102,7 +102,7 @@ async def get_user(user_id: str):
 
 ### **2. Automatic Exception Registration**
 
-The exception mapper automatically registers all shared exceptions from the common package:
+The exception mapper automatically registers all shared exceptions from the common package and service-specific exceptions:
 
 ```python
 # Shared exceptions are automatically mapped:
@@ -111,6 +111,14 @@ EntityAlreadyExistsException → RESOURCE_ALREADY_EXISTS
 InvalidCredentialsException → AUTHENTICATION_FAILED
 OrderValidationException → VALIDATION_ERROR
 InternalServerException → INTERNAL_SERVER_ERROR
+
+# Service-specific exceptions are automatically mapped:
+UserAlreadyExistsException → RESOURCE_ALREADY_EXISTS
+AssetAlreadyExistsException → RESOURCE_ALREADY_EXISTS
+OrderAlreadyExistsException → RESOURCE_ALREADY_EXISTS
+AssetCreationException → INTERNAL_SERVER_ERROR
+OrderCreationException → INTERNAL_SERVER_ERROR
+OrderStatusException → VALIDATION_ERROR
 
 # Common exceptions are NOT mapped (security):
 DatabaseOperationException → INTERNAL_SERVER_ERROR (fallback)

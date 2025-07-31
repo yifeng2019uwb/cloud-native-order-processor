@@ -14,6 +14,11 @@ setup(
     install_requires=[
         "pydantic>=2.0.0",
         "fastapi>=0.100.0",
+        # Dependencies on other services for exception mapping
+        "common",
+        "user_service",
+        "inventory_service",
+        "order_service",
     ],
     extras_require={
         "dev": [
