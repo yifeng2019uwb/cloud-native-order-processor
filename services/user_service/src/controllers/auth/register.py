@@ -20,7 +20,7 @@ from api_models.shared.common import ErrorResponse
 from common.entities.user import UserCreate, User
 
 # Import dependencies and simplified exceptions
-from .dependencies import get_user_dao
+from common.database import get_user_dao
 from exceptions import (
     UserNotFoundException,
     UserAlreadyExistsException,

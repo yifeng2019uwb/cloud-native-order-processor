@@ -1,30 +1,17 @@
 """
 Dependency injection for Order Service controllers
 Path: services/order_service/src/controllers/dependencies.py
-
-TODO: Implement dependency injection tomorrow
-- Order service dependency
-- Database connection dependency
-- Authentication dependency
-- Authorization dependency
 """
 from fastapi import Depends
 from typing import Optional
 
-# TODO: Import services and database connections
-# from services.order_service import OrderService
-# from common.database import get_dynamodb
-# from common.dao.order import OrderDAO
+from common.dao.order.order_dao import OrderDAO
+from common.database import get_order_dao
 
 
 async def get_order_service():
     """
     Dependency to get order service instance
-
-    TODO: Implement proper dependency injection
-    - Initialize order service with dependencies
-    - Configure database connection
-    - Return service instance
     """
     # TODO: Implement order service dependency
     # order_dao = OrderDAO(get_dynamodb())

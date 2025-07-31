@@ -9,7 +9,7 @@ import os
 from common.entities.user import UserCreate, UserResponse, UserLogin
 from common.entities.auth import TokenResponse
 from common.dao.user_dao import UserDAO
-from common.database.dynamodb_connection import get_dynamodb
+from common.database import get_user_dao
 logger = logging.getLogger(__name__)
 
 print("🔍 AUTH.PY FILE IS BEING LOADED")
@@ -68,10 +68,9 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
 
 async def get_current_user(
     email: str = Depends(verify_token),
-    db_connection = Depends(get_dynamodb)
+    user_dao: UserDAO = Depends(get_user_dao)
 ) -> UserResponse:
     """Get current authenticated user"""
-    user_dao = UserDAO(db_connection)
     user = await user_dao.get_user_by_email(email)
 
     if user is None:
@@ -92,11 +91,10 @@ async def get_current_user(
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(
     user_data: UserCreate,
-    db_connection = Depends(get_dynamodb)
+    user_dao: UserDAO = Depends(get_user_dao)
 ):
     """Register a new user"""
     try:
-        user_dao = UserDAO(db_connection)
         user = await user_dao.create_user(user_data)
 
         logger.info(f"User registered successfully: {user.email}")
@@ -126,11 +124,10 @@ async def register_user(
 @router.post("/login", response_model=TokenResponse)
 async def login_user(
     login_data: UserLogin,
-    db_connection = Depends(get_dynamodb)
+    user_dao: UserDAO = Depends(get_user_dao)
 ):
     """Authenticate user and return JWT token"""
     try:
-        user_dao = UserDAO(db_connection)
         user = await user_dao.authenticate_user(login_data.email, login_data.password)
 
         if user is None:

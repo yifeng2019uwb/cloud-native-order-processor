@@ -20,7 +20,7 @@ from api_models.inventory.asset_list import (
 
 # Import common DAO
 from common.dao.asset_dao import AssetDAO
-from common.database.dynamodb_connection import get_dynamodb
+from common.database import get_asset_dao
 
 # Import internal exceptions
 from exceptions import (
@@ -40,9 +40,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
 
-async def get_asset_dao(db_connection = Depends(get_dynamodb)):
-    """Dependency to get AssetDAO instance"""
-    return AssetDAO(db_connection)
+
 
 
 @router.get(

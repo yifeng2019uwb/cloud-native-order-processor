@@ -10,35 +10,13 @@ import logging
 
 from common.entities.user import UserResponse
 from common.dao.user_dao import UserDAO
-from common.database.dynamodb_connection import dynamodb_manager
+from common.database import get_user_dao as get_common_user_dao
 from controllers.token_utilis import verify_access_token
 
 logger = logging.getLogger(__name__)
 
 # Security scheme for JWT Bearer tokens
 security = HTTPBearer(auto_error=True)
-
-
-async def get_db_connection():
-    """
-    Get database connection dependency
-
-    Returns:
-        DynamoDB connection instance
-    """
-    try:
-        return get_dynamodb()
-    except Exception as e:
-        logger.error(f"Database connection error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database unavailable"
-        )
-
-
-async def get_user_dao():
-    async with dynamodb_manager.get_connection() as db_connection:
-        yield UserDAO(db_connection)
 
 
 async def verify_token_dependency(
@@ -88,7 +66,7 @@ async def verify_token_dependency(
 
 async def get_current_user(
     username: str = Depends(verify_token_dependency),
-    user_dao: UserDAO = Depends(get_user_dao)
+    user_dao: UserDAO = Depends(get_common_user_dao)
 ) -> UserResponse:
     """
     Get current authenticated user from token
@@ -140,7 +118,7 @@ async def get_optional_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(
         HTTPBearer(auto_error=False)
     ),
-    user_dao: UserDAO = Depends(get_user_dao)
+    user_dao: UserDAO = Depends(get_common_user_dao)
 ) -> Optional[UserResponse]:
     """
     Get current user if token is provided (optional authentication)

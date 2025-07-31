@@ -20,7 +20,7 @@ from api_models.shared.common import ErrorResponse
 from common.entities.user import User
 
 # Import dependencies
-from .dependencies import get_user_dao
+from common.database import get_user_dao
 from controllers.token_utilis import verify_access_token
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 

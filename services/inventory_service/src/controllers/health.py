@@ -9,7 +9,7 @@ import os
 
 # Import common DAO for database health check
 from common.dao.asset_dao import AssetDAO
-from common.database.dynamodb_connection import get_dynamodb, dynamodb_manager
+from common.database import get_asset_dao, get_database_health
 
 # Import internal exceptions
 from exceptions import (
@@ -89,7 +89,7 @@ async def liveness_check():
 
 
 @router.get("/health/db", status_code=status.HTTP_200_OK)
-async def database_health_check(asset_dao: AssetDAO = Depends(lambda: AssetDAO(None))):
+async def database_health_check(asset_dao: AssetDAO = Depends(get_asset_dao)):
     """
     Database connectivity health check
 
