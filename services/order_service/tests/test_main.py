@@ -8,7 +8,7 @@ def test_order_service_import():
     """Test that order service modules can be imported"""
     try:
         from src.api_models import order_requests, order_responses
-        from src.exceptions import internal_exceptions, secure_exceptions
+        from src.exceptions import exceptions
         from src.controllers import orders, health
         from src.services import order_service
         assert True

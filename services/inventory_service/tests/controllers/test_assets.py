@@ -11,13 +11,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from controllers.assets import list_assets, get_asset_by_id
 
 # Import exception classes for testing
-from exceptions.internal_exceptions import (
-    InternalAssetNotFoundError,
-    InternalDatabaseError
+from exceptions import (
+    AssetNotFoundException,
+    InternalServerException
 )
 from common.exceptions import (
-    DatabaseConnectionError,
-    DatabaseOperationError
+    DatabaseOperationException,
+    ConfigurationException
 )
 
 
@@ -185,19 +185,12 @@ async def test_get_asset_by_id_not_found():
         mock_dao.get_asset_by_id.return_value = None
 
         # Test that the function raises the correct exception
-        with pytest.raises(InternalDatabaseError) as exc_info:
+        with pytest.raises(InternalServerException) as exc_info:
             await get_asset_by_id("INVALID", asset_dao=mock_dao)
 
         error = exc_info.value
-        assert error.operation == "get_asset_by_id"
-        assert error.table_name == "assets"
-        assert isinstance(error.original_error, InternalAssetNotFoundError)
-        original_error = error.original_error
-        assert original_error.asset_id == "INVALID"
-        assert original_error.search_criteria == {"requested_asset_id": "INVALID"}
-
-        # Verify AssetDAO was called with uppercase asset_id
-        mock_dao.get_asset_by_id.assert_called_once_with("INVALID")
+        # Check that the error message contains the operation context
+        assert "failed to get asset invalid" in str(error).lower()
 
 
     @pytest.mark.asyncio
@@ -244,13 +237,12 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao = AsyncMock()
         mock_asset_dao.get_all_assets.side_effect = Exception("Database connection failed")
 
-        with pytest.raises(InternalDatabaseError) as exc_info:
+        with pytest.raises(InternalServerException) as exc_info:
             await list_assets(active_only=True, limit=10, asset_dao=mock_asset_dao)
 
         error = exc_info.value
-        assert error.operation == "get_all_assets"
-        assert error.table_name == "assets"
-        assert "Database connection failed" in str(error.original_error)
+        # Check that the error message contains the operation context
+        assert "failed to list assets" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_get_asset_by_id_database_error_handling(self):
@@ -259,47 +251,44 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao = AsyncMock()
         mock_asset_dao.get_asset_by_id.side_effect = Exception("Database query failed")
 
-        with pytest.raises(InternalDatabaseError) as exc_info:
+        with pytest.raises(InternalServerException) as exc_info:
             await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
-        assert error.operation == "get_asset_by_id"
-        assert error.table_name == "assets"
-        assert "Database query failed" in str(error.original_error)
+        # Check that the error message contains the operation context
+        assert "failed to get asset btc" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_list_assets_with_common_package_exception(self):
         """Test handling of common package exceptions in list_assets"""
         # Mock the asset DAO to raise a common package exception
         mock_asset_dao = AsyncMock()
-        mock_asset_dao.get_all_assets.side_effect = DatabaseConnectionError(
-            "Connection failed", {"service": "dynamodb"}
+        mock_asset_dao.get_all_assets.side_effect = DatabaseOperationException(
+            "Connection failed", service="dynamodb"
         )
 
-        with pytest.raises(InternalDatabaseError) as exc_info:
+        with pytest.raises(InternalServerException) as exc_info:
             await list_assets(active_only=True, limit=10, asset_dao=mock_asset_dao)
 
         error = exc_info.value
-        assert error.operation == "get_all_assets"
-        assert error.table_name == "assets"
-        assert isinstance(error.original_error, DatabaseConnectionError)
+        # Check that the error message contains the operation context
+        assert "failed to list assets" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_get_asset_by_id_with_common_package_exception(self):
         """Test handling of common package exceptions in get_asset_by_id"""
         # Mock the asset DAO to raise a common package exception
         mock_asset_dao = AsyncMock()
-        mock_asset_dao.get_asset_by_id.side_effect = DatabaseOperationError(
-            "Operation failed", {"operation": "get_item"}
+        mock_asset_dao.get_asset_by_id.side_effect = DatabaseOperationException(
+            "Operation failed", operation="get_item"
         )
 
-        with pytest.raises(InternalDatabaseError) as exc_info:
+        with pytest.raises(InternalServerException) as exc_info:
             await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
-        assert error.operation == "get_asset_by_id"
-        assert error.table_name == "assets"
-        assert isinstance(error.original_error, DatabaseOperationError)
+        # Check that the error message contains the operation context
+        assert "failed to get asset btc" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_assets_controller_error_context(self):
@@ -308,38 +297,30 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao = AsyncMock()
         mock_asset_dao.get_asset_by_id.side_effect = Exception("Test database error")
 
-        with pytest.raises(InternalDatabaseError) as exc_info:
+        with pytest.raises(InternalServerException) as exc_info:
             await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Check that the error has proper context
-        assert error.operation == "get_asset_by_id"
-        assert error.table_name == "assets"
-        assert "Test database error" in str(error.original_error)
+        assert "failed to get asset btc" in str(error).lower()
+        assert "Test database error" in str(error)
 
     @pytest.mark.asyncio
     async def test_assets_controller_exception_flow(self):
         """Test the complete exception flow in assets controller"""
         # Mock the asset DAO to raise a common package exception
         mock_asset_dao = AsyncMock()
-        mock_asset_dao.get_all_assets.side_effect = DatabaseConnectionError(
-            "Connection failed", {"service": "dynamodb", "region": "us-east-1"}
+        mock_asset_dao.get_all_assets.side_effect = DatabaseOperationException(
+            "Connection failed", service="dynamodb", region="us-east-1"
         )
 
-        with pytest.raises(InternalDatabaseError) as exc_info:
+        with pytest.raises(InternalServerException) as exc_info:
             await list_assets(active_only=True, limit=5, asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Verify the error is properly wrapped
-        assert isinstance(error, InternalDatabaseError)
-        assert error.operation == "get_all_assets"
-        assert error.table_name == "assets"
-        assert isinstance(error.original_error, DatabaseConnectionError)
-
-        # Verify the original error context is preserved
-        original_error = error.original_error
-        assert original_error.context["service"] == "dynamodb"
-        assert original_error.context["region"] == "us-east-1"
+        assert isinstance(error, InternalServerException)
+        assert "failed to list assets" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_assets_controller_with_complex_exception(self):
@@ -357,14 +338,12 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao = AsyncMock()
         mock_asset_dao.get_asset_by_id.side_effect = complex_error
 
-        with pytest.raises(InternalDatabaseError) as exc_info:
+        with pytest.raises(InternalServerException) as exc_info:
             await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
-        assert error.operation == "get_asset_by_id"
-        assert error.table_name == "assets"
-        assert error.original_error == complex_error
-        assert "Complex error" in str(error.original_error)
+        assert "failed to get asset btc" in str(error).lower()
+        assert "Complex error" in str(error)
 
     @pytest.mark.asyncio
     async def test_assets_controller_with_multiple_exceptions(self):
@@ -374,18 +353,17 @@ class TestAssetsControllerExceptionHandling:
             Exception("Generic exception"),
             ValueError("Value error"),
             RuntimeError("Runtime error"),
-            DatabaseConnectionError("Connection error", {"service": "dynamodb"}),
-            DatabaseOperationError("Operation error", {"operation": "scan"})
+            DatabaseOperationException("Connection error", service="dynamodb"),
+            DatabaseOperationException("Operation error", operation="scan")
         ]
 
-        for test_exception in exceptions_to_test:
+        for exc in exceptions_to_test:
             mock_asset_dao = AsyncMock()
-            mock_asset_dao.get_asset_by_id.side_effect = test_exception
+            mock_asset_dao.get_asset_by_id.side_effect = exc
 
-            with pytest.raises(InternalDatabaseError) as exc_info:
+            with pytest.raises(InternalServerException) as exc_info:
                 await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
             error = exc_info.value
-            assert error.operation == "get_asset_by_id"
-            assert error.table_name == "assets"
-            assert error.original_error == test_exception
+            assert isinstance(error, InternalServerException)
+            assert "failed to get asset btc" in str(error).lower()

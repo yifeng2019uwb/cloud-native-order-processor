@@ -92,7 +92,7 @@ def verify_access_token(token: str) -> Optional[str]:
 
     except jwt.ExpiredSignatureError:
         logger.warning("Token has expired")
-        raise TokenExpiredException()
+        raise TokenExpiredException("Token has expired")
     except JWTError:
         logger.warning("Invalid token provided")
         raise JWTError("Invalid token")

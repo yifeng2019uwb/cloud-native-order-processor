@@ -23,7 +23,11 @@ from common.dao.asset_dao import AssetDAO
 from common.database.dynamodb_connection import get_dynamodb
 
 # Import internal exceptions
-from exceptions import raise_asset_not_found, raise_database_error
+from exceptions import (
+    AssetNotFoundException,
+    InternalServerException,
+    DatabaseOperationException
+)
 
 # Import metrics
 try:
@@ -118,12 +122,8 @@ async def list_assets(
 
     except Exception as e:
         logger.error(f"Failed to list assets: {str(e)}", exc_info=True)
-        # Convert to internal database error for proper handling
-        raise_database_error(
-            operation="get_all_assets",
-            table_name="assets",
-            original_error=e
-        )
+        # Convert to internal server exception for proper handling
+        raise InternalServerException(f"Failed to list assets: {str(e)}")
 
 
 @router.get(
@@ -160,10 +160,7 @@ async def get_asset_by_id(
         if not asset:
             logger.warning(f"Asset not found: {asset_id}")
             # Use internal exception for proper handling
-            raise_asset_not_found(
-                asset_id=asset_id,
-                search_criteria={"requested_asset_id": asset_id}
-            )
+            raise AssetNotFoundException(f"Asset '{asset_id}' not found")
 
         logger.info(f"Asset found: {asset.name} ({asset.asset_id})")
 
@@ -176,9 +173,5 @@ async def get_asset_by_id(
 
     except Exception as e:
         logger.error(f"Failed to get asset {asset_id}: {str(e)}", exc_info=True)
-        # Convert to internal database error for proper handling
-        raise_database_error(
-            operation="get_asset_by_id",
-            table_name="assets",
-            original_error=e
-        )
+        # Convert to internal server exception for proper handling
+        raise InternalServerException(f"Failed to get asset {asset_id}: {str(e)}")

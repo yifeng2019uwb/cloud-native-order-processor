@@ -12,17 +12,73 @@ This guide explains how to map internal service-specific exceptions to external 
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-## ** Mapping Flow**
+## ** Exception Categories**
 
-1. **Internal Exception** (Service-specific) → **External Exception** (Standardized)
-2. **External Exception** → **RFC 7807 Problem Details** (Client-facing)
+### **1. Shared Exceptions (Exposed to Gateway)**
+These exceptions are **mapped to external error codes** and exposed to clients:
+
+```python
+# Authentication (401)
+InvalidCredentialsException, TokenExpiredException, TokenInvalidException
+
+# Authorization (403)
+AuthorizationException, AccessDeniedException, InsufficientPermissionsException
+
+# Resources (404, 409)
+EntityNotFoundException, UserNotFoundException, OrderNotFoundException, AssetNotFoundException
+EntityAlreadyExistsException
+
+# Validation (422)
+EntityValidationException, UserValidationException, OrderValidationException, AssetValidationException
+
+# Internal Server (500)
+InternalServerException
+```
+
+### **2. Common Exceptions (Internal Only)**
+These exceptions are **NOT mapped** and should be handled internally by services:
+
+```python
+# Database (internal)
+DatabaseConnectionException, DatabaseOperationException
+
+# Configuration (internal)
+ConfigurationException
+
+# External Services (internal)
+AWSServiceException, ExternalServiceException
+
+# Generic (internal)
+CommonServerException
+```
+
+## ** Simplified Error Codes (7 total)**
+
+```python
+# Authentication Errors (401)
+AUTHENTICATION_FAILED = "authentication_failed"    # All auth issues (invalid creds, expired token, etc.)
+
+# Authorization Errors (403)
+ACCESS_DENIED = "access_denied"                    # All permission issues
+
+# Resource Errors (404, 409)
+RESOURCE_NOT_FOUND = "resource_not_found"          # All "not found" cases
+RESOURCE_ALREADY_EXISTS = "resource_already_exists" # All "already exists" cases
+
+# Validation Errors (422)
+VALIDATION_ERROR = "validation_error"              # All validation issues
+
+# Server Errors (500, 503)
+INTERNAL_SERVER_ERROR = "internal_server_error"    # All internal issues
+SERVICE_UNAVAILABLE = "service_unavailable"        # External service failures
+```
 
 ## ** Usage Examples**
 
 ### **1. Basic Exception Mapping**
 
 ```python
-from exception import map_service_exception, ErrorCode
+from exception import map_service_exception
 
 # In your service controller
 async def get_user(user_id: str):
@@ -46,352 +102,171 @@ async def get_user(user_id: str):
 
 ### **2. Automatic Exception Registration**
 
+The exception mapper automatically registers all shared exceptions from the common package:
+
 ```python
-# In your service exceptions file (e.g., user_service/exceptions.py)
-from exception import ErrorCode, exception_mapper
+# Shared exceptions are automatically mapped:
+UserNotFoundException → RESOURCE_NOT_FOUND
+EntityAlreadyExistsException → RESOURCE_ALREADY_EXISTS
+InvalidCredentialsException → AUTHENTICATION_FAILED
+OrderValidationException → VALIDATION_ERROR
+InternalServerException → INTERNAL_SERVER_ERROR
 
-class UserNotFoundException(Exception):
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(message)
-
-class UsernameTakenException(Exception):
-    def __init__(self, username: str):
-        self.message = f"Username '{username}' is already taken"
-        super().__init__(self.message)
-
-# Register exceptions with the mapper
-exception_mapper.register_exception_mapping(UserNotFoundException, ErrorCode.USER_NOT_FOUND)
-exception_mapper.register_exception_mapping(UsernameTakenException, ErrorCode.USERNAME_TAKEN)
+# Common exceptions are NOT mapped (security):
+DatabaseOperationException → INTERNAL_SERVER_ERROR (fallback)
+ConfigurationException → INTERNAL_SERVER_ERROR (fallback)
+AWSServiceException → INTERNAL_SERVER_ERROR (fallback)
 ```
 
-### **3. Custom Exception Mappers**
+### **3. FastAPI Integration**
 
 ```python
-from exception import exception_mapper, ProblemDetails, ErrorDetails
-
-class ComplexValidationException(Exception):
-    def __init__(self, field_errors: dict):
-        self.field_errors = field_errors
-        super().__init__("Complex validation failed")
-
-def map_complex_validation(exc: ComplexValidationException, instance: str, trace_id: str, **kwargs):
-    """Custom mapper for complex validation exceptions"""
-    errors = []
-    for field, error_info in exc.field_errors.items():
-        errors.append(ErrorDetails(
-            field=field,
-            message=error_info.get('message', 'Validation failed'),
-            value=error_info.get('value')
-        ))
-
-    return create_validation_error(
-        detail="Complex validation failed",
-        errors=errors,
-        instance=instance,
-        trace_id=trace_id
-    )
-
-# Register custom mapper
-exception_mapper.register_custom_mapper(ComplexValidationException, map_complex_validation)
-```
-
-### **4. Database Exception Mapping**
-
-```python
-from exception import map_database_exception
-
-async def create_user(user_data: dict):
-    try:
-        user = await user_dao.create_user(user_data)
-        return user
-    except Exception as exc:
-        # Map database exceptions to standardized responses
-        problem_details = map_database_exception(
-            exc=exc,
-            instance="/api/v1/users",
-            trace_id=request.headers.get("X-Trace-ID")
-        )
-        return JSONResponse(
-            status_code=problem_details.status,
-            content=problem_details.dict()
-        )
-```
-
-### **5. FastAPI Integration with Exception Handlers**
-
-```python
-from fastapi import FastAPI, HTTPException
-from exception import register_exception_handlers, map_service_exception
+from fastapi import FastAPI
+from exception import register_exception_handlers
 
 app = FastAPI()
 
-# Register automatic exception handlers
+# Register exception handlers for automatic error handling
 register_exception_handlers(app)
 
 @app.get("/users/{user_id}")
 async def get_user(user_id: str):
-    try:
-        user = await user_service.get_user(user_id)
-        if not user:
-            # This will be automatically handled by the exception handler
-            raise HTTPException(
-                status_code=404,
-                detail=f"User '{user_id}' not found"
-            )
-        return user
-    except UserNotFoundException as exc:
-        # Map service-specific exceptions
-        problem_details = map_service_exception(
-            exc=exc,
-            instance=f"/api/v1/users/{user_id}",
-            trace_id=request.headers.get("X-Trace-ID")
-        )
-        return JSONResponse(
-            status_code=problem_details.status,
-            content=problem_details.dict()
-        )
+    # Exceptions are automatically mapped to RFC 7807 Problem Details
+    if not user_exists(user_id):
+        raise UserNotFoundException(f"User '{user_id}' not found")
+    return {"user_id": user_id}
 ```
 
-## ** Common Mapping Patterns**
-
-### **User Service Exceptions**
+### **4. Manual Error Handling**
 
 ```python
-# Internal exceptions
-class UserNotFoundException(Exception): pass
-class UserAlreadyExistsException(Exception): pass
-class InvalidCredentialsException(Exception): pass
-class UsernameTakenException(Exception): pass
-class EmailTakenException(Exception): pass
+from exception import create_problem_details, ErrorCode
 
-# Mapping registration
-exception_mapper.register_exception_mapping(UserNotFoundException, ErrorCode.USER_NOT_FOUND)
-exception_mapper.register_exception_mapping(UserAlreadyExistsException, ErrorCode.RESOURCE_ALREADY_EXISTS)
-exception_mapper.register_exception_mapping(InvalidCredentialsException, ErrorCode.INVALID_CREDENTIALS)
-exception_mapper.register_exception_mapping(UsernameTakenException, ErrorCode.USERNAME_TAKEN)
-exception_mapper.register_exception_mapping(EmailTakenException, ErrorCode.EMAIL_TAKEN)
-```
-
-### **Inventory Service Exceptions**
-
-```python
-# Internal exceptions
-class AssetNotFoundException(Exception): pass
-class AssetAlreadyExistsException(Exception): pass
-class InvalidAssetDataException(Exception): pass
-
-# Mapping registration
-exception_mapper.register_exception_mapping(AssetNotFoundException, ErrorCode.ASSET_NOT_FOUND)
-exception_mapper.register_exception_mapping(AssetAlreadyExistsException, ErrorCode.RESOURCE_ALREADY_EXISTS)
-exception_mapper.register_exception_mapping(InvalidAssetDataException, ErrorCode.INVALID_INPUT)
-```
-
-### **Order Service Exceptions** (Future)
-
-```python
-# Internal exceptions
-class OrderNotFoundException(Exception): pass
-class InsufficientFundsException(Exception): pass
-class InvalidOrderStateException(Exception): pass
-
-# Mapping registration
-exception_mapper.register_exception_mapping(OrderNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
-exception_mapper.register_exception_mapping(InsufficientFundsException, ErrorCode.INVALID_INPUT)
-exception_mapper.register_exception_mapping(InvalidOrderStateException, ErrorCode.INVALID_INPUT)
-```
-
-## ** Error Response Examples**
-
-### **User Not Found**
-```json
-{
-  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/resource-not-found.md",
-  "title": "Resource Not Found",
-  "status": 404,
-  "detail": "User 'john_doe123' not found",
-  "instance": "/api/v1/users/john_doe123",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "trace_id": "req-12345"
-}
-```
-
-### **Validation Error**
-```json
-{
-  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/validation-error.md",
-  "title": "Validation Error",
-  "status": 422,
-  "detail": "The request contains invalid data",
-  "instance": "/api/v1/auth/register",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Invalid email format",
-      "value": "invalid-email"
-    },
-    {
-      "field": "password",
-      "message": "Password must be at least 12 characters",
-      "value": "short"
-    }
-  ],
-  "timestamp": "2024-01-15T10:30:00Z",
-  "trace_id": "req-12345"
-}
-```
-
-### **Username Already Taken**
-```json
-{
-  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/resource-exists.md",
-  "title": "Resource Already Exists",
-  "status": 409,
-  "detail": "Username 'john_doe123' is already taken",
-  "instance": "/api/v1/auth/register",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "trace_id": "req-12345"
-}
-```
-
-## ** Best Practices**
-
-### **1. Register Exceptions Early**
-```python
-# In your service's __init__.py or main.py
-from exception import exception_mapper, ErrorCode
-from .exceptions import UserNotFoundException, UsernameTakenException
-
-# Register all exceptions when the service starts
-def register_exceptions():
-    exception_mapper.register_exception_mapping(UserNotFoundException, ErrorCode.USER_NOT_FOUND)
-    exception_mapper.register_exception_mapping(UsernameTakenException, ErrorCode.USERNAME_TAKEN)
-
-register_exceptions()
-```
-
-### **2. Use Consistent Error Messages**
-```python
-class UserNotFoundException(Exception):
-    def __init__(self, user_id: str):
-        self.message = f"User '{user_id}' not found"
-        super().__init__(self.message)
-
-class UsernameTakenException(Exception):
-    def __init__(self, username: str):
-        self.message = f"Username '{username}' is already taken"
-        super().__init__(self.message)
-```
-
-### **3. Include Trace IDs**
-```python
-# Always include trace_id for debugging
-problem_details = map_service_exception(
-    exc=exc,
-    instance=request.url.path,
-    trace_id=request.headers.get("X-Trace-ID")
+# Create custom problem details
+problem_details = create_problem_details(
+    error_code=ErrorCode.VALIDATION_ERROR,
+    detail="Invalid email format",
+    instance="/api/v1/auth/register",
+    trace_id="req-12345"
 )
 ```
 
-### **4. Use Appropriate HTTP Status Codes**
+## ** Exception Mapping Examples**
+
+### **Authentication Exceptions**
 ```python
-# Let the mapper handle status codes automatically
-problem_details = map_service_exception(exc, instance="/api/v1/users")
-return JSONResponse(
-    status_code=problem_details.status,  # Automatically set based on error code
-    content=problem_details.dict()
-)
+# All authentication issues map to AUTHENTICATION_FAILED
+InvalidCredentialsException → AUTHENTICATION_FAILED (401)
+TokenExpiredException → AUTHENTICATION_FAILED (401)
+TokenInvalidException → AUTHENTICATION_FAILED (401)
 ```
 
-## ** Migration Guide**
-
-### **From Old Error Handling**
-
-**Before:**
+### **Resource Exceptions**
 ```python
-# Old way - inconsistent error responses
-if not user:
-    return JSONResponse(
-        status_code=404,
-        content={"error": "User not found", "message": f"User {user_id} not found"}
-    )
+# All "not found" issues map to RESOURCE_NOT_FOUND
+UserNotFoundException → RESOURCE_NOT_FOUND (404)
+OrderNotFoundException → RESOURCE_NOT_FOUND (404)
+AssetNotFoundException → RESOURCE_NOT_FOUND (404)
+
+# All "already exists" issues map to RESOURCE_ALREADY_EXISTS
+EntityAlreadyExistsException → RESOURCE_ALREADY_EXISTS (409)
 ```
 
-**After:**
+### **Validation Exceptions**
 ```python
-# New way - standardized error responses
-if not user:
+# All validation issues map to VALIDATION_ERROR
+UserValidationException → VALIDATION_ERROR (422)
+OrderValidationException → VALIDATION_ERROR (422)
+AssetValidationException → VALIDATION_ERROR (422)
+```
+
+### **Server Exceptions**
+```python
+# All internal issues map to INTERNAL_SERVER_ERROR
+InternalServerException → INTERNAL_SERVER_ERROR (500)
+
+# All external service issues map to SERVICE_UNAVAILABLE
+ExternalServiceException → SERVICE_UNAVAILABLE (503)
+```
+
+**Note**: Common exceptions (DatabaseOperationException, ConfigurationException, AWSServiceException) are handled at the service level and should not be mapped to external error codes. They automatically fall back to INTERNAL_SERVER_ERROR for security.
+
+## ** Security Benefits**
+
+1. **Internal Details Hidden**: Database errors, AWS issues, and configuration problems are never exposed
+2. **Consistent Error Format**: All services return the same error structure
+3. **Simplified Client Integration**: Only 7 error codes to handle
+4. **RFC 7807 Compliant**: Industry standard error responses
+
+## ** Error Response Format**
+
+All error responses follow RFC 7807 Problem Details format:
+
+```json
+{
+    "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/validation_error.md",
+    "title": "Validation Error",
+    "status": 422,
+    "detail": "The request contains invalid data. Please check your input and try again.",
+    "instance": "/api/v1/auth/register",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "trace_id": "req-12345"
+}
+```
+
+## ** Integration Steps**
+
+### **1. Install the Exception Package**
+```bash
+cd services/exception
+pip install -e .
+```
+
+### **2. Configure Exception Mappings**
+```python
+from exception import configure_service_exceptions
+
+# Configure shared exception mappings
+configure_service_exceptions()
+```
+
+### **3. Register FastAPI Handlers**
+```python
+from fastapi import FastAPI
+from exception import register_exception_handlers
+
+app = FastAPI()
+register_exception_handlers(app)
+```
+
+### **4. Use in Your Services**
+```python
+# Raise shared exceptions for business logic
+if not user_exists(user_id):
     raise UserNotFoundException(f"User '{user_id}' not found")
 
-# Exception handler automatically maps to RFC 7807 format
+# Handle common exceptions internally
+try:
+    result = database_operation()
+except DatabaseOperationException as exc:
+    # Log the error internally
+    logger.error(f"Database error: {exc}")
+    # Re-raise as InternalServerException
+    raise InternalServerException("Failed to process request")
 ```
 
-### **From Custom Error Responses**
+## ** Testing**
 
-**Before:**
-```python
-# Custom error format
-return JSONResponse(
-    status_code=422,
-    content={
-        "success": False,
-        "errors": [
-            {"field": "email", "message": "Invalid email"}
-        ]
-    }
-)
+The exception package includes comprehensive tests to verify:
+
+- ✅ Exception mapping functionality
+- ✅ RFC 7807 compliance
+- ✅ Security (common exceptions not exposed)
+- ✅ Error code standardization
+- ✅ FastAPI integration
+
+Run tests with:
+```bash
+cd services/exception
+python3 -c "from exception_mapping import configure_service_exceptions; configure_service_exceptions(); print('✅ Exception mapping configured successfully')"
 ```
-
-**After:**
-```python
-# Standardized RFC 7807 format
-from exception import create_validation_error, ErrorDetails
-
-errors = [ErrorDetails(field="email", message="Invalid email")]
-problem_details = create_validation_error(
-    detail="The request contains invalid data",
-    errors=errors,
-    instance="/api/v1/auth/register"
-)
-return JSONResponse(
-    status_code=422,
-    content=problem_details.dict()
-)
-```
-
-## ** Testing Exception Mapping**
-
-```python
-import pytest
-from exception import map_service_exception, ErrorCode
-
-def test_user_not_found_mapping():
-    exc = UserNotFoundException("User 'test' not found")
-    problem_details = map_service_exception(
-        exc=exc,
-        instance="/api/v1/users/test"
-    )
-
-    assert problem_details.status == 404
-    assert problem_details.title == "Resource Not Found"
-    assert "User 'test' not found" in problem_details.detail
-
-def test_validation_error_mapping():
-    from pydantic import ValidationError
-
-    # Simulate Pydantic validation error
-    errors = [{"loc": ("email",), "msg": "Invalid email", "input": "invalid"}]
-    exc = ValidationError.from_exception_dict(errors, {})
-
-    problem_details = map_service_exception(
-        exc=exc,
-        instance="/api/v1/auth/register"
-    )
-
-    assert problem_details.status == 422
-    assert problem_details.title == "Validation Error"
-    assert problem_details.errors is not None
-    assert len(problem_details.errors) == 1
-```
-
-This mapping system ensures consistent error handling across all services while maintaining the flexibility to handle service-specific exceptions appropriately.

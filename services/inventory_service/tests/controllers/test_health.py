@@ -2,10 +2,10 @@ import pytest
 from unittest.mock import Mock, patch, AsyncMock
 
 # Import exception classes for testing
-from exceptions.internal_exceptions import InternalDatabaseError
+from exceptions import InternalServerException
 from common.exceptions import (
-    DatabaseConnectionError,
-    DatabaseOperationError
+    DatabaseOperationException,
+    ConfigurationException
 )
 
 
@@ -28,13 +28,12 @@ class TestHealthControllerComprehensive:
 
         # Mock the database health check to return False
         with patch('controllers.health.check_database_health', return_value=False):
-            with pytest.raises(InternalDatabaseError) as exc_info:
+            with pytest.raises(InternalServerException) as exc_info:
                 await readiness_check()
 
             error = exc_info.value
-            assert error.operation == "readiness_check"
-            assert error.table_name == "assets"
-            assert "Database not ready" in str(error.original_error)
+            # Check that the error message contains the operation context
+            assert "readiness check failed" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_readiness_check_exception_handling(self):
@@ -43,13 +42,12 @@ class TestHealthControllerComprehensive:
 
         # Mock the database health check to raise an exception
         with patch('controllers.health.check_database_health', side_effect=Exception("Health check failed")):
-            with pytest.raises(InternalDatabaseError) as exc_info:
+            with pytest.raises(InternalServerException) as exc_info:
                 await readiness_check()
 
             error = exc_info.value
-            assert error.operation == "readiness_check"
-            assert error.table_name == "assets"
-            assert "Health check failed" in str(error.original_error)
+            # Check that the error message contains the operation context
+            assert "readiness check failed" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_database_health_check_unhealthy_status(self):
@@ -61,13 +59,12 @@ class TestHealthControllerComprehensive:
             "status": "unhealthy",
             "error": "Connection timeout"
         }):
-            with pytest.raises(InternalDatabaseError) as exc_info:
+            with pytest.raises(InternalServerException) as exc_info:
                 await database_health_check()
 
             error = exc_info.value
-            assert error.operation == "database_health_check"
-            assert error.table_name == "assets"
-            assert "Connection timeout" in str(error.original_error)
+            # Check that the error message contains the operation context
+            assert "database health check failed" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_database_health_check_exception_handling(self):
@@ -76,13 +73,12 @@ class TestHealthControllerComprehensive:
 
         # Mock the detailed database check to raise an exception
         with patch('controllers.health.detailed_database_check', side_effect=Exception("Health check failed")):
-            with pytest.raises(InternalDatabaseError) as exc_info:
+            with pytest.raises(InternalServerException) as exc_info:
                 await database_health_check()
 
             error = exc_info.value
-            assert error.operation == "database_health_check"
-            assert error.table_name == "assets"
-            assert "Health check failed" in str(error.original_error)
+            # Check that the error message contains the operation context
+            assert "database health check failed" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_readiness_check_with_common_package_exception(self):
@@ -90,16 +86,15 @@ class TestHealthControllerComprehensive:
         from controllers.health import readiness_check
 
         # Mock the database health check to raise a common package exception
-        with patch('controllers.health.check_database_health', side_effect=DatabaseConnectionError(
-            "Connection failed", {"service": "dynamodb"}
+        with patch('controllers.health.check_database_health', side_effect=DatabaseOperationException(
+            "Connection failed", service="dynamodb"
         )):
-            with pytest.raises(InternalDatabaseError) as exc_info:
+            with pytest.raises(InternalServerException) as exc_info:
                 await readiness_check()
 
             error = exc_info.value
-            assert error.operation == "readiness_check"
-            assert error.table_name == "assets"
-            assert isinstance(error.original_error, DatabaseConnectionError)
+            # Check that the error message contains the operation context
+            assert "readiness check failed" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_database_health_check_with_common_package_exception(self):
@@ -107,16 +102,15 @@ class TestHealthControllerComprehensive:
         from controllers.health import database_health_check
 
         # Mock the detailed database check to raise a common package exception
-        with patch('controllers.health.detailed_database_check', side_effect=DatabaseOperationError(
-            "Operation failed", {"operation": "describe_table"}
+        with patch('controllers.health.detailed_database_check', side_effect=ConfigurationException(
+            "Operation failed", operation="describe_table"
         )):
-            with pytest.raises(InternalDatabaseError) as exc_info:
+            with pytest.raises(InternalServerException) as exc_info:
                 await database_health_check()
 
             error = exc_info.value
-            assert error.operation == "database_health_check"
-            assert error.table_name == "assets"
-            assert isinstance(error.original_error, DatabaseOperationError)
+            # Check that the error message contains the operation context
+            assert "database health check failed" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_health_controller_error_context(self):
@@ -125,14 +119,13 @@ class TestHealthControllerComprehensive:
 
         # Mock the database health check to raise an exception
         with patch('controllers.health.check_database_health', side_effect=Exception("Test health error")):
-            with pytest.raises(InternalDatabaseError) as exc_info:
+            with pytest.raises(InternalServerException) as exc_info:
                 await readiness_check()
 
             error = exc_info.value
             # Check that the error has proper context
-            assert error.operation == "readiness_check"
-            assert error.table_name == "assets"
-            assert "Test health error" in str(error.original_error)
+            assert "readiness check failed" in str(error).lower()
+            assert "Test health error" in str(error)
 
     @pytest.mark.asyncio
     async def test_health_controller_exception_flow(self):
@@ -140,23 +133,16 @@ class TestHealthControllerComprehensive:
         from controllers.health import database_health_check
 
         # Mock the detailed database check to raise a common package exception
-        with patch('controllers.health.detailed_database_check', side_effect=DatabaseOperationError(
-            "Operation failed", {"operation": "describe_table", "table": "assets"}
+        with patch('controllers.health.detailed_database_check', side_effect=ConfigurationException(
+            "Operation failed", operation="describe_table", table="assets"
         )):
-            with pytest.raises(InternalDatabaseError) as exc_info:
+            with pytest.raises(InternalServerException) as exc_info:
                 await database_health_check()
 
             error = exc_info.value
             # Verify the error is properly wrapped
-            assert isinstance(error, InternalDatabaseError)
-            assert error.operation == "database_health_check"
-            assert error.table_name == "assets"
-            assert isinstance(error.original_error, DatabaseOperationError)
-
-            # Verify the original error context is preserved
-            original_error = error.original_error
-            assert original_error.context["operation"] == "describe_table"
-            assert original_error.context["table"] == "assets"
+            assert isinstance(error, InternalServerException)
+            assert "database health check failed" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_health_controller_with_multiple_exceptions(self):
@@ -168,19 +154,18 @@ class TestHealthControllerComprehensive:
             Exception("Generic exception"),
             ValueError("Value error"),
             RuntimeError("Runtime error"),
-            DatabaseConnectionError("Connection error", {"service": "dynamodb"}),
-            DatabaseOperationError("Operation error", {"operation": "scan"})
+            DatabaseOperationException("Connection error", service="dynamodb"),
+            ConfigurationException("Operation error", operation="scan")
         ]
 
-        for test_exception in exceptions_to_test:
-            with patch('controllers.health.check_database_health', side_effect=test_exception):
-                with pytest.raises(InternalDatabaseError) as exc_info:
+        for exc in exceptions_to_test:
+            with patch('controllers.health.check_database_health', side_effect=exc):
+                with pytest.raises(InternalServerException) as exc_info:
                     await readiness_check()
 
                 error = exc_info.value
-                assert error.operation == "readiness_check"
-                assert error.table_name == "assets"
-                assert error.original_error == test_exception
+                assert isinstance(error, InternalServerException)
+                assert "readiness check failed" in str(error).lower()
 
     @pytest.mark.asyncio
     async def test_readiness_check_success(self):

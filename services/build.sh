@@ -14,7 +14,7 @@ show_usage() {
     cat << EOF
 Services Build Script
 
-Usage: $0 [OPTIONS]
+Usage: $0 [OPTIONS] [SERVICE_NAME]
 
 OPTIONS:
     -h, --help              Show this help message
@@ -22,11 +22,19 @@ OPTIONS:
     -t, --test-only         Run tests only, skip building
     -v, --verbose           Enable verbose output
 
+SERVICE_NAME:
+    Optional. If provided, build only the specified service.
+    If not provided, build all services.
+
+    Available services: common, user_service, inventory_service, order_service, exception
+
 Examples:
     $0                      # Build and test all services (default)
-    $0 --build-only         # Build only
-    $0 --test-only          # Run tests only
-    $0 -v                   # Verbose output
+    $0 common               # Build and test only common package
+    $0 user_service         # Build and test only user_service
+    $0 --build-only         # Build only all services
+    $0 --test-only common   # Run tests only for common package
+    $0 -v user_service      # Verbose output for user_service
 
 EOF
 }
@@ -36,7 +44,7 @@ detect_service_name() {
     local current_dir=$(basename "$PWD")
 
     # Check if we're in a specific service directory
-    if [[ "$current_dir" == "common" || "$current_dir" == "user_service" || "$current_dir" == "inventory_service" ]] && [[ -d "tests" || -f "setup.py" ]]; then
+    if [[ "$current_dir" == "common" || "$current_dir" == "user_service" || "$current_dir" == "inventory_service" || "$current_dir" == "order_service" || "$current_dir" == "exception" ]] && [[ -d "tests" || -f "setup.py" ]]; then
         echo "$current_dir"
         return 0
     fi
@@ -49,6 +57,35 @@ detect_service_name() {
 
     # For other directories, assume it's a service name
     echo "$current_dir"
+}
+
+# Function to validate service name
+validate_service_name() {
+    local service_name=$1
+
+    # List of valid services
+    local valid_services=("common" "user_service" "inventory_service" "order_service" "exception")
+
+    for valid_service in "${valid_services[@]}"; do
+        if [[ "$service_name" == "$valid_service" ]]; then
+            return 0
+        fi
+    done
+
+    echo "Invalid service name: $service_name"
+    echo "Valid services: ${valid_services[*]}"
+    return 1
+}
+
+# Function to get list of available services
+get_available_services() {
+    local services=()
+    for dir in */; do
+        if [[ -d "$dir" && "$dir" != "*/" ]]; then
+            services+=("${dir%/}")
+        fi
+    done
+    echo "${services[*]}"
 }
 
 # Function to check if Python version is available
@@ -338,6 +375,7 @@ main() {
     local test_only=false
     local build_only=false
     local verbose=false
+    local service_name=""
 
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
@@ -364,9 +402,15 @@ main() {
                 exit 1
                 ;;
             *)
-                echo "Unknown argument: $1"
-                show_usage
-                exit 1
+                # This case handles the SERVICE_NAME argument
+                if [[ -z "$service_name" ]]; then
+                    service_name=$1
+                else
+                    echo "Unknown argument: $1"
+                    show_usage
+                    exit 1
+                fi
+                shift
                 ;;
         esac
     done
@@ -382,11 +426,14 @@ main() {
 
     # Get list of available services
     local services=()
-    for dir in */; do
-        if [[ -d "$dir" && "$dir" != "*/" ]]; then
-            services+=("${dir%/}")
+    if [[ -z "$service_name" ]]; then
+        services=($(get_available_services))
+    else
+        if ! validate_service_name "$service_name"; then
+            exit 1
         fi
-    done
+        services+=("$service_name")
+    fi
 
     if [[ ${#services[@]} -eq 0 ]]; then
         echo "No services found in current directory"
@@ -400,9 +447,16 @@ main() {
     echo "Using Python: $python_cmd"
 
     # Main execution logic
+    local service_list_text
+    if [[ ${#services[@]} -eq 1 ]]; then
+        service_list_text="service: ${services[0]}"
+    else
+        service_list_text="services: ${services[*]}"
+    fi
+
     if [[ "$test_only" == "true" ]]; then
         # For test-only, assume code is already built, just run tests
-        echo "Running tests only for all services"
+        echo "Running tests only for $service_list_text"
         for service in "${services[@]}"; do
             echo "Testing service: $service"
             cd "$service"
@@ -416,7 +470,7 @@ main() {
 
     if [[ "$build_only" == "true" ]]; then
         # For build-only, install deps and build
-        echo "Building only for all services"
+        echo "Building only for $service_list_text"
         for service in "${services[@]}"; do
             echo "Building service: $service"
             cd "$service"
@@ -428,8 +482,8 @@ main() {
         exit 0
     fi
 
-    # Default: build and test all services
-    echo "Building and testing all services"
+    # Default: build and test services
+    echo "Building and testing $service_list_text"
     local failed_services=()
     for service in "${services[@]}"; do
         echo ""
@@ -459,12 +513,18 @@ main() {
     echo "========================================"
 
     if [[ ${#failed_services[@]} -eq 0 ]]; then
-        echo "✅ All services built successfully: ${services[*]}"
-        echo "Services build and test completed successfully!"
+        if [[ ${#services[@]} -eq 1 ]]; then
+            echo "✅ Service built successfully: ${services[0]}"
+        else
+            echo "✅ All services built successfully: ${services[*]}"
+        fi
+        echo "Build and test completed successfully!"
         exit 0
     else
         echo "❌ Failed services: ${failed_services[*]}"
-        echo "✅ Successful services: $(printf '%s\n' "${services[@]}" | grep -v "$(printf '%s\n' "${failed_services[@]}")" | tr '\n' ' ')"
+        if [[ ${#services[@]} -gt 1 ]]; then
+            echo "✅ Successful services: $(printf '%s\n' "${services[@]}" | grep -v "$(printf '%s\n' "${failed_services[@]}")" | tr '\n' ' ')"
+        fi
         exit 1
     fi
 }

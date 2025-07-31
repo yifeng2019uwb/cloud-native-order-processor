@@ -1,6 +1,6 @@
 """
 User Register API Endpoint
-Path: cloud-native-order-processor/services/user-service/src/routes/auth/register.py
+Path: services/user_service/src/controllers/auth/register.py
 """
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import Union
@@ -19,14 +19,15 @@ from api_models.shared.common import ErrorResponse
 # Import common DAO models - simple imports
 from common.entities.user import UserCreate, User
 
-# Import dependencies and exceptions
+# Import dependencies and simplified exceptions
 from .dependencies import get_user_dao
-from exceptions.internal_exceptions import (
-    raise_user_exists,
-    raise_database_error,
-    raise_validation_error
+from exceptions import (
+    UserNotFoundException,
+    UserAlreadyExistsException,
+    UserRegistrationException,
+    UserValidationException,
+    InternalServerException,
 )
-from exceptions import UserNotFoundException
 from controllers.token_utilis import create_access_token
 
 logger = logging.getLogger(__name__)
@@ -62,27 +63,31 @@ async def register_user(
     user_dao = Depends(get_user_dao)
 ) -> RegistrationSuccessResponse:
     """Register a new user account with comprehensive validation and security"""
-    try:
-        # Log register attempt (without sensitive data)
-        logger.info(
-            f"Register attempt from {request.client.host if request.client else 'unknown'}",
-            extra={
-                "username": user_data.username,
-                "email": user_data.email,
-                "user_agent": request.headers.get("user-agent", "unknown"),
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }
-        )
+    # Log register attempt (without sensitive data)
+    logger.info(
+        f"Register attempt from {request.client.host if request.client else 'unknown'}",
+        extra={
+            "username": user_data.username,
+            "email": user_data.email,
+            "user_agent": request.headers.get("user-agent", "unknown"),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    )
 
+    try:
         # Check if username already exists
         existing_user_by_username = await user_dao.get_user_by_username(user_data.username)
         if existing_user_by_username:
-            raise UserNotFoundException(f"Username '{user_data.username}' already exists")
+            raise UserAlreadyExistsException(
+                f"Username '{user_data.username}' already exists"
+            )
 
         # Check if email already exists
         existing_user_by_email = await user_dao.get_user_by_email(user_data.email)
         if existing_user_by_email:
-            raise UserNotFoundException(f"Email '{user_data.email}' already exists")
+            raise UserAlreadyExistsException(
+                f"Email '{user_data.email}' already exists"
+            )
 
         # Transform API model to DAO model - proper field mapping
         user_create = UserCreate(
@@ -95,72 +100,28 @@ async def register_user(
         )
 
         # Create the user via DAO
-        try:
-            created_user = await user_dao.create_user(user_create)
-        except ValueError as ve:
-            # Handle specific DAO validation errors
-            error_message = str(ve)
-            if "username" in error_message.lower() and "already exists" in error_message.lower():
-                raise UserNotFoundException(f"Username '{user_data.username}' already exists")
-            elif "email" in error_message.lower() and "already exists" in error_message.lower():
-                raise UserNotFoundException(f"Email '{user_data.email}' already exists")
-            else:
-                # Re-raise as generic error for other validation issues
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=error_message
-                )
-        except Exception as db_error:
-            # Log the detailed error for debugging
-            logger.error(f"Database error during user creation: {db_error}")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Service is temporarily unavailable. Please try again later."
-            )
+        created_user = await user_dao.create_user(user_create)
 
-        # Log successful register
+        # Log successful registration
         logger.info(
-            f"User registered successfully: {user_data.username} ({user_data.email})",
+            f"User registered successfully: {created_user.username}",
             extra={
-                "username": user_data.username,
-                "email": user_data.email,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "user_id": created_user.user_id,
+                "username": created_user.username,
+                "email": created_user.email,
+                "registration_timestamp": datetime.now(timezone.utc).isoformat()
             }
         )
 
-        # Build simple success response (no token or user data)
-        # TODO: Future Enhancement - Add email verification step
-        # 1. Send confirmation email to user's email address
-        # 2. User clicks link to confirm email
-        # 3. Account becomes active only after email confirmation
-        # 4. User then logs in normally
+        # Return success response (no token - user must login separately)
         return RegistrationSuccessResponse(
-            message="Account created successfully. Please login to continue.",
-            success=True
+            message="User registered successfully. Please login to access your account."
         )
 
-    except UserNotFoundException as e:
-        # Re-raise UserNotFoundException as HTTP 409 Conflict
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(e)
-        )
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
+    except (UserAlreadyExistsException, UserValidationException):
+        # Re-raise these exceptions as they should be handled by the exception mapper
         raise
     except Exception as e:
-        # Log unexpected errors
-        logger.error(
-            f"Unexpected error during registration for {user_data.username} ({user_data.email}): {str(e)}",
-            extra={
-                "username": user_data.username,
-                "email": user_data.email,
-                "error_type": type(e).__name__,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }
-        )
-        # Return generic error for unexpected issues
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred. Please try again later."
-        )
+        # Log unexpected errors and convert to internal server exception
+        logger.error(f"Unexpected error during user registration: {str(e)}")
+        raise InternalServerException(f"Registration failed: {str(e)}")

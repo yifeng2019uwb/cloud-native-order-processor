@@ -1,6 +1,5 @@
 """
-Unit tests for OrderDAO.
-Tests cover all CRUD operations and query methods for Order entities.
+Unit tests for OrderDAO
 """
 
 import sys
@@ -17,10 +16,10 @@ from src.dao.order.order_dao import OrderDAO
 from src.entities.order import Order, OrderUpdate
 from src.entities.order.enums import OrderType, OrderStatus
 from src.exceptions import (
-    EntityNotFoundError,
-    EntityAlreadyExistsError,
-    BusinessRuleError,
-    DatabaseOperationError
+    EntityNotFoundException,
+    EntityAlreadyExistsException,
+    OrderValidationException,
+    DatabaseOperationException
 )
 
 
@@ -109,7 +108,7 @@ class TestOrderDAO:
         order_dao.order_exists = AsyncMock(return_value=True)
 
         # Should raise EntityAlreadyExistsError
-        with pytest.raises(EntityAlreadyExistsError, match="Order with ID"):
+        with pytest.raises(EntityAlreadyExistsException, match="Order with ID"):
             await order_dao.create_order(sample_order)
 
     @pytest.mark.asyncio
@@ -122,7 +121,7 @@ class TestOrderDAO:
         )
 
         # Should raise DatabaseOperationError
-        with pytest.raises(DatabaseOperationError):
+        with pytest.raises(DatabaseOperationException):
             await order_dao.create_order(sample_order)
 
     def test_get_order_success(self, order_dao, sample_db_item, mock_db_connection):
@@ -170,7 +169,7 @@ class TestOrderDAO:
         )
 
         # Should raise DatabaseOperationError
-        with pytest.raises(DatabaseOperationError):
+        with pytest.raises(DatabaseOperationException):
             await order_dao.get_order("test_order")
 
     def test_update_order_success(self, order_dao, sample_order, mock_db_connection):
@@ -221,7 +220,7 @@ class TestOrderDAO:
 
         # Should raise EntityNotFoundError
         update_data = OrderUpdate(status=OrderStatus.COMPLETED)
-        with pytest.raises(EntityNotFoundError, match="Order"):
+        with pytest.raises(EntityNotFoundException, match="Order"):
             order_dao.update_order("nonexistent_order", update_data)
 
     @pytest.mark.asyncio
@@ -235,7 +234,7 @@ class TestOrderDAO:
 
         # Should raise DatabaseOperationError
         update_data = OrderUpdate(status=OrderStatus.COMPLETED)
-        with pytest.raises(DatabaseOperationError):
+        with pytest.raises(DatabaseOperationException):
             await order_dao.update_order(sample_order.order_id, update_data)
 
     def test_get_orders_by_user_success(self, order_dao, mock_db_connection):
@@ -293,7 +292,7 @@ class TestOrderDAO:
         )
 
         # Should raise DatabaseOperationError
-        with pytest.raises(DatabaseOperationError):
+        with pytest.raises(DatabaseOperationException):
             await order_dao.get_orders_by_user("user123")
 
     def test_get_orders_by_user_and_asset_success(self, order_dao, mock_db_connection):
@@ -340,7 +339,7 @@ class TestOrderDAO:
         )
 
         # Should raise DatabaseOperationError
-        with pytest.raises(DatabaseOperationError):
+        with pytest.raises(DatabaseOperationException):
             await order_dao.get_orders_by_user_and_asset("user123", "BTC")
 
     def test_get_orders_by_user_and_status_success(self, order_dao, mock_db_connection):
@@ -387,7 +386,7 @@ class TestOrderDAO:
         )
 
         # Should raise DatabaseOperationError
-        with pytest.raises(DatabaseOperationError):
+        with pytest.raises(DatabaseOperationException):
             await order_dao.get_orders_by_user_and_status("user123", OrderStatus.PENDING)
 
     def test_update_order_status_success(self, order_dao, sample_order):
@@ -419,7 +418,7 @@ class TestOrderDAO:
         order_dao.get_order = Mock(return_value=None)
 
         # Should raise EntityNotFoundError
-        with pytest.raises(EntityNotFoundError, match="Order"):
+        with pytest.raises(EntityNotFoundException, match="Order"):
             order_dao.update_order_status(
                 "nonexistent_order",
                 OrderStatus.COMPLETED
@@ -431,7 +430,7 @@ class TestOrderDAO:
         order_dao.get_order = Mock(return_value=sample_order)
 
         # Should raise BusinessRuleError for invalid transition
-        with pytest.raises(BusinessRuleError, match="Invalid status transition"):
+        with pytest.raises(OrderValidationException, match="Invalid status transition"):
             order_dao.update_order_status(
                 sample_order.order_id,
                 OrderStatus.COMPLETED  # Cannot go directly from PENDING to COMPLETED
@@ -444,10 +443,10 @@ class TestOrderDAO:
         order_dao.get_order = AsyncMock(return_value=sample_order)
 
         # Mock database error
-        order_dao.update_order = AsyncMock(side_effect=DatabaseOperationError("Database error"))
+        order_dao.update_order = AsyncMock(side_effect=DatabaseOperationException("Database error"))
 
         # Should raise DatabaseOperationError
-        with pytest.raises(DatabaseOperationError):
+        with pytest.raises(DatabaseOperationException):
             await order_dao.update_order_status(
                 sample_order.order_id,
                 OrderStatus.CONFIRMED
@@ -490,5 +489,5 @@ class TestOrderDAO:
         )
 
         # Should raise DatabaseOperationError
-        with pytest.raises(DatabaseOperationError):
+        with pytest.raises(DatabaseOperationException):
             await order_dao.order_exists("test_order")

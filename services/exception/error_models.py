@@ -9,14 +9,10 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 
-from .error_codes import ErrorCode, get_http_status_code, get_error_title
-
-
-class ErrorDetails(BaseModel):
-    """Individual field error details for validation errors"""
-    field: str = Field(..., description="The field that failed validation")
-    message: str = Field(..., description="Human-readable error message")
-    value: Optional[Any] = Field(None, description="The invalid value that was provided")
+try:
+    from .error_codes import ErrorCode, get_http_status_code, get_error_title
+except ImportError:
+    from error_codes import ErrorCode, get_http_status_code, get_error_title
 
 
 class ProblemDetails(BaseModel):
@@ -57,7 +53,7 @@ class ProblemDetails(BaseModel):
     )
 
     # Custom fields for additional context
-    errors: Optional[List[ErrorDetails]] = Field(
+    errors: Optional[List[Dict[str, Any]]] = Field(
         None,
         description="Field-specific validation errors (for validation problems)"
     )
@@ -91,26 +87,11 @@ class ProblemDetails(BaseModel):
         }
 
 
-class ValidationError(ProblemDetails):
-    """Specialized Problem Details for validation errors"""
-
-    def __init__(self, **data):
-        # Set default values for validation errors
-        if 'type' not in data:
-            data['type'] = "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/validation-error.md"
-        if 'title' not in data:
-            data['title'] = "Validation Error"
-        if 'status' not in data:
-            data['status'] = 422
-
-        super().__init__(**data)
-
-
 def create_problem_details(
     error_code: ErrorCode,
     detail: str,
     instance: Optional[str] = None,
-    errors: Optional[List[ErrorDetails]] = None,
+    errors: Optional[List[Dict[str, Any]]] = None,
     trace_id: Optional[str] = None
 ) -> ProblemDetails:
     """
@@ -126,69 +107,17 @@ def create_problem_details(
     Returns:
         ProblemDetails instance
     """
+    # Get HTTP status code and title for the error code
+    status = get_http_status_code(error_code)
+    title = get_error_title(error_code)
 
-    # Get documentation URL based on error code
-    doc_urls = {
-        ErrorCode.VALIDATION_ERROR: "validation-error.md",
-        ErrorCode.INVALID_INPUT: "validation-error.md",
-        ErrorCode.MISSING_REQUIRED_FIELD: "validation-error.md",
-        ErrorCode.INVALID_FORMAT: "validation-error.md",
-        ErrorCode.AUTHENTICATION_FAILED: "authentication-error.md",
-        ErrorCode.INVALID_CREDENTIALS: "authentication-error.md",
-        ErrorCode.TOKEN_EXPIRED: "authentication-error.md",
-        ErrorCode.TOKEN_INVALID: "authentication-error.md",
-        ErrorCode.MISSING_TOKEN: "authentication-error.md",
-        ErrorCode.INSUFFICIENT_PERMISSIONS: "authentication-error.md",
-        ErrorCode.ACCESS_DENIED: "authentication-error.md",
-        ErrorCode.RESOURCE_NOT_FOUND: "resource-not-found.md",
-        ErrorCode.USER_NOT_FOUND: "resource-not-found.md",
-        ErrorCode.ASSET_NOT_FOUND: "resource-not-found.md",
-        ErrorCode.RESOURCE_ALREADY_EXISTS: "resource-exists.md",
-        ErrorCode.USERNAME_TAKEN: "resource-exists.md",
-        ErrorCode.EMAIL_TAKEN: "resource-exists.md",
-        ErrorCode.INTERNAL_SERVER_ERROR: "internal-error.md",
-        ErrorCode.SERVICE_UNAVAILABLE: "internal-error.md",
-        ErrorCode.DATABASE_ERROR: "internal-error.md",
-        ErrorCode.EXTERNAL_SERVICE_ERROR: "internal-error.md",
-    }
-
-    doc_file = doc_urls.get(error_code, "internal-error.md")
-    type_url = f"https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/{doc_file}"
+    # Create type URI based on error code
+    type_uri = f"https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/{error_code.value}.md"
 
     return ProblemDetails(
-        type=type_url,
-        title=get_error_title(error_code),
-        status=get_http_status_code(error_code),
-        detail=detail,
-        instance=instance,
-        errors=errors,
-        trace_id=trace_id
-    )
-
-
-def create_validation_error(
-    detail: str,
-    errors: List[ErrorDetails],
-    instance: Optional[str] = None,
-    trace_id: Optional[str] = None
-) -> ValidationError:
-    """
-    Create a validation error response
-
-    Args:
-        detail: Human-readable error message
-        errors: Field-specific validation errors
-        instance: The endpoint that caused the error
-        trace_id: Request trace ID for debugging
-
-    Returns:
-        ValidationError instance
-    """
-
-    return ValidationError(
-        type="https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/validation-error.md",
-        title="Validation Error",
-        status=422,
+        type=type_uri,
+        title=title,
+        status=status,
         detail=detail,
         instance=instance,
         errors=errors,

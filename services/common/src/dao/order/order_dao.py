@@ -14,10 +14,10 @@ from ..base_dao import BaseDAO
 from ...entities.order import Order, OrderUpdate
 from ...entities.order.enums import OrderStatus
 from ...exceptions import (
-    EntityNotFoundError,
-    EntityAlreadyExistsError,
-    BusinessRuleError,
-    DatabaseOperationError
+    EntityNotFoundException,
+    EntityAlreadyExistsException,
+    OrderValidationException,
+    DatabaseOperationException
 )
 
 logger = logging.getLogger(__name__)
@@ -41,13 +41,13 @@ class OrderDAO(BaseDAO):
             Created order
 
         Raises:
-            EntityAlreadyExistsError: If order with same ID already exists
-            DatabaseOperationError: If database operation fails
+            EntityAlreadyExistsException: If order with same ID already exists
+            DatabaseOperationException: If database operation fails
         """
         try:
             # Check if order already exists
             if self.order_exists(order.order_id):
-                raise EntityAlreadyExistsError(f"Order with ID {order.order_id} already exists")
+                raise EntityAlreadyExistsException(f"Order with ID {order.order_id} already exists")
 
             # Prepare item for DynamoDB
             item = order.model_dump()
@@ -69,11 +69,11 @@ class OrderDAO(BaseDAO):
             logger.info(f"Created order {order.order_id} for user {order.user_id}")
             return order
 
-        except EntityAlreadyExistsError:
+        except EntityAlreadyExistsException:
             raise
         except Exception as e:
             logger.error(f"Failed to create order {order.order_id}: {str(e)}")
-            raise DatabaseOperationError(f"Failed to create order: {str(e)}")
+            raise DatabaseOperationException(f"Failed to create order: {str(e)}")
 
     def get_order(self, order_id: str) -> Optional[Order]:
         """
@@ -86,7 +86,7 @@ class OrderDAO(BaseDAO):
             Order entity if found, None otherwise
 
         Raises:
-            DatabaseOperationError: If database operation fails
+            DatabaseOperationException: If database operation fails
         """
         try:
             response = self.db.orders_table.get_item(
@@ -101,7 +101,7 @@ class OrderDAO(BaseDAO):
 
         except Exception as e:
             logger.error(f"Failed to get order {order_id}: {str(e)}")
-            raise DatabaseOperationError(f"Failed to get order: {str(e)}")
+            raise DatabaseOperationException(f"Failed to get order: {str(e)}")
 
     def update_order(self, order_id: str, updates: OrderUpdate) -> Optional[Order]:
         """
@@ -115,14 +115,14 @@ class OrderDAO(BaseDAO):
             Updated order if successful, None if not found
 
         Raises:
-            EntityNotFoundError: If order not found
-            DatabaseOperationError: If database operation fails
+            EntityNotFoundException: If order not found
+            DatabaseOperationException: If database operation fails
         """
         try:
             # Get existing order
             existing_order = self.get_order(order_id)
             if not existing_order:
-                raise EntityNotFoundError(f"Order {order_id} not found")
+                raise EntityNotFoundException(f"Order {order_id} not found")
 
             # Prepare update expression
             update_expression = "SET updated_at = :updated_at"
@@ -168,11 +168,11 @@ class OrderDAO(BaseDAO):
             updated_item = response['Attributes']
             return Order(**updated_item)
 
-        except EntityNotFoundError:
+        except EntityNotFoundException:
             raise
         except Exception as e:
             logger.error(f"Failed to update order {order_id}: {str(e)}")
-            raise DatabaseOperationError(f"Failed to update order: {str(e)}")
+            raise DatabaseOperationException(f"Failed to update order: {str(e)}")
 
     def get_orders_by_user(self, user_id: str, limit: int = 50, offset: int = 0) -> List[Order]:
         """
@@ -207,7 +207,7 @@ class OrderDAO(BaseDAO):
 
         except Exception as e:
             logger.error(f"Failed to get orders for user {user_id}: {str(e)}")
-            raise DatabaseOperationError(f"Failed to get orders for user: {str(e)}")
+            raise DatabaseOperationException(f"Failed to get orders for user: {str(e)}")
 
     def get_orders_by_user_and_asset(self, user_id: str, asset_id: str, limit: int = 50, offset: int = 0) -> List[Order]:
         """
@@ -245,7 +245,7 @@ class OrderDAO(BaseDAO):
 
         except Exception as e:
             logger.error(f"Failed to get orders for user {user_id} and asset {asset_id}: {str(e)}")
-            raise DatabaseOperationError(f"Failed to get orders for user and asset: {str(e)}")
+            raise DatabaseOperationException(f"Failed to get orders for user and asset: {str(e)}")
 
     def get_orders_by_user_and_status(self, user_id: str, status: OrderStatus, limit: int = 50, offset: int = 0) -> List[Order]:
         """
@@ -276,7 +276,7 @@ class OrderDAO(BaseDAO):
 
         except Exception as e:
             logger.error(f"Failed to get orders for user {user_id} with status {status}: {str(e)}")
-            raise DatabaseOperationError(f"Failed to get orders for user and status: {str(e)}")
+            raise DatabaseOperationException(f"Failed to get orders for user and status: {str(e)}")
 
     def update_order_status(self, order_id: str, new_status: OrderStatus, reason: str = None) -> Optional[Order]:
         """
@@ -291,20 +291,20 @@ class OrderDAO(BaseDAO):
             Updated order if successful, None if not found
 
         Raises:
-            EntityNotFoundError: If order not found
-            BusinessRuleError: If invalid status transition
-            DatabaseOperationError: If database operation fails
+            EntityNotFoundException: If order not found
+            OrderValidationException: If invalid status transition
+            DatabaseOperationException: If database operation fails
         """
         try:
             # Get existing order
             existing_order = self.get_order(order_id)
             if not existing_order:
-                raise EntityNotFoundError(f"Order {order_id} not found")
+                raise EntityNotFoundException(f"Order {order_id} not found")
 
             # Validate status transition
             can_transition, error_msg = existing_order.can_transition_to(new_status)
             if not can_transition:
-                raise BusinessRuleError(f"Invalid status transition: {error_msg}")
+                raise OrderValidationException(f"Invalid status transition: {error_msg}")
 
             # Create update object
             updates = OrderUpdate(status=new_status)
@@ -316,11 +316,11 @@ class OrderDAO(BaseDAO):
             # Update the order
             return self.update_order(order_id, updates)
 
-        except (EntityNotFoundError, BusinessRuleError):
+        except (EntityNotFoundException, OrderValidationException):
             raise
         except Exception as e:
             logger.error(f"Failed to update order status {order_id} to {new_status}: {str(e)}")
-            raise DatabaseOperationError(f"Failed to update order status: {str(e)}")
+            raise DatabaseOperationException(f"Failed to update order status: {str(e)}")
 
     def order_exists(self, order_id: str) -> bool:
         """
@@ -345,7 +345,7 @@ class OrderDAO(BaseDAO):
 
         except Exception as e:
             logger.error(f"Failed to check if order {order_id} exists: {str(e)}")
-            raise DatabaseOperationError(f"Failed to check order existence: {str(e)}")
+            raise DatabaseOperationException(f"Failed to check order existence: {str(e)}")
 
     # Future implementation methods (commented out for now)
     # def get_orders_by_status(self, status: OrderStatus, limit: int = 50) -> List[Order]:

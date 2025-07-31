@@ -3,6 +3,8 @@ from fastapi import HTTPException, status
 from unittest.mock import AsyncMock, patch, MagicMock
 from src.controllers.auth.register import register_user
 from api_models.auth.registration import UserRegistrationRequest
+from common.exceptions.shared_exceptions import InternalServerException
+from exceptions import UserAlreadyExistsException
 import pydantic
 
 @pytest.mark.asyncio
@@ -30,7 +32,7 @@ async def test_register_success():
         "expires_in": 3600
     }
     result = await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
-    assert result.message == "Account created successfully. Please login to continue."
+    assert result.message == "User registered successfully. Please login to access your account."
     assert result.success is True
 
 @pytest.mark.asyncio
@@ -49,10 +51,9 @@ async def test_register_username_exists():
         last_name="User",
         phone="+1-555-123-4567"
     )
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(UserAlreadyExistsException) as exc_info:
         await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
-    assert exc_info.value.status_code == status.HTTP_409_CONFLICT
-    assert "Username 'newuser' already exists" in str(exc_info.value.detail)
+    assert "Username 'newuser' already exists" in exc_info.value.message
 
 @pytest.mark.asyncio
 async def test_register_email_exists():
@@ -70,10 +71,9 @@ async def test_register_email_exists():
         last_name="User",
         phone="+1-555-123-4567"
     )
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(UserAlreadyExistsException) as exc_info:
         await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
-    assert exc_info.value.status_code == status.HTTP_409_CONFLICT
-    assert "Email 'newuser@example.com' already exists" in str(exc_info.value.detail)
+    assert "Email 'newuser@example.com' already exists" in exc_info.value.message
 
 @pytest.mark.asyncio
 async def test_register_validation_error():
@@ -92,10 +92,9 @@ async def test_register_validation_error():
         last_name="User",
         phone="+1-555-123-4567"
     )
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(InternalServerException) as exc_info:
         await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
-    assert exc_info.value.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-    assert "Some validation error" in str(exc_info.value.detail)
+    assert "Registration failed: Some validation error" in str(exc_info.value)
 
 @pytest.mark.asyncio
 async def test_register_unexpected_error():
@@ -114,10 +113,9 @@ async def test_register_unexpected_error():
         last_name="User",
         phone="+1-555-123-4567"
     )
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(InternalServerException) as exc_info:
         await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
-    assert exc_info.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
-    assert "Service is temporarily unavailable" in str(exc_info.value.detail)
+    assert "Registration failed: Unexpected error" in str(exc_info.value)
 
 @pytest.mark.asyncio
 async def test_register_missing_input():

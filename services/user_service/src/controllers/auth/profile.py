@@ -44,12 +44,12 @@ async def get_current_user(
         username = verify_access_token(credentials.credentials)
 
         if not username:
-            raise TokenExpiredException()
+            raise TokenExpiredException("Token has expired")
 
         # Get user from database using username from token
         user = await user_dao.get_user_by_username(username)
         if not user:
-            raise UserNotFoundException(username)
+            raise UserNotFoundException(f"User '{username}' not found")
 
         return user
 
@@ -142,7 +142,7 @@ async def update_profile(
         )
 
         if not updated_user:
-            raise UserNotFoundException(current_user.username)
+            raise UserNotFoundException(f"User '{current_user.username}' not found")
 
         logger.info(f"Profile updated successfully for user: {current_user.username}")
 

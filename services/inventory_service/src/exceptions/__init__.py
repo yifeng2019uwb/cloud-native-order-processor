@@ -1,50 +1,58 @@
 """
-Exception handling package for inventory service
+Inventory service exceptions package
+Path: services/inventory_service/src/exceptions/__init__.py
 """
 
-# Import internal exceptions
-from .internal_exceptions import (
-    InternalInventoryError,
-    InternalAssetNotFoundError,
-    InternalDatabaseError,
-    InternalValidationError,
+# Import shared exceptions (mapped to external error codes)
+from common.exceptions import (
+    # Authentication (401)
+    InvalidCredentialsException,
+    TokenExpiredException,
+    TokenInvalidException,
+
+    # Resources (404)
     AssetNotFoundException,
-    InvalidAssetDataException,
-    raise_asset_not_found,
-    raise_database_error,
-    raise_validation_error
+
+    # Validation (422)
+    AssetValidationException,
+
+    # Internal Server (500) - general use by services
+    InternalServerException,
 )
 
-# Import secure exception handlers
-from .secure_exceptions import (
-    secure_validation_exception_handler,
-    secure_general_exception_handler,
-    secure_http_exception_handler,
-    StandardErrorResponse,
-    # Single generic handler for all common package exceptions
-    secure_common_exception_handler,
-    secure_internal_exception_handler
+# Import common exceptions (handled internally, NOT mapped)
+from common.exceptions import (
+    # Database (500) - handled internally
+    DatabaseOperationException,
+    ConfigurationException,
+    ExternalServiceException,
+    AWSServiceException,
+)
+
+# Import inventory service specific exceptions
+from .exceptions import (
+    AssetAlreadyExistsException,
+    AssetCreationException,
+    InventoryServerException,
 )
 
 __all__ = [
-    # Internal exceptions
-    "InternalInventoryError",
-    "InternalAssetNotFoundError",
-    "InternalDatabaseError",
-    "InternalValidationError",
+    # Shared exceptions (mapped to external error codes)
+    "InvalidCredentialsException",
+    "TokenExpiredException",
+    "TokenInvalidException",
     "AssetNotFoundException",
-    "InvalidAssetDataException",
-    "raise_asset_not_found",
-    "raise_database_error",
-    "raise_validation_error",
+    "AssetValidationException",
+    "InternalServerException",
 
-    # Secure exception handlers
-    "secure_validation_exception_handler",
-    "secure_general_exception_handler",
-    "secure_http_exception_handler",
-    "StandardErrorResponse",
-    "secure_internal_exception_handler",
+    # Common exceptions (handled internally, NOT mapped)
+    "DatabaseOperationException",
+    "ConfigurationException",
+    "ExternalServiceException",
+    "AWSServiceException",
 
-    # Single generic handler for all common package exceptions
-    "secure_common_exception_handler"
+    # Inventory service specific exceptions
+    "AssetAlreadyExistsException",
+    "AssetCreationException",
+    "InventoryServerException",
 ]

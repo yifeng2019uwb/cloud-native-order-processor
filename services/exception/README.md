@@ -7,12 +7,38 @@ Standardized exception handling package for the Order Processor system, implemen
 - **RFC 7807 Compliant**: Implements Problem Details for HTTP APIs standard
 - **Type Safe**: Built with Pydantic for validation and type safety
 - **FastAPI Integration**: Ready-to-use exception handlers for FastAPI
-- **Standardized Error Codes**: Consistent error codes across all services
+- **Standardized Error Codes**: 7 simplified error codes across all services
+- **Security by Design**: Internal exceptions are never exposed to clients
 - **Self-Documenting**: Error responses include links to documentation
+
+## Architecture
+
+The exception package provides a secure mapping layer between internal service exceptions and external client-facing error responses:
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ Internal        │    │ Exception        │    │ RFC 7807        │
+│ Exceptions      │───▶│ Mapping Layer    │───▶│ Problem Details │
+│ (Service-Specific)│    │ (Standardized)   │    │ (Client-Facing) │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+```
+
+### Exception Categories
+
+**Shared Exceptions** (Exposed to Gateway):
+- Authentication, Authorization, Resource, Validation, and Internal Server exceptions
+- Mapped to standardized error codes
+- Exposed to external clients
+
+**Common Exceptions** (Internal Only):
+- Database, Configuration, and External Service exceptions
+- NOT mapped to external error codes
+- Handled internally for security
 
 ## Installation
 
 ```bash
+cd services/exception
 pip install -e .
 ```
 
@@ -21,18 +47,14 @@ pip install -e .
 ### Basic Usage
 
 ```python
-from exception import create_problem_details, ErrorCode, ErrorDetails
+from exception import create_problem_details, ErrorCode
 
 # Create a validation error
-errors = [
-    ErrorDetails(field="email", message="Invalid email format", value="invalid-email")
-]
-
 problem_details = create_problem_details(
     error_code=ErrorCode.VALIDATION_ERROR,
     detail="The request contains invalid data",
-    errors=errors,
-    instance="/api/v1/auth/register"
+    instance="/api/v1/auth/register",
+    trace_id="req-12345"
 )
 ```
 
@@ -50,117 +72,195 @@ register_exception_handlers(app)
 @app.get("/users/{user_id}")
 async def get_user(user_id: str):
     if not user_exists(user_id):
-        raise HTTPException(
-            status_code=404,
-            detail=f"User '{user_id}' not found"
-        )
+        raise UserNotFoundException(f"User '{user_id}' not found")
     return {"user_id": user_id}
 ```
 
-### Manual Error Handling
+### Manual Exception Mapping
 
 ```python
-from exception import (
-    handle_validation_error,
-    handle_authentication_error,
-    handle_resource_not_found
-)
+from exception import map_service_exception
 
-# Validation error
-validation_error = handle_validation_error(
-    detail="Invalid input data",
-    errors=[ErrorDetails(field="username", message="Username is required")],
-    instance="/api/v1/auth/register"
-)
-
-# Authentication error
-auth_error = handle_authentication_error(
-    detail="Invalid credentials",
-    instance="/api/v1/auth/login"
-)
-
-# Resource not found
-not_found_error = handle_resource_not_found(
-    detail="User not found",
-    instance="/api/v1/users/123"
-)
+# Map internal exceptions to standardized responses
+try:
+    user = await user_service.get_user(user_id)
+    if not user:
+        raise UserNotFoundException(f"User '{user_id}' not found")
+    return user
+except UserNotFoundException as exc:
+    problem_details = map_service_exception(
+        exc=exc,
+        instance=f"/api/v1/users/{user_id}",
+        trace_id=request.headers.get("X-Trace-ID")
+    )
+    return JSONResponse(
+        status_code=problem_details.status,
+        content=problem_details.dict()
+    )
 ```
 
 ## Error Codes
 
-### Validation Errors (422)
-- `VALIDATION_ERROR`: General validation failure
-- `INVALID_INPUT`: Invalid input data
-- `MISSING_REQUIRED_FIELD`: Required field is missing
-- `INVALID_FORMAT`: Invalid data format
+The package provides 7 standardized error codes:
 
 ### Authentication Errors (401)
-- `AUTHENTICATION_FAILED`: Authentication failed
-- `INVALID_CREDENTIALS`: Invalid username/password
-- `TOKEN_EXPIRED`: JWT token expired
-- `TOKEN_INVALID`: Invalid JWT token
-- `MISSING_TOKEN`: No authentication token provided
+- `AUTHENTICATION_FAILED`: All authentication issues (invalid credentials, expired tokens, etc.)
 
 ### Authorization Errors (403)
-- `INSUFFICIENT_PERMISSIONS`: User lacks required permissions
-- `ACCESS_DENIED`: Access denied to resource
+- `ACCESS_DENIED`: All permission and access control issues
 
 ### Resource Errors (404, 409)
-- `RESOURCE_NOT_FOUND`: Resource not found
-- `USER_NOT_FOUND`: User not found
-- `ASSET_NOT_FOUND`: Asset not found
-- `RESOURCE_ALREADY_EXISTS`: Resource already exists
-- `USERNAME_TAKEN`: Username already taken
-- `EMAIL_TAKEN`: Email already registered
+- `RESOURCE_NOT_FOUND`: All "not found" cases
+- `RESOURCE_ALREADY_EXISTS`: All "already exists" cases
 
-### Server Errors (500)
-- `INTERNAL_SERVER_ERROR`: Unexpected server error
-- `SERVICE_UNAVAILABLE`: Service temporarily unavailable
-- `DATABASE_ERROR`: Database operation failed
-- `EXTERNAL_SERVICE_ERROR`: External service error
+### Validation Errors (422)
+- `VALIDATION_ERROR`: All validation and input format issues
 
-## Response Format
+### Server Errors (500, 503)
+- `INTERNAL_SERVER_ERROR`: All internal server issues
+- `SERVICE_UNAVAILABLE`: External service failures
+
+## Exception Mapping
+
+### Shared Exceptions (Exposed)
+
+```python
+# Authentication
+InvalidCredentialsException → AUTHENTICATION_FAILED (401)
+TokenExpiredException → AUTHENTICATION_FAILED (401)
+
+# Resources
+UserNotFoundException → RESOURCE_NOT_FOUND (404)
+EntityAlreadyExistsException → RESOURCE_ALREADY_EXISTS (409)
+
+# Validation
+OrderValidationException → VALIDATION_ERROR (422)
+
+# Internal Server
+InternalServerException → INTERNAL_SERVER_ERROR (500)
+```
+
+### Common Exceptions (Internal Only)
+
+```python
+# These are NOT mapped and fall back to INTERNAL_SERVER_ERROR
+DatabaseOperationException → INTERNAL_SERVER_ERROR (500)
+ConfigurationException → INTERNAL_SERVER_ERROR (500)
+AWSServiceException → INTERNAL_SERVER_ERROR (500)
+```
+
+## Error Response Format
 
 All error responses follow RFC 7807 Problem Details format:
 
 ```json
 {
-  "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/validation-error.md",
-  "title": "Validation Error",
-  "status": 422,
-  "detail": "The request contains invalid data",
-  "instance": "/api/v1/auth/register",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Invalid email format",
-      "value": "invalid-email"
-    }
-  ],
-  "timestamp": "2024-01-15T10:30:00Z",
-  "trace_id": "req-12345"
+    "type": "https://github.com/yifeng2019uwb/cloud-native-order-processor/blob/main/docs/errors/validation_error.md",
+    "title": "Validation Error",
+    "status": 422,
+    "detail": "The request contains invalid data. Please check your input and try again.",
+    "instance": "/api/v1/auth/register",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "trace_id": "req-12345"
 }
 ```
 
-## Documentation
+## Security Benefits
 
-Error documentation is available at:
-- [Validation Error](./docs/errors/validation-error.md)
-- [Authentication Error](./docs/errors/authentication-error.md)
-- [Resource Not Found](./docs/errors/resource-not-found.md)
-- [Resource Exists](./docs/errors/resource-exists.md)
-- [Internal Error](./docs/errors/internal-error.md)
+1. **Internal Details Hidden**: Database errors, AWS issues, and configuration problems are never exposed to clients
+2. **Consistent Error Format**: All services return the same error structure
+3. **Simplified Client Integration**: Only 7 error codes to handle
+4. **RFC 7807 Compliant**: Industry standard error responses
 
-## Development
+## Integration Steps
 
-### Running Tests
-
+### 1. Install the Package
 ```bash
-pytest tests/
+cd services/exception
+pip install -e .
 ```
 
-### Building Package
+### 2. Configure Exception Mappings
+```python
+from exception import configure_service_exceptions
 
-```bash
-python setup.py sdist bdist_wheel
+# Configure shared exception mappings
+configure_service_exceptions()
 ```
+
+### 3. Register FastAPI Handlers
+```python
+from fastapi import FastAPI
+from exception import register_exception_handlers
+
+app = FastAPI()
+register_exception_handlers(app)
+```
+
+### 4. Use in Your Services
+```python
+# Raise shared exceptions for business logic
+if not user_exists(user_id):
+    raise UserNotFoundException(f"User '{user_id}' not found")
+
+# Handle common exceptions internally
+try:
+    result = database_operation()
+except DatabaseOperationException as exc:
+    # Log the error internally
+    logger.error(f"Database error: {exc}")
+    # Re-raise as InternalServerException
+    raise InternalServerException("Failed to process request")
+```
+
+## Testing
+
+The exception package includes comprehensive tests to verify:
+
+- ✅ Exception mapping functionality
+- ✅ RFC 7807 compliance
+- ✅ Security (common exceptions not exposed)
+- ✅ Error code standardization
+- ✅ FastAPI integration
+
+Run tests with:
+```bash
+cd services/exception
+python3 -c "from exception_mapping import configure_service_exceptions; configure_service_exceptions(); print('✅ Exception mapping configured successfully')"
+```
+
+## API Reference
+
+### Core Functions
+
+- `configure_service_exceptions()`: Configure shared exception mappings
+- `map_service_exception(exc, instance, trace_id)`: Map exception to ProblemDetails
+- `create_problem_details(error_code, detail, instance, errors, trace_id)`: Create ProblemDetails
+- `register_exception_handlers(app)`: Register FastAPI exception handlers
+
+### Error Codes
+
+- `ErrorCode.AUTHENTICATION_FAILED`: Authentication errors (401)
+- `ErrorCode.ACCESS_DENIED`: Authorization errors (403)
+- `ErrorCode.RESOURCE_NOT_FOUND`: Resource not found (404)
+- `ErrorCode.RESOURCE_ALREADY_EXISTS`: Resource already exists (409)
+- `ErrorCode.VALIDATION_ERROR`: Validation errors (422)
+- `ErrorCode.INTERNAL_SERVER_ERROR`: Internal server errors (500)
+- `ErrorCode.SERVICE_UNAVAILABLE`: Service unavailable (503)
+
+### Models
+
+- `ProblemDetails`: RFC 7807 Problem Details model
+- `ErrorDetails`: Field-specific validation error model
+
+## Contributing
+
+When adding new exceptions:
+
+1. **Shared Exceptions**: Add to `common/src/exceptions/shared_exceptions.py` and register in `configure_service_exceptions()`
+2. **Common Exceptions**: Add to `common/src/exceptions/exceptions.py` (NOT mapped)
+3. **Service-Specific Exceptions**: Add to individual service exception modules
+
+## License
+
+This package is part of the Order Processor system and follows the same licensing terms.

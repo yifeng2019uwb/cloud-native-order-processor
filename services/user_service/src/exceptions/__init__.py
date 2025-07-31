@@ -1,53 +1,56 @@
 """
-Exception handling package for user authentication service
-Path: cloud-native-order-processor/services/user-service/src/exceptions/__init__.py
+User service exceptions package
+Path: services/user_service/src/exceptions/__init__.py
 """
 
-# Import internal exceptions
-from .internal_exceptions import (
-    InternalAuthError,
-    InternalUserExistsError,
-    InternalDatabaseError,
-    InternalValidationError,
-    UserNotFoundException,
+# Import shared exceptions (mapped to external error codes)
+from common.exceptions import (
+    # Authentication (401)
     InvalidCredentialsException,
     TokenExpiredException,
-    raise_user_exists,
-    raise_database_error,
-    raise_validation_error
+    TokenInvalidException,
+
+    # Resources (404)
+    UserNotFoundException,
+
+    # Validation (422)
+    UserValidationException,
+
+    # Internal Server (500) - general use by services
+    InternalServerException,
 )
 
-# Import secure exception handlers
-from .secure_exceptions import (
-    secure_internal_exception_handler,
-    secure_validation_exception_handler,
-    secure_general_exception_handler,
-    StandardErrorResponse,
-    SecureExceptionMapper,
-    # Single generic handler for all common package exceptions
-    secure_common_exception_handler
+# Import common exceptions (handled internally, NOT mapped)
+from common.exceptions import (
+    # Database (500) - handled internally
+    DatabaseOperationException,
+    ConfigurationException,
+    ExternalServiceException,
+)
+
+# Import user service specific exceptions
+from .exceptions import (
+    UserAlreadyExistsException,
+    UserRegistrationException,
+    UserServerException,
 )
 
 __all__ = [
-    # Internal exceptions
-    "InternalAuthError",
-    "InternalUserExistsError",
-    "InternalDatabaseError",
-    "InternalValidationError",
-    "UserNotFoundException",
+    # Shared exceptions (mapped to external error codes)
     "InvalidCredentialsException",
     "TokenExpiredException",
-    "raise_user_exists",
-    "raise_database_error",
-    "raise_validation_error",
+    "TokenInvalidException",
+    "UserNotFoundException",
+    "UserValidationException",
+    "InternalServerException",
 
-    # Secure exception handlers
-    "secure_internal_exception_handler",
-    "secure_validation_exception_handler",
-    "secure_general_exception_handler",
-    "StandardErrorResponse",
-    "SecureExceptionMapper",
+    # Common exceptions (handled internally, NOT mapped)
+    "DatabaseOperationException",
+    "ConfigurationException",
+    "ExternalServiceException",
 
-    # Single generic handler for all common package exceptions
-    "secure_common_exception_handler"
+    # User service specific exceptions
+    "UserAlreadyExistsException",
+    "UserRegistrationException",
+    "UserServerException",
 ]

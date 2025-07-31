@@ -12,7 +12,10 @@ from common.dao.asset_dao import AssetDAO
 from common.database.dynamodb_connection import get_dynamodb, dynamodb_manager
 
 # Import internal exceptions
-from exceptions import raise_database_error
+from exceptions import (
+    InternalServerException,
+    DatabaseOperationException
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["health"])
@@ -62,11 +65,7 @@ async def readiness_check():
 
     except Exception as e:
         logger.error(f"Readiness check failed: {str(e)}")
-        raise_database_error(
-            operation="readiness_check",
-            table_name="assets",
-            original_error=e
-        )
+        raise InternalServerException(f"Readiness check failed: {str(e)}")
 
 
 @router.get("/health/live", status_code=status.HTTP_200_OK)
@@ -101,11 +100,7 @@ async def database_health_check(asset_dao: AssetDAO = Depends(lambda: AssetDAO(N
         db_status = await detailed_database_check()
 
         if db_status["status"] != "healthy":
-            raise_database_error(
-                operation="detailed_health_check",
-                table_name="assets",
-                original_error=Exception(f"Database unhealthy: {db_status.get('error', 'Unknown error')}")
-            )
+            raise InternalServerException(f"Database unhealthy: {db_status.get('error', 'Unknown error')}")
 
         return {
             "status": "healthy",
@@ -116,11 +111,7 @@ async def database_health_check(asset_dao: AssetDAO = Depends(lambda: AssetDAO(N
 
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
-        raise_database_error(
-            operation="database_health_check",
-            table_name="assets",
-            original_error=e
-        )
+        raise InternalServerException(f"Database health check failed: {str(e)}")
 
 
 # Helper functions
