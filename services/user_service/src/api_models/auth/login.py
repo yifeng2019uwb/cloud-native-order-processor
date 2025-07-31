@@ -22,7 +22,7 @@ class UserLoginRequest(BaseModel):
         ...,
         min_length=12,
         max_length=20,
-        description="User password",
+        description="User password - Examples show format only, not actual passwords",
         example="SecurePassword123!"
     )
 
@@ -68,7 +68,7 @@ class LoginSuccessResponse(SuccessResponse):
             "example": {
                 "success": True,
                 "message": "Login successful",
-                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "access_token": "[JWT_TOKEN_HIDDEN]",
                 "token_type": "bearer",
                 "expires_in": 86400,
                 "user": {

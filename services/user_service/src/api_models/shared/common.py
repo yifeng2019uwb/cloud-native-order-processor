@@ -54,7 +54,7 @@ class SuccessResponse(BaseResponse):
 
 
 class TokenResponse(BaseModel):
-    """JWT token response model"""
+    """JWT token response model - TODO: Implement token blacklist in gateway"""
 
     access_token: str = Field(
         ...,
@@ -67,23 +67,23 @@ class TokenResponse(BaseModel):
     )
 
     expires_in: Optional[int] = Field(
-        None,
-        description="Token expiration time in seconds"
+        default=3600,  # 1 hour in seconds
+        description="Token expiration time in seconds (1 hour)"
     )
 
     class Config:
         json_schema_extra = {
             "example": {
-                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "access_token": "[JWT_TOKEN_HIDDEN]",
                 "token_type": "bearer",
-                "expires_in": 86400
+                "expires_in": 3600
             }
         }
 
 
 class UserBaseInfo(BaseModel):
 
-    """Base user information model (safe for client responses)"""
+    """Base user information model (safe for client responses) - TODO: Implement data masking for sensitive fields"""
 
     username: str = Field(
         ...,
@@ -103,16 +103,6 @@ class UserBaseInfo(BaseModel):
     last_name: str = Field(
         ...,
         description="User last name"
-    )
-
-    phone: Optional[str] = Field(
-        None,
-        description="User phone number"
-    )
-
-    date_of_birth: Optional[date] = Field(
-        None,
-        description="User date of birth"
     )
 
     marketing_emails_consent: bool = Field(
@@ -141,8 +131,6 @@ class UserBaseInfo(BaseModel):
                 "email": "john.doe@example.com",
                 "first_name": "John",
                 "last_name": "Doe",
-                "phone": "+1-555-123-4567",
-                "date_of_birth": "1990-05-15",
                 "marketing_emails_consent": False,
                 "created_at": "2025-07-09T10:30:00Z",
                 "updated_at": "2025-07-09T10:30:00Z"

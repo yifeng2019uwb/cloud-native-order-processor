@@ -33,7 +33,7 @@ class UserRegistrationRequest(BaseModel):
         ...,
         min_length=12,
         max_length=20,
-        description="User password (12-20 characters with complexity requirements)",  # UPDATED
+        description="User password (12-20 characters with complexity requirements) - Examples show format only, not actual passwords",  # UPDATED
         example="SecurePassword123!"
     )
 
