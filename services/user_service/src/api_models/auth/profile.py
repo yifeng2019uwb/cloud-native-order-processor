@@ -11,7 +11,7 @@ from ..shared.common import SuccessResponse, ErrorResponse
 
 
 class UserProfileResponse(BaseModel):
-    """Response model for GET /auth/me - Complete user profile"""
+    """Response model for GET /auth/me - Complete user profile (without timestamps for security)"""
 
     username: str = Field(
         ...,
@@ -48,19 +48,8 @@ class UserProfileResponse(BaseModel):
         description="Marketing emails consent status"
     )
 
-    created_at: datetime = Field(
-        ...,
-        description="Account creation timestamp"
-    )
-
-    updated_at: datetime = Field(
-        ...,
-        description="Last update timestamp"
-    )
-
     class Config:
         json_encoders = {
-            datetime: lambda v: v.isoformat(),
             date: lambda v: v.isoformat()
         }
         json_schema_extra = {
@@ -71,17 +60,13 @@ class UserProfileResponse(BaseModel):
                 "last_name": "Doe",
                 "phone": "+1-555-123-4567",
                 "date_of_birth": "1990-05-15",
-                "marketing_emails_consent": False,
-                "created_at": "2025-07-09T10:30:00Z",
-                "updated_at": "2025-07-09T10:30:00Z"
+                "marketing_emails_consent": False
             }
         }
 
 
 class UserProfileUpdateRequest(BaseModel):
-    """Request model for PUT /auth/me - Updateable fields only"""
-
-    username: str = Field(..., description="Username to identify user (cannot be changed)")
+    """Request model for PUT /auth/me - Updateable fields only (JWT-only approach)"""
 
     first_name: Optional[str] = Field(
         None,
@@ -180,7 +165,7 @@ class UserProfileUpdateRequest(BaseModel):
                 "first_name": "John",
                 "last_name": "Smith",
                 "email": "john.smith@example.com",
-                "phone": "+1-555-987-6543",
+                "phone": "+1-555-123-4567",
                 "date_of_birth": "1990-05-15",
                 "marketing_emails_consent": True
             }

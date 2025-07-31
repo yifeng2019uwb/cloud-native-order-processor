@@ -17,9 +17,7 @@ def test_user_profile_response_serialization():
         last_name="Doe",
         phone="+1-555-123-4567",
         date_of_birth=date(1990, 5, 15),
-        marketing_emails_consent=False,
-        created_at=datetime(2025, 7, 9, 10, 30, 0),
-        updated_at=datetime(2025, 7, 9, 10, 30, 0)
+        marketing_emails_consent=False
     )
     data = resp.model_dump()
     assert data["username"] == "john_doe123"
@@ -29,13 +27,10 @@ def test_user_profile_response_serialization():
     assert data["phone"] == "+1-555-123-4567"
     assert data["date_of_birth"] == date(1990, 5, 15)
     assert data["marketing_emails_consent"] is False
-    assert "created_at" in data
-    assert "updated_at" in data
 
 # --- UserProfileUpdateRequest: Valid update data ---
 def test_user_profile_update_request_valid():
     req = UserProfileUpdateRequest(
-        username="john_doe123",
         first_name="John",
         last_name="Doe",
         email="john.doe@example.com",
@@ -43,7 +38,6 @@ def test_user_profile_update_request_valid():
         date_of_birth=date(1990, 5, 15),
         marketing_emails_consent=True
     )
-    assert req.username == "john_doe123"
     assert req.first_name == "John"
     assert req.last_name == "Doe"
     assert req.email == "john.doe@example.com"
@@ -54,53 +48,53 @@ def test_user_profile_update_request_valid():
 # --- First/last name validation ---
 def test_user_profile_update_request_first_name_invalid():
     with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(username="john_doe123", first_name="John1")
+        UserProfileUpdateRequest(first_name="John1")
     with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(username="john_doe123", first_name="J@hn")
+        UserProfileUpdateRequest(first_name="J@hn")
 
 def test_user_profile_update_request_last_name_invalid():
     with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(username="john_doe123", last_name="Doe1")
+        UserProfileUpdateRequest(last_name="Doe1")
     with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(username="john_doe123", last_name="D0e")
+        UserProfileUpdateRequest(last_name="D0e")
 
 def test_user_profile_update_request_first_last_name_valid():
-    req = UserProfileUpdateRequest(username="john_doe123", first_name="John", last_name="Doe")
+    req = UserProfileUpdateRequest(first_name="John", last_name="Doe")
     assert req.first_name == "John"
     assert req.last_name == "Doe"
 
 # --- Phone validation ---
 def test_user_profile_update_request_phone_too_short():
     with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(username="john_doe123", phone="12345")
+        UserProfileUpdateRequest(phone="12345")
 
 def test_user_profile_update_request_phone_too_long():
     with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(username="john_doe123", phone="1"*20)
+        UserProfileUpdateRequest(phone="1"*20)
 
 def test_user_profile_update_request_phone_valid():
-    req = UserProfileUpdateRequest(username="john_doe123", phone="(123) 456-7890")
+    req = UserProfileUpdateRequest(phone="(123) 456-7890")
     assert req.phone == "(123) 456-7890"
 
 # --- Date of birth validation ---
 def test_user_profile_update_request_dob_in_future():
     future_date = date.today() + timedelta(days=1)
     with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(username="john_doe123", date_of_birth=future_date)
+        UserProfileUpdateRequest(date_of_birth=future_date)
 
 def test_user_profile_update_request_dob_under_13():
     under_13 = date.today() - timedelta(days=12*365)
     with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(username="john_doe123", date_of_birth=under_13)
+        UserProfileUpdateRequest(date_of_birth=under_13)
 
 def test_user_profile_update_request_dob_over_120():
     over_120 = date.today() - timedelta(days=121*365)
     with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(username="john_doe123", date_of_birth=over_120)
+        UserProfileUpdateRequest(date_of_birth=over_120)
 
 def test_user_profile_update_request_dob_valid():
     valid_dob = date.today() - timedelta(days=20*365)
-    req = UserProfileUpdateRequest(username="john_doe123", date_of_birth=valid_dob)
+    req = UserProfileUpdateRequest(date_of_birth=valid_dob)
     assert req.date_of_birth == valid_dob
 
 # --- ProfileUpdateSuccessResponse serialization ---
@@ -112,9 +106,7 @@ def test_profile_update_success_response_serialization():
         last_name="Smith",
         phone="+1-555-987-6543",
         date_of_birth=date(1990, 5, 15),
-        marketing_emails_consent=True,
-        created_at=datetime(2025, 7, 9, 10, 30, 0),
-        updated_at=datetime(2025, 7, 9, 12, 45, 0)
+        marketing_emails_consent=True
     )
     resp = ProfileUpdateSuccessResponse(
         message="Profile updated successfully",
@@ -129,8 +121,6 @@ def test_profile_update_success_response_serialization():
     assert data["user"]["phone"] == "+1-555-987-6543"
     assert data["user"]["date_of_birth"] == date(1990, 5, 15)
     assert data["user"]["marketing_emails_consent"] is True
-    assert "created_at" in data["user"]
-    assert "updated_at" in data["user"]
 
 # --- ProfileUpdateErrorResponse serialization ---
 def test_profile_update_error_response_serialization():

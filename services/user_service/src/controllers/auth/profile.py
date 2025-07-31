@@ -85,7 +85,6 @@ async def get_profile(
     try:
         logger.info(f"Profile accessed by user: {current_user.username}")
 
-        # Use proper response model with all fields from database
         return UserProfileResponse(
             username=current_user.username,
             email=current_user.email,
@@ -93,9 +92,7 @@ async def get_profile(
             last_name=current_user.last_name,
             phone=current_user.phone,
             date_of_birth=current_user.date_of_birth,
-            marketing_emails_consent=current_user.marketing_emails_consent,
-            created_at=current_user.created_at,
-            updated_at=current_user.updated_at
+            marketing_emails_consent=current_user.marketing_emails_consent
         )
 
     except Exception as e:
@@ -133,31 +130,22 @@ async def update_profile(
     current_user: User = Depends(get_current_user),
     user_dao = Depends(get_user_dao)
 ) -> ProfileUpdateSuccessResponse:
-    """Update current user profile (requires JWT token)"""
+    """Update current user profile (JWT-only approach)"""
     try:
         logger.info(f"Profile update attempt by user: {current_user.username}")
 
-        # ✅ Security check: Users can only update their own profile
-        if profile_data.username != current_user.username:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only update your own profile"
-            )
-
-        # ✅ Update user profile using DAO (username from request as identifier)
         updated_user = await user_dao.update_user(
-            username=profile_data.username,  # ✅ From request (identifier)
+            username=current_user.username,
             email=profile_data.email,
             name=f"{profile_data.first_name} {profile_data.last_name}" if profile_data.first_name and profile_data.last_name else None,
             phone=profile_data.phone
         )
 
         if not updated_user:
-            raise UserNotFoundException(profile_data.username)
+            raise UserNotFoundException(current_user.username)
 
         logger.info(f"Profile updated successfully for user: {current_user.username}")
 
-        # Return updated profile data from database
         return ProfileUpdateSuccessResponse(
             message="Profile updated successfully",
             user=UserProfileResponse(
@@ -167,16 +155,13 @@ async def update_profile(
                 last_name=profile_data.last_name or current_user.last_name,
                 phone=updated_user.phone,
                 date_of_birth=profile_data.date_of_birth or current_user.date_of_birth,
-                marketing_emails_consent=profile_data.marketing_emails_consent if profile_data.marketing_emails_consent is not None else current_user.marketing_emails_consent,
-                created_at=updated_user.created_at,
-                updated_at=updated_user.updated_at
+                marketing_emails_consent=profile_data.marketing_emails_consent if profile_data.marketing_emails_consent is not None else current_user.marketing_emails_consent
             )
         )
 
     except (UserNotFoundException, TokenExpiredException, HTTPException):
         raise
     except ValueError as e:
-        # Handle email already in use or other validation errors
         logger.warning(f"Profile update validation failed for {current_user.username}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

@@ -36,18 +36,22 @@ async def test_update_profile_valid():
     mock_user.created_at = "2024-01-01T00:00:00Z"
     mock_user.updated_at = "2024-01-02T00:00:00Z"
 
+    mock_updated_user = MagicMock()
+    mock_updated_user.username = "john_doe"
+    mock_updated_user.email = "john.new@example.com"
+    mock_updated_user.first_name = "John"
+    mock_updated_user.last_name = "Doe"
+    mock_updated_user.phone = "+1234567890"
+    mock_updated_user.date_of_birth = "1990-01-01"
+    mock_updated_user.marketing_emails_consent = True
+    mock_updated_user.created_at = "2024-01-01T00:00:00Z"
+    mock_updated_user.updated_at = "2024-01-02T00:00:00Z"
+
     mock_user_dao = MagicMock()
-    updated_user = MagicMock()
-    updated_user.username = "john_doe"
-    updated_user.email = "john@example.com"
-    updated_user.phone = "+1234567890"
-    updated_user.created_at = "2024-01-01T00:00:00Z"
-    updated_user.updated_at = "2024-01-02T00:00:00Z"
-    mock_user_dao.update_user = AsyncMock(return_value=updated_user)
+    mock_user_dao.update_user = AsyncMock(return_value=mock_updated_user)
 
     profile_data = UserProfileUpdateRequest(
-        username="john_doe",
-        email="john@example.com",
+        email="john.new@example.com",
         first_name="John",
         last_name="Doe",
         phone="+1234567890",
@@ -57,6 +61,7 @@ async def test_update_profile_valid():
     result = await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
     assert result.message == "Profile updated successfully"
     assert result.user.username == "john_doe"
+    assert result.user.email == "john.new@example.com"
 
 @pytest.mark.asyncio
 async def test_update_profile_email_in_use():
@@ -75,8 +80,7 @@ async def test_update_profile_email_in_use():
     mock_user_dao.update_user = AsyncMock(side_effect=ValueError("Email already in use"))
 
     profile_data = UserProfileUpdateRequest(
-        username="john_doe",
-        email="used@example.com",
+        email="existing@example.com",
         first_name="John",
         last_name="Doe",
         phone="+1234567890",
@@ -86,6 +90,7 @@ async def test_update_profile_email_in_use():
     with pytest.raises(HTTPException) as exc_info:
         await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
     assert exc_info.value.status_code == 409
+    assert "Email already in use" in str(exc_info.value.detail)
 
 @pytest.mark.asyncio
 async def test_update_profile_unauthorized():
@@ -101,8 +106,9 @@ async def test_update_profile_unauthorized():
     mock_user.updated_at = "2024-01-02T00:00:00Z"
 
     mock_user_dao = MagicMock()
+    mock_user_dao.update_user = AsyncMock(return_value=None)
+
     profile_data = UserProfileUpdateRequest(
-        username="other_user",
         email="john@example.com",
         first_name="John",
         last_name="Doe",
@@ -110,9 +116,9 @@ async def test_update_profile_unauthorized():
         date_of_birth="1990-01-01",
         marketing_emails_consent=True
     )
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(UserNotFoundException) as exc_info:
         await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
-    assert exc_info.value.status_code == 403
+    assert "User 'john_doe' not found" in str(exc_info.value)
 
 @pytest.mark.asyncio
 async def test_update_profile_user_not_found():
@@ -131,7 +137,6 @@ async def test_update_profile_user_not_found():
     mock_user_dao.update_user = AsyncMock(return_value=None)
 
     profile_data = UserProfileUpdateRequest(
-        username="john_doe",
         email="john@example.com",
         first_name="John",
         last_name="Doe",
@@ -160,7 +165,6 @@ async def test_update_profile_database_error():
     mock_user_dao.update_user = AsyncMock(side_effect=Exception("Database error"))
 
     profile_data = UserProfileUpdateRequest(
-        username="john_doe",
         email="john@example.com",
         first_name="John",
         last_name="Doe",
