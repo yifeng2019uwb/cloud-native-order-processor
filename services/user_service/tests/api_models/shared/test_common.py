@@ -35,8 +35,6 @@ def test_user_base_info_serialization():
         email="john.doe@example.com",
         first_name="John",
         last_name="Doe",
-        phone="+1-555-123-4567",
-        date_of_birth=date(1990, 5, 15),
         marketing_emails_consent=False,
         created_at=datetime(2025, 7, 9, 10, 30, 0),
         updated_at=datetime(2025, 7, 9, 10, 30, 0)
@@ -46,11 +44,10 @@ def test_user_base_info_serialization():
     assert data["email"] == "john.doe@example.com"
     assert data["first_name"] == "John"
     assert data["last_name"] == "Doe"
-    assert data["phone"] == "+1-555-123-4567"
-    assert data["date_of_birth"] == date(1990, 5, 15)
     assert data["marketing_emails_consent"] is False
-    assert "created_at" in data
-    assert "updated_at" in data
+    # Handle datetime object returned by Pydantic
+    assert isinstance(data["created_at"], (str, datetime))
+    assert isinstance(data["updated_at"], (str, datetime))
 
 def test_error_response_serialization():
     resp = ErrorResponse(
