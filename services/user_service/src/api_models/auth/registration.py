@@ -2,11 +2,12 @@
 Pydantic models specific to user registration API
 Path: cloud-native-order-processor/services/user-service/src/models/register_models.py
 """
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import date
 import re
 
+from common.validators import sanitized_username, sanitized_email, sanitized_phone
 from ..shared.common import UserBaseInfo, SuccessResponse, ErrorResponse
 
 
@@ -73,25 +74,19 @@ class UserRegistrationRequest(BaseModel):
         description="Consent to receive marketing emails (GDPR compliance)"
     )
 
-    @validator('username')
+    @field_validator('username')
+    @classmethod
     def validate_username_format(cls, v):
-        """
-        Validate username format:
-        - Only alphanumeric characters and underscores
-        - Cannot start or end with underscore
-        - Cannot have consecutive underscores
-        """
-        if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9_]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$', v):
-            raise ValueError('Username can only contain letters, numbers, and underscores. Cannot start/end with underscore.')
+        """Simple username validation with sanitization"""
+        return sanitized_username()(v)
 
-        if '__' in v:
-            raise ValueError('Username cannot contain consecutive underscores')
-
-        return v.lower()  # Store usernames in lowercase for consistency
-
-    @validator('password')  # ADDED: Password complexity validation
+    @field_validator('password')
+    @classmethod
     def validate_password_complexity(cls, v):
-        """Validate password complexity requirements"""
+        """Password complexity validation"""
+        if len(v) < 12:
+            raise ValueError("Password must be at least 12 characters long")
+
         if not re.search(r"[A-Z]", v):
             raise ValueError("Password must contain at least one uppercase letter")
 
@@ -106,46 +101,30 @@ class UserRegistrationRequest(BaseModel):
 
         return v
 
-    @validator('first_name')
+    @field_validator('first_name')
+    @classmethod
     def validate_first_name_format(cls, v):
-        """Validate first name contains only letters"""
-        if not re.match(r"^[a-zA-Z]+$", v):
-            raise ValueError('First name can only contain letters')
-        return v.title()  # Convert to title case
+        """Simple first name validation with sanitization"""
+        from common.validators import sanitized_string
+        return sanitized_string(max_length=50)(v)
 
-    @validator('last_name')
+    @field_validator('last_name')
+    @classmethod
     def validate_last_name_format(cls, v):
-        """Validate last name contains only letters"""
-        if not re.match(r"^[a-zA-Z]+$", v):
-            raise ValueError('Last name can only contain letters')
-        return v.title()  # Convert to title case
+        """Simple last name validation with sanitization"""
+        from common.validators import sanitized_string
+        return sanitized_string(max_length=50)(v)
 
-    @validator('phone')
+    @field_validator('phone')
+    @classmethod
     def validate_phone_format(cls, v):
-        """
-        Validate phone number format if provided
-        - Must contain 10-15 digits after removing non-digit characters
-        """
-        if v is None:
-            return v
+        """Simple phone validation with sanitization"""
+        return sanitized_phone()(v)
 
-        # Remove all non-digit characters to count digits
-        digits_only = re.sub(r'\D', '', v)
-
-        if len(digits_only) < 10:
-            raise ValueError('Phone number must contain at least 10 digits')
-        if len(digits_only) > 15:
-            raise ValueError('Phone number must contain no more than 15 digits')
-
-        return v
-
-    @validator('date_of_birth')
+    @field_validator('date_of_birth')
+    @classmethod
     def validate_age_requirements(cls, v):
-        """
-        Validate date of birth meets age requirements
-        - Must be at least 13 years old (COPPA compliance)
-        - Cannot be in the future
-        """
+        """Simple date of birth validation with age requirements"""
         if v is None:
             return v
 
@@ -157,7 +136,7 @@ class UserRegistrationRequest(BaseModel):
             raise ValueError('Date of birth cannot be in the future')
 
         # Check minimum age (13 years for COPPA compliance)
-        min_age_date = today - timedelta(days=13 * 365.25)  # Approximate 13 years
+        min_age_date = today - timedelta(days=13 * 365.25)
         if v > min_age_date:
             raise ValueError('Must be at least 13 years old to register')
 
