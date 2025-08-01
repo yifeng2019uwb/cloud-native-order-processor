@@ -4,7 +4,6 @@ from . import dao
 from . import entities
 from . import exceptions
 from . import health
-from . import services
 from . import utils
 
 __all__ = [
@@ -13,6 +12,5 @@ __all__ = [
     "entities",
     "exceptions",
     "health",
-    "services",
     "utils"
 ]
