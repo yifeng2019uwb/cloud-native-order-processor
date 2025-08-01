@@ -1,11 +1,14 @@
 """
 User Profile API Endpoint
-Path: cloud-native-order-processor/services/user-service/src/routes/auth/profile.py
+Path: services/user_service/src/controllers/auth/profile.py
+
+Layer 2: Business validation (in service layer)
+Layer 1: Field validation (handled in API models)
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Union
 import logging
-from datetime import datetime, timezone
 
 # Import user-service API models
 from api_models.auth.profile import (
@@ -22,19 +25,16 @@ from common.entities.user import User
 # Import dependencies
 from common.database import get_user_dao
 from controllers.token_utilis import verify_access_token
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 # Import exceptions
-from exceptions import UserNotFoundException, TokenExpiredException, UserAlreadyExistsException
-from common.exceptions.shared_exceptions import UserValidationException
-
-# Import validation functions
-from validation.field_validators import (
-    validate_name,
-    validate_email,
-    validate_phone,
-    validate_date_of_birth
+from exceptions import (
+    UserNotFoundException,
+    TokenExpiredException,
+    UserAlreadyExistsException,
+    UserValidationException
 )
+
+# Import business validation functions only (Layer 2)
 from validation.business_validators import (
     validate_email_uniqueness,
     validate_age_requirements
@@ -105,7 +105,9 @@ async def get_profile(
             last_name=current_user.last_name,
             phone=current_user.phone,
             date_of_birth=current_user.date_of_birth,
-            marketing_emails_consent=current_user.marketing_emails_consent
+            marketing_emails_consent=current_user.marketing_emails_consent,
+            created_at=current_user.created_at,
+            updated_at=current_user.updated_at
         )
 
     except Exception as e:
@@ -143,23 +145,16 @@ async def update_profile(
     current_user: User = Depends(get_current_user),
     user_dao = Depends(get_user_dao)
 ) -> ProfileUpdateSuccessResponse:
-    """Update current user profile (JWT-only approach)"""
+    """
+    Update current user profile (JWT-only approach)
+
+    Layer 1: Field validation already handled in API models
+    Layer 2: Business validation (uniqueness, age requirements, etc.)
+    """
     try:
         logger.info(f"Profile update attempt by user: {current_user.username}")
 
-        # Field validation - validate format and sanitize input
-        if profile_data.first_name:
-            validate_name(profile_data.first_name)
-        if profile_data.last_name:
-            validate_name(profile_data.last_name)
-        if profile_data.email:
-            validate_email(profile_data.email)
-        if profile_data.phone:
-            validate_phone(profile_data.phone)
-        if profile_data.date_of_birth:
-            validate_date_of_birth(profile_data.date_of_birth)
-
-        # Business validation - check business rules
+        # Layer 2: Business validation only
         if profile_data.email and profile_data.email != current_user.email:
             await validate_email_uniqueness(profile_data.email, user_dao)
         if profile_data.date_of_birth:
@@ -186,7 +181,9 @@ async def update_profile(
                 last_name=profile_data.last_name or current_user.last_name,
                 phone=updated_user.phone,
                 date_of_birth=profile_data.date_of_birth or current_user.date_of_birth,
-                marketing_emails_consent=profile_data.marketing_emails_consent if profile_data.marketing_emails_consent is not None else current_user.marketing_emails_consent
+                marketing_emails_consent=current_user.marketing_emails_consent,
+                created_at=updated_user.created_at,
+                updated_at=updated_user.updated_at
             )
         )
 

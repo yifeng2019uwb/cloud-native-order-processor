@@ -37,33 +37,23 @@ def test_user_login_request_password_too_long():
 
 # --- LoginSuccessResponse serialization ---
 def test_login_success_response_serialization():
-    user_info = UserBaseInfo(
-        username="john_doe123",
-        email="john.doe@example.com",
-        first_name="John",
-        last_name="Doe",
-        phone="+1-555-123-4567",
-        date_of_birth=date(1990, 5, 15),
-        marketing_emails_consent=False,
-        created_at=datetime(2025, 7, 9, 10, 30, 0),
-        updated_at=datetime(2025, 7, 9, 10, 30, 0)
-    )
-    resp = LoginSuccessResponse(
-        success=True,
-        message="Login successful",
+    from api_models.auth.login import UserLoginResponse
+
+    login_data = UserLoginResponse(
         access_token="token123",
         token_type="bearer",
-        expires_in=86400,
-        user=user_info
+        expires_in=86400
+    )
+
+    resp = LoginSuccessResponse(
+        message="Login successful",
+        data=login_data
     )
     data = resp.model_dump()
-    assert data["success"] is True
     assert data["message"] == "Login successful"
-    assert data["access_token"] == "token123"
-    assert data["token_type"] == "bearer"
-    assert data["expires_in"] == 86400
-    assert data["user"]["username"] == "john_doe123"
-    assert data["user"]["email"] == "john.doe@example.com"
+    assert data["data"]["access_token"] == "token123"
+    assert data["data"]["token_type"] == "bearer"
+    assert data["data"]["expires_in"] == 86400
 
 # --- LoginErrorResponse serialization ---
 def test_login_error_response_serialization():

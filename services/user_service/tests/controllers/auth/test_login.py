@@ -32,10 +32,10 @@ async def test_login_valid_credentials_patch_login_only():
     }
     with patch("controllers.auth.login.create_access_token", return_value=token_dict):
         result = await login_user(login_data, user_dao=mock_user_dao)
-        assert result.access_token == "token123"
-        assert result.token_type == "bearer"
-        assert result.expires_in == 3600
-        assert result.user.username == "john_doe"
+        assert result.data.access_token == "token123"
+        assert result.data.token_type == "bearer"
+        assert result.data.expires_in == 3600
+        assert result.message == "Login successful"
         assert result.success is True
 
 @pytest.mark.asyncio

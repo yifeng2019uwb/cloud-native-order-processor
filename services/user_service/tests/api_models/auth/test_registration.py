@@ -3,19 +3,21 @@ Tests for user registration request models
 """
 
 import pytest
-from datetime import date
+from datetime import date, timedelta
 from pydantic import ValidationError
 from api_models.auth.registration import (
     UserRegistrationRequest,
-    UserRegistrationResponse,
     RegistrationSuccessResponse,
     RegistrationErrorResponse
 )
+from api_models.shared.common import ErrorResponse
+from exceptions import UserValidationException
 
 
 def test_valid_registration_data():
+    # Valid registration data
     req = UserRegistrationRequest(
-        username="john_doe123",
+        username="johndoe",
         email="john.doe@example.com",
         password="SecurePassword123!",
         first_name="John",
@@ -24,13 +26,13 @@ def test_valid_registration_data():
         date_of_birth=date(1990, 5, 15),
         marketing_emails_consent=True
     )
-    assert req.username == "john_doe123"
+    assert req.username == "johndoe"
     assert req.email == "john.doe@example.com"
     assert req.password == "SecurePassword123!"
     assert req.first_name == "John"
     assert req.last_name == "Doe"
-    # Phone is stored as provided (sanitization happens in controller)
-    assert req.phone == "+1-555-123-4567"
+    # Phone is sanitized to digits only
+    assert req.phone == "15551234567"
     assert req.date_of_birth == date(1990, 5, 15)
     assert req.marketing_emails_consent is True
 
@@ -48,7 +50,7 @@ def test_username_validation():
 
 
 def test_username_invalid_characters():
-    # Username with special chars - stored as provided (validation happens in controller)
+    # Username with special chars - sanitized to remove HTML tags
     req = UserRegistrationRequest(
         username="john<doe>123",
         email="test@example.com",
@@ -56,8 +58,8 @@ def test_username_invalid_characters():
         first_name="John",
         last_name="Doe"
     )
-    # Username is stored as provided (validation happens in controller)
-    assert req.username == "john<doe>123"
+    # HTML tags are removed during sanitization
+    assert req.username == "john123"
 
 
 def test_username_starts_or_ends_with_underscore():
@@ -167,16 +169,15 @@ def test_first_name_validation():
 
 
 def test_first_name_non_letters():
-    # First name with non-letters - basic sanitization only removes HTML tags
-    req = UserRegistrationRequest(
-        username="johndoe",
-        email="test@example.com",
-        password="SecurePassword123!",
-        first_name="John123",
-        last_name="Doe"
-    )
-    # Basic sanitization keeps numbers (only removes HTML tags)
-    assert req.first_name == "John123"
+    # First name with non-letters - validation now happens at model level
+    with pytest.raises(UserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
+        UserRegistrationRequest(
+            username="johndoe",
+            email="test@example.com",
+            password="SecurePassword123!",
+            first_name="John1",
+            last_name="Doe"
+        )
 
 
 def test_last_name_validation():
@@ -192,16 +193,15 @@ def test_last_name_validation():
 
 
 def test_last_name_non_letters():
-    # Last name with non-letters - basic sanitization only removes HTML tags
-    req = UserRegistrationRequest(
-        username="johndoe",
-        email="test@example.com",
-        password="SecurePassword123!",
-        first_name="John",
-        last_name="Doe123"
-    )
-    # Basic sanitization keeps numbers (only removes HTML tags)
-    assert req.last_name == "Doe123"
+    # Last name with non-letters - validation now happens at model level
+    with pytest.raises(UserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
+        UserRegistrationRequest(
+            username="johndoe",
+            email="test@example.com",
+            password="SecurePassword123!",
+            first_name="John",
+            last_name="Doe123"
+        )
 
 
 def test_phone_validation():
@@ -214,8 +214,8 @@ def test_phone_validation():
         last_name="Doe",
         phone="+1-555-123-4567"
     )
-    # Phone is stored as provided (validation happens in controller)
-    assert req.phone == "+1-555-123-4567"
+    # Phone is sanitized to digits only
+    assert req.phone == "15551234567"
 
 
 def test_phone_valid_formats():
@@ -227,21 +227,21 @@ def test_phone_valid_formats():
         last_name="Doe",
         phone="(123) 456-7890"
     )
-    # Phone is stored as provided (validation happens in controller)
-    assert req.phone == "(123) 456-7890"
+    # Phone is sanitized to digits only
+    assert req.phone == "1234567890"
 
 
 def test_phone_invalid_format():
-    # Phone validation now happens in controller, not in API model
-    req = UserRegistrationRequest(
-        username="johndoe",
-        email="test@example.com",
-        password="SecurePassword123!",
-        first_name="John",
-        last_name="Doe",
-        phone="123"  # Too short - will be validated in controller
-    )
-    assert req.phone == "123"
+    # Phone validation now happens at model level
+    with pytest.raises(UserValidationException, match="Phone number must contain 10-15 digits"):
+        UserRegistrationRequest(
+            username="johndoe",
+            email="test@example.com",
+            password="SecurePassword123!",
+            first_name="John",
+            last_name="Doe",
+            phone="123"  # Too short - will be rejected at model level
+        )
 
 
 def test_date_of_birth_validation():
@@ -255,6 +255,34 @@ def test_date_of_birth_validation():
         date_of_birth=date(1990, 5, 15)
     )
     assert req.date_of_birth == date(1990, 5, 15)
+
+
+def test_date_of_birth_future():
+    # Future date validation now happens at model level
+    future_date = date.today() + timedelta(days=1)
+    with pytest.raises(UserValidationException, match="User must be at least 13 years old"):
+        UserRegistrationRequest(
+            username="johndoe",
+            email="test@example.com",
+            password="SecurePassword123!",
+            first_name="John",
+            last_name="Doe",
+            date_of_birth=future_date  # Future date - will be rejected at model level
+        )
+
+
+def test_date_of_birth_under_13():
+    # Under 13 validation now happens at model level
+    under_13 = date.today() - timedelta(days=12*365)
+    with pytest.raises(UserValidationException, match="User must be at least 13 years old"):
+        UserRegistrationRequest(
+            username="johndoe",
+            email="test@example.com",
+            password="SecurePassword123!",
+            first_name="John",
+            last_name="Doe",
+            date_of_birth=under_13  # Under 13 - will be rejected at model level
+        )
 
 
 def test_marketing_emails_consent():
@@ -295,32 +323,15 @@ def test_optional_fields():
     assert req.marketing_emails_consent is False
 
 
-def test_user_registration_response_serialization():
-    from datetime import datetime
-    resp = UserRegistrationResponse(
-        username="john_doe123",
-        email="john.doe@example.com",
-        first_name="John",
-        last_name="Doe",
-        marketing_emails_consent=False,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
-    )
-    data = resp.model_dump()
-    assert data["username"] == "john_doe123"
-    assert data["email"] == "john.doe@example.com"
-    assert data["first_name"] == "John"
-    assert data["last_name"] == "Doe"
-    assert data["marketing_emails_consent"] is False
-
-
+# --- RegistrationSuccessResponse serialization ---
 def test_registration_success_response_serialization():
     resp = RegistrationSuccessResponse(
         message="User registered successfully"
     )
     data = resp.model_dump()
-    assert data["message"] == "User registered successfully"
     assert data["success"] is True
+    assert data["message"] == "User registered successfully"
+    assert data["data"] is None
 
 
 def test_registration_error_response_serialization():

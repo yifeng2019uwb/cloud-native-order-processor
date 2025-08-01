@@ -8,6 +8,7 @@ from exceptions import UserAlreadyExistsException
 import pydantic
 from datetime import date, timedelta
 from common.exceptions.shared_exceptions import EntityAlreadyExistsException
+from exceptions import UserValidationException
 
 @pytest.mark.asyncio
 async def test_register_success():
@@ -34,7 +35,7 @@ async def test_register_success():
         "expires_in": 3600
     }
     result = await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
-    assert result.message == "User registered successfully. Please login to access your account."
+    assert result.message == "User registered successfully"
     assert result.success is True
 
 @pytest.mark.asyncio
@@ -154,27 +155,27 @@ async def test_register_weak_password():
 
 @pytest.mark.asyncio
 async def test_register_invalid_phone():
-    # Validation now happens in controller, not in API model
-    req = UserRegistrationRequest(
-        username="johndoe",
-        email="test@example.com",
-        password="SecurePassword123!",
-        first_name="John",
-        last_name="Doe",
-        phone="123"  # Too short - will be validated in controller
-    )
-    assert req.phone == "123"
+    # Validation now happens at model level
+    with pytest.raises(UserValidationException, match="Phone number must contain 10-15 digits"):
+        UserRegistrationRequest(
+            username="johndoe",
+            email="test@example.com",
+            password="SecurePassword123!",
+            first_name="John",
+            last_name="Doe",
+            phone="123"  # Too short - will be rejected at model level
+        )
 
 @pytest.mark.asyncio
 async def test_register_future_date_of_birth():
-    # Validation now happens in controller, not in API model
+    # Validation now happens at model level
     future_date = date.today() + timedelta(days=1)
-    req = UserRegistrationRequest(
-        username="johndoe",
-        email="test@example.com",
-        password="SecurePassword123!",
-        first_name="John",
-        last_name="Doe",
-        date_of_birth=future_date  # Future date - will be validated in controller
-    )
-    assert req.date_of_birth == future_date
+    with pytest.raises(UserValidationException, match="User must be at least 13 years old"):
+        UserRegistrationRequest(
+            username="johndoe",
+            email="test@example.com",
+            password="SecurePassword123!",
+            first_name="John",
+            last_name="Doe",
+            date_of_birth=future_date  # Future date - will be rejected at model level
+        )

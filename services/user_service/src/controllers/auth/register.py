@@ -1,6 +1,9 @@
 """
 User Register API Endpoint
 Path: services/user_service/src/controllers/auth/register.py
+
+Layer 2: Business validation (in service layer)
+Layer 1: Field validation (handled in API models)
 """
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import Union
@@ -10,7 +13,6 @@ from datetime import datetime, timezone
 # Import user-service API models (same directory structure)
 from api_models.auth.registration import (
     UserRegistrationRequest,
-    UserRegistrationResponse,
     RegistrationSuccessResponse,
     RegistrationErrorResponse
 )
@@ -30,15 +32,7 @@ from exceptions import (
 )
 from controllers.token_utilis import create_access_token
 
-# Import validation functions
-from validation.field_validators import (
-    validate_username,
-    validate_name,
-    validate_email,
-    validate_phone,
-    validate_password,
-    validate_date_of_birth
-)
+# Import business validation functions only (Layer 2)
 from validation.business_validators import (
     validate_username_uniqueness,
     validate_email_uniqueness,
@@ -77,7 +71,12 @@ async def register_user(
     request: Request,
     user_dao = Depends(get_user_dao)
 ) -> RegistrationSuccessResponse:
-    """Register a new user account with comprehensive validation and security"""
+    """
+    Register a new user account with comprehensive validation and security
+
+    Layer 1: Field validation already handled in API models
+    Layer 2: Business validation (uniqueness, age requirements, etc.)
+    """
     # Log register attempt (without sensitive data)
     logger.info(
         f"Register attempt from {request.client.host if request.client else 'unknown'}",
@@ -90,16 +89,7 @@ async def register_user(
     )
 
     try:
-        # Field validation - validate format and sanitize input
-        validate_username(user_data.username)
-        validate_name(user_data.first_name)
-        validate_name(user_data.last_name)
-        validate_email(user_data.email)
-        validate_phone(user_data.phone)
-        validate_password(user_data.password)
-        validate_date_of_birth(user_data.date_of_birth)
-
-        # Business validation - check business rules
+        # Layer 2: Business validation only
         await validate_username_uniqueness(user_data.username, user_dao)
         await validate_email_uniqueness(user_data.email, user_dao)
         validate_age_requirements(user_data.date_of_birth)
@@ -118,19 +108,11 @@ async def register_user(
         created_user = await user_dao.create_user(user_create)
 
         # Log successful registration
-        logger.info(
-            f"User registered successfully: {created_user.username}",
-            extra={
-                "user_id": created_user.user_id,
-                "username": created_user.username,
-                "email": created_user.email,
-                "registration_timestamp": datetime.now(timezone.utc).isoformat()
-            }
-        )
+        logger.info(f"User registered successfully: {user_data.username}")
 
-        # Return success response (no token - user must login separately)
+        # Return simple success response - no user data
         return RegistrationSuccessResponse(
-            message="User registered successfully. Please login to access your account."
+            message="User registered successfully"
         )
 
     except (UserAlreadyExistsException, UserValidationException):

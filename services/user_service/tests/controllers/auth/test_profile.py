@@ -5,6 +5,7 @@ from controllers.auth.profile import get_profile, update_profile, get_current_us
 from api_models.auth.profile import UserProfileUpdateRequest
 from fastapi.security import HTTPAuthorizationCredentials
 from exceptions import UserNotFoundException, TokenExpiredException, UserAlreadyExistsException
+from datetime import datetime
 
 @pytest.mark.asyncio
 async def test_get_profile_valid_token():
@@ -16,8 +17,8 @@ async def test_get_profile_valid_token():
     mock_user.phone = "+1234567890"
     mock_user.date_of_birth = "1990-01-01"
     mock_user.marketing_emails_consent = True
-    mock_user.created_at = "2024-01-01T00:00:00Z"
-    mock_user.updated_at = "2024-01-02T00:00:00Z"
+    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
+    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     result = await get_profile(current_user=mock_user)
     assert result.username == "john_doe"
@@ -33,8 +34,8 @@ async def test_update_profile_valid():
     mock_user.phone = "+1234567890"
     mock_user.date_of_birth = "1990-01-01"
     mock_user.marketing_emails_consent = True
-    mock_user.created_at = "2024-01-01T00:00:00Z"
-    mock_user.updated_at = "2024-01-02T00:00:00Z"
+    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
+    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_updated_user = MagicMock()
     mock_updated_user.username = "john_doe"
@@ -44,8 +45,8 @@ async def test_update_profile_valid():
     mock_updated_user.phone = "+1234567890"
     mock_updated_user.date_of_birth = "1990-01-01"
     mock_updated_user.marketing_emails_consent = True
-    mock_updated_user.created_at = "2024-01-01T00:00:00Z"
-    mock_updated_user.updated_at = "2024-01-02T00:00:00Z"
+    mock_updated_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
+    mock_updated_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_user_dao = MagicMock()
     mock_user_dao.update_user = AsyncMock(return_value=mock_updated_user)
@@ -56,8 +57,7 @@ async def test_update_profile_valid():
         first_name="John",
         last_name="Doe",
         phone="+1234567890",
-        date_of_birth="1990-01-01",
-        marketing_emails_consent=True
+        date_of_birth="1990-01-01"
     )
     result = await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
     assert result.message == "Profile updated successfully"
@@ -74,8 +74,8 @@ async def test_update_profile_email_in_use():
     mock_user.phone = "+1234567890"
     mock_user.date_of_birth = "1990-01-01"
     mock_user.marketing_emails_consent = True
-    mock_user.created_at = "2024-01-01T00:00:00Z"
-    mock_user.updated_at = "2024-01-02T00:00:00Z"
+    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
+    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_user_dao = MagicMock()
     mock_user_dao.get_user_by_email = AsyncMock(return_value=MagicMock())  # Email already exists
@@ -85,8 +85,7 @@ async def test_update_profile_email_in_use():
         first_name="John",
         last_name="Doe",
         phone="+1234567890",
-        date_of_birth="1990-01-01",
-        marketing_emails_consent=True
+        date_of_birth="1990-01-01"
     )
     with pytest.raises(UserAlreadyExistsException):
         await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
@@ -101,8 +100,8 @@ async def test_update_profile_unauthorized():
     mock_user.phone = "+1234567890"
     mock_user.date_of_birth = "1990-01-01"
     mock_user.marketing_emails_consent = True
-    mock_user.created_at = "2024-01-01T00:00:00Z"
-    mock_user.updated_at = "2024-01-02T00:00:00Z"
+    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
+    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_user_dao = MagicMock()
     mock_user_dao.update_user = AsyncMock(return_value=None)
@@ -112,8 +111,7 @@ async def test_update_profile_unauthorized():
         first_name="John",
         last_name="Doe",
         phone="+1234567890",
-        date_of_birth="1990-01-01",
-        marketing_emails_consent=True
+        date_of_birth="1990-01-01"
     )
     with pytest.raises(UserNotFoundException) as exc_info:
         await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
@@ -129,8 +127,8 @@ async def test_update_profile_user_not_found():
     mock_user.phone = "+1234567890"
     mock_user.date_of_birth = "1990-01-01"
     mock_user.marketing_emails_consent = True
-    mock_user.created_at = "2024-01-01T00:00:00Z"
-    mock_user.updated_at = "2024-01-02T00:00:00Z"
+    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
+    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_user_dao = MagicMock()
     mock_user_dao.update_user = AsyncMock(return_value=None)
@@ -140,8 +138,7 @@ async def test_update_profile_user_not_found():
         first_name="John",
         last_name="Doe",
         phone="+1234567890",
-        date_of_birth="1990-01-01",
-        marketing_emails_consent=True
+        date_of_birth="1990-01-01"
     )
     with pytest.raises(UserNotFoundException) as exc_info:
         await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
@@ -157,8 +154,8 @@ async def test_update_profile_database_error():
     mock_user.phone = "+1234567890"
     mock_user.date_of_birth = "1990-01-01"
     mock_user.marketing_emails_consent = True
-    mock_user.created_at = "2024-01-01T00:00:00Z"
-    mock_user.updated_at = "2024-01-02T00:00:00Z"
+    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
+    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_user_dao = MagicMock()
     mock_user_dao.update_user = AsyncMock(side_effect=Exception("Database error"))
@@ -168,8 +165,7 @@ async def test_update_profile_database_error():
         first_name="John",
         last_name="Doe",
         phone="+1234567890",
-        date_of_birth="1990-01-01",
-        marketing_emails_consent=True
+        date_of_birth="1990-01-01"
     )
     with pytest.raises(HTTPException) as exc_info:
         await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)

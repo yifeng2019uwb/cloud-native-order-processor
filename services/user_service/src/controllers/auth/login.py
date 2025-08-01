@@ -1,9 +1,11 @@
 """
 User Login API Endpoint
-Path: cloud-native-order-processor/services/user-service/src/routes/auth/login.py
+Path: services/user_service/src/controllers/auth/login.py
+
+Layer 2: Business validation (in service layer)
+Layer 1: Field validation (handled in API models)
 """
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Depends, status
 from typing import Union
 import logging
 from datetime import datetime, timezone
@@ -26,12 +28,6 @@ from controllers.token_utilis import create_access_token
 
 # Import exceptions
 from exceptions import InvalidCredentialsException
-
-# Import validation functions
-from validation.field_validators import (
-    validate_username,
-    validate_password
-)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["authentication"])
@@ -59,14 +55,16 @@ async def login_user(
     login_data: UserLoginRequest,
     user_dao=Depends(get_user_dao)
 ) -> LoginSuccessResponse:
-    """Authenticate user with username and password"""
+    """
+    Authenticate user with username and password
+
+    Layer 1: Field validation already handled in API models
+    Layer 2: Business validation (authentication, etc.)
+    """
     try:
         logger.info(f"Login attempt for: {login_data.username}")
 
-        # Field validation - validate format and sanitize input
-        validate_username(login_data.username)
-        validate_password(login_data.password)
-
+        # Layer 2: Business validation only
         # Authenticate user using username
         user = await user_dao.authenticate_user(login_data.username, login_data.password)
         if not user:
@@ -78,23 +76,19 @@ async def login_user(
         # Create JWT token using username and role
         token_data = create_access_token(user.username, user.role)
 
-        # Use proper response model with all required fields
-        return LoginSuccessResponse(
-            message="Login successful",
+        # Create UserLoginResponse with only token data
+        from api_models.auth.login import UserLoginResponse
+
+        login_response = UserLoginResponse(
             access_token=token_data["access_token"],
             token_type=token_data["token_type"],
-            expires_in=token_data["expires_in"],
-            user=UserBaseInfo(
-                username=user.username,
-                email=user.email,
-                first_name=user.first_name,
-                last_name=user.last_name,
-                phone=user.phone,
-                date_of_birth=user.date_of_birth,
-                marketing_emails_consent=user.marketing_emails_consent,
-                created_at=user.created_at,
-                updated_at=user.updated_at
-            )
+            expires_in=token_data["expires_in"]
+        )
+
+        # Wrap in LoginSuccessResponse
+        return LoginSuccessResponse(
+            message="Login successful",
+            data=login_response
         )
 
     except InvalidCredentialsException:
