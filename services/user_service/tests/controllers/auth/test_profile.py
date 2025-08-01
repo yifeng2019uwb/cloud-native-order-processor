@@ -1,10 +1,10 @@
 import pytest
 from fastapi import HTTPException, status
 from unittest.mock import AsyncMock, patch, MagicMock
-from src.controllers.auth.profile import get_profile, update_profile, get_current_user
+from controllers.auth.profile import get_profile, update_profile, get_current_user
 from api_models.auth.profile import UserProfileUpdateRequest
 from fastapi.security import HTTPAuthorizationCredentials
-from exceptions import UserNotFoundException, TokenExpiredException
+from exceptions import UserNotFoundException, TokenExpiredException, UserAlreadyExistsException
 
 @pytest.mark.asyncio
 async def test_get_profile_valid_token():
@@ -49,6 +49,7 @@ async def test_update_profile_valid():
 
     mock_user_dao = MagicMock()
     mock_user_dao.update_user = AsyncMock(return_value=mock_updated_user)
+    mock_user_dao.get_user_by_email = AsyncMock(return_value=None)  # Email is unique
 
     profile_data = UserProfileUpdateRequest(
         email="john.new@example.com",
@@ -77,7 +78,7 @@ async def test_update_profile_email_in_use():
     mock_user.updated_at = "2024-01-02T00:00:00Z"
 
     mock_user_dao = MagicMock()
-    mock_user_dao.update_user = AsyncMock(side_effect=ValueError("Email already in use"))
+    mock_user_dao.get_user_by_email = AsyncMock(return_value=MagicMock())  # Email already exists
 
     profile_data = UserProfileUpdateRequest(
         email="existing@example.com",
@@ -87,10 +88,8 @@ async def test_update_profile_email_in_use():
         date_of_birth="1990-01-01",
         marketing_emails_consent=True
     )
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(UserAlreadyExistsException):
         await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
-    assert exc_info.value.status_code == 409
-    assert "Email already in use" in str(exc_info.value.detail)
 
 @pytest.mark.asyncio
 async def test_update_profile_unauthorized():
@@ -184,7 +183,7 @@ async def test_get_current_user_valid():
     mock_user = MagicMock()
     mock_user.username = "john_doe"
     mock_user_dao.get_user_by_username = AsyncMock(return_value=mock_user)
-    with patch("src.controllers.auth.profile.verify_access_token", return_value="john_doe"):
+    with patch("controllers.auth.profile.verify_access_token", return_value="john_doe"):
         result = await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
         assert result.username == "john_doe"
 
@@ -193,7 +192,7 @@ async def test_get_current_user_invalid_token():
     mock_creds = MagicMock()
     mock_creds.credentials = "invalid.jwt.token"
     mock_user_dao = MagicMock()
-    with patch("src.controllers.auth.profile.verify_access_token", return_value=None):
+    with patch("controllers.auth.profile.verify_access_token", return_value=None):
         with pytest.raises(TokenExpiredException):
             await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
 
@@ -202,7 +201,7 @@ async def test_get_current_user_user_not_found():
     mock_creds = MagicMock()
     mock_creds.credentials = "valid.jwt.token"
     mock_user_dao = MagicMock()
-    with patch("src.controllers.auth.profile.verify_access_token", return_value="john_doe"), \
+    with patch("controllers.auth.profile.verify_access_token", return_value="john_doe"), \
          patch.object(mock_user_dao, "get_user_by_username", AsyncMock(return_value=None)):
         with pytest.raises(UserNotFoundException):
             await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
@@ -212,7 +211,7 @@ async def test_get_current_user_verify_token_exception():
     mock_creds = MagicMock()
     mock_creds.credentials = "invalid.jwt.token"
     mock_user_dao = MagicMock()
-    with patch("src.controllers.auth.profile.verify_access_token", side_effect=Exception("Token error")):
+    with patch("controllers.auth.profile.verify_access_token", side_effect=Exception("Token error")):
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
         assert exc_info.value.status_code == 401
@@ -222,7 +221,7 @@ async def test_get_current_user_user_dao_exception():
     mock_creds = MagicMock()
     mock_creds.credentials = "valid.jwt.token"
     mock_user_dao = MagicMock()
-    with patch("src.controllers.auth.profile.verify_access_token", return_value="john_doe"), \
+    with patch("controllers.auth.profile.verify_access_token", return_value="john_doe"), \
          patch.object(mock_user_dao, "get_user_by_username", AsyncMock(side_effect=Exception("DAO error"))):
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)

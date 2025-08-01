@@ -1,20 +1,18 @@
 """
 Order creation request model.
-Handles validation for creating new orders.
+Simple DB constraints only - validation handled by service layer.
 """
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
-import re
 
 from .enums import OrderType, OrderStatus
-from .utils import OrderBusinessRules
 
 
 class OrderCreate(BaseModel):
-    """Request model for creating new orders"""
+    """Request model for creating new orders with simple DB constraints only"""
 
     order_type: OrderType = Field(
         ...,
@@ -23,7 +21,6 @@ class OrderCreate(BaseModel):
 
     asset_id: str = Field(
         ...,
-        min_length=1,
         max_length=10,
         description="Asset symbol to trade"
     )
@@ -42,6 +39,7 @@ class OrderCreate(BaseModel):
 
     currency: str = Field(
         default="USD",
+        max_length=3,
         description="Order currency (default: USD)"
     )
 
@@ -49,68 +47,6 @@ class OrderCreate(BaseModel):
         None,
         description="Expiration time for limit orders"
     )
-
-    @field_validator("asset_id")
-    @classmethod
-    def validate_asset_id(cls, v):
-        """Validate asset ID format"""
-        if not v or not v.strip():
-            raise ValueError("Asset ID cannot be empty")
-
-        v = v.strip().upper()
-
-        # Asset ID should be 1-10 characters, alphanumeric
-        if not re.match(r'^[A-Z0-9]{1,10}$', v):
-            raise ValueError("Asset ID must be 1-10 uppercase letters and numbers")
-
-        return v
-
-    @field_validator("quantity")
-    @classmethod
-    def validate_quantity(cls, v):
-        """Validate quantity is positive"""
-        if v <= 0:
-            raise ValueError("Quantity must be greater than 0")
-        return v
-
-    @field_validator("order_price")
-    @classmethod
-    def validate_order_price(cls, v):
-        """Validate price is positive if provided"""
-        if v is not None and v <= 0:
-            raise ValueError("Order price must be greater than 0")
-        return v
-
-    @field_validator("currency")
-    @classmethod
-    def validate_currency(cls, v):
-        """Validate currency format"""
-        if not v or not v.strip():
-            raise ValueError("Currency cannot be empty")
-
-        v = v.strip().upper()
-
-        # Simple currency validation (3 letters)
-        if not re.match(r'^[A-Z]{3}$', v):
-            raise ValueError("Currency must be 3 uppercase letters (e.g., USD)")
-
-        return v
-
-    @model_validator(mode="after")
-    def validate_business_rules(self):
-        """Validate all business rules using utility functions"""
-        errors = OrderBusinessRules.validate_all_business_rules(
-            order_type=self.order_type,
-            quantity=self.quantity,
-            order_price=self.order_price,
-            expires_at=self.expires_at,
-            currency=self.currency
-        )
-
-        if errors:
-            raise ValueError("; ".join(errors))
-
-        return self
 
     class Config:
         json_schema_extra = {

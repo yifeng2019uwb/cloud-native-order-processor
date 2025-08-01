@@ -13,6 +13,7 @@ from controllers.assets import list_assets, get_asset_by_id
 # Import exception classes for testing
 from exceptions import (
     AssetNotFoundException,
+    AssetValidationException,
     InternalServerException
 )
 from common.exceptions import (
@@ -350,20 +351,41 @@ class TestAssetsControllerExceptionHandling:
         """Test assets controller handling multiple types of exceptions"""
         # Test with different exception types
         exceptions_to_test = [
-            Exception("Generic exception"),
-            ValueError("Value error"),
-            RuntimeError("Runtime error"),
-            DatabaseOperationException("Connection error", service="dynamodb"),
-            DatabaseOperationException("Operation error", operation="scan")
+            (Exception("Generic exception"), InternalServerException),
+            (RuntimeError("Runtime error"), InternalServerException),
+            (DatabaseOperationException("Connection error", service="dynamodb"), InternalServerException),
+            (DatabaseOperationException("Operation error", operation="scan"), InternalServerException)
         ]
 
-        for exc in exceptions_to_test:
+        for exc, expected_exception_type in exceptions_to_test:
             mock_asset_dao = AsyncMock()
             mock_asset_dao.get_asset_by_id.side_effect = exc
 
-            with pytest.raises(InternalServerException) as exc_info:
+            with pytest.raises(expected_exception_type) as exc_info:
                 await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
             error = exc_info.value
-            assert isinstance(error, InternalServerException)
-            assert "failed to get asset btc" in str(error).lower()
+            assert isinstance(error, expected_exception_type)
+            if expected_exception_type == InternalServerException:
+                assert "failed to get asset btc" in str(error).lower()
+
+    @pytest.mark.asyncio
+    async def test_assets_controller_validation_error_handling(self):
+        """Test assets controller handling validation errors"""
+        # Test with validation errors that should be converted to AssetValidationException
+        validation_errors = [
+            AssetValidationException("Asset ID cannot be empty"),
+            AssetValidationException("Asset ID contains potentially malicious content"),
+            AssetValidationException("Asset ID must be 1-10 alphanumeric characters")
+        ]
+
+        for validation_error in validation_errors:
+            mock_asset_dao = AsyncMock()
+            mock_asset_dao.get_asset_by_id.side_effect = validation_error
+
+            with pytest.raises(AssetValidationException) as exc_info:
+                await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+
+            error = exc_info.value
+            assert isinstance(error, AssetValidationException)
+            assert "Invalid asset ID" in str(error)

@@ -13,6 +13,7 @@ from .base_dao import BaseDAO
 from ..entities.user import User, UserCreate, UserLogin
 from ..entities.user_enums import DEFAULT_USER_ROLE
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,15 +45,15 @@ class UserDAO(BaseDAO):
             # Hash password
             password_hash = self._hash_password(user_create.password)
 
-            # Create user item with first_name/last_name fields
+            # Create user item
             now = datetime.utcnow().isoformat()
             user_item = {
                 'user_id': user_create.username,  # Primary key
                 'username': user_create.username,
                 'email': user_create.email,
                 'password_hash': password_hash,
-                'first_name': user_create.first_name,  # FIXED: Split field
-                'last_name': user_create.last_name,    # FIXED: Split field
+                'first_name': user_create.first_name,
+                'last_name': user_create.last_name,
                 'phone': user_create.phone,
                 'role': user_create.role,  # Add role field
                 'created_at': now,
@@ -65,8 +66,8 @@ class UserDAO(BaseDAO):
             return User(
                 username=user_create.username,
                 email=user_create.email,
-                first_name=user_create.first_name,  # FIXED: Split field
-                last_name=user_create.last_name,    # FIXED: Split field
+                first_name=user_create.first_name,
+                last_name=user_create.last_name,
                 phone=user_create.phone,
                 role=user_create.role,  # Add role field
                 created_at=datetime.fromisoformat(created_item['created_at']),

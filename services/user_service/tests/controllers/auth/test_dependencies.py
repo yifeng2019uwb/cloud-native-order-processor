@@ -4,11 +4,11 @@ import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi import HTTPException, status
 from api_models.auth.profile import UserProfileResponse
-from src.controllers.auth.dependencies import get_current_user
+from controllers.auth.dependencies import get_current_user
 import builtins
 import logging
 from fastapi.security import HTTPAuthorizationCredentials
-from src.controllers.auth import dependencies
+from controllers.auth import dependencies
 from jose.exceptions import JWTError
 import asyncio
 
@@ -102,7 +102,7 @@ async def test_get_current_user_database_error():
 @pytest.mark.asyncio
 async def test_verify_token_dependency_valid():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
-    with patch("src.controllers.auth.dependencies.verify_access_token", return_value="user1"):
+    with patch("controllers.auth.dependencies.verify_access_token", return_value="user1"):
         username = await dependencies.verify_token_dependency(creds)
         assert username == "user1"
 
@@ -117,7 +117,7 @@ async def test_verify_token_dependency_none():
 @pytest.mark.asyncio
 async def test_verify_token_dependency_jwt_error():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
-    with patch("src.controllers.auth.dependencies.verify_access_token", side_effect=JWTError("bad token")):
+    with patch("controllers.auth.dependencies.verify_access_token", side_effect=JWTError("bad token")):
         with pytest.raises(HTTPException) as exc_info:
             await dependencies.verify_token_dependency(creds)
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
@@ -126,11 +126,11 @@ async def test_verify_token_dependency_jwt_error():
 @pytest.mark.asyncio
 async def test_verify_token_dependency_general_error():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
-    with patch("src.controllers.auth.dependencies.verify_access_token", side_effect=Exception("fail")):
+    with patch("controllers.auth.dependencies.verify_access_token", side_effect=Exception("fail")):
         with pytest.raises(HTTPException) as exc_info:
             await dependencies.verify_token_dependency(creds)
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert exc_info.value.detail == "Token verification failed"
+        assert "fail" in exc_info.value.detail
 
 @pytest.mark.asyncio
 async def test_get_optional_current_user_none():

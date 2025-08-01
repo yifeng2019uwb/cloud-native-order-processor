@@ -28,13 +28,12 @@ class TestUserCreate:
         assert user.phone == "+1234567890"
 
     def test_username_validation_valid(self):
-        """Test valid username formats"""
+        """Test valid username formats - simple DB constraints only"""
         valid_usernames = [
-            "john_doe",      # With underscore (6+ chars)
-            "user123",       # With numbers (6+ chars)
-            "test_user_123", # Multiple underscores and numbers
-            "johnsmith"      # Mixed case (6+ chars)
-            # REMOVED: "john", "a" - too short now (< 6 chars)
+            "john_doe",      # Valid username
+            "user123",       # Valid username
+            "test_user_123", # Valid username
+            "johnsmith"      # Valid username
         ]
 
         for username in valid_usernames:
@@ -42,38 +41,42 @@ class TestUserCreate:
                 username=username,
                 email="test@example.com",
                 password="ValidPass123!",
-                first_name="Test",     # FIXED: Split field
-                last_name="User"       # FIXED: Split field
+                first_name="Test",
+                last_name="User"
             )
-            # Username should be converted to lowercase
-            assert user.username == username.lower()
+            # Username should be stored as provided (no transformation)
+            assert user.username == username
 
     def test_username_too_short(self):
-        """Test username length validation - too short"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                username="abc12",  # FIXED: 5 chars (still too short for 6+ requirement)
-                email="test@example.com",
-                password="ValidPass123!",
-                first_name="Test",     # FIXED: Split field
-                last_name="User"       # FIXED: Split field
-            )
-        assert "Username must be 6-30 characters long" in str(exc_info.value)  # FIXED: 6-30
+        """Test username length validation - too short (simple DB constraint)"""
+        # This should now pass since we removed complex validation
+        # Only testing basic DB constraints
+        user = UserCreate(
+            username="abc12",  # Short username - should be allowed
+            email="test@example.com",
+            password="ValidPass123!",
+            first_name="Test",
+            last_name="User"
+        )
+        assert user.username == "abc12"
 
     def test_username_too_long(self):
-        """Test username length validation - too long"""
+        """Test username length validation - too long (simple DB constraint)"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
-                username="a" * 31,  # 31 chars
+                username="a" * 31,  # 31 chars - exceeds max_length=30
                 email="test@example.com",
                 password="ValidPass123!",
-                first_name="Test",     # FIXED: Split field
-                last_name="User"       # FIXED: Split field
+                first_name="Test",
+                last_name="User"
             )
-        assert "Username must be 6-30 characters long" in str(exc_info.value)  # FIXED: 6-30
+        # Should get Pydantic's default error message for string_too_long
+        assert "String should have at most 30 characters" in str(exc_info.value)
 
     def test_username_invalid_format(self):
-        """Test username format validation"""
+        """Test username format validation - simple DB constraints only"""
+        # These should now pass since we removed complex validation
+        # Only testing basic DB constraints
         invalid_usernames = [
             "_john_doe",     # Starts with underscore
             "john_doe_",     # Ends with underscore
@@ -85,44 +88,39 @@ class TestUserCreate:
         ]
 
         for username in invalid_usernames:
-            with pytest.raises(ValidationError) as exc_info:
-                UserCreate(
-                    username=username,
-                    email="test@example.com",
-                    password="ValidPass123!",
-                    first_name="Test",     # FIXED: Split field
-                    last_name="User"       # FIXED: Split field
-                )
-            error_msg = str(exc_info.value)
-            # Should contain one of these error messages
-            assert any(msg in error_msg for msg in [
-                "Username can only contain letters, numbers, and underscores",
-                "Username cannot contain consecutive underscores"
-            ])
+            # These should now be allowed since we removed complex validation
+            user = UserCreate(
+                username=username,
+                email="test@example.com",
+                password="ValidPass123!",
+                first_name="Test",
+                last_name="User"
+            )
+            assert user.username == username
 
     def test_username_empty(self):
-        """Test username cannot be empty"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                username="",
-                email="test@example.com",
-                password="ValidPass123!",
-                first_name="Test",     # FIXED: Split field
-                last_name="User"       # FIXED: Split field
-            )
-        assert "Username cannot be empty" in str(exc_info.value)
+        """Test empty username - simple DB constraints only"""
+        # Empty username should be allowed since we removed complex validation
+        user = UserCreate(
+            username="",
+            email="test@example.com",
+            password="ValidPass123!",
+            first_name="Test",
+            last_name="User"
+        )
+        assert user.username == ""
 
     def test_username_whitespace_only(self):
-        """Test username cannot be whitespace only"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                username="   ",
-                email="test@example.com",
-                password="ValidPass123!",
-                first_name="Test",     # FIXED: Split field
-                last_name="User"       # FIXED: Split field
-            )
-        assert "Username cannot be empty" in str(exc_info.value)
+        """Test whitespace username - simple DB constraints only"""
+        # Whitespace username should be allowed since we removed complex validation
+        user = UserCreate(
+            username="   ",
+            email="test@example.com",
+            password="ValidPass123!",
+            first_name="Test",
+            last_name="User"
+        )
+        assert user.username == "   "
 
     def test_password_valid_complexity(self):
         """Test valid password with all complexity requirements"""
@@ -168,76 +166,77 @@ class TestUserCreate:
         assert user.password == max_password
 
     def test_password_too_short(self):
-        """Test password length validation - too short"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                username="john_doe123",
-                email="test@example.com",
-                password="Short1!",  # Only 7 chars
-                first_name="Test",   # FIXED: Split field
-                last_name="User"     # FIXED: Split field
-            )
-        assert "Password must be 12-20 characters long" in str(exc_info.value)
+        """Test password length validation - too short (simple DB constraint)"""
+        # Short password should be allowed since we removed complex validation
+        user = UserCreate(
+            username="john_doe123",
+            email="test@example.com",
+            password="Short1!",  # Only 7 chars
+            first_name="Test",
+            last_name="User"
+        )
+        assert user.password == "Short1!"
 
     def test_password_too_long(self):
-        """Test password length validation - too long"""
+        """Test password length validation - too long (simple DB constraint)"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
                 username="john_doe123",
                 email="test@example.com",
-                password="ThisPasswordIsTooLong123!",  # 25 chars
-                first_name="Test",   # FIXED: Split field
-                last_name="User"     # FIXED: Split field
+                password="a" * 129,  # 129 chars - exceeds max_length=128
+                first_name="Test",
+                last_name="User"
             )
-        assert "Password must be 12-20 characters long" in str(exc_info.value)
+        # Should get Pydantic's default error message for string_too_long
+        assert "String should have at most 128 characters" in str(exc_info.value)
 
     def test_password_no_uppercase(self):
-        """Test password requires uppercase"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                username="john_doe123",
-                email="test@example.com",
-                password="validpass123!",  # No uppercase
-                first_name="Test",   # FIXED: Split field
+        """Test password complexity - simple DB constraints only"""
+        # Password without uppercase should be allowed since we removed complex validation
+        user = UserCreate(
+            username="john_doe123",
+            email="test@example.com",
+            password="validpass123!",  # No uppercase
+            first_name="Test",
                 last_name="User"     # FIXED: Split field
             )
-        assert "Password must contain at least one uppercase letter" in str(exc_info.value)
+        assert user.password == "validpass123!"
 
     def test_password_no_lowercase(self):
-        """Test password requires lowercase"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                username="john_doe123",
-                email="test@example.com",
-                password="VALIDPASS123!",  # No lowercase
-                first_name="Test",   # FIXED: Split field
-                last_name="User"     # FIXED: Split field
-            )
-        assert "Password must contain at least one lowercase letter" in str(exc_info.value)
+        """Test password complexity - simple DB constraints only"""
+        # Password without lowercase should be allowed since we removed complex validation
+        user = UserCreate(
+            username="john_doe123",
+            email="test@example.com",
+            password="VALIDPASS123!",  # No lowercase
+            first_name="Test",
+            last_name="User"
+        )
+        assert user.password == "VALIDPASS123!"
 
     def test_password_no_number(self):
-        """Test password requires number"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                username="john_doe123",
-                email="test@example.com",
-                password="ValidPassword!",  # No number
-                first_name="Test",   # FIXED: Split field
-                last_name="User"     # FIXED: Split field
-            )
-        assert "Password must contain at least one number" in str(exc_info.value)
+        """Test password complexity - simple DB constraints only"""
+        # Password without number should be allowed since we removed complex validation
+        user = UserCreate(
+            username="john_doe123",
+            email="test@example.com",
+            password="ValidPassword!",  # No number
+            first_name="Test",
+            last_name="User"
+        )
+        assert user.password == "ValidPassword!"
 
     def test_password_no_special_char(self):
-        """Test password requires special character"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                username="john_doe123",
-                email="test@example.com",
-                password="ValidPass123",  # No special char
-                first_name="Test",   # FIXED: Split field
-                last_name="User"     # FIXED: Split field
-            )
-        assert "Password must contain at least one special character" in str(exc_info.value)
+        """Test password complexity - simple DB constraints only"""
+        # Password without special char should be allowed since we removed complex validation
+        user = UserCreate(
+            username="john_doe123",
+            email="test@example.com",
+            password="ValidPass123",  # No special char
+            first_name="Test",
+            last_name="User"
+        )
+        assert user.password == "ValidPass123"
 
     def test_invalid_email(self):
         """Test email validation"""
@@ -252,63 +251,63 @@ class TestUserCreate:
         assert "value is not a valid email address" in str(exc_info.value)
 
     def test_empty_first_name(self):
-        """Test first name cannot be empty"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                username="john_doe123",
-                email="test@example.com",
-                password="ValidPass123!",
-                first_name="   ",    # FIXED: Only whitespace
-                last_name="User"
-            )
-        assert "First name cannot be empty" in str(exc_info.value)
+        """Test empty first name - simple DB constraints only"""
+        # Empty first name should be allowed since we removed complex validation
+        user = UserCreate(
+            username="john_doe123",
+            email="test@example.com",
+            password="ValidPass123!",
+            first_name="   ",    # Only whitespace
+            last_name="User"
+        )
+        assert user.first_name == "   "
 
     def test_empty_last_name(self):
-        """Test last name cannot be empty"""
+        """Test empty last name - simple DB constraints only"""
+        # Empty last name should be allowed since we removed complex validation
+        user = UserCreate(
+            username="john_doe123",
+            email="test@example.com",
+            password="ValidPass123!",
+            first_name="Test",
+            last_name="   "      # Only whitespace
+        )
+        assert user.last_name == "   "
+
+    def test_invalid_phone_too_short(self):
+        """Test phone validation - too short (simple DB constraint)"""
+        # Short phone should be allowed since we removed complex validation
+        user = UserCreate(
+            username="john_doe123",
+            email="test@example.com",
+            password="ValidPass123!",
+            first_name="Test",
+            last_name="User",
+            phone="123"  # Too short
+        )
+        assert user.phone == "123"
+
+    def test_invalid_phone_too_long(self):
+        """Test phone validation - too long (simple DB constraint)"""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
                 username="john_doe123",
                 email="test@example.com",
                 password="ValidPass123!",
                 first_name="Test",
-                last_name="   "      # FIXED: Only whitespace
+                last_name="User",
+                phone="a" * 16  # 16 chars - exceeds max_length=15
             )
-        assert "Last name cannot be empty" in str(exc_info.value)
-
-    def test_invalid_phone_too_short(self):
-        """Test phone validation - too short"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                username="john_doe123",
-                email="test@example.com",
-                password="ValidPass123!",
-                first_name="Test",   # FIXED: Split field
-                last_name="User",    # FIXED: Split field
-                phone="123"  # Too short
-            )
-        assert "Phone number must be 10-15 digits" in str(exc_info.value)
-
-    def test_invalid_phone_too_long(self):
-        """Test phone validation - too long"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                username="john_doe123",
-                email="test@example.com",
-                password="ValidPass123!",
-                first_name="Test",   # FIXED: Split field
-                last_name="User",    # FIXED: Split field
-                phone="12345678901234567890"  # Too long
-            )
-        assert "Phone number must be 10-15 digits" in str(exc_info.value)
+        # Should get Pydantic's default error message for string_too_long
+        assert "String should have at most 15 characters" in str(exc_info.value)
 
     def test_valid_phone_formats(self):
-        """Test various valid phone formats"""
+        """Test various valid phone formats - simple DB constraints only"""
+        # Only test phones that fit within max_length=15
         valid_phones = [
-            "+1234567890",
-            "1234567890",
-            "(123) 456-7890",
-            "123-456-7890",
-            "+1 (123) 456-7890"
+            "+1234567890",      # 11 chars
+            "1234567890",       # 10 chars
+            "123-456-7890",     # 12 chars
         ]
 
         for phone in valid_phones:
@@ -316,8 +315,8 @@ class TestUserCreate:
                 username="john_doe123",
                 email="test@example.com",
                 password="ValidPass123!",
-                first_name="Test",   # FIXED: Split field
-                last_name="User",    # FIXED: Split field
+                first_name="Test",
+                last_name="User",
                 phone=phone
             )
             assert user.phone == phone
@@ -356,30 +355,31 @@ class TestUserLogin:
         assert login.password == "ValidPass123!"
 
     def test_username_whitespace_stripping(self):
-        """Test username whitespace stripping in login"""
+        """Test username whitespace handling in login - simple DB constraints only"""
+        # Username should be stored as provided since we removed complex validation
         login = UserLogin(
             username="  john_doe123  ",
             password="ValidPass123!"
         )
-        assert login.username == "john_doe123"
+        assert login.username == "  john_doe123  "
 
     def test_empty_username(self):
-        """Test login with empty username"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserLogin(
-                username="",
-                password="ValidPass123!"
-            )
-        assert "Username cannot be empty" in str(exc_info.value)
+        """Test login with empty username - simple DB constraints only"""
+        # Empty username should be allowed since we removed complex validation
+        login = UserLogin(
+            username="",
+            password="ValidPass123!"
+        )
+        assert login.username == ""
 
     def test_whitespace_username(self):
-        """Test login with whitespace username"""
-        with pytest.raises(ValidationError) as exc_info:
-            UserLogin(
-                username="   ",
-                password="ValidPass123!"
-            )
-        assert "Username cannot be empty" in str(exc_info.value)
+        """Test login with whitespace username - simple DB constraints only"""
+        # Whitespace username should be allowed since we removed complex validation
+        login = UserLogin(
+            username="   ",
+            password="ValidPass123!"
+        )
+        assert login.username == "   "
 
     def test_missing_username(self):
         """Test login missing username field"""
@@ -419,21 +419,25 @@ class TestUser:
         assert user.created_at == now
         assert user.updated_at == now
 
-    def test_computed_name_property(self):
-        """Test computed name property for backward compatibility"""
+    def test_name_property_removed(self):
+        """Test that name property was removed from User model"""
         from datetime import datetime
 
         now = datetime.utcnow()
         user = User(
             username="john_doe123",
             email="test@example.com",
-            first_name="John",       # FIXED: Split field
-            last_name="Doe",         # FIXED: Split field
+            first_name="John",
+            last_name="Doe",
             phone="+1234567890",
             created_at=now,
             updated_at=now
         )
-        assert user.name == "John Doe"      # ADDED: Test computed property
+        # Test that name property no longer exists
+        assert not hasattr(user, 'name')
+        # Test that first_name and last_name are separate fields
+        assert user.first_name == "John"
+        assert user.last_name == "Doe"
 
     def test_optional_phone(self):
         """Test user with no phone"""
@@ -473,8 +477,8 @@ class TestUserResponse:
         assert response.first_name == "Test"    # FIXED: Split field
         assert response.last_name == "User"     # FIXED: Split field
 
-    def test_computed_name_property_response(self):
-        """Test computed name property in response"""
+    def test_name_property_removed_response(self):
+        """Test that name property was removed from UserResponse model"""
         from datetime import datetime
 
         now = datetime.utcnow()
@@ -486,10 +490,14 @@ class TestUserResponse:
             created_at=now,
             updated_at=now
         )
-        assert response.name == "Jane Smith"
+        # Test that name property no longer exists
+        assert not hasattr(response, 'name')
+        # Test that first_name and last_name are separate fields
+        assert response.first_name == "Jane"
+        assert response.last_name == "Smith"
 
-    def test_computed_name_property_response_edge_cases(self):
-        """Test computed name property edge cases in response"""
+    def test_name_property_removed_response_edge_cases(self):
+        """Test that name property was removed from UserResponse model - edge cases"""
         from datetime import datetime
 
         now = datetime.utcnow()
@@ -503,7 +511,11 @@ class TestUserResponse:
             created_at=now,
             updated_at=now
         )
-        assert response.name == "A B"
+        # Test that name property no longer exists
+        assert not hasattr(response, 'name')
+        # Test that first_name and last_name are separate fields
+        assert response.first_name == "A"
+        assert response.last_name == "B"
 
     def test_userresponse_all_fields(self):
         """Test UserResponse with all fields populated"""
@@ -524,7 +536,8 @@ class TestUserResponse:
         assert response.first_name == "Complete"
         assert response.last_name == "User"
         assert response.phone == "+1234567890"
-        assert response.name == "Complete User"
+        # Test that name property no longer exists
+        assert not hasattr(response, 'name')
 
     def test_optional_phone_in_response(self):
         """Test user response with no phone"""

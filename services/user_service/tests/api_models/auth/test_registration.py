@@ -5,7 +5,7 @@ Tests for user registration request models
 import pytest
 from datetime import date
 from pydantic import ValidationError
-from src.api_models.auth.registration import (
+from api_models.auth.registration import (
     UserRegistrationRequest,
     UserRegistrationResponse,
     RegistrationSuccessResponse,
@@ -29,8 +29,8 @@ def test_valid_registration_data():
     assert req.password == "SecurePassword123!"
     assert req.first_name == "John"
     assert req.last_name == "Doe"
-    # Phone is sanitized to digits only
-    assert req.phone == "15551234567"
+    # Phone is stored as provided (sanitization happens in controller)
+    assert req.phone == "+1-555-123-4567"
     assert req.date_of_birth == date(1990, 5, 15)
     assert req.marketing_emails_consent is True
 
@@ -48,7 +48,7 @@ def test_username_validation():
 
 
 def test_username_invalid_characters():
-    # Username with special chars - sanitization removes them
+    # Username with special chars - stored as provided (validation happens in controller)
     req = UserRegistrationRequest(
         username="john<doe>123",
         email="test@example.com",
@@ -56,8 +56,8 @@ def test_username_invalid_characters():
         first_name="John",
         last_name="Doe"
     )
-    # Sanitization removes < and > characters
-    assert req.username == "john123"
+    # Username is stored as provided (validation happens in controller)
+    assert req.username == "john<doe>123"
 
 
 def test_username_starts_or_ends_with_underscore():
@@ -214,8 +214,8 @@ def test_phone_validation():
         last_name="Doe",
         phone="+1-555-123-4567"
     )
-    # Phone is sanitized to digits only
-    assert req.phone == "15551234567"
+    # Phone is stored as provided (validation happens in controller)
+    assert req.phone == "+1-555-123-4567"
 
 
 def test_phone_valid_formats():
@@ -227,20 +227,21 @@ def test_phone_valid_formats():
         last_name="Doe",
         phone="(123) 456-7890"
     )
-    # Phone is sanitized to digits only
-    assert req.phone == "1234567890"
+    # Phone is stored as provided (validation happens in controller)
+    assert req.phone == "(123) 456-7890"
 
 
 def test_phone_invalid_format():
-    with pytest.raises(ValidationError):
-        UserRegistrationRequest(
-            username="johndoe",
-            email="test@example.com",
-            password="SecurePassword123!",
-            first_name="John",
-            last_name="Doe",
-            phone="123"  # Too short
-        )
+    # Phone validation now happens in controller, not in API model
+    req = UserRegistrationRequest(
+        username="johndoe",
+        email="test@example.com",
+        password="SecurePassword123!",
+        first_name="John",
+        last_name="Doe",
+        phone="123"  # Too short - will be validated in controller
+    )
+    assert req.phone == "123"
 
 
 def test_date_of_birth_validation():

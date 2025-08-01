@@ -26,9 +26,24 @@ from exceptions import (
     UserAlreadyExistsException,
     UserRegistrationException,
     UserValidationException,
-    InternalServerException,
+    InternalServerException
 )
 from controllers.token_utilis import create_access_token
+
+# Import validation functions
+from validation.field_validators import (
+    validate_username,
+    validate_name,
+    validate_email,
+    validate_phone,
+    validate_password,
+    validate_date_of_birth
+)
+from validation.business_validators import (
+    validate_username_uniqueness,
+    validate_email_uniqueness,
+    validate_age_requirements
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["register"])
@@ -75,19 +90,19 @@ async def register_user(
     )
 
     try:
-        # Check if username already exists
-        existing_user_by_username = await user_dao.get_user_by_username(user_data.username)
-        if existing_user_by_username:
-            raise UserAlreadyExistsException(
-                f"Username '{user_data.username}' already exists"
-            )
+        # Field validation - validate format and sanitize input
+        validate_username(user_data.username)
+        validate_name(user_data.first_name)
+        validate_name(user_data.last_name)
+        validate_email(user_data.email)
+        validate_phone(user_data.phone)
+        validate_password(user_data.password)
+        validate_date_of_birth(user_data.date_of_birth)
 
-        # Check if email already exists
-        existing_user_by_email = await user_dao.get_user_by_email(user_data.email)
-        if existing_user_by_email:
-            raise UserAlreadyExistsException(
-                f"Email '{user_data.email}' already exists"
-            )
+        # Business validation - check business rules
+        await validate_username_uniqueness(user_data.username, user_dao)
+        await validate_email_uniqueness(user_data.email, user_dao)
+        validate_age_requirements(user_data.date_of_birth)
 
         # Transform API model to DAO model - proper field mapping
         user_create = UserCreate(

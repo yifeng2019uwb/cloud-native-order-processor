@@ -1,9 +1,9 @@
 """
 Order update models for modifying existing orders.
-Limited fields that can be updated after order creation.
+Simple DB constraints only - validation handled by service layer.
 """
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
@@ -12,7 +12,7 @@ from .enums import OrderStatus
 
 
 class OrderUpdate(BaseModel):
-    """Model for updating existing orders (limited fields)"""
+    """Model for updating existing orders with simple DB constraints only"""
 
     status: Optional[OrderStatus] = Field(
         None,
@@ -35,22 +35,6 @@ class OrderUpdate(BaseModel):
         None,
         description="Order completion timestamp"
     )
-
-    @field_validator("executed_quantity")
-    @classmethod
-    def validate_executed_quantity(cls, v):
-        """Validate executed quantity is positive"""
-        if v is not None and v <= 0:
-            raise ValueError("Executed quantity must be greater than 0")
-        return v
-
-    @field_validator("executed_price")
-    @classmethod
-    def validate_executed_price(cls, v):
-        """Validate executed price is positive"""
-        if v is not None and v <= 0:
-            raise ValueError("Executed price must be greater than 0")
-        return v
 
     class Config:
         json_schema_extra = {

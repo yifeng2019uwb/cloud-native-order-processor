@@ -27,6 +27,12 @@ from controllers.token_utilis import create_access_token
 # Import exceptions
 from exceptions import InvalidCredentialsException
 
+# Import validation functions
+from validation.field_validators import (
+    validate_username,
+    validate_password
+)
+
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["authentication"])
 
@@ -56,6 +62,10 @@ async def login_user(
     """Authenticate user with username and password"""
     try:
         logger.info(f"Login attempt for: {login_data.username}")
+
+        # Field validation - validate format and sanitize input
+        validate_username(login_data.username)
+        validate_password(login_data.password)
 
         # Authenticate user using username
         user = await user_dao.authenticate_user(login_data.username, login_data.password)

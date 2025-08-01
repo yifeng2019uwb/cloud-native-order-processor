@@ -25,9 +25,13 @@ from common.database import get_asset_dao
 # Import internal exceptions
 from exceptions import (
     AssetNotFoundException,
+    AssetValidationException,
     InternalServerException,
     DatabaseOperationException
 )
+
+# Import validation
+from validation.field_validators import validate_asset_id
 
 # Import metrics
 try:
@@ -152,23 +156,30 @@ async def get_asset_by_id(
     try:
         logger.info(f"Asset details requested for: {asset_id}")
 
+        # Field validation - validate format and sanitize input
+        validated_asset_id = validate_asset_id(asset_id)
+
         # Get asset from database
-        asset = await asset_dao.get_asset_by_id(asset_id.upper())
+        asset = await asset_dao.get_asset_by_id(validated_asset_id)
 
         if not asset:
-            logger.warning(f"Asset not found: {asset_id}")
+            logger.warning(f"Asset not found: {validated_asset_id}")
             # Use internal exception for proper handling
-            raise AssetNotFoundException(f"Asset '{asset_id}' not found")
+            raise AssetNotFoundException(f"Asset '{validated_asset_id}' not found")
 
         logger.info(f"Asset found: {asset.name} ({asset.asset_id})")
 
         # Record metrics if available
         if METRICS_AVAILABLE:
-            record_asset_detail_view(asset_id=asset_id)
+            record_asset_detail_view(asset_id=validated_asset_id)
 
         # Convert to detailed response model
         return asset_to_detail_response(asset)
 
+    except AssetValidationException as e:
+        # Handle validation errors
+        logger.warning(f"Validation error for asset_id '{asset_id}': {str(e)}")
+        raise AssetValidationException(f"Invalid asset ID: {str(e)}")
     except Exception as e:
         logger.error(f"Failed to get asset {asset_id}: {str(e)}", exc_info=True)
         # Convert to internal server exception for proper handling

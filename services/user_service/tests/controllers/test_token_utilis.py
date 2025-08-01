@@ -1,5 +1,5 @@
 import pytest
-from src.controllers.token_utilis import (
+from controllers.token_utilis import (
     create_access_token, verify_access_token, JWTError, JWT_SECRET, JWT_ALGORITHM,
     decode_token_payload, is_token_expired, get_token_expiration
 )

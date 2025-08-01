@@ -47,16 +47,18 @@ def test_user_profile_update_request_valid():
 
 # --- First/last name validation ---
 def test_user_profile_update_request_first_name_invalid():
-    with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(first_name="John1")
-    with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(first_name="J@hn")
+    # Validation now happens in controller, not in API model
+    req = UserProfileUpdateRequest(first_name="John1")
+    assert req.first_name == "John1"
+    req = UserProfileUpdateRequest(first_name="J@hn")
+    assert req.first_name == "J@hn"
 
 def test_user_profile_update_request_last_name_invalid():
-    with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(last_name="Doe1")
-    with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(last_name="D0e")
+    # Validation now happens in controller, not in API model
+    req = UserProfileUpdateRequest(last_name="Doe1")
+    assert req.last_name == "Doe1"
+    req = UserProfileUpdateRequest(last_name="D0e")
+    assert req.last_name == "D0e"
 
 def test_user_profile_update_request_first_last_name_valid():
     req = UserProfileUpdateRequest(first_name="John", last_name="Doe")
@@ -65,12 +67,14 @@ def test_user_profile_update_request_first_last_name_valid():
 
 # --- Phone validation ---
 def test_user_profile_update_request_phone_too_short():
-    with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(phone="12345")
+    # Validation now happens in controller, not in API model
+    req = UserProfileUpdateRequest(phone="12345")
+    assert req.phone == "12345"
 
 def test_user_profile_update_request_phone_too_long():
-    with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(phone="1"*20)
+    # Validation now happens in controller, not in API model
+    req = UserProfileUpdateRequest(phone="1"*20)
+    assert req.phone == "1"*20
 
 def test_user_profile_update_request_phone_valid():
     req = UserProfileUpdateRequest(phone="(123) 456-7890")
@@ -78,19 +82,22 @@ def test_user_profile_update_request_phone_valid():
 
 # --- Date of birth validation ---
 def test_user_profile_update_request_dob_in_future():
+    # Validation now happens in controller, not in API model
     future_date = date.today() + timedelta(days=1)
-    with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(date_of_birth=future_date)
+    req = UserProfileUpdateRequest(date_of_birth=future_date)
+    assert req.date_of_birth == future_date
 
 def test_user_profile_update_request_dob_under_13():
+    # Validation now happens in controller, not in API model
     under_13 = date.today() - timedelta(days=12*365)
-    with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(date_of_birth=under_13)
+    req = UserProfileUpdateRequest(date_of_birth=under_13)
+    assert req.date_of_birth == under_13
 
 def test_user_profile_update_request_dob_over_120():
+    # Validation now happens in controller, not in API model
     over_120 = date.today() - timedelta(days=121*365)
-    with pytest.raises(ValidationError):
-        UserProfileUpdateRequest(date_of_birth=over_120)
+    req = UserProfileUpdateRequest(date_of_birth=over_120)
+    assert req.date_of_birth == over_120
 
 def test_user_profile_update_request_dob_valid():
     valid_dob = date.today() - timedelta(days=20*365)

@@ -25,7 +25,20 @@ from controllers.token_utilis import verify_access_token
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 # Import exceptions
-from exceptions import UserNotFoundException, TokenExpiredException
+from exceptions import UserNotFoundException, TokenExpiredException, UserAlreadyExistsException
+from common.exceptions.shared_exceptions import UserValidationException
+
+# Import validation functions
+from validation.field_validators import (
+    validate_name,
+    validate_email,
+    validate_phone,
+    validate_date_of_birth
+)
+from validation.business_validators import (
+    validate_email_uniqueness,
+    validate_age_requirements
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["profile"])
@@ -134,6 +147,24 @@ async def update_profile(
     try:
         logger.info(f"Profile update attempt by user: {current_user.username}")
 
+        # Field validation - validate format and sanitize input
+        if profile_data.first_name:
+            validate_name(profile_data.first_name)
+        if profile_data.last_name:
+            validate_name(profile_data.last_name)
+        if profile_data.email:
+            validate_email(profile_data.email)
+        if profile_data.phone:
+            validate_phone(profile_data.phone)
+        if profile_data.date_of_birth:
+            validate_date_of_birth(profile_data.date_of_birth)
+
+        # Business validation - check business rules
+        if profile_data.email and profile_data.email != current_user.email:
+            await validate_email_uniqueness(profile_data.email, user_dao)
+        if profile_data.date_of_birth:
+            validate_age_requirements(profile_data.date_of_birth)
+
         updated_user = await user_dao.update_user(
             username=current_user.username,
             email=profile_data.email,
@@ -159,14 +190,8 @@ async def update_profile(
             )
         )
 
-    except (UserNotFoundException, TokenExpiredException, HTTPException):
+    except (UserNotFoundException, TokenExpiredException, HTTPException, UserValidationException, UserAlreadyExistsException):
         raise
-    except ValueError as e:
-        logger.warning(f"Profile update validation failed for {current_user.username}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(e)
-        )
     except Exception as e:
         logger.error(f"Profile update failed for user {current_user.username}: {str(e)}")
         raise HTTPException(

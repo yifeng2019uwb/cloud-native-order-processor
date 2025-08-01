@@ -1,7 +1,7 @@
 import pytest
 from fastapi import HTTPException, status
 from unittest.mock import AsyncMock, patch, MagicMock
-from src.controllers.auth.login import login_user
+from controllers.auth.login import login_user
 from api_models.auth.login import UserLoginRequest
 from exceptions import InvalidCredentialsException
 import pydantic
@@ -18,6 +18,7 @@ async def test_login_valid_credentials_patch_login_only():
     mock_user.marketing_emails_consent = True
     mock_user.created_at = "2024-01-01T00:00:00Z"
     mock_user.updated_at = "2024-01-02T00:00:00Z"
+    mock_user.role = "user"  # Provide a proper role value
 
     mock_user_dao = AsyncMock()
     mock_user_dao.authenticate_user = AsyncMock(return_value=mock_user)
@@ -29,7 +30,7 @@ async def test_login_valid_credentials_patch_login_only():
         "token_type": "bearer",
         "expires_in": 3600
     }
-    with patch("src.controllers.auth.login.create_access_token", return_value=token_dict):
+    with patch("controllers.auth.login.create_access_token", return_value=token_dict):
         result = await login_user(login_data, user_dao=mock_user_dao)
         assert result.access_token == "token123"
         assert result.token_type == "bearer"

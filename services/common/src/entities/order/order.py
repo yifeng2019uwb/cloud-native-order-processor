@@ -223,13 +223,7 @@ class Order(BaseModel):
         """Get most recent status transition"""
         return self.status_history[-1] if self.status_history else None
 
-    @field_validator("executed_quantity")
-    @classmethod
-    def validate_executed_quantity(cls, v, info):
-        """Validate executed quantity doesn't exceed total quantity"""
-        if "quantity" in info.data and v > info.data["quantity"]:
-            raise ValueError("Executed quantity cannot exceed total quantity")
-        return v
+
 
     def validate_order_state(self) -> List[str]:
         """Validate order state for business rules"""

@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from .base_dao import BaseDAO
 from ..entities.asset import Asset, AssetCreate, AssetUpdate
 
+
 logger = logging.getLogger(__name__)
 
 

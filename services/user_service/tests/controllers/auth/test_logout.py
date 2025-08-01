@@ -1,7 +1,7 @@
 import pytest
 from fastapi import HTTPException
 from unittest.mock import patch, MagicMock
-from src.controllers.auth.logout import logout_user
+from controllers.auth.logout import logout_user
 from api_models.auth.logout import LogoutRequest, LogoutSuccessResponse
 
 @pytest.mark.asyncio

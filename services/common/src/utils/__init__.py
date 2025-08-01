@@ -1,13 +1,9 @@
 """
-Utilities module for common functionality
+Common Utilities Package
+
+Provides shared utility functions across all services.
 """
 
-from .sanitizer import sanitize_string, sanitize_username, sanitize_email, sanitize_phone, is_suspicious
+# No utilities in common - each service implements its own utilities
 
-__all__ = [
-    "sanitize_string",
-    "sanitize_username",
-    "sanitize_email",
-    "sanitize_phone",
-    "is_suspicious"
-]
+__all__ = []
