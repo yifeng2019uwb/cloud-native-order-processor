@@ -1,5 +1,6 @@
 from inventory_service.src.api_models.inventory.asset_response import AssetDetailResponse, asset_to_detail_response
 import types
+from datetime import datetime, timezone
 
 def test_asset_detail_response_creation():
     resp = AssetDetailResponse(
@@ -9,7 +10,8 @@ def test_asset_detail_response_creation():
         category='crypto',
         price_usd=1.0,
         is_active=True,
-        availability_status='available'
+        availability_status='available',
+        last_updated=datetime.now(timezone.utc)
     )
     assert resp.asset_id == 'BTC'
     assert resp.name == 'Bitcoin'

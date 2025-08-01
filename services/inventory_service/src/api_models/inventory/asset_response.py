@@ -2,7 +2,7 @@
 Asset response models for inventory service API
 Path: services/inventory-service/src/api_models/inventory/asset_response.py
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -49,8 +49,8 @@ class AssetResponse(BaseModel):
     # Note: We exclude 'amount' (inventory quantity) from public response for security
     # Note: We exclude created_at/updated_at as they're not needed for public viewing
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "asset_id": "BTC",
                 "name": "Bitcoin",
@@ -60,6 +60,7 @@ class AssetResponse(BaseModel):
                 "is_active": True
             }
         }
+    )
 
 
 class AssetDetailResponse(BaseModel):
@@ -98,22 +99,30 @@ class AssetDetailResponse(BaseModel):
     # For individual asset view, we can show availability status without exact amounts
     availability_status: str = Field(
         ...,
-        description="Availability status",
-        example="available"  # available, limited, out_of_stock
+        description="Human-readable availability status",
+        example="Available"
     )
 
-    class Config:
-        json_schema_extra = {
+    # Additional metadata for detailed view
+    last_updated: datetime = Field(
+        ...,
+        description="Last time asset data was updated"
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "asset_id": "BTC",
                 "name": "Bitcoin",
-                "description": "Bitcoin is a decentralized digital currency that can be transferred on the peer-to-peer bitcoin network.",
+                "description": "Digital currency and store of value",
                 "category": "major",
                 "price_usd": 45000.50,
                 "is_active": True,
-                "availability_status": "available"
+                "availability_status": "Available",
+                "last_updated": "2025-07-09T10:30:00Z"
             }
         }
+    )
 
 
 class AssetListResponse(BaseModel):
@@ -192,6 +201,10 @@ def asset_to_detail_response(asset) -> AssetDetailResponse:
     else:
         availability_status = "available"
 
+    # Use current time if asset doesn't have updated_at field
+    from datetime import datetime, timezone
+    last_updated = getattr(asset, 'updated_at', datetime.now(timezone.utc))
+
     return AssetDetailResponse(
         asset_id=asset.asset_id,
         name=asset.name,
@@ -199,5 +212,6 @@ def asset_to_detail_response(asset) -> AssetDetailResponse:
         category=asset.category,
         price_usd=asset.price_usd,
         is_active=asset.is_active,
-        availability_status=availability_status
+        availability_status=availability_status,
+        last_updated=last_updated
     )

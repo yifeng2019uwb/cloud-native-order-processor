@@ -2,11 +2,18 @@
 Inventory Service Validation Package
 
 Provides validation logic specific to the inventory service.
-Only validates API request fields (GET endpoints only).
+Layer 1: Field validation (format, sanitization)
+Layer 2: Business validation (existence checks, business rules)
 """
 
 from .field_validators import validate_asset_id
+from .business_validators import validate_asset_exists, validate_asset_is_active
 
 __all__ = [
-    'validate_asset_id'
+    # Layer 1: Field validation
+    'validate_asset_id',
+
+    # Layer 2: Business validation
+    'validate_asset_exists',
+    'validate_asset_is_active'
 ]

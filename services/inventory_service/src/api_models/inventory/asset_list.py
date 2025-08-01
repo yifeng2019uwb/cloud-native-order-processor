@@ -2,14 +2,18 @@
 Asset list request and response models for inventory service API
 Path: services/inventory-service/src/api_models/inventory/asset_list.py
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional
 
 from .asset_response import AssetResponse
 
 
 class AssetListRequest(BaseModel):
-    """Query parameters for asset list endpoint"""
+    """Query parameters for asset list endpoint
+
+    Layer 1: Field validation (format, sanitization) - handled by Pydantic @field_validator
+    Layer 2: Business validation - handled by centralized functions in controllers
+    """
 
     active_only: Optional[bool] = Field(
         True,
@@ -25,13 +29,14 @@ class AssetListRequest(BaseModel):
         example=20
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "active_only": True,
                 "limit": 20
             }
         }
+    )
 
 
 class AssetListResponse(BaseModel):
@@ -64,8 +69,8 @@ class AssetListResponse(BaseModel):
 
     # available_categories field removed - category filtering not exposed via API
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "assets": [
                     {
@@ -95,6 +100,7 @@ class AssetListResponse(BaseModel):
                 # "available_categories": ["major", "altcoin", "stablecoin"]  # Removed
             }
         }
+    )
 
 
 class AssetSummary(BaseModel):

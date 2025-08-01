@@ -17,6 +17,7 @@ from api_models.inventory.asset_list import (
     AssetListResponse,
     build_asset_list_response
 )
+from api_models.inventory.asset_requests import AssetIdRequest
 
 # Import common DAO
 from common.dao.asset_dao import AssetDAO
@@ -26,12 +27,11 @@ from common.database import get_asset_dao
 from exceptions import (
     AssetNotFoundException,
     AssetValidationException,
-    InternalServerException,
-    DatabaseOperationException
+    InternalServerException
 )
 
-# Import validation
-from validation.field_validators import validate_asset_id
+# Import business validation functions (Layer 2)
+from validation.business_validators import validate_asset_exists
 
 # Import metrics
 try:
@@ -151,33 +151,32 @@ async def get_asset_by_id(
     """
     Get detailed information about a specific asset
 
+    Layer 1: Field validation already handled in API models
+    Layer 2: Business validation (existence checks, etc.)
+
     - **asset_id**: The asset symbol/identifier (e.g., "BTC", "ETH")
     """
     try:
         logger.info(f"Asset details requested for: {asset_id}")
 
-        # Field validation - validate format and sanitize input
-        validated_asset_id = validate_asset_id(asset_id)
+        # Layer 1: Field validation already handled by API model
+        # Layer 2: Business validation - check if asset exists
+        await validate_asset_exists(asset_id, asset_dao)
 
-        # Get asset from database
-        asset = await asset_dao.get_asset_by_id(validated_asset_id)
-
-        if not asset:
-            logger.warning(f"Asset not found: {validated_asset_id}")
-            # Use internal exception for proper handling
-            raise AssetNotFoundException(f"Asset '{validated_asset_id}' not found")
+        # Get asset from database (already validated to exist)
+        asset = await asset_dao.get_asset_by_id(asset_id)
 
         logger.info(f"Asset found: {asset.name} ({asset.asset_id})")
 
         # Record metrics if available
         if METRICS_AVAILABLE:
-            record_asset_detail_view(asset_id=validated_asset_id)
+            record_asset_detail_view(asset_id=asset_id)
 
         # Convert to detailed response model
         return asset_to_detail_response(asset)
 
     except AssetValidationException as e:
-        # Handle validation errors
+        # Handle validation errors (from API model)
         logger.warning(f"Validation error for asset_id '{asset_id}': {str(e)}")
         raise AssetValidationException(f"Invalid asset ID: {str(e)}")
     except Exception as e:
