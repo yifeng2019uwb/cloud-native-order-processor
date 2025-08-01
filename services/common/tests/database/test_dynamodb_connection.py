@@ -122,8 +122,7 @@ class TestDynamoDBManager:
         'AWS_REGION': 'us-west-2'
     })
     @patch('src.database.dynamodb_connection.boto3.Session')
-    @pytest.mark.asyncio
-    async def test_health_check_success(self, mock_boto3_session):
+    def test_health_check_success(self, mock_boto3_session):
         mock_session = MagicMock()
         mock_resource = MagicMock()
         mock_users_table = MagicMock()
@@ -137,7 +136,7 @@ class TestDynamoDBManager:
         mock_inventory_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-inventory-table'}}
 
         manager = DynamoDBManager()
-        result = await manager.health_check()
+        result = manager.health_check()
         assert result is True
         mock_users_table.meta.client.describe_table.assert_called_once_with(TableName='test-users-table')
         mock_orders_table.meta.client.describe_table.assert_called_once_with(TableName='test-orders-table')
@@ -150,8 +149,7 @@ class TestDynamoDBManager:
         'AWS_REGION': 'us-west-2'
     })
     @patch('src.database.dynamodb_connection.boto3.Session')
-    @pytest.mark.asyncio
-    async def test_health_check_failure(self, mock_boto3_session):
+    def test_health_check_failure(self, mock_boto3_session):
         mock_session = MagicMock()
         mock_resource = MagicMock()
         mock_users_table = MagicMock()
@@ -163,7 +161,7 @@ class TestDynamoDBManager:
         mock_users_table.meta.client.describe_table.side_effect = Exception("Table not found")
 
         manager = DynamoDBManager()
-        result = await manager.health_check()
+        result = manager.health_check()
         assert result is False
 
     @patch.dict(os.environ, {
@@ -173,8 +171,7 @@ class TestDynamoDBManager:
         'AWS_REGION': 'us-west-2'
     })
     @patch('src.database.dynamodb_connection.boto3.Session')
-    @pytest.mark.asyncio
-    async def test_get_connection_context_manager(self, mock_boto3_session):
+    def test_get_connection(self, mock_boto3_session):
         mock_session = MagicMock()
         mock_resource = MagicMock()
         mock_users_table = MagicMock()
@@ -185,37 +182,11 @@ class TestDynamoDBManager:
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
 
         manager = DynamoDBManager()
-        async with manager.get_connection() as connection:
-            assert isinstance(connection, DynamoDBConnection)
-            assert connection.users_table == mock_users_table
-            assert connection.orders_table == mock_orders_table
-            assert connection.inventory_table == mock_inventory_table
-
-    @patch.dict(os.environ, {
-        'USERS_TABLE': 'test-users-table',
-        'ORDERS_TABLE': 'test-orders-table',
-        'INVENTORY_TABLE': 'test-inventory-table',
-        'AWS_REGION': 'us-west-2'
-    })
-    @patch('src.database.dynamodb_connection.boto3.Session')
-    @pytest.mark.asyncio
-    async def test_get_connection_exception_handling(self, mock_boto3_session):
-        mock_session = MagicMock()
-        mock_resource = MagicMock()
-        mock_users_table = MagicMock()
-        mock_orders_table = MagicMock()
-        mock_inventory_table = MagicMock()
-        mock_boto3_session.return_value = mock_session
-        mock_session.resource.return_value = mock_resource
-        mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
-        mock_users_table.meta.client.describe_table.side_effect = Exception("Table not found")
-
-        manager = DynamoDBManager()
-        try:
-            async with manager.get_connection() as connection:
-                pass
-        except Exception as e:
-            assert str(e) == "Table not found"
+        connection = manager.get_connection()
+        assert isinstance(connection, DynamoDBConnection)
+        assert connection.users_table == mock_users_table
+        assert connection.orders_table == mock_orders_table
+        assert connection.inventory_table == mock_inventory_table
 
 
 class TestDynamoDBConnection:
@@ -256,55 +227,30 @@ class TestDynamoDBConnection:
 
 
 class TestGetDynamoDBFunction:
-    """Test get_dynamodb FastAPI dependency function"""
+    """Test get_dynamodb function"""
 
     @patch('src.database.dynamodb_connection.dynamodb_manager')
-    @pytest.mark.asyncio
-    async def test_get_dynamodb_dependency(self, mock_manager):
+    def test_get_dynamodb_dependency(self, mock_manager):
         """Test get_dynamodb FastAPI dependency function"""
         # Create mock connection
         mock_connection = Mock()
-
-        # Create a proper async context manager
-        @asynccontextmanager
-        async def mock_get_connection():
-            yield mock_connection
-
-        mock_manager.get_connection = mock_get_connection
+        mock_manager.get_connection.return_value = mock_connection
 
         # Test the dependency function
-        async_gen = get_dynamodb()
-        connection = await async_gen.__anext__()
-
-        # Verify we get the connection
-        assert connection == mock_connection
-
-        # Test cleanup (shouldn't raise exception)
-        try:
-            await async_gen.__anext__()
-        except StopAsyncIteration:
-            pass  # Expected behavior
+        result = get_dynamodb()
+        assert result == mock_connection
+        mock_manager.get_connection.assert_called_once()
 
     @patch('src.database.dynamodb_connection.dynamodb_manager')
-    @pytest.mark.asyncio
-    async def test_get_dynamodb_dependency_with_exception(self, mock_manager):
+    def test_get_dynamodb_dependency_with_exception(self, mock_manager):
         """Test get_dynamodb dependency handles exceptions"""
         # Create mock connection that raises exception
-        @asynccontextmanager
-        async def mock_get_connection():
-            try:
-                yield Mock()
-            except Exception:
-                pass  # Context manager should handle cleanup
-
-        mock_manager.get_connection = mock_get_connection
+        mock_manager.get_connection.side_effect = Exception("Connection failed")
 
         # Test the dependency function
-        async_gen = get_dynamodb()
-        connection = await async_gen.__anext__()
-
-        # Should still get a connection
-        assert connection is not None
+        with pytest.raises(Exception) as exc_info:
+            get_dynamodb()
+        assert "Connection failed" in str(exc_info.value)
 
 
 class TestGlobalDynamoDBManager:
@@ -366,15 +312,15 @@ class TestDynamoDBIntegration:
         mock_inventory_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-inventory-table'}}
 
         manager = DynamoDBManager()
-        health_result = await manager.health_check()
+        health_result = manager.health_check()
         assert health_result is True
-        async with manager.get_connection() as connection:
-            assert hasattr(connection, 'users_table')
-            assert hasattr(connection, 'orders_table')
-            assert hasattr(connection, 'inventory_table')
-            assert connection.users_table == mock_users_table
-            assert connection.orders_table == mock_orders_table
-            assert connection.inventory_table == mock_inventory_table
+        connection = manager.get_connection()
+        assert hasattr(connection, 'users_table')
+        assert hasattr(connection, 'orders_table')
+        assert hasattr(connection, 'inventory_table')
+        assert connection.users_table == mock_users_table
+        assert connection.orders_table == mock_orders_table
+        assert connection.inventory_table == mock_inventory_table
 
     @patch.dict(os.environ, {
         'USERS_TABLE': 'test-users-table',

@@ -29,16 +29,16 @@ class UserDAO(BaseDAO):
         """Verify password against hash"""
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
-    async def create_user(self, user_create: UserCreate) -> User:
+    def create_user(self, user_create: UserCreate) -> User:
         """Create a new user"""
         try:
             # Check if username already exists
-            existing_user_by_username = await self.get_user_by_username(user_create.username)
+            existing_user_by_username = self.get_user_by_username(user_create.username)
             if existing_user_by_username:
                 raise ValueError(f"User with username {user_create.username} already exists")
 
             # Check if email already exists
-            existing_user_by_email = await self.get_user_by_email(user_create.email)
+            existing_user_by_email = self.get_user_by_email(user_create.email)
             if existing_user_by_email:
                 raise ValueError(f"User with email {user_create.email} already exists")
 
@@ -78,7 +78,7 @@ class UserDAO(BaseDAO):
             logger.error(f"Failed to create user: {e}")
             raise
 
-    async def get_user_by_username(self, username: str) -> Optional[User]:
+    def get_user_by_username(self, username: str) -> Optional[User]:
         """Get user by username (Primary Key lookup)"""
         try:
             logger.info(f"🔍 DEBUG: Looking up user by username: '{username}'")
@@ -111,7 +111,7 @@ class UserDAO(BaseDAO):
             logger.error(f"Failed to get user by username {username}: {e}")
             raise
 
-    async def get_user_by_email(self, email: str) -> Optional[User]:
+    def get_user_by_email(self, email: str) -> Optional[User]:
         """Get user by email (GSI lookup)"""
         try:
             items = self._safe_query(
@@ -141,112 +141,116 @@ class UserDAO(BaseDAO):
             logger.error(f"Failed to get user by email {email}: {e}")
             raise
 
-    async def authenticate_user(self, username: str, password: str) -> Optional[User]:
+    def authenticate_user(self, username: str, password: str) -> Optional[User]:
         """Authenticate user with username and password"""
         try:
-            # Get user by username only
-            user = await self.get_user_by_username(username)
-
+            user = self.get_user_by_username(username)
             if not user:
                 return None
 
-            # Get the full user record with password hash for verification
-            key = {
-                'user_id': user.username
-            }
-
+            # Get the stored password hash
+            key = {'user_id': username}
             item = self._safe_get_item(self.db.users_table, key)
             if not item:
                 return None
 
-            # Verify password
-            if not self._verify_password(password, item['password_hash']):
+            stored_hash = item.get('password_hash')
+            if not stored_hash:
+                logger.error(f"No password hash found for user {username}")
                 return None
 
-            return user
+            # Verify password
+            if self._verify_password(password, stored_hash):
+                return user
+            else:
+                return None
 
         except Exception as e:
             logger.error(f"Failed to authenticate user {username}: {e}")
             raise
 
-    async def update_user(self, username: str, email: Optional[str] = None,
-                         first_name: Optional[str] = None, last_name: Optional[str] = None,  # FIXED: Split parameters
-                         phone: Optional[str] = None) -> Optional[User]:
-        """Update user profile"""
+    def update_user(self, username: str, email: Optional[str] = None,
+                    first_name: Optional[str] = None, last_name: Optional[str] = None,  # FIXED: Split parameters
+                    phone: Optional[str] = None) -> Optional[User]:
+        """Update user information"""
         try:
-            updates = {}
-            if email is not None:
-                # Check if new email already exists (for another user)
-                existing_user = await self.get_user_by_email(email)
-                if existing_user and existing_user.username != username:
-                    raise ValueError(f"Email {email} is already in use by another user")
-                updates['email'] = email
-            if first_name is not None:  # FIXED: Split field
-                updates['first_name'] = first_name
-            if last_name is not None:   # FIXED: Split field
-                updates['last_name'] = last_name
-            if phone is not None:
-                updates['phone'] = phone
+            # Check if user exists
+            existing_user = self.get_user_by_username(username)
+            if not existing_user:
+                logger.warning(f"User {username} not found for update")
+                return None
 
-            if not updates:
-                # No updates provided, just return current user
-                return await self.get_user_by_username(username)
-
-            # Build update expression
-            set_clauses = []
+            # Build update expression and values
+            update_parts = []
             expression_values = {}
+            expression_names = {}
 
-            for field, value in updates.items():
-                set_clauses.append(f"{field} = :{field}")
-                expression_values[f":{field}"] = value
+            if email is not None:
+                update_parts.append("#email = :email")
+                expression_values[":email"] = email
+                expression_names["#email"] = "email"
 
-            # Always update timestamp
-            set_clauses.append("updated_at = :updated_at")
+            if first_name is not None:
+                update_parts.append("#first_name = :first_name")
+                expression_values[":first_name"] = first_name
+                expression_names["#first_name"] = "first_name"
+
+            if last_name is not None:
+                update_parts.append("#last_name = :last_name")
+                expression_values[":last_name"] = last_name
+                expression_names["#last_name"] = "last_name"
+
+            if phone is not None:
+                update_parts.append("#phone = :phone")
+                expression_values[":phone"] = phone
+                expression_names["#phone"] = "phone"
+
+            # Always update the updated_at timestamp
+            update_parts.append("#updated_at = :updated_at")
             expression_values[":updated_at"] = datetime.utcnow().isoformat()
+            expression_names["#updated_at"] = "updated_at"
 
-            update_expression = "SET " + ", ".join(set_clauses)
+            if not update_parts:
+                logger.warning(f"No fields to update for user {username}")
+                return existing_user
 
-            key = {
-                'user_id': username
-            }
+            update_expression = "SET " + ", ".join(update_parts)
 
-            item = self._safe_update_item(
+            # Perform the update
+            key = {'user_id': username}
+            updated_item = self._safe_update_item(
                 self.db.users_table,
                 key,
                 update_expression,
-                expression_values
+                expression_values,
+                expression_names
             )
 
-            if not item:
+            if not updated_item:
+                logger.error(f"Failed to update user {username}")
                 return None
 
+            # Return updated user
             return User(
-                username=item['username'],
-                email=item['email'],
-                first_name=item.get('first_name', ''),  # FIXED: Split field with fallback
-                last_name=item.get('last_name', ''),    # FIXED: Split field with fallback
-                phone=item.get('phone'),
-                created_at=datetime.fromisoformat(item['created_at']),
-                updated_at=datetime.fromisoformat(item['updated_at'])
+                username=updated_item['username'],
+                email=updated_item['email'],
+                first_name=updated_item.get('first_name', ''),
+                last_name=updated_item.get('last_name', ''),
+                phone=updated_item.get('phone'),
+                role=updated_item.get('role', DEFAULT_USER_ROLE),
+                created_at=datetime.fromisoformat(updated_item['created_at']),
+                updated_at=datetime.fromisoformat(updated_item['updated_at'])
             )
 
         except Exception as e:
             logger.error(f"Failed to update user {username}: {e}")
             raise
 
-    async def delete_user(self, username: str) -> bool:
-        """Delete user by username"""
+    def delete_user(self, username: str) -> bool:
+        """Delete a user by username"""
         try:
-            key = {
-                'user_id': username
-            }
-
-            success = self._safe_delete_item(self.db.users_table, key)
-
-            if success:
-                logger.info(f"User deleted successfully: {username}")
-
-            return success
+            key = {'user_id': username}
+            return self._safe_delete_item(self.db.users_table, key)
 
         except Exception as e:
             logger.error(f"Failed to delete user {username}: {e}")

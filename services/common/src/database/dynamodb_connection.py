@@ -1,9 +1,8 @@
 # services/common/database/dynamodb_connection.py
 import os
 import boto3
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +65,7 @@ class DynamoDBManager:
 
         logger.info(f"DynamoDB initialized - Users: {self.users_table_name}, Orders: {self.orders_table_name}, Inventory: {self.inventory_table_name}")
 
-    async def health_check(self) -> bool:
+    def health_check(self) -> bool:
         """Check if all DynamoDB tables are accessible"""
         try:
             # Test connection by describing tables
@@ -78,15 +77,9 @@ class DynamoDBManager:
             logger.error(f"DynamoDB health check failed: {e}")
             return False
 
-    @asynccontextmanager
-    async def get_connection(self) -> AsyncGenerator['DynamoDBConnection', None]:
+    def get_connection(self) -> 'DynamoDBConnection':
         """Get DynamoDB connection wrapper"""
-        connection = DynamoDBConnection(self.users_table, self.orders_table, self.inventory_table)
-        try:
-            yield connection
-        finally:
-            # DynamoDB doesn't need explicit connection cleanup
-            pass
+        return DynamoDBConnection(self.users_table, self.orders_table, self.inventory_table)
 
 
 class DynamoDBConnection:
@@ -107,7 +100,6 @@ dynamodb_manager = DynamoDBManager()
 
 
 # ✅ FastAPI dependency for getting database connection
-async def get_dynamodb():
+def get_dynamodb():
     """FastAPI dependency to get DynamoDB connection"""
-    async with dynamodb_manager.get_connection() as conn:
-        yield conn
+    return dynamodb_manager.get_connection()

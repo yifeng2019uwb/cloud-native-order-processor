@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 class AssetDAO(BaseDAO):
     """Data Access Object for asset operations"""
 
-    async def create_asset(self, asset_create: AssetCreate) -> Asset:
+    def create_asset(self, asset_create: AssetCreate) -> Asset:
         try:
-            existing_asset = await self.get_asset_by_id(asset_create.asset_id)
+            existing_asset = self.get_asset_by_id(asset_create.asset_id)
             if existing_asset:
                 raise ValueError(f"Asset with ID {asset_create.asset_id} already exists")
 
@@ -71,7 +71,7 @@ class AssetDAO(BaseDAO):
             logger.error(f"Failed to create asset: {e}")
             raise
 
-    async def get_asset_by_id(self, asset_id: str) -> Optional[Asset]:
+    def get_asset_by_id(self, asset_id: str) -> Optional[Asset]:
         try:
             key = {'product_id': asset_id}
             item = self._safe_get_item(self.db.inventory_table, key)
@@ -101,7 +101,7 @@ class AssetDAO(BaseDAO):
             logger.error(f"Failed to get asset by ID {asset_id}: {e}")
             raise
 
-    async def get_all_assets(self, active_only: bool = False) -> List[Asset]:
+    def get_all_assets(self, active_only: bool = False) -> List[Asset]:
         """Get all assets, optionally filter by active status"""
         try:
             logger.info(f"🔍 DEBUG: Getting all assets, active_only: {active_only}")
@@ -148,7 +148,7 @@ class AssetDAO(BaseDAO):
             logger.error(f"Failed to get all assets: {e}")
             raise
 
-    async def get_assets_by_category(self, category: str) -> List[Asset]:
+    def get_assets_by_category(self, category: str) -> List[Asset]:
         """Get assets by category"""
         try:
             logger.info(f"🔍 DEBUG: Getting assets by category: '{category}'")
@@ -192,7 +192,7 @@ class AssetDAO(BaseDAO):
             logger.error(f"Failed to get assets by category {category}: {e}")
             raise
 
-    async def update_asset(self, asset_id: str, asset_update: AssetUpdate) -> Optional[Asset]:
+    def update_asset(self, asset_id: str, asset_update: AssetUpdate) -> Optional[Asset]:
         try:
             updates = {}
             for field in [
@@ -203,7 +203,7 @@ class AssetDAO(BaseDAO):
                 if value is not None:
                     updates[field] = value
             if not updates:
-                return await self.get_asset_by_id(asset_id)
+                return self.get_asset_by_id(asset_id)
             set_clauses = []
             expression_values = {}
             for field, value in updates.items():
@@ -245,7 +245,7 @@ class AssetDAO(BaseDAO):
             logger.error(f"Failed to update asset {asset_id}: {e}")
             raise
 
-    async def delete_asset(self, asset_id: str) -> bool:
+    def delete_asset(self, asset_id: str) -> bool:
         """Delete asset by asset_id"""
         try:
             key = {
@@ -263,7 +263,7 @@ class AssetDAO(BaseDAO):
             logger.error(f"Failed to delete asset {asset_id}: {e}")
             raise
 
-    async def update_asset_price(self, asset_id: str, new_price: float) -> Optional[Asset]:
+    def update_asset_price(self, asset_id: str, new_price: float) -> Optional[Asset]:
         """Update only the price of an asset (convenience method)"""
         try:
             asset_update = AssetUpdate(price_usd=new_price)
@@ -272,37 +272,37 @@ class AssetDAO(BaseDAO):
             if new_price == 0:
                 asset_update.is_active = False
 
-            return await self.update_asset(asset_id, asset_update)
+            return self.update_asset(asset_id, asset_update)
 
         except Exception as e:
             logger.error(f"Failed to update price for asset {asset_id}: {e}")
             raise
 
-    async def update_asset_amount(self, asset_id: str, new_amount: float) -> Optional[Asset]:
+    def update_asset_amount(self, asset_id: str, new_amount: float) -> Optional[Asset]:
         """Update only the amount of an asset (convenience method for inventory management)"""
         try:
             asset_update = AssetUpdate(amount=new_amount)
-            return await self.update_asset(asset_id, asset_update)
+            return self.update_asset(asset_id, asset_update)
 
         except Exception as e:
             logger.error(f"Failed to update amount for asset {asset_id}: {e}")
             raise
 
-    async def deactivate_asset(self, asset_id: str) -> Optional[Asset]:
+    def deactivate_asset(self, asset_id: str) -> Optional[Asset]:
         """Deactivate an asset (convenience method)"""
         try:
             asset_update = AssetUpdate(is_active=False)
-            return await self.update_asset(asset_id, asset_update)
+            return self.update_asset(asset_id, asset_update)
 
         except Exception as e:
             logger.error(f"Failed to deactivate asset {asset_id}: {e}")
             raise
 
-    async def activate_asset(self, asset_id: str) -> Optional[Asset]:
+    def activate_asset(self, asset_id: str) -> Optional[Asset]:
         """Activate an asset (only if price > 0)"""
         try:
             # First check if asset has valid price
-            asset = await self.get_asset_by_id(asset_id)
+            asset = self.get_asset_by_id(asset_id)
             if not asset:
                 raise ValueError(f"Asset {asset_id} not found")
 
@@ -310,16 +310,16 @@ class AssetDAO(BaseDAO):
                 raise ValueError(f"Cannot activate asset {asset_id} with zero or negative price")
 
             asset_update = AssetUpdate(is_active=True)
-            return await self.update_asset(asset_id, asset_update)
+            return self.update_asset(asset_id, asset_update)
 
         except Exception as e:
             logger.error(f"Failed to activate asset {asset_id}: {e}")
             raise
 
-    async def get_asset_stats(self) -> Dict[str, Any]:
+    def get_asset_stats(self) -> Dict[str, Any]:
         """Get summary statistics about assets"""
         try:
-            all_assets = await self.get_all_assets()
+            all_assets = self.get_all_assets()
             active_assets = [asset for asset in all_assets if asset.is_active]
 
             total_value = sum(asset.amount * asset.price_usd for asset in active_assets)

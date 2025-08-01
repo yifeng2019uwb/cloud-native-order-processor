@@ -21,31 +21,21 @@ async def test_get_user_dao_success():
     # Test the common database dependency
     from common.database import get_user_dao
 
-    # Patch the async context manager for get_connection
-    class AsyncContextManager:
-        async def __aenter__(self):
-            return MagicMock()
-        async def __aexit__(self, exc_type, exc, tb):
-            pass
-    with patch("common.database.dependencies.dynamodb_manager.get_connection", return_value=AsyncContextManager()), \
-         patch("common.database.dependencies.UserDAO", return_value="user_dao_instance"):
-        gen = get_user_dao()
-        result = await anext(gen)
+    # Patch the UserDAO constructor
+    with patch("common.database.dependencies.UserDAO", return_value="user_dao_instance"), \
+         patch("common.database.dependencies.dynamodb_manager.get_connection", return_value="mock_connection"):
+        result = get_user_dao()
         assert result == "user_dao_instance"
+
 
 @pytest.mark.asyncio
 async def test_get_user_dao_error():
     from common.database import get_user_dao
 
-    class AsyncContextManager:
-        async def __aenter__(self):
-            raise Exception("fail")
-        async def __aexit__(self, exc_type, exc, tb):
-            pass
-    with patch("common.database.dependencies.dynamodb_manager.get_connection", return_value=AsyncContextManager()):
-        gen = get_user_dao()
+    # Patch to raise an exception
+    with patch("common.database.dependencies.dynamodb_manager.get_connection", side_effect=Exception("fail")):
         with pytest.raises(Exception) as exc_info:
-            await anext(gen)
+            get_user_dao()
         assert "fail" in str(exc_info.value)
 
 @pytest.mark.asyncio
