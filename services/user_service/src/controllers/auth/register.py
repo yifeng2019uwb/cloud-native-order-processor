@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import Union
 import logging
 from datetime import datetime, timezone
+from decimal import Decimal
 
 # Import user-service API models (same directory structure)
 from api_models.auth.registration import (
@@ -19,10 +20,10 @@ from api_models.auth.registration import (
 from api_models.shared.common import ErrorResponse
 
 # Import common DAO models - simple imports
-from common.entities.user import UserCreate, User
+from common.entities.user import UserCreate, User, Balance
 
 # Import dependencies and simplified exceptions
-from common.database import get_user_dao
+from common.database import get_user_dao, get_balance_dao
 from user_exceptions import (
     UserNotFoundException,
     UserAlreadyExistsException,
@@ -69,7 +70,8 @@ router = APIRouter(tags=["register"])
 async def register_user(
     user_data: UserRegistrationRequest,
     request: Request,
-    user_dao = Depends(get_user_dao)
+    user_dao = Depends(get_user_dao),
+    balance_dao = Depends(get_balance_dao)
 ) -> RegistrationSuccessResponse:
     """
     Register a new user account with comprehensive validation and security
@@ -106,6 +108,15 @@ async def register_user(
 
         # Create the user via DAO
         created_user = await user_dao.create_user(user_create)
+
+        # Create initial balance record with 0 balance
+        initial_balance = Balance(
+            user_id=created_user.user_id,
+            current_balance=Decimal('0.00'),
+            total_deposits=Decimal('0.00'),
+            total_withdrawals=Decimal('0.00')
+        )
+        await balance_dao.create_balance(initial_balance)
 
         # Log successful registration
         logger.info(f"User registered successfully: {user_data.username}")

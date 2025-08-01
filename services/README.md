@@ -2,11 +2,12 @@
 
 ## 🏗️ Architecture Overview
 
-This project implements a **microservices architecture** with three main components:
+This project implements a **microservices architecture** with four main components:
 
 1. **API Gateway** (Go/Gin) - Entry point, authentication, rate limiting ✅ **WORKING**
-2. **User Service** (FastAPI) - Authentication, user management, JWT tokens ✅ **WORKING**
-3. **Inventory Service** (FastAPI) - Asset management, public inventory data ✅ **WORKING**
+2. **User Service** (FastAPI) - Authentication, user management, balance management ✅ **WORKING**
+3. **Order Service** (FastAPI) - Order processing, trading operations ✅ **IN DEVELOPMENT**
+4. **Inventory Service** (FastAPI) - Asset management, public inventory data ✅ **WORKING**
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -16,12 +17,12 @@ This project implements a **microservices architecture** with three main compone
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                               │
                               ▼
-                       ┌─────────────────┐
-                       │ Inventory       │
-                       │ Service         │
-                       │ (FastAPI)       │
-                       │ ✅ WORKING       │
-                       └─────────────────┘
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │ Order Service   │    │ Inventory       │
+                       │ (FastAPI)       │    │ Service         │
+                       │ 🔄 IN DEV       │    │ (FastAPI)       │
+                       └─────────────────┘    │ ✅ WORKING       │
+                                              └─────────────────┘
 ```
 
 ## 🔐 Security Model
@@ -31,8 +32,39 @@ This project implements a **microservices architecture** with three main compone
 - **Health Checks**: Service status endpoints ✅ **WORKING**
 
 ### **Authenticated Access (JWT Required)**
-- **User Service**: Login, registration, profile management ✅ **WORKING**
+- **User Service**: Login, registration, profile management, balance operations ✅ **WORKING**
+- **Order Service**: Order creation, management, cancellation 🔄 **IN DEVELOPMENT**
 - **API Gateway**: All authenticated endpoints ✅ **WORKING**
+
+## 💰 Order-Balance Integration
+
+### **Market Order Flow**
+```
+Market Buy Order:
+1. User creates order → Order Service validates balance
+2. If sufficient balance → Create order + ORDER_PAYMENT transaction
+3. Update user balance (deduct funds)
+4. Return success/fail to user
+
+Market Sell Order:
+1. User creates order → Order Service creates order
+2. When order executes → Create ORDER_PAYMENT transaction (receive funds)
+3. Update user balance (add funds)
+4. Return success/fail to user
+```
+
+### **Balance Management**
+- **Automatic balance creation** on user registration
+- **Transaction history** for all balance changes
+- **Real-time balance updates** for order operations
+- **Balance validation** before order creation
+
+### **Transaction Types**
+- `DEPOSIT` - User adds money to account
+- `WITHDRAW` - User takes money out
+- `ORDER_PAYMENT` - Money spent/received from orders
+- `ORDER_REFUND` - Money returned from cancelled orders
+- `SYSTEM_ADJUSTMENT` - System corrections
 
 ### **JWT Flow** ✅ **WORKING**
 ```
@@ -46,13 +78,15 @@ This project implements a **microservices architecture** with three main compone
 
 ### **1. User Service** (`services/user_service/`) ✅ **WORKING**
 
-**Purpose**: User authentication and management
+**Purpose**: User authentication, management, and balance operations
 
 **Key Features**:
 - ✅ JWT token generation and validation
 - ✅ User registration and login
 - ✅ Password authentication
 - ✅ User profile management
+- ✅ **Balance management** (deposits, withdrawals, transactions)
+- ✅ **Account balance tracking** with transaction history
 - ✅ Secure exception handling
 - ✅ CloudWatch logging (Lambda ready)
 - ✅ **AWS DynamoDB integration** ✅ **WORKING**
@@ -65,6 +99,10 @@ POST /register           - User registration ✅
 GET  /me                 - Get user profile ✅
 PUT  /profile            - Update user profile ✅
 POST /logout             - User logout ✅
+GET  /users/{id}/balance - Get user balance ✅
+POST /users/{id}/deposit - Deposit funds ✅
+POST /users/{id}/withdraw- Withdraw funds ✅
+GET  /users/{id}/transactions - Transaction history ✅
 GET  /health             - Health check ✅
 ```
 
@@ -74,7 +112,37 @@ GET  /health             - Health check ✅
 - **Authentication**: JWT (PyJWT)
 - **Deployment**: Lambda/Kubernetes ready ✅ **WORKING**
 
-### **2. Inventory Service** (`services/inventory_service/`) ✅ **WORKING**
+### **2. Order Service** (`services/order_service/`) 🔄 **IN DEVELOPMENT**
+
+**Purpose**: Order processing and trading operations
+
+**Key Features**:
+- 🔄 **Market order processing** (buy/sell)
+- 🔄 **Order lifecycle management** (creation, execution, completion)
+- 🔄 **Balance validation** before order creation
+- 🔄 **Order-balance integration** with automatic transactions
+- 🔄 **Order history and tracking**
+- 🔄 **Secure exception handling**
+- 🔄 **AWS DynamoDB integration** via common package
+- 🔄 **Fresh AWS credentials**
+
+**API Endpoints**:
+```
+POST /orders                    - Create new order 🔄
+GET  /orders/{id}              - Get order details 🔄
+GET  /orders                    - List user orders 🔄
+PUT  /orders/{id}/cancel        - Cancel order 🔄
+GET  /orders/{id}/status        - Get order status 🔄
+GET  /health                    - Health check 🔄
+```
+
+**Technology Stack**:
+- **Framework**: FastAPI
+- **Database**: DynamoDB (via common package)
+- **Integration**: User service (balance validation)
+- **Deployment**: Lambda/Kubernetes ready
+
+### **3. Inventory Service** (`services/inventory_service/`) ✅ **WORKING**
 
 **Purpose**: Asset inventory management
 
@@ -92,7 +160,6 @@ GET  /health             - Health check ✅
 ```
 GET  /inventory/assets           - List all assets (public) ✅
 GET  /inventory/assets/{id}      - Get asset details (public) ✅
-POST /inventory/orders           - Place order (authenticated - future)
 GET  /health                     - Health check ✅
 GET  /metrics                    - Service metrics ✅
 ```
@@ -103,16 +170,17 @@ GET  /metrics                    - Service metrics ✅
 - **External API**: CoinGecko integration ✅ **WORKING**
 - **Metrics**: Custom metrics collection ✅ **WORKING**
 
-### **3. Common Package** (`services/common/`) ✅ **WORKING**
+### **4. Common Package** (`services/common/`) ✅ **WORKING**
 
-**Purpose**: Shared utilities and components
+**Purpose**: Shared utilities, components, and order-balance integration
 
 **Components**:
 - **Database**: DynamoDB connection and DAOs ✅ **WORKING**
 - **AWS**: STS client for role assumption ✅ **WORKING**
-- **Entities**: Shared data models ✅ **WORKING**
+- **Entities**: Shared data models (User, Order, Balance, Inventory) ✅ **WORKING**
 - **Health**: Redis health checks ✅ **WORKING**
 - **Examples**: Usage examples and tests ✅ **WORKING**
+- **Order-Balance Integration**: Balance validation and transaction management ✅ **WORKING**
 
 ## 🚀 Development Workflow
 
@@ -148,15 +216,21 @@ GET  /metrics                    - Service metrics ✅
    - ✅ Rate limiting with Redis (planned)
    - ✅ Service discovery
 
-2. **✅ End-to-End Testing**: ✅ **WORKING**
+2. **🔄 Order Service Development**: 🔄 **IN PROGRESS**
+   - 🔄 Order creation with balance validation
+   - 🔄 Order execution and completion
+   - 🔄 Order cancellation and refunds
+   - 🔄 API endpoint implementation
+
+3. **✅ End-to-End Testing**: ✅ **WORKING**
    - ✅ Gateway → User Service authentication
    - ✅ Gateway → Inventory Service proxying
-   - ✅ Rate limiting validation (planned)
+   - 🔄 Gateway → Order Service integration (in progress)
    - ✅ Error handling verification
 
 ### **Future Enhancements**
-- **Order Processing**: Add order placement to inventory service
-- **Payment Integration**: Payment processing for orders
+- **Limit Order Processing**: Advanced order types and hold mechanisms
+- **Payment Integration**: External payment processing for deposits/withdrawals
 - **Advanced Security**: OAuth2, API keys, audit logging
 - **Performance**: Caching, connection pooling, load balancing
 - **Monitoring**: Distributed tracing, advanced metrics
@@ -189,7 +263,16 @@ pip install -r requirements.txt
 python -m uvicorn src.main:app --reload --port 8001
 ```
 
-3. **Start API Gateway**:
+3. **Start Order Service** (when implemented):
+```bash
+cd services/order_service
+python -m venv .venv-order_service
+source .venv-order_service/bin/activate
+pip install -r requirements.txt
+python -m uvicorn src.main:app --reload --port 8002
+```
+
+4. **Start API Gateway**:
 ```bash
 cd gateway
 ./gateway/build.sh --build-only
@@ -213,6 +296,10 @@ cd gateway
 cd services/user_service
 ./build.sh
 
+# Order Service
+cd services/order_service
+./build.sh
+
 # Inventory Service
 cd services/inventory_service
 ./build.sh
@@ -223,6 +310,12 @@ cd services/inventory_service
 **User Service**:
 ```bash
 cd services/user_service
+pytest tests/ -v --cov=src
+```
+
+**Order Service**:
+```bash
+cd services/order_service
 pytest tests/ -v --cov=src
 ```
 
@@ -267,11 +360,13 @@ cd gateway
 
 ### **Health Checks** ✅ **WORKING**
 - **User Service**: `GET /health` ✅
+- **Order Service**: `GET /health` 🔄 (when implemented)
 - **Inventory Service**: `GET /health` ✅
 - **API Gateway**: `GET /health` ✅
 
 ### **Metrics** ✅ **WORKING**
 - **User Service**: Request/response metrics ✅
+- **Order Service**: Order processing metrics 🔄 (when implemented)
 - **Inventory Service**: Asset retrieval metrics ✅
 - **API Gateway**: Rate limiting, proxy metrics ✅
 
@@ -338,6 +433,10 @@ kubectl apply -k kubernetes/dev/
 - **Swagger UI**: `http://localhost:8000/docs` ✅
 - **ReDoc**: `http://localhost:8000/redoc` ✅
 
+### **Order Service**
+- **Swagger UI**: `http://localhost:8002/docs` 🔄 (when implemented)
+- **ReDoc**: `http://localhost:8002/redoc` 🔄 (when implemented)
+
 ### **Inventory Service**
 - **Swagger UI**: `http://localhost:8001/docs` ✅
 - **ReDoc**: `http://localhost:8001/redoc` ✅
@@ -364,7 +463,8 @@ For questions or issues:
 ## 🎯 Current Status Summary
 
 ### **✅ All Core Services Working**
-- **User Service**: Complete authentication system ✅
+- **User Service**: Complete authentication and balance system ✅
+- **Order Service**: Order processing and balance integration 🔄 (in development)
 - **Inventory Service**: Public asset browsing ✅
 - **API Gateway**: JWT validation and proxying ✅
 - **AWS Integration**: Fresh credentials working ✅
