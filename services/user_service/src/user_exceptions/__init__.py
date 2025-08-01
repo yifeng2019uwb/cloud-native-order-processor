@@ -1,6 +1,17 @@
 """
 User service exceptions package
-Path: services/user_service/src/exceptions/__init__.py
+
+TECH DEBT: This module was renamed from 'exceptions' to 'user_exceptions' to avoid
+naming conflicts with the common package's 'exceptions' module. Python's module
+resolution was finding the common package's exceptions module first, causing import
+errors.
+
+TODO: Consider a better long-term solution such as:
+1. Restructuring the common package to avoid the naming conflict
+2. Using namespace packages
+3. Implementing a more robust module resolution strategy
+
+Current path: services/user_service/src/user_exceptions/__init__.py
 """
 
 # Import shared exceptions (mapped to external error codes)
