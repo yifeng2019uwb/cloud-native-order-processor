@@ -8,8 +8,8 @@ from decimal import Decimal
 import httpx
 import asyncio
 
-from common.dao.asset_dao import AssetDAO
-from common.entities.asset import AssetCreate
+from common.dao.inventory import AssetDAO
+from common.entities.inventory import AssetCreate
 from common.database.dynamodb_connection import dynamodb_manager
 
 logger = logging.getLogger(__name__)

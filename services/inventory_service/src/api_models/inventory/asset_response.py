@@ -178,7 +178,7 @@ class AssetListResponse(BaseModel):
 
 # Helper function to convert DAO Asset model to API response model
 def asset_to_response(asset) -> AssetResponse:
-    """Convert common.entities.asset.Asset to AssetResponse"""
+    """Convert common.entities.inventory.Asset to AssetResponse"""
     return AssetResponse(
         asset_id=asset.asset_id,
         name=asset.name,
@@ -190,7 +190,7 @@ def asset_to_response(asset) -> AssetResponse:
 
 
 def asset_to_detail_response(asset) -> AssetDetailResponse:
-    """Convert common.entities.asset.Asset to AssetDetailResponse"""
+    """Convert common.entities.inventory.Asset to AssetDetailResponse"""
     # Determine availability status based on amount and active status
     if not asset.is_active:
         availability_status = "unavailable"
