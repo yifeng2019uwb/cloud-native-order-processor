@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from common.dao.asset_dao import AssetDAO
 from common.entities.asset import AssetCreate, Asset, AssetUpdate
+from common.exceptions.shared_exceptions import EntityAlreadyExistsException, AssetNotFoundException, AssetValidationException
 
 
 class TestAssetDAO:
@@ -150,16 +151,35 @@ class TestAssetDAO:
         assert call_args['symbol'] == 'BTC'
         assert call_args['image'].startswith('https://')
 
-    def test_create_asset_already_exists(self, asset_dao, sample_asset_create, sample_asset):
-        """Test creating asset that already exists"""
+    def test_create_asset_already_exists(self, asset_dao, sample_asset_create, mock_db_connection):
+        """Test create asset when asset already exists"""
         # Mock that asset already exists
-        asset_dao.get_asset_by_id = Mock(return_value=sample_asset)
+        existing_asset = Asset(
+            asset_id=sample_asset_create.asset_id,
+            name='Existing Asset',
+            description='Existing description',
+            category='major',
+            amount=Decimal('5.0'),
+            price_usd=50000.0,
+            symbol='BTC',
+            image='https://example.com/image.png',
+            market_cap_rank=1,
+            high_24h=52000.0,
+            low_24h=48000.0,
+            circulating_supply=19400000.0,
+            price_change_24h=1000.0,
+            ath_change_percentage=-5.0,
+            market_cap=1000000000000.0,
+            is_active=True,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC)
+        )
+        asset_dao.get_asset_by_id = Mock(return_value=existing_asset)
 
-        # Should raise ValueError
-        with pytest.raises(ValueError) as exc_info:
+        # Should raise EntityAlreadyExistsException
+        with pytest.raises(EntityAlreadyExistsException) as exc_info:
             asset_dao.create_asset(sample_asset_create)
-
-        assert "Asset with ID BTC already exists" in str(exc_info.value)
+        assert f"Asset with ID {sample_asset_create.asset_id} already exists" in str(exc_info.value)
 
     def test_create_asset_database_error(self, asset_dao, sample_asset_create, mock_db_connection):
         """Test create asset with database error"""
@@ -732,60 +752,75 @@ class TestAssetDAO:
         asset_update = call_args[1]
         assert asset_update.is_active is False
 
-    def test_activate_asset_not_found(self, asset_dao):
-        """Test activate asset when asset not found"""
-        # Mock get_asset_by_id to return None
+    def test_activate_asset_not_found(self, asset_dao, mock_db_connection):
+        """Test activate asset that doesn't exist"""
+        # Mock that asset doesn't exist
         asset_dao.get_asset_by_id = Mock(return_value=None)
 
-        # Should raise ValueError
-        with pytest.raises(ValueError) as exc_info:
+        # Should raise AssetNotFoundException
+        with pytest.raises(AssetNotFoundException) as exc_info:
             asset_dao.activate_asset('NONEXISTENT')
-
         assert "Asset NONEXISTENT not found" in str(exc_info.value)
 
-    def test_activate_asset_zero_price(self, asset_dao):
+    def test_activate_asset_zero_price(self, asset_dao, mock_db_connection):
         """Test activate asset with zero price"""
-        # Mock get_asset_by_id to return asset with zero price
-        zero_price_asset = Asset(
-            asset_id="BTC",
-            name="Bitcoin",
-            description="Digital currency",
-            category="major",
-            amount=10.5,
-            price_usd=0.0,
+        # Mock asset with zero price
+        asset_with_zero_price = Asset(
+            asset_id='ZERO_PRICE',
+            name='Zero Price Asset',
+            description='Asset with zero price',
+            category='minor',
+            amount=Decimal('10.0'),
+            price_usd=0.0,  # Zero price
+            symbol='ZERO',
+            image='https://example.com/zero.png',
+            market_cap_rank=1000,
+            high_24h=0.0,
+            low_24h=0.0,
+            circulating_supply=1000000.0,
+            price_change_24h=0.0,
+            ath_change_percentage=0.0,
+            market_cap=0.0,
             is_active=False,
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC)
         )
-        asset_dao.get_asset_by_id = Mock(return_value=zero_price_asset)
+        asset_dao.get_asset_by_id = Mock(return_value=asset_with_zero_price)
 
-        # Should raise ValueError
-        with pytest.raises(ValueError) as exc_info:
-            asset_dao.activate_asset('BTC')
+        # Should raise AssetValidationException
+        with pytest.raises(AssetValidationException) as exc_info:
+            asset_dao.activate_asset('ZERO_PRICE')
+        assert "Cannot activate asset ZERO_PRICE with zero or negative price" in str(exc_info.value)
 
-        assert "Cannot activate asset BTC with zero or negative price" in str(exc_info.value)
-
-    def test_activate_asset_negative_price(self, asset_dao):
+    def test_activate_asset_negative_price(self, asset_dao, mock_db_connection):
         """Test activate asset with negative price"""
-        # Mock get_asset_by_id to return asset with negative price
-        negative_price_asset = Asset(
-            asset_id="BTC",
-            name="Bitcoin",
-            description="Digital currency",
-            category="major",
-            amount=10.5,
-            price_usd=-100.0,
+        # Mock asset with negative price
+        asset_with_negative_price = Asset(
+            asset_id='NEGATIVE_PRICE',
+            name='Negative Price Asset',
+            description='Asset with negative price',
+            category='minor',
+            amount=Decimal('10.0'),
+            price_usd=-10.0,  # Negative price
+            symbol='NEG',
+            image='https://example.com/negative.png',
+            market_cap_rank=1000,
+            high_24h=-5.0,
+            low_24h=-15.0,
+            circulating_supply=1000000.0,
+            price_change_24h=-5.0,
+            ath_change_percentage=-20.0,
+            market_cap=-10000000.0,
             is_active=False,
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC)
         )
-        asset_dao.get_asset_by_id = Mock(return_value=negative_price_asset)
+        asset_dao.get_asset_by_id = Mock(return_value=asset_with_negative_price)
 
-        # Should raise ValueError
-        with pytest.raises(ValueError) as exc_info:
-            asset_dao.activate_asset('BTC')
-
-        assert "Cannot activate asset BTC with zero or negative price" in str(exc_info.value)
+        # Should raise AssetValidationException
+        with pytest.raises(AssetValidationException) as exc_info:
+            asset_dao.activate_asset('NEGATIVE_PRICE')
+        assert "Cannot activate asset NEGATIVE_PRICE with zero or negative price" in str(exc_info.value)
 
     def test_activate_asset_database_error(self, asset_dao):
         """Test activate asset with database error"""

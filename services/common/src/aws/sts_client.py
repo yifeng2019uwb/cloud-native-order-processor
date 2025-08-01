@@ -5,83 +5,81 @@ Handles both local development and Kubernetes environments
 import os
 import boto3
 import logging
-from typing import Optional
-from botocore.exceptions import ClientError
+from typing import Optional, Dict, Any
+from botocore.exceptions import ClientError, NoCredentialsError
+
+from ..exceptions.shared_exceptions import InternalServerException
 
 logger = logging.getLogger(__name__)
 
 class STSClient:
     """AWS STS client for role assumption"""
 
-    def __init__(self, role_arn: Optional[str] = None):
-        self.role_arn = role_arn or os.getenv('AWS_ROLE_ARN')
-        self.session = None
+    def __init__(self):
+        """Initialize STS client"""
+        self.region = os.getenv('AWS_REGION')
+        if not self.region:
+            raise InternalServerException("AWS_REGION environment variable is required")
 
-    def get_credentials(self):
-        """Get AWS credentials via role assumption or local config"""
+        self.session = boto3.Session(region_name=self.region)
+        self.sts_client = self.session.client('sts')
 
-        # Check if we're in Kubernetes with IRSA
-        if os.getenv('AWS_WEB_IDENTITY_TOKEN_FILE'):
-            logger.info("Using IRSA credentials from Kubernetes")
-            region = os.getenv('AWS_REGION')
-            if not region:
-                raise ValueError("AWS_REGION environment variable is required")
-            return boto3.Session(region_name=region)
-
-        # Check if we have a role to assume
-        if self.role_arn:
-            logger.info(f"Assuming role: {self.role_arn}")
-            return self._assume_role()
-
-        # Fallback to local credentials
-        logger.info("Using local AWS credentials")
-        region = os.getenv('AWS_REGION')
-        if not region:
-            raise ValueError("AWS_REGION environment variable is required")
-        return boto3.Session(region_name=region)
-
-    def _assume_role(self):
-        """Assume the specified IAM role"""
+    def get_caller_identity(self) -> Dict[str, Any]:
+        """Get current AWS caller identity"""
         try:
-            # Get region from environment
-            region = os.getenv('AWS_REGION')
-            if not region:
-                raise ValueError("AWS_REGION environment variable is required")
-            sts_client = boto3.client('sts', region_name=region)
+            if not self.region:
+                raise InternalServerException("AWS_REGION environment variable is required")
 
-            # Assume role with session name
-            session_name = f"order-processor-{os.getenv('ENVIRONMENT', 'dev')}"
-
-            response = sts_client.assume_role(
-                RoleArn=self.role_arn,
-                RoleSessionName=session_name
-            )
-
-            # Create session with temporary credentials and region
-            self.session = boto3.Session(
-                aws_access_key_id=response['Credentials']['AccessKeyId'],
-                aws_secret_access_key=response['Credentials']['SecretAccessKey'],
-                aws_session_token=response['Credentials']['SessionToken'],
-                region_name=region
-            )
-
-            logger.info(f"Successfully assumed role: {self.role_arn} in region: {region}")
-            return self.session
-
+            response = self.sts_client.get_caller_identity()
+            return response
+        except NoCredentialsError:
+            logger.error("No AWS credentials found")
+            raise InternalServerException("AWS credentials not configured")
         except ClientError as e:
-            logger.error(f"Failed to assume role: {e}")
-            # Fallback to local credentials with region
-            region = os.getenv('AWS_REGION')
-            if not region:
-                raise ValueError("AWS_REGION environment variable is required")
-            return boto3.Session(region_name=region)
+            logger.error(f"AWS STS error: {e}")
+            raise InternalServerException(f"AWS STS error: {e}")
+
+    def assume_role(self, role_arn: str, role_session_name: str,
+                   duration_seconds: int = 3600) -> Dict[str, Any]:
+        """Assume an IAM role"""
+        try:
+            if not self.region:
+                raise InternalServerException("AWS_REGION environment variable is required")
+
+            response = self.sts_client.assume_role(
+                RoleArn=role_arn,
+                RoleSessionName=role_session_name,
+                DurationSeconds=duration_seconds
+            )
+            return response
+        except NoCredentialsError:
+            logger.error("No AWS credentials found")
+            raise InternalServerException("AWS credentials not configured")
+        except ClientError as e:
+            logger.error(f"AWS STS assume role error: {e}")
+            raise InternalServerException(f"AWS STS assume role error: {e}")
+
+    def get_session_token(self, duration_seconds: int = 3600) -> Dict[str, Any]:
+        """Get temporary session token"""
+        try:
+            if not self.region:
+                raise InternalServerException("AWS_REGION environment variable is required")
+
+            response = self.sts_client.get_session_token(
+                DurationSeconds=duration_seconds
+            )
+            return response
+        except NoCredentialsError:
+            logger.error("No AWS credentials found")
+            raise InternalServerException("AWS credentials not configured")
+        except ClientError as e:
+            logger.error(f"AWS STS get session token error: {e}")
+            raise InternalServerException(f"AWS STS get session token error: {e}")
 
     def get_client(self, service_name: str):
         """Get AWS client for specified service"""
-        session = self.get_credentials()
-        return session.client(service_name)
+        return self.session.client(service_name)
 
     def get_resource(self, service_name: str):
         """Get AWS resource for specified service"""
-        session = self.get_credentials()
-        return session.resource(service_name)
+        return self.session.resource(service_name)

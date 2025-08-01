@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from .base_dao import BaseDAO
 from ..entities.asset import Asset, AssetCreate, AssetUpdate
+from ..exceptions.shared_exceptions import EntityAlreadyExistsException, AssetNotFoundException, AssetValidationException
 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ class AssetDAO(BaseDAO):
         try:
             existing_asset = self.get_asset_by_id(asset_create.asset_id)
             if existing_asset:
-                raise ValueError(f"Asset with ID {asset_create.asset_id} already exists")
+                raise EntityAlreadyExistsException(f"Asset with ID {asset_create.asset_id} already exists")
 
             now = datetime.now(UTC).isoformat()
             asset_item = {
@@ -304,10 +305,10 @@ class AssetDAO(BaseDAO):
             # First check if asset has valid price
             asset = self.get_asset_by_id(asset_id)
             if not asset:
-                raise ValueError(f"Asset {asset_id} not found")
+                raise AssetNotFoundException(f"Asset {asset_id} not found")
 
             if asset.price_usd <= 0:
-                raise ValueError(f"Cannot activate asset {asset_id} with zero or negative price")
+                raise AssetValidationException(f"Cannot activate asset {asset_id} with zero or negative price")
 
             asset_update = AssetUpdate(is_active=True)
             return self.update_asset(asset_id, asset_update)

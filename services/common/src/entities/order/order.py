@@ -4,12 +4,13 @@ Contains the main Order class for database operations.
 """
 
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from decimal import Decimal
 
 from .enums import OrderType, OrderStatus
 from .utils import OrderStatusManager, OrderStatusTransition
+from ...exceptions.shared_exceptions import OrderValidationException
 
 
 class Order(BaseModel):
@@ -192,7 +193,7 @@ class Order(BaseModel):
         )
 
         if not is_valid:
-            raise ValueError(f"Invalid status transition: {error_msg}")
+            raise OrderValidationException(f"Invalid status transition: {error_msg}")
 
         # Record the transition
         transition = OrderStatusTransition(

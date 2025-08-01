@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from .base_dao import BaseDAO
 from ..entities.user import User, UserCreate, UserLogin
 from ..entities.user_enums import DEFAULT_USER_ROLE
+from ..exceptions.shared_exceptions import EntityAlreadyExistsException
 
 
 logger = logging.getLogger(__name__)
@@ -35,12 +36,12 @@ class UserDAO(BaseDAO):
             # Check if username already exists
             existing_user_by_username = self.get_user_by_username(user_create.username)
             if existing_user_by_username:
-                raise ValueError(f"User with username {user_create.username} already exists")
+                raise EntityAlreadyExistsException(f"User with username {user_create.username} already exists")
 
             # Check if email already exists
             existing_user_by_email = self.get_user_by_email(user_create.email)
             if existing_user_by_email:
-                raise ValueError(f"User with email {user_create.email} already exists")
+                raise EntityAlreadyExistsException(f"User with email {user_create.email} already exists")
 
             # Hash password
             password_hash = self._hash_password(user_create.password)

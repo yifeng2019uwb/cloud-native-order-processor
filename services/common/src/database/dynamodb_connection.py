@@ -3,6 +3,9 @@ import os
 import boto3
 import logging
 from typing import Optional
+from botocore.exceptions import ClientError, NoCredentialsError
+
+from ..exceptions.shared_exceptions import InternalServerException
 
 logger = logging.getLogger(__name__)
 
@@ -35,22 +38,23 @@ class DynamoDBManager:
     """DynamoDB Manager - Only handles connections and table references"""
 
     def __init__(self):
-        # ✅ Get table names from environment variables (set by Terraform)
-        self.users_table_name = os.getenv("USERS_TABLE")
-        self.orders_table_name = os.getenv("ORDERS_TABLE")
-        self.inventory_table_name = os.getenv("INVENTORY_TABLE")
-
-        # ✅ Validate required tables are configured
+        """Initialize DynamoDB manager with table references"""
+        # Get environment variables
+        self.users_table_name = os.getenv('USERS_TABLE')
         if not self.users_table_name:
-            raise ValueError("USERS_TABLE environment variable not found")
-        if not self.orders_table_name:
-            raise ValueError("ORDERS_TABLE environment variable not found")
-        if not self.inventory_table_name:
-            raise ValueError("INVENTORY_TABLE environment variable not found")
+            raise InternalServerException("USERS_TABLE environment variable not found")
 
-        self.region = os.getenv("AWS_REGION")
+        self.orders_table_name = os.getenv('ORDERS_TABLE')
+        if not self.orders_table_name:
+            raise InternalServerException("ORDERS_TABLE environment variable not found")
+
+        self.inventory_table_name = os.getenv('INVENTORY_TABLE')
+        if not self.inventory_table_name:
+            raise InternalServerException("INVENTORY_TABLE environment variable not found")
+
+        self.region = os.getenv('AWS_REGION')
         if not self.region:
-            raise ValueError("AWS_REGION environment variable is required")
+            raise InternalServerException("AWS_REGION environment variable is required")
 
         # Use the universal session pattern
         session = get_boto3_session()

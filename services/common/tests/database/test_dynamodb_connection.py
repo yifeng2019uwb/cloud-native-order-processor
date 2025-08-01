@@ -16,6 +16,7 @@ os.environ.setdefault('AWS_REGION', 'us-west-2')
 # Mock boto3 before any imports
 with patch('boto3.resource'), patch('boto3.client'):
     from src.database.dynamodb_connection import DynamoDBManager, DynamoDBConnection, get_dynamodb
+    from src.exceptions.shared_exceptions import InternalServerException
 
 
 class TestDynamoDBManager:
@@ -47,38 +48,40 @@ class TestDynamoDBManager:
         assert manager.orders_table == mock_orders_table
         assert manager.inventory_table == mock_inventory_table
 
-    @patch.dict(os.environ, {
-        'ORDERS_TABLE': 'test-orders-table',
-        'INVENTORY_TABLE': 'test-inventory-table'
-    }, clear=True)
-    def test_dynamodb_manager_missing_users_table(self):
-        """Test DynamoDBManager initialization fails when USERS_TABLE is missing"""
-        with pytest.raises(ValueError) as exc_info:
-            DynamoDBManager()
-
+    def test_init_missing_users_table(self):
+        """Test initialization with missing USERS_TABLE environment variable"""
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(InternalServerException) as exc_info:
+                DynamoDBManager()
         assert "USERS_TABLE environment variable not found" in str(exc_info.value)
 
-    @patch.dict(os.environ, {
-        'USERS_TABLE': 'test-users-table',
-        'INVENTORY_TABLE': 'test-inventory-table'
-    }, clear=True)
-    def test_dynamodb_manager_missing_orders_table(self):
-        """Test DynamoDBManager initialization fails when ORDERS_TABLE is missing"""
-        with pytest.raises(ValueError) as exc_info:
-            DynamoDBManager()
-
+    def test_init_missing_orders_table(self):
+        """Test initialization with missing ORDERS_TABLE environment variable"""
+        with patch.dict(os.environ, {'USERS_TABLE': 'test-users'}, clear=True):
+            with pytest.raises(InternalServerException) as exc_info:
+                DynamoDBManager()
         assert "ORDERS_TABLE environment variable not found" in str(exc_info.value)
 
-    @patch.dict(os.environ, {
-        'USERS_TABLE': 'test-users-table',
-        'ORDERS_TABLE': 'test-orders-table'
-    }, clear=True)
-    def test_dynamodb_manager_missing_inventory_table(self):
-        """Test DynamoDBManager initialization fails when INVENTORY_TABLE is missing"""
-        with pytest.raises(ValueError) as exc_info:
-            DynamoDBManager()
-
+    def test_init_missing_inventory_table(self):
+        """Test initialization with missing INVENTORY_TABLE environment variable"""
+        with patch.dict(os.environ, {
+            'USERS_TABLE': 'test-users',
+            'ORDERS_TABLE': 'test-orders'
+        }, clear=True):
+            with pytest.raises(InternalServerException) as exc_info:
+                DynamoDBManager()
         assert "INVENTORY_TABLE environment variable not found" in str(exc_info.value)
+
+    def test_init_missing_aws_region(self):
+        """Test initialization with missing AWS_REGION environment variable"""
+        with patch.dict(os.environ, {
+            'USERS_TABLE': 'test-users',
+            'ORDERS_TABLE': 'test-orders',
+            'INVENTORY_TABLE': 'test-inventory'
+        }, clear=True):
+            with pytest.raises(InternalServerException) as exc_info:
+                DynamoDBManager()
+        assert "AWS_REGION environment variable is required" in str(exc_info.value)
 
     @patch.dict(os.environ, {
         'USERS_TABLE': 'test-users-table',
@@ -86,11 +89,15 @@ class TestDynamoDBManager:
         'INVENTORY_TABLE': 'test-inventory-table'
     }, clear=True)  # Clear AWS_REGION to test error
     def test_dynamodb_manager_missing_region(self):
-        """Test DynamoDBManager fails when AWS_REGION not set"""
-        with pytest.raises(ValueError) as exc_info:
-            DynamoDBManager()
-
-        assert "AWS_REGION environment variable is required" in str(exc_info.value)
+        """Test DynamoDBManager initialization fails when AWS_REGION is missing"""
+        with patch.dict(os.environ, {
+            'USERS_TABLE': 'test-users-table',
+            'ORDERS_TABLE': 'test-orders-table',
+            'INVENTORY_TABLE': 'test-inventory-table'
+        }, clear=True):
+            with pytest.raises(InternalServerException) as exc_info:
+                DynamoDBManager()
+            assert "AWS_REGION environment variable is required" in str(exc_info.value)
 
     @patch.dict(os.environ, {
         'USERS_TABLE': 'test-users-table',

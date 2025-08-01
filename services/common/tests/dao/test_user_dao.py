@@ -7,6 +7,7 @@ import os
 
 from src.dao.user_dao import UserDAO
 from src.entities.user import UserCreate, User, UserLogin
+from src.exceptions.shared_exceptions import EntityAlreadyExistsException
 
 
 class TestUserDAO:
@@ -98,23 +99,40 @@ class TestUserDAO:
         call_args = mock_db_connection.users_table.put_item.call_args[1]['Item']
         assert call_args['user_id'] == sample_user_create.username
 
-    def test_create_user_username_exists(self, user_dao, sample_user_create, sample_user):
-        """Test user creation when username already exists"""
+    def test_create_user_username_exists(self, user_dao, sample_user_create, mock_db_connection):
+        """Test create user with existing username"""
         # Mock that username already exists
-        user_dao.get_user_by_username = Mock(return_value=sample_user)
+        existing_user = User(
+            username=sample_user_create.username,
+            email='existing@example.com',
+            first_name='Existing',
+            last_name='User',
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        user_dao.get_user_by_username = Mock(return_value=existing_user)
+        user_dao.get_user_by_email = Mock(return_value=None)
 
-        # Attempt to create user
-        with pytest.raises(ValueError, match=f"User with username {sample_user_create.username} already exists"):
+        # Should raise EntityAlreadyExistsException
+        with pytest.raises(EntityAlreadyExistsException, match=f"User with username {sample_user_create.username} already exists"):
             user_dao.create_user(sample_user_create)
 
-    def test_create_user_email_exists(self, user_dao, sample_user_create, sample_user):
-        """Test user creation when email already exists"""
-        # Mock that username doesn't exist but email does
+    def test_create_user_email_exists(self, user_dao, sample_user_create, mock_db_connection):
+        """Test create user with existing email"""
+        # Mock that email already exists
+        existing_user = User(
+            username='existing_user',
+            email=sample_user_create.email,
+            first_name='Existing',
+            last_name='User',
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
         user_dao.get_user_by_username = Mock(return_value=None)
-        user_dao.get_user_by_email = Mock(return_value=sample_user)
+        user_dao.get_user_by_email = Mock(return_value=existing_user)
 
-        # Attempt to create user
-        with pytest.raises(ValueError, match=f"User with email {sample_user_create.email} already exists"):
+        # Should raise EntityAlreadyExistsException
+        with pytest.raises(EntityAlreadyExistsException, match=f"User with email {sample_user_create.email} already exists"):
             user_dao.create_user(sample_user_create)
 
     def test_get_user_by_username_found(self, user_dao, mock_db_connection):
