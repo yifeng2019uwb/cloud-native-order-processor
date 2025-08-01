@@ -20,7 +20,7 @@ from validation.business_validators import (
     validate_age_requirements
 )
 from common.exceptions.shared_exceptions import UserValidationException, UserNotFoundException
-from exceptions import UserAlreadyExistsException
+from user_exceptions import UserAlreadyExistsException
 
 
 class TestFieldValidators:

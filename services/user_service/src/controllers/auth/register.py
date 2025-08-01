@@ -23,7 +23,7 @@ from common.entities.user import UserCreate, User
 
 # Import dependencies and simplified exceptions
 from common.database import get_user_dao
-from exceptions import (
+from user_exceptions import (
     UserNotFoundException,
     UserAlreadyExistsException,
     UserRegistrationException,

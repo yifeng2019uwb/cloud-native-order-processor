@@ -6,10 +6,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import jwt, JWTError
 import logging
-from common.entities.user_enums import DEFAULT_USER_ROLE
+from common.entities.user import DEFAULT_USER_ROLE
 
 # Import exceptions
-from exceptions import TokenExpiredException, TokenInvalidException
+from user_exceptions import TokenExpiredException, TokenInvalidException
 
 logger = logging.getLogger(__name__)
 

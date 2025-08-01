@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from controllers.auth.profile import get_profile, update_profile, get_current_user
 from api_models.auth.profile import UserProfileUpdateRequest
 from fastapi.security import HTTPAuthorizationCredentials
-from exceptions import UserNotFoundException, TokenExpiredException, UserAlreadyExistsException
+from user_exceptions import UserNotFoundException, TokenExpiredException, UserAlreadyExistsException
 from datetime import datetime
 
 @pytest.mark.asyncio

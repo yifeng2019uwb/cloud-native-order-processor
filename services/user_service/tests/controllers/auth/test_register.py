@@ -4,11 +4,11 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from controllers.auth.register import register_user
 from api_models.auth.registration import UserRegistrationRequest
 from common.exceptions.shared_exceptions import InternalServerException
-from exceptions import UserAlreadyExistsException
+from user_exceptions import UserAlreadyExistsException
 import pydantic
 from datetime import date, timedelta
 from common.exceptions.shared_exceptions import EntityAlreadyExistsException
-from exceptions import UserValidationException
+from user_exceptions import UserValidationException
 
 @pytest.mark.asyncio
 async def test_register_success():

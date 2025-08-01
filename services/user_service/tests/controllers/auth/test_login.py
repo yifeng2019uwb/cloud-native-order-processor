@@ -3,7 +3,7 @@ from fastapi import HTTPException, status
 from unittest.mock import AsyncMock, patch, MagicMock
 from controllers.auth.login import login_user
 from api_models.auth.login import UserLoginRequest
-from exceptions import InvalidCredentialsException
+from user_exceptions import InvalidCredentialsException
 import pydantic
 
 @pytest.mark.asyncio

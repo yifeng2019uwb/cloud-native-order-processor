@@ -11,7 +11,7 @@ from api_models.auth.registration import (
     RegistrationErrorResponse
 )
 from api_models.shared.common import ErrorResponse
-from exceptions import UserValidationException
+from user_exceptions import UserValidationException
 
 
 def test_valid_registration_data():

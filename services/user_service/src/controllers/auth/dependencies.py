@@ -9,7 +9,7 @@ from jose import JWTError
 import logging
 
 from common.entities.user import UserResponse
-from common.dao.user_dao import UserDAO
+from common.dao.user import UserDAO
 from common.database import get_user_dao as get_common_user_dao
 from controllers.token_utilis import verify_access_token
 

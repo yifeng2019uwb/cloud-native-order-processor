@@ -27,7 +27,7 @@ from common.database import get_user_dao
 from controllers.token_utilis import create_access_token
 
 # Import exceptions
-from exceptions import InvalidCredentialsException
+from user_exceptions import InvalidCredentialsException
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["authentication"])

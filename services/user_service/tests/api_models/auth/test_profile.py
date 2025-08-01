@@ -7,7 +7,7 @@ from api_models.auth.profile import (
     ProfileUpdateErrorResponse
 )
 from datetime import datetime, date, timedelta
-from exceptions import UserValidationException
+from user_exceptions import UserValidationException
 
 # --- UserProfileResponse: Serialization with all fields ---
 def test_user_profile_response_serialization():

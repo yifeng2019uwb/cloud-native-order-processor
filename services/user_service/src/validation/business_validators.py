@@ -9,11 +9,11 @@ from typing import Optional, Any
 from datetime import date
 
 # Import proper exceptions
-from common.exceptions.shared_exceptions import (
+from common.exceptions import (
     UserNotFoundException,
     UserValidationException
 )
-from exceptions import UserAlreadyExistsException
+from user_exceptions import UserAlreadyExistsException
 
 
 async def validate_username_uniqueness(username: str, user_dao: Any, exclude_user_id: Optional[str] = None) -> bool:

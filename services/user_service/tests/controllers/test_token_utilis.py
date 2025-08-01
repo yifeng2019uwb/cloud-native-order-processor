@@ -8,7 +8,7 @@ from controllers.token_utilis import (
     create_access_token, verify_access_token, decode_token_payload,
     is_token_expired, get_token_expiration, JWT_SECRET
 )
-from exceptions import TokenExpiredException, TokenInvalidException
+from user_exceptions import TokenExpiredException, TokenInvalidException
 
 
 def test_create_access_token_returns_valid_jwt():

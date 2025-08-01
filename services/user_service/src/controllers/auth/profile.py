@@ -27,7 +27,7 @@ from common.database import get_user_dao
 from controllers.token_utilis import verify_access_token
 
 # Import exceptions
-from exceptions import (
+from user_exceptions import (
     UserNotFoundException,
     TokenExpiredException,
     UserAlreadyExistsException,
