@@ -8,9 +8,9 @@ from decimal import Decimal
 # Add the common directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from common.dao.asset_dao import AssetDAO
-from common.entities.asset import AssetCreate, Asset, AssetUpdate
-from common.exceptions.shared_exceptions import EntityAlreadyExistsException, AssetNotFoundException, AssetValidationException
+from src.dao.inventory import AssetDAO
+from src.entities.inventory import AssetCreate, Asset, AssetUpdate
+from src.exceptions.shared_exceptions import EntityAlreadyExistsException, AssetNotFoundException, AssetValidationException
 
 
 class TestAssetDAO:
@@ -1101,7 +1101,7 @@ class TestAssetDAO:
         mock_db_connection.inventory_table.put_item.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
 
         # Patch datetime to control the timestamp
-        with patch('common.dao.asset_dao.datetime') as mock_datetime:
+        with patch('src.dao.inventory.asset_dao.datetime') as mock_datetime:
             fixed_time = datetime(2023, 1, 1, 12, 0, 0, tzinfo=UTC)
             mock_datetime.now.return_value = fixed_time
             mock_datetime.fromisoformat = datetime.fromisoformat  # Keep original method

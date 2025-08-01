@@ -1,6 +1,6 @@
 import pytest
 from decimal import Decimal
-from common.entities.asset import AssetCreate, AssetUpdate
+from src.entities.inventory import AssetCreate, AssetUpdate
 from pydantic import ValidationError
 
 def test_asset_create_all_fields():

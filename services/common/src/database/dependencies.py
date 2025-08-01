@@ -9,9 +9,9 @@ import logging
 from fastapi import Depends, HTTPException, status
 
 from .dynamodb_connection import dynamodb_manager
-from ..dao.user_dao import UserDAO
-from ..dao.asset_dao import AssetDAO
-from ..dao.order.order_dao import OrderDAO
+from ..dao.user import UserDAO
+from ..dao.inventory import AssetDAO
+from ..dao.order import OrderDAO
 
 logger = logging.getLogger(__name__)
 

@@ -2,17 +2,13 @@
 Common models package for all services
 """
 
-# Import user enums
-from .user_enums import UserRole, DEFAULT_USER_ROLE, VALID_ROLES
+# Import user entities
+from .user import User, UserCreate, UserLogin, UserResponse, UserRole, DEFAULT_USER_ROLE, VALID_ROLES, LoginRequest, TokenResponse
 
-# Import user models
-from .user import User, UserCreate, UserLogin, UserResponse
-from .auth import LoginRequest, TokenResponse
+# Import asset entities
+from .inventory import Asset, AssetCreate, AssetResponse, AssetUpdate, AssetListResponse
 
-# Import asset models
-from .asset import Asset, AssetCreate, AssetResponse, AssetUpdate, AssetListResponse
-
-# Import order models
+# Import order entities
 from .order import (
     OrderType,
     OrderStatus,

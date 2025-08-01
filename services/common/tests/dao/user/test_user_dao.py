@@ -5,7 +5,7 @@ from datetime import datetime
 import sys
 import os
 
-from src.dao.user_dao import UserDAO
+from src.dao.user import UserDAO
 from src.entities.user import UserCreate, User, UserLogin
 from src.exceptions.shared_exceptions import EntityAlreadyExistsException
 

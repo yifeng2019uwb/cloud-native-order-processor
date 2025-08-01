@@ -8,9 +8,9 @@ import os
 # Add the src directory to Python path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from .base_dao import BaseDAO
-from ..entities.asset import Asset, AssetCreate, AssetUpdate
-from ..exceptions.shared_exceptions import EntityAlreadyExistsException, AssetNotFoundException, AssetValidationException
+from ..base_dao import BaseDAO
+from ...entities.inventory import Asset, AssetCreate, AssetUpdate
+from ...exceptions.shared_exceptions import EntityAlreadyExistsException, AssetNotFoundException, AssetValidationException
 
 
 logger = logging.getLogger(__name__)

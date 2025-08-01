@@ -9,10 +9,10 @@ import os
 # Add the src directory to Python path for editor recognition
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from .base_dao import BaseDAO
-from ..entities.user import User, UserCreate, UserLogin
-from ..entities.user_enums import DEFAULT_USER_ROLE
-from ..exceptions.shared_exceptions import EntityAlreadyExistsException
+from ..base_dao import BaseDAO
+from ...entities.user import User, UserCreate, UserLogin
+from ...entities.user import DEFAULT_USER_ROLE
+from ...exceptions.shared_exceptions import EntityAlreadyExistsException
 
 
 logger = logging.getLogger(__name__)
