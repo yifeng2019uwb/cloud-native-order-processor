@@ -7,6 +7,7 @@ from common.exceptions.shared_exceptions import InternalServerException
 from exceptions import UserAlreadyExistsException
 import pydantic
 from datetime import date, timedelta
+from common.exceptions.shared_exceptions import EntityAlreadyExistsException
 
 @pytest.mark.asyncio
 async def test_register_success():
@@ -81,7 +82,7 @@ async def test_register_validation_error():
     mock_user_dao = AsyncMock()
     mock_user_dao.get_user_by_username = AsyncMock(return_value=None)
     mock_user_dao.get_user_by_email = AsyncMock(return_value=None)
-    mock_user_dao.create_user = AsyncMock(side_effect=ValueError("Some validation error"))
+    mock_user_dao.create_user = AsyncMock(side_effect=EntityAlreadyExistsException("Some validation error"))
     mock_request = MagicMock()
     mock_request.client = MagicMock(host="127.0.0.1")
     mock_request.headers = {"user-agent": "pytest"}
@@ -95,7 +96,7 @@ async def test_register_validation_error():
     )
     with pytest.raises(InternalServerException) as exc_info:
         await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
-    assert "Registration failed: Some validation error" in str(exc_info.value)
+    assert "EntityAlreadyExistsException: Some validation error" in str(exc_info.value)
 
 @pytest.mark.asyncio
 async def test_register_unexpected_error():

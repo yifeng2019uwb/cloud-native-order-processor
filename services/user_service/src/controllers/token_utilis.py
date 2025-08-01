@@ -9,7 +9,7 @@ import logging
 from common.entities.user_enums import DEFAULT_USER_ROLE
 
 # Import exceptions
-from exceptions import TokenExpiredException
+from exceptions import TokenExpiredException, TokenInvalidException
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def create_access_token(username: str, role: str = DEFAULT_USER_ROLE, expires_de
 
 def verify_access_token(token: str) -> Optional[str]:
     """
-    Verify JWT access token and extract username
+    Verify and decode JWT access token
 
     Args:
         token: JWT token string
@@ -71,7 +71,7 @@ def verify_access_token(token: str) -> Optional[str]:
 
     Raises:
         TokenExpiredException: If token is expired
-        JWTError: If token is invalid
+        TokenInvalidException: If token is invalid
     """
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
@@ -79,13 +79,13 @@ def verify_access_token(token: str) -> Optional[str]:
         # Check token type
         if payload.get("type") != "access_token":
             logger.warning("Invalid token type")
-            raise JWTError("Invalid token type")
+            raise TokenInvalidException("Invalid token type")
 
         # Extract username
         username: str = payload.get("sub")
         if username is None:
             logger.warning("Token missing subject (username)")
-            raise JWTError("Token missing subject")
+            raise TokenInvalidException("Token missing subject")
 
         logger.debug(f"Token verified for user: {username}")
         return username
@@ -95,10 +95,13 @@ def verify_access_token(token: str) -> Optional[str]:
         raise TokenExpiredException("Token has expired")
     except JWTError:
         logger.warning("Invalid token provided")
-        raise JWTError("Invalid token")
+        raise TokenInvalidException("Invalid token")
+    except TokenInvalidException:
+        # Re-raise TokenInvalidException without wrapping
+        raise
     except Exception as e:
         logger.error(f"Unexpected error verifying token: {e}")
-        raise JWTError("Token verification failed")
+        raise TokenInvalidException("Token verification failed")
 
 
 def decode_token_payload(token: str) -> dict:
