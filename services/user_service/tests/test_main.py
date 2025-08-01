@@ -338,7 +338,7 @@ class TestShutdownEvent:
 class TestEnvironmentDetection:
     """Test environment detection"""
 
-    @patch.dict(os.environ, {}, clear=True)
+    @patch.dict(os.environ, {"AWS_REGION": "us-east-1"}, clear=True)
     def test_is_lambda_false(self):
         """Test IS_LAMBDA is False when AWS_LAMBDA_FUNCTION_NAME not set"""
         # Re-import to get fresh IS_LAMBDA value
@@ -348,7 +348,7 @@ class TestEnvironmentDetection:
 
         assert main.IS_LAMBDA is False
 
-    @patch.dict(os.environ, {"AWS_LAMBDA_FUNCTION_NAME": "test-function"})
+    @patch.dict(os.environ, {"AWS_LAMBDA_FUNCTION_NAME": "test-function", "AWS_REGION": "us-east-1"})
     def test_is_lambda_true(self):
         """Test IS_LAMBDA is True when AWS_LAMBDA_FUNCTION_NAME is set"""
         # Re-import to get fresh IS_LAMBDA value

@@ -1,12 +1,17 @@
 """
-Order request models for the Order Service API
-Path: services/order_service/src/api_models/order_requests.py
+Order Service API Request Models
+
+Defines request models for order service endpoints.
+Includes validation logic for order creation, retrieval, and listing.
 """
 
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+# Import custom exceptions
+from exceptions import OrderValidationException
 
 
 class OrderCreateRequest(BaseModel):
@@ -48,7 +53,7 @@ class OrderCreateRequest(BaseModel):
         """Validate order type"""
         valid_types = ['market_buy', 'market_sell', 'limit_buy', 'limit_sell']
         if v not in valid_types:
-            raise ValueError(f"Invalid order_type. Must be one of: {valid_types}")
+            raise OrderValidationException(f"Invalid order_type. Must be one of: {valid_types}")
         return v
 
     @field_validator('asset_id')
@@ -56,7 +61,7 @@ class OrderCreateRequest(BaseModel):
     def validate_asset_id(cls, v: str) -> str:
         """Validate asset ID"""
         if not v or not v.strip():
-            raise ValueError("Asset ID cannot be empty")
+            raise OrderValidationException("Asset ID cannot be empty")
         return v.strip().upper()
 
     @field_validator('order_price')
@@ -67,10 +72,10 @@ class OrderCreateRequest(BaseModel):
 
         if order_type in ['limit_buy', 'limit_sell']:
             if v is None:
-                raise ValueError(f"order_price is required for {order_type} orders")
+                raise OrderValidationException(f"order_price is required for {order_type} orders")
         elif order_type in ['market_buy', 'market_sell']:
             if v is not None:
-                raise ValueError(f"order_price should not be specified for {order_type} orders")
+                raise OrderValidationException(f"order_price should not be specified for {order_type} orders")
 
         return v
 
@@ -80,7 +85,7 @@ class OrderCreateRequest(BaseModel):
         """Validate expiration time"""
         if v is not None:
             if v <= datetime.utcnow():
-                raise ValueError("Expiration time must be in the future")
+                raise OrderValidationException("Expiration time must be in the future")
         return v
 
     @model_validator(mode='after')
@@ -89,12 +94,12 @@ class OrderCreateRequest(BaseModel):
 
         # Validate minimum order size
         if self.quantity < Decimal("0.001"):
-            raise ValueError("Order quantity below minimum threshold (0.001)")
+            raise OrderValidationException("Order quantity below minimum threshold (0.001)")
 
         # Validate expiration time for limit orders
         if self.order_type in ['limit_buy', 'limit_sell']:
             if self.expires_at is None:
-                raise ValueError("expires_at is required for limit orders")
+                raise OrderValidationException("expires_at is required for limit orders")
 
         return self
 
@@ -125,7 +130,7 @@ class GetOrderRequest(BaseModel):
     def validate_order_id(cls, v: str) -> str:
         """Validate order ID format"""
         if not v or not v.strip():
-            raise ValueError("Order ID cannot be empty")
+            raise OrderValidationException("Order ID cannot be empty")
         return v.strip()
 
     class Config:
@@ -172,7 +177,7 @@ class OrderListRequest(BaseModel):
         if v is not None:
             valid_statuses = ['pending', 'confirmed', 'processing', 'completed', 'cancelled', 'failed']
             if v not in valid_statuses:
-                raise ValueError(f"Invalid status. Must be one of: {valid_statuses}")
+                raise OrderValidationException(f"Invalid status. Must be one of: {valid_statuses}")
         return v
 
     @field_validator('asset_id')
@@ -180,7 +185,7 @@ class OrderListRequest(BaseModel):
     def validate_asset_id(cls, v: Optional[str]) -> Optional[str]:
         """Validate asset ID filter"""
         if v is not None and not v.strip():
-            raise ValueError("Asset ID cannot be empty")
+            raise OrderValidationException("Asset ID cannot be empty")
         return v.strip().upper() if v else v
 
     class Config:
