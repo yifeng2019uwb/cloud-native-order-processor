@@ -5,6 +5,7 @@ from .dependencies import (
     get_balance_dao,
     get_asset_dao,
     get_order_dao,
+    get_transaction_manager,
     get_database_health
 )
 
@@ -15,5 +16,6 @@ __all__ = [
     "get_balance_dao",
     "get_asset_dao",
     "get_order_dao",
+    "get_transaction_manager",
     "get_database_health"
 ]

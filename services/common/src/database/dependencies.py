@@ -12,6 +12,7 @@ from .dynamodb_connection import dynamodb_manager
 from ..dao.user import UserDAO, BalanceDAO
 from ..dao.inventory import AssetDAO
 from ..dao.order import OrderDAO
+from ..utils.transaction_manager import SimpleTransactionManager
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,16 @@ def get_asset_dao() -> AssetDAO:
 def get_order_dao() -> OrderDAO:
     """Get OrderDAO instance with database connection"""
     return OrderDAO(dynamodb_manager.get_connection())
+
+
+def get_transaction_manager() -> SimpleTransactionManager:
+    """Get SimpleTransactionManager instance with all required DAOs"""
+    return SimpleTransactionManager(
+        user_dao=get_user_dao(),
+        balance_dao=get_balance_dao(),
+        order_dao=get_order_dao(),
+        asset_dao=get_asset_dao()
+    )
 
 
 def get_database_health():

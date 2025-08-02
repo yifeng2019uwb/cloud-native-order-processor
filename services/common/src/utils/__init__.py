@@ -4,6 +4,34 @@ Common Utilities Package
 Provides shared utility functions across all services.
 """
 
-# No utilities in common - each service implements its own utilities
+from .lock_manager import (
+    UserLock,
+    acquire_lock,
+    release_lock,
+    get_lock_info,
+    cleanup_expired_locks,
+    LockTimeoutError,
+    LockAcquisitionError,
+    LOCK_TIMEOUTS
+)
 
-__all__ = []
+from .transaction_manager import (
+    SimpleTransactionManager,
+    TransactionResult
+)
+
+__all__ = [
+    # Lock Manager
+    "UserLock",
+    "acquire_lock",
+    "release_lock",
+    "get_lock_info",
+    "cleanup_expired_locks",
+    "LockTimeoutError",
+    "LockAcquisitionError",
+    "LOCK_TIMEOUTS",
+
+    # Transaction Manager
+    "SimpleTransactionManager",
+    "TransactionResult"
+]
