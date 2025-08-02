@@ -484,7 +484,7 @@ class TestUserDAO:
 
         # Verify database was called correctly
         mock_db_connection.users_table.delete_item.assert_called_once_with(
-            Key={'Pk': 'john_doe123'},
+            Key={'Pk': 'john_doe123', 'Sk': 'USER'},
             ReturnValues='ALL_OLD'
         )
 

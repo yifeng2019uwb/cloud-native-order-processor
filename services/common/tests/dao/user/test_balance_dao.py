@@ -111,7 +111,7 @@ class TestBalanceDAO:
 
         # Verify database was called
         mock_db_connection.users_table.get_item.assert_called_once_with(
-            Key={'Pk': 'BALANCE#testuser123'}
+            Key={'Pk': 'BALANCE#testuser123', 'Sk': 'BALANCE'}
         )
 
     def test_get_balance_not_found(self, balance_dao, mock_db_connection):
