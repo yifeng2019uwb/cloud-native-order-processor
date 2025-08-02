@@ -27,7 +27,6 @@ from common.database import get_user_dao, get_balance_dao
 from user_exceptions import (
     UserNotFoundException,
     UserAlreadyExistsException,
-    UserRegistrationException,
     UserValidationException,
     InternalServerException
 )

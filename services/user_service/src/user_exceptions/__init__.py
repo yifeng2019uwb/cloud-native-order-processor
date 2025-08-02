@@ -42,8 +42,6 @@ from common.exceptions import (
 # Import user service specific exceptions
 from .exceptions import (
     UserAlreadyExistsException,
-    UserRegistrationException,
-    UserServerException,
 )
 
 __all__ = [
@@ -62,6 +60,4 @@ __all__ = [
 
     # User service specific exceptions
     "UserAlreadyExistsException",
-    "UserRegistrationException",
-    "UserServerException",
 ]

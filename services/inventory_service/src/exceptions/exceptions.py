@@ -11,11 +11,6 @@ class AssetAlreadyExistsException(BaseInternalException):
     pass
 
 
-class AssetCreationException(BaseInternalException):
-    """Asset creation specific failures"""
-    pass
-
-
 class InventoryServerException(BaseInternalException):
     """Inventory service itself has bad function/implementation"""
     pass

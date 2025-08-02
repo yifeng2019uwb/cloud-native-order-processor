@@ -11,11 +11,6 @@ class UserAlreadyExistsException(BaseInternalException):
     pass
 
 
-class UserRegistrationException(BaseInternalException):
-    """User registration specific failures"""
-    pass
-
-
 class UserServerException(BaseInternalException):
     """User service itself has bad function/implementation"""
     pass

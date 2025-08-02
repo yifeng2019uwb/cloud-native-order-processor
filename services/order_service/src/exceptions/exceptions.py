@@ -11,9 +11,6 @@ class OrderAlreadyExistsException(BaseInternalException):
     pass
 
 
-
-
-
 class OrderStatusException(BaseInternalException):
     """Order status transition failures"""
     pass
