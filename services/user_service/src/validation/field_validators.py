@@ -8,6 +8,7 @@ Combines sanitization + format validation in each function.
 
 import re
 from datetime import date, timedelta
+from decimal import Decimal
 
 # Import proper exceptions
 from common.exceptions.shared_exceptions import UserValidationException
@@ -221,5 +222,27 @@ def validate_date_of_birth(v: date) -> date:
     # Check maximum reasonable age (120 years)
     if age > 120:
         raise UserValidationException("Invalid date of birth")
+
+    return v
+
+
+def validate_amount(v: Decimal) -> Decimal:
+    """
+    User service: amount validation for balance operations
+    """
+    if not v:
+        raise UserValidationException("Amount cannot be empty")
+
+    # Check for positive amount
+    if v <= 0:
+        raise UserValidationException("Amount must be greater than 0")
+
+    # Check for reasonable maximum amount (1 million)
+    if v > 1000000:
+        raise UserValidationException("Amount cannot exceed 1,000,000")
+
+    # Check for reasonable precision (2 decimal places)
+    if v.as_tuple().exponent < -2:
+        raise UserValidationException("Amount cannot have more than 2 decimal places")
 
     return v

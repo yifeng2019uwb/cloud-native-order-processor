@@ -143,3 +143,31 @@ def validate_role_permissions(user_role: str, required_role: str) -> bool:
     # - Check role hierarchy
     # - Return True if authorized, raise UserValidationException if not
     pass
+
+
+async def validate_sufficient_balance(user_id: str, amount: float, balance_dao: Any) -> bool:
+    """
+    Validate that user has sufficient balance for withdrawal
+
+    Args:
+        user_id: User ID to check
+        amount: Amount to withdraw
+        balance_dao: Balance DAO instance
+
+    Returns:
+        True if user has sufficient balance
+
+    Raises:
+        UserValidationException: If insufficient balance
+    """
+    # Get current balance
+    balance = await balance_dao.get_balance_by_user_id(user_id)
+
+    if not balance:
+        raise UserValidationException("User balance not found")
+
+    # Check if user has sufficient funds
+    if balance.current_balance < amount:
+        raise UserValidationException(f"Insufficient balance. Current balance: ${balance.current_balance}, Required: ${amount}")
+
+    return True

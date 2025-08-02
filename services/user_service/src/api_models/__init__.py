@@ -40,6 +40,17 @@ from .auth.profile import (
     ProfileUpdateErrorResponse
 )
 
+# Import balance models
+from .balance import (
+    BalanceResponse,
+    DepositRequest,
+    DepositResponse,
+    WithdrawRequest,
+    WithdrawResponse,
+    TransactionResponse,
+    TransactionListResponse
+)
+
 __all__ = [
     # Shared models
     "SuccessResponse",
@@ -66,5 +77,14 @@ __all__ = [
     "UserProfileResponse",
     "UserProfileUpdateRequest",
     "ProfileUpdateSuccessResponse",
-    "ProfileUpdateErrorResponse"
+    "ProfileUpdateErrorResponse",
+
+    # Balance models
+    "BalanceResponse",
+    "DepositRequest",
+    "DepositResponse",
+    "WithdrawRequest",
+    "WithdrawResponse",
+    "TransactionResponse",
+    "TransactionListResponse"
 ]

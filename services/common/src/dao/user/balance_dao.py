@@ -29,8 +29,6 @@ class BalanceDAO:
                 "PK": f"USER#{balance.user_id}",
                 "SK": "BALANCE",
                 "current_balance": str(balance.current_balance),
-                "total_deposits": str(balance.total_deposits),
-                "total_withdrawals": str(balance.total_withdrawals),
                 "created_at": balance.created_at.isoformat(),
                 "updated_at": balance.updated_at.isoformat(),
                 "entity_type": "balance"
@@ -59,8 +57,6 @@ class BalanceDAO:
             return Balance(
                 user_id=user_id,
                 current_balance=Decimal(item["current_balance"]),
-                total_deposits=Decimal(item["total_deposits"]),
-                total_withdrawals=Decimal(item["total_withdrawals"]),
                 created_at=datetime.fromisoformat(item["created_at"]),
                 updated_at=datetime.fromisoformat(item["updated_at"])
             )
@@ -68,8 +64,7 @@ class BalanceDAO:
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to get balance: {str(e)}")
 
-    def update_balance(self, user_id: UUID, current_balance: Decimal,
-                      total_deposits: Decimal, total_withdrawals: Decimal) -> Balance:
+    def update_balance(self, user_id: UUID, current_balance: Decimal) -> Balance:
         """Update balance for a user."""
         try:
             updated_at = datetime.utcnow()
@@ -79,12 +74,9 @@ class BalanceDAO:
                     "PK": f"USER#{user_id}",
                     "SK": "BALANCE"
                 },
-                UpdateExpression="SET current_balance = :balance, total_deposits = :deposits, "
-                               "total_withdrawals = :withdrawals, updated_at = :updated_at",
+                UpdateExpression="SET current_balance = :balance, updated_at = :updated_at",
                 ExpressionAttributeValues={
                     ":balance": str(current_balance),
-                    ":deposits": str(total_deposits),
-                    ":withdrawals": str(total_withdrawals),
                     ":updated_at": updated_at.isoformat()
                 },
                 ReturnValues="ALL_NEW"
@@ -94,8 +86,6 @@ class BalanceDAO:
             return Balance(
                 user_id=user_id,
                 current_balance=Decimal(item["current_balance"]),
-                total_deposits=Decimal(item["total_deposits"]),
-                total_withdrawals=Decimal(item["total_withdrawals"]),
                 created_at=datetime.fromisoformat(item["created_at"]),
                 updated_at=datetime.fromisoformat(item["updated_at"])
             )
@@ -142,28 +132,17 @@ class BalanceDAO:
                 # Create initial balance if doesn't exist
                 current_balance = Balance(
                     user_id=transaction.user_id,
-                    current_balance=Decimal('0.00'),
-                    total_deposits=Decimal('0.00'),
-                    total_withdrawals=Decimal('0.00')
+                    current_balance=Decimal('0.00')
                 )
                 self.create_balance(current_balance)
 
-            # Calculate new balance values
+            # Calculate new balance value
             new_current_balance = current_balance.current_balance + transaction.amount
-            new_total_deposits = current_balance.total_deposits
-            new_total_withdrawals = current_balance.total_withdrawals
-
-            if transaction.amount > 0:
-                new_total_deposits += transaction.amount
-            else:
-                new_total_withdrawals += abs(transaction.amount)
 
             # Update balance
             self.update_balance(
                 transaction.user_id,
-                new_current_balance,
-                new_total_deposits,
-                new_total_withdrawals
+                new_current_balance
             )
 
         except Exception as e:

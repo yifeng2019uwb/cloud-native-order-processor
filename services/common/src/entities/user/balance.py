@@ -17,8 +17,6 @@ class Balance(BaseModel):
 
     user_id: UUID = Field(..., description="User ID")
     current_balance: Decimal = Field(default=Decimal('0.00'), description="Current account balance")
-    total_deposits: Decimal = Field(default=Decimal('0.00'), description="Total deposits made")
-    total_withdrawals: Decimal = Field(default=Decimal('0.00'), description="Total withdrawals made")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Balance creation timestamp")
     updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
 
@@ -75,8 +73,6 @@ class BalanceResponse(BaseModel):
 
     user_id: UUID = Field(..., description="User ID")
     current_balance: Decimal = Field(..., description="Current account balance")
-    total_deposits: Decimal = Field(..., description="Total deposits made")
-    total_withdrawals: Decimal = Field(..., description="Total withdrawals made")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
     model_config = ConfigDict(
