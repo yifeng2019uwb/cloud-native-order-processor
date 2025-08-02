@@ -110,7 +110,7 @@ async def register_user(
 
         # Create initial balance record with 0 balance
         initial_balance = Balance(
-            user_id=created_user.user_id,
+            user_id=created_user.username,  # Use username instead of user_id
             current_balance=Decimal('0.00')
         )
         await balance_dao.create_balance(initial_balance)

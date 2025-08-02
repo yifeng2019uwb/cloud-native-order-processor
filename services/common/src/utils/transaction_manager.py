@@ -4,18 +4,18 @@ Orchestrates complex transactions with proper locking for order and balance oper
 """
 
 import logging
+import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, Any, Optional
-from uuid import UUID
 
 from .lock_manager import UserLock, LOCK_TIMEOUTS
 from ..dao.user import UserDAO, BalanceDAO
 from ..dao.order import OrderDAO
 from ..dao.inventory import AssetDAO
 from ..entities.user import BalanceTransaction, TransactionType, TransactionStatus
-from ..entities.order import Order, OrderStatus
-from ..exceptions import DatabaseOperationException, EntityNotFoundException, LockAcquisitionException
+from ..entities.order import Order, OrderStatus, OrderType
+from ..exceptions import DatabaseOperationException, EntityNotFoundException, LockAcquisitionException, InsufficientBalanceException
 from ..exceptions.shared_exceptions import UserValidationException
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ class SimpleTransactionManager:
         Deposit funds to user account with proper locking.
 
         Args:
-            user_id: User ID
+            user_id: User ID (username)
             amount: Amount to deposit
 
         Returns:
@@ -68,7 +68,7 @@ class SimpleTransactionManager:
             async with UserLock(user_id, "deposit", LOCK_TIMEOUTS["deposit"]):
                 # Create deposit transaction
                 transaction = BalanceTransaction(
-                    user_id=UUID(user_id),
+                    user_id=user_id,  # Use username directly, no UUID conversion
                     transaction_type=TransactionType.DEPOSIT,
                     amount=amount,
                     description="Deposit",
@@ -79,7 +79,7 @@ class SimpleTransactionManager:
                 created_transaction = await self.balance_dao.create_transaction(transaction)
 
                 # Get updated balance
-                balance = await self.balance_dao.get_balance(UUID(user_id))
+                balance = await self.balance_dao.get_balance(user_id)  # Use username directly
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
@@ -107,7 +107,7 @@ class SimpleTransactionManager:
         Withdraw funds from user account with proper locking.
 
         Args:
-            user_id: User ID
+            user_id: User ID (username)
             amount: Amount to withdraw
 
         Returns:
@@ -118,17 +118,31 @@ class SimpleTransactionManager:
         try:
             async with UserLock(user_id, "withdraw", LOCK_TIMEOUTS["withdraw"]):
                 # Check balance first
-                balance = await self.balance_dao.get_balance(UUID(user_id))
+                balance = await self.balance_dao.get_balance(user_id)  # Use username directly
                 if not balance:
-                    raise EntityNotFoundException("User balance not found")
+                    # CRITICAL: This should NEVER happen - balance is created during user registration
+                    # If this occurs, it indicates a serious system issue (database corruption, race condition, or bug)
+                    logger.critical(f"CRITICAL SYSTEM ERROR: User balance missing for user {user_id}. "
+                                  f"This should NEVER happen as balance is created during user registration.")
+                    raise DatabaseOperationException(
+                        f"Critical system error: User balance missing for user {user_id}. "
+                        f"This indicates a serious system issue. Please contact support immediately."
+                    )
 
                 if balance.current_balance < amount:
-                    raise UserValidationException(f"Insufficient balance. Current: ${balance.current_balance}, Required: ${amount}")
+                    shortfall = amount - balance.current_balance
+                    raise InsufficientBalanceException(
+                        f"Insufficient balance for withdrawal. "
+                        f"Current balance: ${balance.current_balance:.2f}, "
+                        f"Required amount: ${amount:.2f}, "
+                        f"Shortfall: ${shortfall:.2f}. "
+                        f"Please deposit additional funds or reduce withdrawal amount."
+                    )
 
                 # Create withdrawal transaction
                 transaction = BalanceTransaction(
-                    user_id=UUID(user_id),
-                    transaction_type=TransactionType.WITHDRAWAL,
+                    user_id=user_id,  # Use username directly, no UUID conversion
+                    transaction_type=TransactionType.WITHDRAW,  # Use WITHDRAW not WITHDRAWAL
                     amount=-amount,  # Negative for withdrawal
                     description="Withdrawal",
                     status=TransactionStatus.COMPLETED
@@ -138,7 +152,7 @@ class SimpleTransactionManager:
                 created_transaction = await self.balance_dao.create_transaction(transaction)
 
                 # Get updated balance
-                updated_balance = await self.balance_dao.get_balance(UUID(user_id))
+                updated_balance = await self.balance_dao.get_balance(user_id)  # Use username directly
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
@@ -157,6 +171,9 @@ class SimpleTransactionManager:
         except LockAcquisitionException as e:
             logger.warning(f"Lock acquisition failed for withdrawal: user={user_id}, error={str(e)}")
             raise DatabaseOperationException("Service temporarily unavailable")
+        except InsufficientBalanceException:
+            # Re-raise InsufficientBalanceException directly
+            raise
         except Exception as e:
             logger.error(f"Withdrawal failed: user={user_id}, amount={amount}, error={str(e)}")
             raise DatabaseOperationException(f"Withdrawal failed: {str(e)}")
@@ -168,66 +185,80 @@ class SimpleTransactionManager:
         total_cost: Decimal
     ) -> TransactionResult:
         """
-        Create a buy order and update balance atomically.
+        Create a buy order with atomic balance update.
 
         Args:
-            user_id: User ID
-            order_data: Order creation data
+            user_id: User ID (username)
+            order_data: Order data (asset_id, quantity, order_price)
             total_cost: Total cost of the order
 
         Returns:
             TransactionResult with order and transaction information
         """
         start_time = datetime.now(timezone.utc)
-        created_order = None
-        balance_transaction = None
 
         try:
             async with UserLock(user_id, "buy_order", LOCK_TIMEOUTS["buy_order"]):
                 # Phase 1: Validate prerequisites
-                balance = await self.balance_dao.get_balance(UUID(user_id))
+                balance = await self.balance_dao.get_balance(user_id)  # Use username directly
                 if not balance:
-                    raise EntityNotFoundException("User balance not found")
+                    # CRITICAL: This should NEVER happen - balance is created during user registration
+                    # If this occurs, it indicates a serious system issue (database corruption, race condition, or bug)
+                    logger.critical(f"CRITICAL SYSTEM ERROR: User balance missing for user {user_id}. "
+                                  f"This should NEVER happen as balance is created during user registration.")
+                    raise DatabaseOperationException(
+                        f"Critical system error: User balance missing for user {user_id}. "
+                        f"This indicates a serious system issue. Please contact support immediately."
+                    )
 
                 if balance.current_balance < total_cost:
-                    raise UserValidationException(f"Insufficient balance. Current: ${balance.current_balance}, Required: ${total_cost}")
+                    shortfall = total_cost - balance.current_balance
+                    raise InsufficientBalanceException(
+                        f"Insufficient balance for buy order. "
+                        f"Current balance: ${balance.current_balance:.2f}, "
+                        f"Order cost: ${total_cost:.2f}, "
+                        f"Asset: {order_data.get('asset_id', 'Unknown')}, "
+                        f"Quantity: {order_data.get('quantity', 'Unknown')}, "
+                        f"Shortfall: ${shortfall:.2f}. "
+                        f"Please deposit additional funds or reduce order quantity."
+                    )
 
-                # Phase 2: Execute operations
-                # 2.1 Create order with PENDING status
-                order_create_data = order_data.copy()
-                order_create_data["status"] = OrderStatus.PENDING
-                order_create_data["user_id"] = user_id
-                order_create_data["total_amount"] = total_cost
+                # Phase 2: Create order
+                now = datetime.now(timezone.utc)
+                order = Order(
+                    order_id=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
+                    user_id=user_id,  # Use username directly, no UUID conversion
+                    order_type=OrderType.MARKET_BUY,
+                    asset_id=order_data["asset_id"],
+                    quantity=order_data["quantity"],
+                    order_price=order_data["order_price"],
+                    total_amount=total_cost,
+                    status=OrderStatus.PENDING,
+                    created_at=now,
+                    updated_at=now
+                )
 
-                created_order = await self.order_dao.create_order(order_create_data)
-                logger.info(f"Order created: {created_order.order_id}")
+                created_order = await self.order_dao.create_order(order)
 
-                # 2.2 Create balance transaction
-                balance_transaction = BalanceTransaction(
-                    user_id=UUID(user_id),
+                # Phase 3: Create balance transaction
+                transaction = BalanceTransaction(
+                    user_id=user_id,  # Use username directly, no UUID conversion
                     transaction_type=TransactionType.ORDER_PAYMENT,
-                    amount=-total_cost,  # Negative for spending
-                    description=f"Buy order {created_order.order_id}",
+                    amount=-total_cost,  # Negative for payment
+                    description=f"Payment for buy order {created_order.order_id}",
                     status=TransactionStatus.COMPLETED,
-                    reference_id=str(created_order.order_id)
+                    reference_id=created_order.order_id
                 )
 
-                created_transaction = await self.balance_dao.create_transaction(balance_transaction)
-                logger.info(f"Balance transaction created: {created_transaction.transaction_id}")
-
-                # 2.3 Update order status to CONFIRMED
-                await self.order_dao.update_order_status(
-                    created_order.order_id,
-                    OrderStatus.CONFIRMED
-                )
-                logger.info(f"Order confirmed: {created_order.order_id}")
+                created_transaction = await self.balance_dao.create_transaction(transaction)
 
                 # Get updated balance
-                updated_balance = await self.balance_dao.get_balance(UUID(user_id))
+                updated_balance = await self.balance_dao.get_balance(user_id)  # Use username directly
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
-                logger.info(f"Buy order transaction successful: user={user_id}, order_id={created_order.order_id}, lock_duration={lock_duration}s")
+                logger.info(f"Buy order created successfully: user={user_id}, order_id={created_order.order_id}, "
+                           f"total_cost={total_cost}, lock_duration={lock_duration}s")
 
                 return TransactionResult(
                     success=True,
@@ -243,34 +274,12 @@ class SimpleTransactionManager:
         except LockAcquisitionException as e:
             logger.warning(f"Lock acquisition failed for buy order: user={user_id}, error={str(e)}")
             raise DatabaseOperationException("Service temporarily unavailable")
+        except InsufficientBalanceException:
+            # Re-raise InsufficientBalanceException directly
+            raise
         except Exception as e:
-            # Phase 3: Rollback on Error
-            logger.error(f"Buy order transaction failed: user={user_id}, error={str(e)}")
-
-            # Rollback balance transaction if created
-            if balance_transaction:
-                try:
-                    await self.balance_dao.update_transaction_status(
-                        UUID(user_id),
-                        balance_transaction.transaction_id,
-                        TransactionStatus.CANCELLED
-                    )
-                    logger.info("Balance transaction rolled back")
-                except Exception as rollback_error:
-                    logger.error(f"Balance rollback failed: {rollback_error}")
-
-            # Mark order as FAILED if created
-            if created_order:
-                try:
-                    await self.order_dao.update_order_status(
-                        created_order.order_id,
-                        OrderStatus.FAILED
-                    )
-                    logger.info("Order marked as FAILED")
-                except Exception as rollback_error:
-                    logger.error(f"Order rollback failed: {rollback_error}")
-
-            raise DatabaseOperationException(f"Buy order failed: {str(e)}")
+            logger.error(f"Buy order creation failed: user={user_id}, error={str(e)}")
+            raise DatabaseOperationException(f"Order creation failed: {str(e)}")
 
     async def create_sell_order_with_balance_update(
         self,
@@ -279,66 +288,63 @@ class SimpleTransactionManager:
         asset_amount: Decimal
     ) -> TransactionResult:
         """
-        Create a sell order and update asset balance atomically.
+        Create a sell order with atomic balance update.
 
         Args:
-            user_id: User ID
-            order_data: Order creation data
-            asset_amount: Amount of asset being sold
+            user_id: User ID (username)
+            order_data: Order data (asset_id, quantity, order_price)
+            asset_amount: Total amount from the sell order
 
         Returns:
             TransactionResult with order and transaction information
         """
         start_time = datetime.now(timezone.utc)
-        created_order = None
-        balance_transaction = None
 
         try:
             async with UserLock(user_id, "sell_order", LOCK_TIMEOUTS["sell_order"]):
-                # Phase 1: Validate prerequisites
-                # TODO: Check asset balance when asset management is implemented
-                # For now, we'll assume user has the asset
+                # Phase 2: Create order
+                now = datetime.now(timezone.utc)
+                order = Order(
+                    order_id=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
+                    user_id=user_id,  # Use username directly, no UUID conversion
+                    order_type=OrderType.MARKET_SELL,
+                    asset_id=order_data["asset_id"],
+                    quantity=order_data["quantity"],
+                    order_price=order_data["order_price"],
+                    total_amount=asset_amount,
+                    status=OrderStatus.PENDING,
+                    created_at=now,
+                    updated_at=now
+                )
 
-                # Phase 2: Execute operations
-                # 2.1 Create order with PENDING status
-                order_create_data = order_data.copy()
-                order_create_data["status"] = OrderStatus.PENDING
-                order_create_data["user_id"] = user_id
-                order_create_data["asset_amount"] = asset_amount
+                created_order = await self.order_dao.create_order(order)
 
-                created_order = await self.order_dao.create_order(order_create_data)
-                logger.info(f"Sell order created: {created_order.order_id}")
-
-                # 2.2 Create balance transaction for asset sale
-                # TODO: This will be updated when asset management is implemented
-                balance_transaction = BalanceTransaction(
-                    user_id=UUID(user_id),
-                    transaction_type=TransactionType.ASSET_SALE,
-                    amount=asset_amount,  # Positive for asset sale
-                    description=f"Sell order {created_order.order_id}",
+                # Phase 3: Create balance transaction
+                transaction = BalanceTransaction(
+                    user_id=user_id,  # Use username directly, no UUID conversion
+                    transaction_type=TransactionType.DEPOSIT,  # Use DEPOSIT for sell order receipt
+                    amount=asset_amount,  # Positive for receipt
+                    description=f"Receipt for sell order {created_order.order_id}",
                     status=TransactionStatus.COMPLETED,
-                    reference_id=str(created_order.order_id)
+                    reference_id=created_order.order_id
                 )
 
-                created_transaction = await self.balance_dao.create_transaction(balance_transaction)
-                logger.info(f"Asset transaction created: {created_transaction.transaction_id}")
+                created_transaction = await self.balance_dao.create_transaction(transaction)
 
-                # 2.3 Update order status to CONFIRMED
-                await self.order_dao.update_order_status(
-                    created_order.order_id,
-                    OrderStatus.CONFIRMED
-                )
-                logger.info(f"Sell order confirmed: {created_order.order_id}")
+                # Get updated balance
+                updated_balance = await self.balance_dao.get_balance(user_id)  # Use username directly
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
-                logger.info(f"Sell order transaction successful: user={user_id}, order_id={created_order.order_id}, lock_duration={lock_duration}s")
+                logger.info(f"Sell order created successfully: user={user_id}, order_id={created_order.order_id}, "
+                           f"asset_amount={asset_amount}, lock_duration={lock_duration}s")
 
                 return TransactionResult(
                     success=True,
                     data={
                         "order": created_order,
                         "transaction": created_transaction,
+                        "balance": updated_balance,
                         "asset_amount": asset_amount
                     },
                     lock_duration=lock_duration
@@ -348,30 +354,5 @@ class SimpleTransactionManager:
             logger.warning(f"Lock acquisition failed for sell order: user={user_id}, error={str(e)}")
             raise DatabaseOperationException("Service temporarily unavailable")
         except Exception as e:
-            # Phase 3: Rollback on Error
-            logger.error(f"Sell order transaction failed: user={user_id}, error={str(e)}")
-
-            # Rollback balance transaction if created
-            if balance_transaction:
-                try:
-                    await self.balance_dao.update_transaction_status(
-                        UUID(user_id),
-                        balance_transaction.transaction_id,
-                        TransactionStatus.CANCELLED
-                    )
-                    logger.info("Asset transaction rolled back")
-                except Exception as rollback_error:
-                    logger.error(f"Asset rollback failed: {rollback_error}")
-
-            # Mark order as FAILED if created
-            if created_order:
-                try:
-                    await self.order_dao.update_order_status(
-                        created_order.order_id,
-                        OrderStatus.FAILED
-                    )
-                    logger.info("Sell order marked as FAILED")
-                except Exception as rollback_error:
-                    logger.error(f"Sell order rollback failed: {rollback_error}")
-
-            raise DatabaseOperationException(f"Sell order failed: {str(e)}")
+            logger.error(f"Sell order creation failed: user={user_id}, error={str(e)}")
+            raise DatabaseOperationException(f"Order creation failed: {str(e)}")

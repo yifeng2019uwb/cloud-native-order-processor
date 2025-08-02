@@ -95,6 +95,9 @@ class UserValidationException(SharedException):
     pass
 
 
+
+
+
 class OrderValidationException(SharedException):
     """Order-specific validation exception"""
     pass

@@ -42,7 +42,8 @@ from src.exceptions import (
 from common.exceptions import (
     DatabaseOperationException,
     EntityNotFoundException,
-    LockAcquisitionException
+    LockAcquisitionException,
+    InsufficientBalanceException
 )
 from common.exceptions.shared_exceptions import UserValidationException
 
@@ -67,10 +68,7 @@ router = APIRouter(tags=["orders"])
             "description": "Unauthorized",
             "model": ErrorResponse
         },
-        404: {
-            "description": "User balance not found",
-            "model": ErrorResponse
-        },
+
         409: {
             "description": "Operation is busy - try again",
             "model": ErrorResponse
@@ -160,15 +158,20 @@ async def create_order(
     except LockAcquisitionException as e:
         logger.warning(f"Lock acquisition failed for order creation: user={current_user.username}, error={str(e)}")
         raise InternalServerException("Service temporarily unavailable")
-    except EntityNotFoundException as e:
-        logger.error(f"User balance not found for order creation: user={current_user.username}, error={str(e)}")
-        raise OrderValidationException("User balance not found")
-    except UserValidationException as e:
+
+    except InsufficientBalanceException as e:
         logger.warning(f"Insufficient balance for order creation: user={current_user.username}, error={str(e)}")
         raise OrderValidationException(str(e))
+    except UserValidationException as e:
+        logger.warning(f"User validation error for order creation: user={current_user.username}, error={str(e)}")
+        raise OrderValidationException(str(e))
     except DatabaseOperationException as e:
-        logger.error(f"Database operation failed for order creation: user={current_user.username}, error={str(e)}")
-        raise InternalServerException("Service temporarily unavailable")
+        if "User balance not found" in str(e):
+            logger.error(f"System error - user balance not found for order creation: user={current_user.username}, error={str(e)}")
+            raise InternalServerException("System error - please contact support")
+        else:
+            logger.error(f"Database operation failed for order creation: user={current_user.username}, error={str(e)}")
+            raise InternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(f"Unexpected error during order creation: user={current_user.username}, error={str(e)}", exc_info=True)
         raise InternalServerException("Service temporarily unavailable")

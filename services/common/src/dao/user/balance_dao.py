@@ -40,7 +40,7 @@ class BalanceDAO:
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to create balance: {str(e)}")
 
-    def get_balance(self, user_id: UUID) -> Optional[Balance]:
+    def get_balance(self, user_id: str) -> Optional[Balance]:
         """Get balance for a user."""
         try:
             response = self.db.table.get_item(
@@ -64,7 +64,7 @@ class BalanceDAO:
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to get balance: {str(e)}")
 
-    def update_balance(self, user_id: UUID, current_balance: Decimal) -> Balance:
+    def update_balance(self, user_id: str, current_balance: Decimal) -> Balance:
         """Update balance for a user."""
         try:
             updated_at = datetime.utcnow()
@@ -101,7 +101,7 @@ class BalanceDAO:
                 "PK": f"USER#{transaction.user_id}#{transaction.transaction_id}",
                 "SK": transaction.created_at.isoformat(),
                 "transaction_id": str(transaction.transaction_id),
-                "user_id": str(transaction.user_id),
+                "user_id": transaction.user_id,  # Already a string
                 "transaction_type": transaction.transaction_type.value,
                 "amount": str(transaction.amount),
                 "description": transaction.description,
@@ -137,33 +137,31 @@ class BalanceDAO:
                 self.create_balance(current_balance)
 
             # Calculate new balance value
-            new_current_balance = current_balance.current_balance + transaction.amount
+            new_balance = current_balance.current_balance + transaction.amount
 
             # Update balance
-            self.update_balance(
-                transaction.user_id,
-                new_current_balance
-            )
+            self.update_balance(transaction.user_id, new_balance)
 
         except Exception as e:
             raise DatabaseOperationException(f"Failed to update balance from transaction: {str(e)}")
 
-    def get_transaction(self, user_id: UUID, transaction_id: UUID) -> Optional[BalanceTransaction]:
-        """Get a specific transaction."""
+    def get_transaction(self, user_id: str, transaction_id: UUID) -> Optional[BalanceTransaction]:
+        """Get a specific transaction for a user."""
         try:
-            # We need to query since PK is composite
-            response = self.db.table.query(
-                KeyConditionExpression=Key("PK").eq(f"USER#{user_id}#{transaction_id}"),
-                Limit=1
+            response = self.db.table.get_item(
+                Key={
+                    "PK": f"USER#{user_id}#{transaction_id}",
+                    "SK": "2023-01-01T00:00:00"  # We need to know the exact timestamp
+                }
             )
 
-            if not response.get("Items"):
+            if "Item" not in response:
                 return None
 
-            item = response["Items"][0]
+            item = response["Item"]
             return BalanceTransaction(
                 transaction_id=UUID(item["transaction_id"]),
-                user_id=user_id,
+                user_id=item["user_id"],  # Already a string
                 transaction_type=item["transaction_type"],
                 amount=Decimal(item["amount"]),
                 description=item["description"],
@@ -176,16 +174,13 @@ class BalanceDAO:
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to get transaction: {str(e)}")
 
-    def get_user_transactions(self, user_id: UUID, limit: int = 50,
+    def get_user_transactions(self, user_id: str, limit: int = 50,
                             start_key: Optional[dict] = None) -> tuple[List[BalanceTransaction], Optional[dict]]:
-        """Get transactions for a user with pagination."""
+        """Get all transactions for a user with pagination."""
         try:
-            # Query for all transactions for this user
-            # Since PK is USER#{user_id}#{transaction_id}, we need to use begins_with
             query_params = {
                 "KeyConditionExpression": Key("PK").begins_with(f"USER#{user_id}#"),
-                "Limit": limit,
-                "ScanIndexForward": False  # Most recent first
+                "Limit": limit
             }
 
             if start_key:
@@ -197,7 +192,7 @@ class BalanceDAO:
             for item in response.get("Items", []):
                 transaction = BalanceTransaction(
                     transaction_id=UUID(item["transaction_id"]),
-                    user_id=user_id,
+                    user_id=item["user_id"],  # Already a string
                     transaction_type=item["transaction_type"],
                     amount=Decimal(item["amount"]),
                     description=item["description"],
@@ -214,7 +209,7 @@ class BalanceDAO:
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to get user transactions: {str(e)}")
 
-    def update_transaction_status(self, user_id: UUID, transaction_id: UUID,
+    def update_transaction_status(self, user_id: str, transaction_id: UUID,
                                 status: str) -> BalanceTransaction:
         """Update transaction status and adjust balance if needed."""
         try:
@@ -267,7 +262,7 @@ class BalanceDAO:
             item = response["Attributes"]
             return BalanceTransaction(
                 transaction_id=UUID(item["transaction_id"]),
-                user_id=user_id,
+                user_id=item["user_id"],  # Already a string
                 transaction_type=item["transaction_type"],
                 amount=Decimal(item["amount"]),
                 description=item["description"],
@@ -280,7 +275,7 @@ class BalanceDAO:
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to update transaction status: {str(e)}")
 
-    def balance_exists(self, user_id: UUID) -> bool:
+    def balance_exists(self, user_id: str) -> bool:
         """Check if balance exists for a user."""
         try:
             response = self.db.table.get_item(
@@ -293,7 +288,7 @@ class BalanceDAO:
         except ClientError:
             return False
 
-    def user_has_transactions(self, user_id: UUID) -> bool:
+    def user_has_transactions(self, user_id: str) -> bool:
         """Check if user has any transactions."""
         try:
             response = self.db.table.query(

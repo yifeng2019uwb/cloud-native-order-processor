@@ -32,7 +32,8 @@ from user_exceptions import (
 from common.exceptions import (
     DatabaseOperationException,
     EntityNotFoundException,
-    LockAcquisitionException
+    LockAcquisitionException,
+    InsufficientBalanceException
 )
 from common.exceptions.shared_exceptions import UserValidationException as CommonUserValidationException
 
@@ -57,10 +58,7 @@ router = APIRouter(tags=["balance"])
             "description": "Unauthorized",
             "model": ErrorResponse
         },
-        404: {
-            "description": "User balance not found",
-            "model": ErrorResponse
-        },
+
         409: {
             "description": "Operation is busy - try again",
             "model": ErrorResponse
@@ -117,15 +115,20 @@ async def withdraw_funds(
     except LockAcquisitionException as e:
         logger.warning(f"Lock acquisition failed for withdrawal: user={current_user.username}, error={str(e)}")
         raise InternalServerException("Service temporarily unavailable")
-    except EntityNotFoundException as e:
-        logger.error(f"User balance not found for withdrawal: user={current_user.username}, error={str(e)}")
-        raise UserNotFoundException("User balance not found")
-    except CommonUserValidationException as e:
+
+    except InsufficientBalanceException as e:
         logger.warning(f"Insufficient balance for withdrawal: user={current_user.username}, error={str(e)}")
         raise UserValidationException(str(e))
+    except CommonUserValidationException as e:
+        logger.warning(f"User validation error for withdrawal: user={current_user.username}, error={str(e)}")
+        raise UserValidationException(str(e))
     except DatabaseOperationException as e:
-        logger.error(f"Database operation failed for withdrawal: user={current_user.username}, error={str(e)}")
-        raise InternalServerException("Service temporarily unavailable")
+        if "User balance not found" in str(e):
+            logger.error(f"System error - user balance not found for withdrawal: user={current_user.username}, error={str(e)}")
+            raise InternalServerException("System error - please contact support")
+        else:
+            logger.error(f"Database operation failed for withdrawal: user={current_user.username}, error={str(e)}")
+            raise InternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(f"Unexpected error during withdrawal: user={current_user.username}, error={str(e)}", exc_info=True)
         raise InternalServerException("Service temporarily unavailable")

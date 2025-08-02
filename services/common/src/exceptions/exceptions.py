@@ -67,6 +67,15 @@ class LockTimeoutException(CommonException):
 
 
 # ========================================
+# BUSINESS LOGIC EXCEPTIONS (400/422 scenarios)
+# ========================================
+
+class InsufficientBalanceException(CommonException):
+    """Insufficient balance exception - specific to balance operations"""
+    pass
+
+
+# ========================================
 # GENERIC COMMON SERVER EXCEPTION (500 scenarios)
 # ========================================
 

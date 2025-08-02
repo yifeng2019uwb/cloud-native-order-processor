@@ -48,6 +48,8 @@ from .exceptions import (
     # Locking exceptions
     LockAcquisitionException,
     LockTimeoutException,
+    # Business logic exceptions
+    InsufficientBalanceException,
     # Generic common server exception
     CommonServerException,
 )
@@ -71,6 +73,7 @@ __all__ = [
     "AssetNotFoundException",
     "EntityValidationException",
     "UserValidationException",
+    "InsufficientBalanceException",
     "OrderValidationException",
     "AssetValidationException",
     "InternalServerException",
@@ -84,5 +87,6 @@ __all__ = [
     "ExternalServiceException",
     "LockAcquisitionException",
     "LockTimeoutException",
+    "InsufficientBalanceException",
     "CommonServerException",
 ]

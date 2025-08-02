@@ -15,7 +15,7 @@ from .balance_enums import TransactionType, TransactionStatus, DEFAULT_TRANSACTI
 class Balance(BaseModel):
     """User account balance entity."""
 
-    user_id: UUID = Field(..., description="User ID")
+    user_id: str = Field(..., description="User ID (username)")
     current_balance: Decimal = Field(default=Decimal('0.00'), description="Current account balance")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Balance creation timestamp")
     updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
@@ -23,8 +23,7 @@ class Balance(BaseModel):
     model_config = ConfigDict(
         json_encoders={
             datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v),
-            UUID: lambda v: str(v)
+            Decimal: lambda v: str(v)
         }
     )
 
@@ -33,7 +32,7 @@ class BalanceTransaction(BaseModel):
     """Balance transaction entity."""
 
     transaction_id: UUID = Field(default_factory=uuid4, description="Unique transaction ID")
-    user_id: UUID = Field(..., description="User ID")
+    user_id: str = Field(..., description="User ID (username)")
     transaction_type: TransactionType = Field(..., description="Type of transaction")
     amount: Decimal = Field(..., description="Transaction amount (positive for deposits, negative for withdrawals)")
     description: str = Field(..., description="Transaction description")
@@ -54,14 +53,14 @@ class BalanceTransaction(BaseModel):
 class BalanceCreate(BaseModel):
     """Request model for creating a balance."""
 
-    user_id: UUID = Field(..., description="User ID")
+    user_id: str = Field(..., description="User ID (username)")
     initial_balance: Decimal = Field(default=Decimal('0.00'), description="Initial balance amount")
 
 
 class BalanceTransactionCreate(BaseModel):
     """Request model for creating a balance transaction."""
 
-    user_id: UUID = Field(..., description="User ID")
+    user_id: str = Field(..., description="User ID (username)")
     transaction_type: TransactionType = Field(..., description="Type of transaction")
     amount: Decimal = Field(..., description="Transaction amount")
     description: str = Field(..., description="Transaction description")
@@ -71,15 +70,14 @@ class BalanceTransactionCreate(BaseModel):
 class BalanceResponse(BaseModel):
     """Response model for balance information."""
 
-    user_id: UUID = Field(..., description="User ID")
+    user_id: str = Field(..., description="User ID (username)")
     current_balance: Decimal = Field(..., description="Current account balance")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
     model_config = ConfigDict(
         json_encoders={
             datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v),
-            UUID: lambda v: str(v)
+            Decimal: lambda v: str(v)
         }
     )
 
@@ -88,7 +86,7 @@ class BalanceTransactionResponse(BaseModel):
     """Response model for balance transaction."""
 
     transaction_id: UUID = Field(..., description="Unique transaction ID")
-    user_id: UUID = Field(..., description="User ID")
+    user_id: str = Field(..., description="User ID (username)")
     transaction_type: TransactionType = Field(..., description="Type of transaction")
     amount: Decimal = Field(..., description="Transaction amount")
     description: str = Field(..., description="Transaction description")
