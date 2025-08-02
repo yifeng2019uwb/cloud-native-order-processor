@@ -18,7 +18,7 @@ from api_models.shared.common import ErrorResponse
 from common.entities.user import UserResponse
 
 # Import dependencies
-from common.database import get_balance_dao
+from common.database import get_transaction_manager
 from controllers.auth.dependencies import get_current_user
 
 # Import exceptions
@@ -27,7 +27,12 @@ from user_exceptions import (
     InternalServerException
 )
 
-
+# Import common exceptions for transaction manager
+from common.exceptions import (
+    DatabaseOperationException,
+    EntityNotFoundException,
+    LockAcquisitionException
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["balance"])
@@ -42,8 +47,20 @@ router = APIRouter(tags=["balance"])
             "description": "Deposit successful",
             "model": DepositResponse
         },
+        400: {
+            "description": "Bad request - invalid amount",
+            "model": ErrorResponse
+        },
         401: {
             "description": "Unauthorized",
+            "model": ErrorResponse
+        },
+        404: {
+            "description": "User balance not found",
+            "model": ErrorResponse
+        },
+        409: {
+            "description": "Operation is busy - try again",
             "model": ErrorResponse
         },
         422: {
@@ -51,7 +68,7 @@ router = APIRouter(tags=["balance"])
             "model": ErrorResponse
         },
         503: {
-            "description": "Service unavailable",
+            "description": "Service temporarily unavailable",
             "model": ErrorResponse
         }
     }
@@ -60,10 +77,10 @@ async def deposit_funds(
     deposit_data: DepositRequest,
     request: Request,
     current_user: UserResponse = Depends(get_current_user),
-    balance_dao = Depends(get_balance_dao)
+    transaction_manager = Depends(get_transaction_manager)
 ) -> DepositResponse:
     """
-    Deposit funds to user account
+    Deposit funds to user account using transaction manager for atomicity
 
     Layer 1: Field validation already handled in API models
     Layer 2: Business validation (user authentication, etc.)
@@ -79,30 +96,31 @@ async def deposit_funds(
         }
     )
 
-        try:
-        # Create deposit transaction
-        from common.entities.user import BalanceTransaction, TransactionType, TransactionStatus
-
-        transaction = BalanceTransaction(
-            user_id=current_user.user_id,
-            transaction_type=TransactionType.DEPOSIT,
-            amount=deposit_data.amount,
-            description="Deposit",
-            status=TransactionStatus.COMPLETED
+    try:
+        # Use transaction manager for atomic deposit operation
+        result = await transaction_manager.deposit_funds(
+            user_id=str(current_user.user_id),
+            amount=deposit_data.amount
         )
 
-        # Save transaction to database
-        created_transaction = await balance_dao.create_transaction(transaction)
-
-        logger.info(f"Deposit successful for user {current_user.username}: {deposit_data.amount}")
+        logger.info(f"Deposit successful for user {current_user.username}: {deposit_data.amount} (lock_duration: {result.lock_duration}s)")
 
         return DepositResponse(
             success=True,
             message=f"Successfully deposited ${deposit_data.amount}",
-            transaction_id=str(created_transaction.transaction_id),
+            transaction_id=str(result.data["transaction"].transaction_id),
             timestamp=datetime.utcnow()
         )
 
+    except LockAcquisitionException as e:
+        logger.warning(f"Lock acquisition failed for deposit: user={current_user.username}, error={str(e)}")
+        raise InternalServerException("Service temporarily unavailable")
+    except EntityNotFoundException as e:
+        logger.error(f"User balance not found for deposit: user={current_user.username}, error={str(e)}")
+        raise UserNotFoundException("User balance not found")
+    except DatabaseOperationException as e:
+        logger.error(f"Database operation failed for deposit: user={current_user.username}, error={str(e)}")
+        raise InternalServerException("Service temporarily unavailable")
     except Exception as e:
-        logger.error(f"Deposit failed for user {current_user.username}: {str(e)}", exc_info=True)
-        raise InternalServerException(f"Deposit failed: {str(e)}")
+        logger.error(f"Unexpected error during deposit: user={current_user.username}, error={str(e)}", exc_info=True)
+        raise InternalServerException("Service temporarily unavailable")

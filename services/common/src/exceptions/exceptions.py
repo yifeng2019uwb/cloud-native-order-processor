@@ -53,6 +53,20 @@ class ExternalServiceException(CommonException):
 
 
 # ========================================
+# LOCKING EXCEPTIONS (500 scenarios)
+# ========================================
+
+class LockAcquisitionException(CommonException):
+    """Raised when lock acquisition fails"""
+    pass
+
+
+class LockTimeoutException(CommonException):
+    """Raised when lock acquisition times out"""
+    pass
+
+
+# ========================================
 # GENERIC COMMON SERVER EXCEPTION (500 scenarios)
 # ========================================
 

@@ -45,6 +45,9 @@ from .exceptions import (
     # External service exceptions
     AWSServiceException,
     ExternalServiceException,
+    # Locking exceptions
+    LockAcquisitionException,
+    LockTimeoutException,
     # Generic common server exception
     CommonServerException,
 )
@@ -79,5 +82,7 @@ __all__ = [
     "ConfigurationException",
     "AWSServiceException",
     "ExternalServiceException",
+    "LockAcquisitionException",
+    "LockTimeoutException",
     "CommonServerException",
 ]

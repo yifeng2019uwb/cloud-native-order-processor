@@ -9,13 +9,14 @@ from decimal import Decimal
 from typing import Dict, Any, Optional
 from uuid import UUID
 
-from .lock_manager import UserLock, LOCK_TIMEOUTS, LockAcquisitionError
+from .lock_manager import UserLock, LOCK_TIMEOUTS
 from ..dao.user import UserDAO, BalanceDAO
 from ..dao.order import OrderDAO
 from ..dao.inventory import AssetDAO
 from ..entities.user import BalanceTransaction, TransactionType, TransactionStatus
 from ..entities.order import Order, OrderStatus
-from ..exceptions import DatabaseOperationException, EntityNotFoundException
+from ..exceptions import DatabaseOperationException, EntityNotFoundException, LockAcquisitionException
+from ..exceptions.shared_exceptions import UserValidationException
 
 logger = logging.getLogger(__name__)
 
@@ -94,18 +95,12 @@ class SimpleTransactionManager:
                     lock_duration=lock_duration
                 )
 
-        except LockAcquisitionError as e:
+        except LockAcquisitionException as e:
             logger.warning(f"Lock acquisition failed for deposit: user={user_id}, error={str(e)}")
-            return TransactionResult(
-                success=False,
-                error="Operation is busy, please try again in a moment"
-            )
+            raise DatabaseOperationException("Service temporarily unavailable")
         except Exception as e:
             logger.error(f"Deposit failed: user={user_id}, amount={amount}, error={str(e)}")
-            return TransactionResult(
-                success=False,
-                error=f"Deposit failed: {str(e)}"
-            )
+            raise DatabaseOperationException(f"Deposit failed: {str(e)}")
 
     async def withdraw_funds(self, user_id: str, amount: Decimal) -> TransactionResult:
         """
@@ -125,16 +120,10 @@ class SimpleTransactionManager:
                 # Check balance first
                 balance = await self.balance_dao.get_balance(UUID(user_id))
                 if not balance:
-                    return TransactionResult(
-                        success=False,
-                        error="User balance not found"
-                    )
+                    raise EntityNotFoundException("User balance not found")
 
                 if balance.current_balance < amount:
-                    return TransactionResult(
-                        success=False,
-                        error=f"Insufficient balance. Current: ${balance.current_balance}, Required: ${amount}"
-                    )
+                    raise UserValidationException(f"Insufficient balance. Current: ${balance.current_balance}, Required: ${amount}")
 
                 # Create withdrawal transaction
                 transaction = BalanceTransaction(
@@ -165,18 +154,12 @@ class SimpleTransactionManager:
                     lock_duration=lock_duration
                 )
 
-        except LockAcquisitionError as e:
+        except LockAcquisitionException as e:
             logger.warning(f"Lock acquisition failed for withdrawal: user={user_id}, error={str(e)}")
-            return TransactionResult(
-                success=False,
-                error="Operation is busy, please try again in a moment"
-            )
+            raise DatabaseOperationException("Service temporarily unavailable")
         except Exception as e:
             logger.error(f"Withdrawal failed: user={user_id}, amount={amount}, error={str(e)}")
-            return TransactionResult(
-                success=False,
-                error=f"Withdrawal failed: {str(e)}"
-            )
+            raise DatabaseOperationException(f"Withdrawal failed: {str(e)}")
 
     async def create_buy_order_with_balance_update(
         self,
@@ -204,16 +187,10 @@ class SimpleTransactionManager:
                 # Phase 1: Validate prerequisites
                 balance = await self.balance_dao.get_balance(UUID(user_id))
                 if not balance:
-                    return TransactionResult(
-                        success=False,
-                        error="User balance not found"
-                    )
+                    raise EntityNotFoundException("User balance not found")
 
                 if balance.current_balance < total_cost:
-                    return TransactionResult(
-                        success=False,
-                        error=f"Insufficient balance. Current: ${balance.current_balance}, Required: ${total_cost}"
-                    )
+                    raise UserValidationException(f"Insufficient balance. Current: ${balance.current_balance}, Required: ${total_cost}")
 
                 # Phase 2: Execute operations
                 # 2.1 Create order with PENDING status
@@ -263,12 +240,9 @@ class SimpleTransactionManager:
                     lock_duration=lock_duration
                 )
 
-        except LockAcquisitionError as e:
+        except LockAcquisitionException as e:
             logger.warning(f"Lock acquisition failed for buy order: user={user_id}, error={str(e)}")
-            return TransactionResult(
-                success=False,
-                error="Operation is busy, please try again in a moment"
-            )
+            raise DatabaseOperationException("Service temporarily unavailable")
         except Exception as e:
             # Phase 3: Rollback on Error
             logger.error(f"Buy order transaction failed: user={user_id}, error={str(e)}")
@@ -296,10 +270,7 @@ class SimpleTransactionManager:
                 except Exception as rollback_error:
                     logger.error(f"Order rollback failed: {rollback_error}")
 
-            return TransactionResult(
-                success=False,
-                error=f"Buy order failed: {str(e)}"
-            )
+            raise DatabaseOperationException(f"Buy order failed: {str(e)}")
 
     async def create_sell_order_with_balance_update(
         self,
@@ -373,12 +344,9 @@ class SimpleTransactionManager:
                     lock_duration=lock_duration
                 )
 
-        except LockAcquisitionError as e:
+        except LockAcquisitionException as e:
             logger.warning(f"Lock acquisition failed for sell order: user={user_id}, error={str(e)}")
-            return TransactionResult(
-                success=False,
-                error="Operation is busy, please try again in a moment"
-            )
+            raise DatabaseOperationException("Service temporarily unavailable")
         except Exception as e:
             # Phase 3: Rollback on Error
             logger.error(f"Sell order transaction failed: user={user_id}, error={str(e)}")
@@ -406,7 +374,4 @@ class SimpleTransactionManager:
                 except Exception as rollback_error:
                     logger.error(f"Sell order rollback failed: {rollback_error}")
 
-            return TransactionResult(
-                success=False,
-                error=f"Sell order failed: {str(e)}"
-            )
+            raise DatabaseOperationException(f"Sell order failed: {str(e)}")

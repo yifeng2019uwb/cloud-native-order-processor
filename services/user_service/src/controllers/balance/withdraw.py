@@ -18,19 +18,23 @@ from api_models.shared.common import ErrorResponse
 from common.entities.user import UserResponse
 
 # Import dependencies
-from common.database import get_balance_dao
+from common.database import get_transaction_manager
 from controllers.auth.dependencies import get_current_user
 
 # Import exceptions
 from user_exceptions import (
     UserNotFoundException,
+    UserValidationException,
     InternalServerException
 )
 
-# Import business validation functions only (Layer 2)
-from validation.business_validators import (
-    validate_sufficient_balance
+# Import common exceptions for transaction manager
+from common.exceptions import (
+    DatabaseOperationException,
+    EntityNotFoundException,
+    LockAcquisitionException
 )
+from common.exceptions.shared_exceptions import UserValidationException as CommonUserValidationException
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["balance"])
@@ -45,8 +49,20 @@ router = APIRouter(tags=["balance"])
             "description": "Withdrawal successful",
             "model": WithdrawResponse
         },
+        400: {
+            "description": "Bad request - insufficient balance",
+            "model": ErrorResponse
+        },
         401: {
             "description": "Unauthorized",
+            "model": ErrorResponse
+        },
+        404: {
+            "description": "User balance not found",
+            "model": ErrorResponse
+        },
+        409: {
+            "description": "Operation is busy - try again",
             "model": ErrorResponse
         },
         422: {
@@ -54,7 +70,7 @@ router = APIRouter(tags=["balance"])
             "model": ErrorResponse
         },
         503: {
-            "description": "Service unavailable",
+            "description": "Service temporarily unavailable",
             "model": ErrorResponse
         }
     }
@@ -63,10 +79,10 @@ async def withdraw_funds(
     withdraw_data: WithdrawRequest,
     request: Request,
     current_user: UserResponse = Depends(get_current_user),
-    balance_dao = Depends(get_balance_dao)
+    transaction_manager = Depends(get_transaction_manager)
 ) -> WithdrawResponse:
     """
-    Withdraw funds from user account
+    Withdraw funds from user account using transaction manager for atomicity
 
     Layer 1: Field validation already handled in API models
     Layer 2: Business validation (user authentication, etc.)
@@ -83,32 +99,33 @@ async def withdraw_funds(
     )
 
     try:
-        # Layer 2: Business validation only
-        await validate_sufficient_balance(current_user.user_id, withdraw_data.amount, balance_dao)
-
-        # Create withdrawal transaction
-        from common.entities.user import BalanceTransaction, TransactionType, TransactionStatus
-
-        transaction = BalanceTransaction(
-            user_id=current_user.user_id,
-            transaction_type=TransactionType.WITHDRAWAL,
-            amount=-withdraw_data.amount,  # Negative amount for withdrawal
-            description="Withdrawal",
-            status=TransactionStatus.COMPLETED
+        # Use transaction manager for atomic withdrawal operation
+        result = await transaction_manager.withdraw_funds(
+            user_id=str(current_user.user_id),
+            amount=withdraw_data.amount
         )
 
-        # Save transaction to database
-        created_transaction = await balance_dao.create_transaction(transaction)
-
-        logger.info(f"Withdrawal successful for user {current_user.username}: {withdraw_data.amount}")
+        logger.info(f"Withdrawal successful for user {current_user.username}: {withdraw_data.amount} (lock_duration: {result.lock_duration}s)")
 
         return WithdrawResponse(
             success=True,
             message=f"Successfully withdrew ${withdraw_data.amount}",
-            transaction_id=str(created_transaction.transaction_id),
+            transaction_id=str(result.data["transaction"].transaction_id),
             timestamp=datetime.utcnow()
         )
 
+    except LockAcquisitionException as e:
+        logger.warning(f"Lock acquisition failed for withdrawal: user={current_user.username}, error={str(e)}")
+        raise InternalServerException("Service temporarily unavailable")
+    except EntityNotFoundException as e:
+        logger.error(f"User balance not found for withdrawal: user={current_user.username}, error={str(e)}")
+        raise UserNotFoundException("User balance not found")
+    except CommonUserValidationException as e:
+        logger.warning(f"Insufficient balance for withdrawal: user={current_user.username}, error={str(e)}")
+        raise UserValidationException(str(e))
+    except DatabaseOperationException as e:
+        logger.error(f"Database operation failed for withdrawal: user={current_user.username}, error={str(e)}")
+        raise InternalServerException("Service temporarily unavailable")
     except Exception as e:
-        logger.error(f"Withdrawal failed for user {current_user.username}: {str(e)}", exc_info=True)
-        raise InternalServerException(f"Withdrawal failed: {str(e)}")
+        logger.error(f"Unexpected error during withdrawal: user={current_user.username}, error={str(e)}", exc_info=True)
+        raise InternalServerException("Service temporarily unavailable")

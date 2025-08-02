@@ -10,19 +10,9 @@ from typing import Optional
 from contextlib import asynccontextmanager
 
 from ..database.dynamodb_connection import dynamodb_manager
-from ..exceptions import DatabaseOperationException
+from ..exceptions import DatabaseOperationException, LockAcquisitionException, LockTimeoutException
 
 logger = logging.getLogger(__name__)
-
-
-class LockTimeoutError(Exception):
-    """Raised when lock acquisition times out"""
-    pass
-
-
-class LockAcquisitionError(Exception):
-    """Raised when lock acquisition fails"""
-    pass
 
 
 class UserLock:
@@ -40,18 +30,17 @@ class UserLock:
 
     async def __aenter__(self):
         """Acquire lock when entering context"""
-        self.lock_id = await acquire_lock(
-            self.user_id,
-            self.operation,
-            self.timeout_seconds
-        )
-        if not self.lock_id:
-            raise LockAcquisitionError(
-                f"Failed to acquire lock for user {self.user_id}, operation {self.operation}"
+        try:
+            self.lock_id = await acquire_lock(
+                self.user_id,
+                self.operation,
+                self.timeout_seconds
             )
-        self.acquired = True
-        logger.info(f"Lock acquired: user={self.user_id}, operation={self.operation}, lock_id={self.lock_id}")
-        return self
+            self.acquired = True
+            logger.info(f"Lock acquired: user={self.user_id}, operation={self.operation}, lock_id={self.lock_id}")
+            return self
+        except LockAcquisitionException as e:
+            raise e
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Release lock when exiting context"""
@@ -106,7 +95,7 @@ async def acquire_lock(user_id: str, operation: str, timeout_seconds: int = 15) 
     except Exception as e:
         if "ConditionalCheckFailedException" in str(e):
             logger.debug(f"Lock acquisition failed - lock exists: user={user_id}, operation={operation}")
-            return None
+            raise LockAcquisitionException(f"Lock acquisition failed for user {user_id}, operation {operation}")
         else:
             logger.error(f"Lock acquisition error: user={user_id}, operation={operation}, error={str(e)}")
             raise DatabaseOperationException(f"Failed to acquire lock: {str(e)}")

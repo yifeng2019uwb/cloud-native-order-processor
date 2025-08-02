@@ -10,8 +10,6 @@ from .lock_manager import (
     release_lock,
     get_lock_info,
     cleanup_expired_locks,
-    LockTimeoutError,
-    LockAcquisitionError,
     LOCK_TIMEOUTS
 )
 
@@ -27,8 +25,7 @@ __all__ = [
     "release_lock",
     "get_lock_info",
     "cleanup_expired_locks",
-    "LockTimeoutError",
-    "LockAcquisitionError",
+
     "LOCK_TIMEOUTS",
 
     # Transaction Manager
