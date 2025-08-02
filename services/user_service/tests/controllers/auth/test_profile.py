@@ -49,8 +49,8 @@ async def test_update_profile_valid():
     mock_updated_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_user_dao = MagicMock()
-    mock_user_dao.update_user = AsyncMock(return_value=mock_updated_user)
-    mock_user_dao.get_user_by_email = AsyncMock(return_value=None)  # Email is unique
+    mock_user_dao.update_user = MagicMock(return_value=mock_updated_user)
+    mock_user_dao.get_user_by_email = MagicMock(return_value=None)  # Email is unique
 
     profile_data = UserProfileUpdateRequest(
         email="john.new@example.com",
@@ -78,7 +78,7 @@ async def test_update_profile_email_in_use():
     mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_email = AsyncMock(return_value=MagicMock())  # Email already exists
+    mock_user_dao.get_user_by_email = MagicMock(return_value=MagicMock())  # Email already exists
 
     profile_data = UserProfileUpdateRequest(
         email="existing@example.com",
@@ -104,7 +104,7 @@ async def test_update_profile_unauthorized():
     mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_user_dao = MagicMock()
-    mock_user_dao.update_user = AsyncMock(return_value=None)
+    mock_user_dao.update_user = MagicMock(return_value=None)
 
     profile_data = UserProfileUpdateRequest(
         email="john@example.com",
@@ -131,7 +131,7 @@ async def test_update_profile_user_not_found():
     mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_user_dao = MagicMock()
-    mock_user_dao.update_user = AsyncMock(return_value=None)
+    mock_user_dao.update_user = MagicMock(return_value=None)
 
     profile_data = UserProfileUpdateRequest(
         email="john@example.com",
@@ -158,7 +158,7 @@ async def test_update_profile_database_error():
     mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_user_dao = MagicMock()
-    mock_user_dao.update_user = AsyncMock(side_effect=Exception("Database error"))
+    mock_user_dao.update_user = MagicMock(side_effect=Exception("Database error"))
 
     profile_data = UserProfileUpdateRequest(
         email="john@example.com",
@@ -178,7 +178,7 @@ async def test_get_current_user_valid():
     mock_user_dao = MagicMock()
     mock_user = MagicMock()
     mock_user.username = "john_doe"
-    mock_user_dao.get_user_by_username = AsyncMock(return_value=mock_user)
+    mock_user_dao.get_user_by_username = MagicMock(return_value=mock_user)
     with patch("controllers.auth.profile.verify_access_token", return_value="john_doe"):
         result = await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
         assert result.username == "john_doe"
@@ -198,7 +198,7 @@ async def test_get_current_user_user_not_found():
     mock_creds.credentials = "valid.jwt.token"
     mock_user_dao = MagicMock()
     with patch("controllers.auth.profile.verify_access_token", return_value="john_doe"), \
-         patch.object(mock_user_dao, "get_user_by_username", AsyncMock(return_value=None)):
+         patch.object(mock_user_dao, "get_user_by_username", MagicMock(return_value=None)):
         with pytest.raises(UserNotFoundException):
             await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
 
@@ -218,7 +218,7 @@ async def test_get_current_user_user_dao_exception():
     mock_creds.credentials = "valid.jwt.token"
     mock_user_dao = MagicMock()
     with patch("controllers.auth.profile.verify_access_token", return_value="john_doe"), \
-         patch.object(mock_user_dao, "get_user_by_username", AsyncMock(side_effect=Exception("DAO error"))):
+         patch.object(mock_user_dao, "get_user_by_username", MagicMock(side_effect=Exception("DAO error"))):
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
         assert exc_info.value.status_code == 401

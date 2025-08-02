@@ -36,7 +36,7 @@ def validate_username_uniqueness(username: str, user_dao: Any, exclude_user_id: 
 
     if existing_user:
         # If we're updating, exclude the current user
-        if exclude_user_id and existing_user.id == exclude_user_id:
+        if exclude_user_id and existing_user.username == exclude_user_id:
             return True
 
         raise UserAlreadyExistsException(f"Username '{username}' already exists")
@@ -64,7 +64,7 @@ def validate_email_uniqueness(email: str, user_dao: Any, exclude_user_id: Option
 
     if existing_user:
         # If we're updating, exclude the current user
-        if exclude_user_id and existing_user.id == exclude_user_id:
+        if exclude_user_id and existing_user.username == exclude_user_id:
             return True
 
         raise UserAlreadyExistsException(f"Email '{email}' already exists")
@@ -77,7 +77,7 @@ def validate_user_exists(user_id: str, user_dao: Any) -> bool:
     Validate that user exists in the system
 
     Args:
-        user_id: User ID to check
+        user_id: User ID to check (username in new entity structure)
         user_dao: User DAO instance
 
     Returns:
@@ -86,8 +86,8 @@ def validate_user_exists(user_id: str, user_dao: Any) -> bool:
     Raises:
         UserNotFoundException: If user doesn't exist
     """
-    # Query database for user existence
-    user = user_dao.get_user_by_id(user_id)
+    # Query database for user existence (use username as user_id)
+    user = user_dao.get_user_by_username(user_id)
 
     if not user:
         raise UserNotFoundException(f"User with ID '{user_id}' not found")
@@ -161,7 +161,7 @@ async def validate_sufficient_balance(user_id: str, amount: float, balance_dao: 
         UserValidationException: If insufficient balance
     """
     # Get current balance
-    balance = await balance_dao.get_balance_by_user_id(user_id)
+    balance = balance_dao.get_balance_by_user_id(user_id)
 
     if not balance:
         raise UserValidationException("User balance not found")

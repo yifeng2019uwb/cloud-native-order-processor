@@ -14,17 +14,17 @@ from user_exceptions import UserValidationException
 async def test_register_success():
     from uuid import uuid4
 
-    mock_user_dao = AsyncMock()
-    mock_user_dao.get_user_by_username = AsyncMock(return_value=None)
-    mock_user_dao.get_user_by_email = AsyncMock(return_value=None)
+    mock_user_dao = MagicMock()
+    mock_user_dao.get_user_by_username = MagicMock(return_value=None)
+    mock_user_dao.get_user_by_email = MagicMock(return_value=None)
     mock_user = MagicMock()
     mock_user.username = "newuser"
     mock_user.user_id = uuid4()  # Set a proper UUID
-    mock_user_dao.create_user = AsyncMock(return_value=mock_user)
+    mock_user_dao.create_user = MagicMock(return_value=mock_user)
 
     # Mock balance_dao
-    mock_balance_dao = AsyncMock()
-    mock_balance_dao.create_balance = AsyncMock()
+    mock_balance_dao = MagicMock()
+    mock_balance_dao.create_balance = MagicMock()
 
     mock_request = MagicMock()
     mock_request.client = MagicMock(host="127.0.0.1")
@@ -48,9 +48,9 @@ async def test_register_success():
 
 @pytest.mark.asyncio
 async def test_register_username_exists():
-    mock_user_dao = AsyncMock()
-    mock_user_dao.get_user_by_username = AsyncMock(return_value=MagicMock())
-    mock_user_dao.get_user_by_email = AsyncMock(return_value=None)
+    mock_user_dao = MagicMock()
+    mock_user_dao.get_user_by_username = MagicMock(return_value=MagicMock())
+    mock_user_dao.get_user_by_email = MagicMock(return_value=None)
     mock_request = MagicMock()
     mock_request.client = MagicMock(host="127.0.0.1")
     mock_request.headers = {"user-agent": "pytest"}
@@ -68,9 +68,9 @@ async def test_register_username_exists():
 
 @pytest.mark.asyncio
 async def test_register_email_exists():
-    mock_user_dao = AsyncMock()
-    mock_user_dao.get_user_by_username = AsyncMock(return_value=None)
-    mock_user_dao.get_user_by_email = AsyncMock(return_value=MagicMock())
+    mock_user_dao = MagicMock()
+    mock_user_dao.get_user_by_username = MagicMock(return_value=None)
+    mock_user_dao.get_user_by_email = MagicMock(return_value=MagicMock())
     mock_request = MagicMock()
     mock_request.client = MagicMock(host="127.0.0.1")
     mock_request.headers = {"user-agent": "pytest"}
@@ -88,10 +88,10 @@ async def test_register_email_exists():
 
 @pytest.mark.asyncio
 async def test_register_validation_error():
-    mock_user_dao = AsyncMock()
-    mock_user_dao.get_user_by_username = AsyncMock(return_value=None)
-    mock_user_dao.get_user_by_email = AsyncMock(return_value=None)
-    mock_user_dao.create_user = AsyncMock(side_effect=EntityAlreadyExistsException("Some validation error"))
+    mock_user_dao = MagicMock()
+    mock_user_dao.get_user_by_username = MagicMock(return_value=None)
+    mock_user_dao.get_user_by_email = MagicMock(return_value=None)
+    mock_user_dao.create_user = MagicMock(side_effect=EntityAlreadyExistsException("Some validation error"))
     mock_request = MagicMock()
     mock_request.client = MagicMock(host="127.0.0.1")
     mock_request.headers = {"user-agent": "pytest"}
@@ -109,10 +109,10 @@ async def test_register_validation_error():
 
 @pytest.mark.asyncio
 async def test_register_unexpected_error():
-    mock_user_dao = AsyncMock()
-    mock_user_dao.get_user_by_username = AsyncMock(return_value=None)
-    mock_user_dao.get_user_by_email = AsyncMock(return_value=None)
-    mock_user_dao.create_user = AsyncMock(side_effect=Exception("Unexpected error"))
+    mock_user_dao = MagicMock()
+    mock_user_dao.get_user_by_username = MagicMock(return_value=None)
+    mock_user_dao.get_user_by_email = MagicMock(return_value=None)
+    mock_user_dao.create_user = MagicMock(side_effect=Exception("Unexpected error"))
     mock_request = MagicMock()
     mock_request.client = MagicMock(host="127.0.0.1")
     mock_request.headers = {"user-agent": "pytest"}

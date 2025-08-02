@@ -50,7 +50,7 @@ async def test_get_current_user_valid_token():
     mock_user.updated_at = "2025-07-09T10:30:00Z"
 
     mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_username = AsyncMock(return_value=mock_user)
+    mock_user_dao.get_user_by_username = MagicMock(return_value=mock_user)
     with patch("src.controllers.auth.dependencies.verify_token_dependency", return_value="john_doe123"), \
          patch("src.controllers.auth.dependencies.UserDAO", return_value=mock_user_dao):
         user = await get_current_user(username="john_doe123", user_dao=mock_user_dao)
@@ -60,7 +60,7 @@ async def test_get_current_user_valid_token():
 @pytest.mark.asyncio
 async def test_get_current_user_invalid_token():
     mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_username = AsyncMock(return_value=None)
+    mock_user_dao.get_user_by_username = MagicMock(return_value=None)
     with patch("src.controllers.auth.dependencies.verify_token_dependency", side_effect=HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)), \
          patch("src.controllers.auth.dependencies.UserDAO", return_value=mock_user_dao):
         with pytest.raises(HTTPException) as exc_info:
@@ -70,7 +70,7 @@ async def test_get_current_user_invalid_token():
 @pytest.mark.asyncio
 async def test_get_current_user_user_not_found():
     mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_username = AsyncMock(return_value=None)
+    mock_user_dao.get_user_by_username = MagicMock(return_value=None)
     with patch("src.controllers.auth.dependencies.verify_token_dependency", return_value="john_doe123"), \
          patch("src.controllers.auth.dependencies.UserDAO", return_value=mock_user_dao):
         with pytest.raises(HTTPException) as exc_info:
@@ -80,7 +80,7 @@ async def test_get_current_user_user_not_found():
 @pytest.mark.asyncio
 async def test_get_current_user_database_error():
     mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_username = AsyncMock(side_effect=Exception("DB error"))
+    mock_user_dao.get_user_by_username = MagicMock(side_effect=Exception("DB error"))
     with patch("src.controllers.auth.dependencies.verify_token_dependency", return_value="john_doe123"), \
          patch("src.controllers.auth.dependencies.UserDAO", return_value=mock_user_dao):
         with pytest.raises(HTTPException) as exc_info:
@@ -138,7 +138,7 @@ async def test_get_optional_current_user_invalid_token():
 async def test_get_optional_current_user_user_not_found():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
     mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_email = AsyncMock(return_value=None)
+    mock_user_dao.get_user_by_email = MagicMock(return_value=None)
     with patch("src.controllers.auth.dependencies.verify_access_token", return_value="user@email.com"):
         result = await dependencies.get_optional_current_user(creds, user_dao=mock_user_dao)
         assert result is None
@@ -147,7 +147,7 @@ async def test_get_optional_current_user_user_not_found():
 async def test_get_optional_current_user_exception():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
     mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_email = AsyncMock(side_effect=Exception("fail"))
+    mock_user_dao.get_user_by_email = MagicMock(side_effect=Exception("fail"))
     with patch("src.controllers.auth.dependencies.verify_access_token", return_value="user@email.com"):
         result = await dependencies.get_optional_current_user(creds, user_dao=mock_user_dao)
         assert result is None

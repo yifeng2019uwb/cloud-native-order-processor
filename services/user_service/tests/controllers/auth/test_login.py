@@ -20,8 +20,8 @@ async def test_login_valid_credentials_patch_login_only():
     mock_user.updated_at = "2024-01-02T00:00:00Z"
     mock_user.role = "user"  # Provide a proper role value
 
-    mock_user_dao = AsyncMock()
-    mock_user_dao.authenticate_user = AsyncMock(return_value=mock_user)
+    mock_user_dao = MagicMock()
+    mock_user_dao.authenticate_user = MagicMock(return_value=mock_user)
 
     login_data = UserLoginRequest(username="john_doe", password="Password123!")
 
@@ -40,8 +40,8 @@ async def test_login_valid_credentials_patch_login_only():
 
 @pytest.mark.asyncio
 async def test_login_invalid_credentials():
-    mock_user_dao = AsyncMock()
-    mock_user_dao.authenticate_user = AsyncMock(return_value=None)
+    mock_user_dao = MagicMock()
+    mock_user_dao.authenticate_user = MagicMock(return_value=None)
     login_data = UserLoginRequest(username="john_doe", password="WrongPassword1!")
     with pytest.raises(InvalidCredentialsException) as exc_info:
         await login_user(login_data, user_dao=mock_user_dao)
@@ -55,8 +55,8 @@ async def test_login_missing_input():
 
 @pytest.mark.asyncio
 async def test_login_database_error():
-    mock_user_dao = AsyncMock()
-    mock_user_dao.authenticate_user = AsyncMock(side_effect=Exception("db error"))
+    mock_user_dao = MagicMock()
+    mock_user_dao.authenticate_user = MagicMock(side_effect=Exception("db error"))
     login_data = UserLoginRequest(username="john_doe", password="Password123!")
     with pytest.raises(HTTPException) as exc_info:
         await login_user(login_data, user_dao=mock_user_dao)

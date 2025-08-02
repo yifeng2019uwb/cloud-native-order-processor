@@ -138,7 +138,7 @@ async def get_optional_current_user(
         if email is None:
             return None
 
-        user = user_dao.get_user_by_email(email)
+        user = await user_dao.get_user_by_email(email)
         if user is None:
             return None
 

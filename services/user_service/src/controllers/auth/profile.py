@@ -60,7 +60,7 @@ async def get_current_user(
             raise TokenExpiredException("Token has expired")
 
         # Get user from database using username from token
-        user = await user_dao.get_user_by_username(username)
+        user = user_dao.get_user_by_username(username)
         if not user:
             raise UserNotFoundException(f"User '{username}' not found")
 
@@ -156,11 +156,11 @@ async def update_profile(
 
         # Layer 2: Business validation only
         if profile_data.email and profile_data.email != current_user.email:
-            await validate_email_uniqueness(profile_data.email, user_dao)
+            validate_email_uniqueness(profile_data.email, user_dao)
         if profile_data.date_of_birth:
             validate_age_requirements(profile_data.date_of_birth)
 
-        updated_user = await user_dao.update_user(
+        updated_user = user_dao.update_user(
             username=current_user.username,
             email=profile_data.email,
             name=f"{profile_data.first_name} {profile_data.last_name}" if profile_data.first_name and profile_data.last_name else None,

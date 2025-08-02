@@ -3,7 +3,7 @@ Tests for user service validation
 """
 import pytest
 from datetime import date, timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 from validation.field_validators import (
     validate_username,
@@ -363,78 +363,71 @@ class TestFieldValidators:
 class TestBusinessValidators:
     """Test business validation functions"""
 
-    @pytest.mark.asyncio
-    async def test_validate_username_uniqueness_unique(self):
+    def test_validate_username_uniqueness_unique(self):
         """Test username uniqueness when username is unique"""
-        mock_dao = AsyncMock()
+        mock_dao = Mock()
         mock_dao.get_user_by_username.return_value = None
 
-        result = await validate_username_uniqueness("newuser", mock_dao)
+        result = validate_username_uniqueness("newuser", mock_dao)
         assert result is True
         mock_dao.get_user_by_username.assert_called_once_with("newuser")
 
-    @pytest.mark.asyncio
-    async def test_validate_username_uniqueness_exists(self):
+    def test_validate_username_uniqueness_exists(self):
         """Test username uniqueness when username already exists"""
-        mock_dao = AsyncMock()
+        mock_dao = Mock()
         mock_user = MagicMock()
-        mock_user.id = "user123"
+        mock_user.username = "user123"
         mock_dao.get_user_by_username.return_value = mock_user
 
         with pytest.raises(UserAlreadyExistsException, match="Username 'existinguser' already exists"):
-            await validate_username_uniqueness("existinguser", mock_dao)
+            validate_username_uniqueness("existinguser", mock_dao)
 
-    @pytest.mark.asyncio
-    async def test_validate_username_uniqueness_exclude_current(self):
+    def test_validate_username_uniqueness_exclude_current(self):
         """Test username uniqueness when updating current user"""
-        mock_dao = AsyncMock()
+        mock_dao = Mock()
         mock_user = MagicMock()
-        mock_user.id = "user123"
+        mock_user.username = "user123"
         mock_dao.get_user_by_username.return_value = mock_user
 
-        result = await validate_username_uniqueness("existinguser", mock_dao, exclude_user_id="user123")
+        result = validate_username_uniqueness("existinguser", mock_dao, exclude_user_id="user123")
         assert result is True
 
-    @pytest.mark.asyncio
-    async def test_validate_email_uniqueness_unique(self):
+    def test_validate_email_uniqueness_unique(self):
         """Test email uniqueness when email is unique"""
-        mock_dao = AsyncMock()
+        mock_dao = Mock()
         mock_dao.get_user_by_email.return_value = None
 
-        result = await validate_email_uniqueness("new@example.com", mock_dao)
+        result = validate_email_uniqueness("new@example.com", mock_dao)
         assert result is True
         mock_dao.get_user_by_email.assert_called_once_with("new@example.com")
 
-    @pytest.mark.asyncio
-    async def test_validate_email_uniqueness_exists(self):
+    def test_validate_email_uniqueness_exists(self):
         """Test email uniqueness when email already exists"""
-        mock_dao = AsyncMock()
+        mock_dao = Mock()
         mock_user = MagicMock()
-        mock_user.id = "user123"
+        mock_user.username = "user123"
         mock_dao.get_user_by_email.return_value = mock_user
 
         with pytest.raises(UserAlreadyExistsException, match="Email 'existing@example.com' already exists"):
-            await validate_email_uniqueness("existing@example.com", mock_dao)
+            validate_email_uniqueness("existing@example.com", mock_dao)
 
-    @pytest.mark.asyncio
-    async def test_validate_user_exists_found(self):
+    def test_validate_user_exists_found(self):
         """Test user existence when user exists"""
-        mock_dao = AsyncMock()
+        mock_dao = Mock()
         mock_user = MagicMock()
-        mock_dao.get_user_by_id.return_value = mock_user
+        mock_dao.get_user_by_username.return_value = mock_user
 
-        result = await validate_user_exists("user123", mock_dao)
+        result = validate_user_exists("user123", mock_dao)
         assert result is True
-        mock_dao.get_user_by_id.assert_called_once_with("user123")
+        mock_dao.get_user_by_username.assert_called_once_with("user123")
 
-    @pytest.mark.asyncio
-    async def test_validate_user_exists_not_found(self):
+    def test_validate_user_exists_not_found(self):
         """Test user existence when user doesn't exist"""
-        mock_dao = AsyncMock()
-        mock_dao.get_user_by_id.return_value = None
+        mock_dao = Mock()
+        mock_dao.get_user_by_username.return_value = None
 
         with pytest.raises(UserNotFoundException, match="User with ID 'nonexistent' not found"):
-            await validate_user_exists("nonexistent", mock_dao)
+            validate_user_exists("nonexistent", mock_dao)
 
     def test_validate_age_requirements_valid(self):
         """Test age requirements with valid age"""
