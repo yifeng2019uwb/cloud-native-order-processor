@@ -21,7 +21,7 @@ from api_models.inventory.asset_requests import AssetIdRequest
 
 # Import common DAO
 from common.dao.inventory import AssetDAO
-from common.database import get_asset_dao
+from common.database.dependencies import get_asset_dao
 
 # Import internal exceptions
 from exceptions import (

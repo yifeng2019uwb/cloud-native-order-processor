@@ -5,7 +5,7 @@ Provides business logic validation for the inventory service.
 Layer 2: Business validation (existence checks, business rules, etc.)
 """
 
-from common.dao.inventory import AssetDAO
+from common.dao.inventory.asset_dao import AssetDAO
 from exceptions import AssetNotFoundException
 
 

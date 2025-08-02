@@ -12,12 +12,20 @@ from user_exceptions import UserValidationException
 
 @pytest.mark.asyncio
 async def test_register_success():
+    from uuid import uuid4
+
     mock_user_dao = AsyncMock()
     mock_user_dao.get_user_by_username = AsyncMock(return_value=None)
     mock_user_dao.get_user_by_email = AsyncMock(return_value=None)
     mock_user = MagicMock()
     mock_user.username = "newuser"
+    mock_user.user_id = uuid4()  # Set a proper UUID
     mock_user_dao.create_user = AsyncMock(return_value=mock_user)
+
+    # Mock balance_dao
+    mock_balance_dao = AsyncMock()
+    mock_balance_dao.create_balance = AsyncMock()
+
     mock_request = MagicMock()
     mock_request.client = MagicMock(host="127.0.0.1")
     mock_request.headers = {"user-agent": "pytest"}
@@ -34,7 +42,7 @@ async def test_register_success():
         "token_type": "bearer",
         "expires_in": 3600
     }
-    result = await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
+    result = await register_user(reg_data, request=mock_request, user_dao=mock_user_dao, balance_dao=mock_balance_dao)
     assert result.message == "User registered successfully"
     assert result.success is True
 
