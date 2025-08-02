@@ -5,11 +5,11 @@ Provides business logic validation for the inventory service.
 Layer 2: Business validation (existence checks, business rules, etc.)
 """
 
-from common.dao.inventory.asset_dao import AssetDAO
+from common.database import get_asset_dao
 from exceptions import AssetNotFoundException
 
 
-async def validate_asset_exists(asset_id: str, asset_dao: AssetDAO) -> None:
+async def validate_asset_exists(asset_id: str, asset_dao) -> None:
     """
     Layer 2: Business validation - check if asset exists in database
 
@@ -25,7 +25,7 @@ async def validate_asset_exists(asset_id: str, asset_dao: AssetDAO) -> None:
         raise AssetNotFoundException(f"Asset '{asset_id}' not found")
 
 
-async def validate_asset_is_active(asset_id: str, asset_dao: AssetDAO) -> None:
+async def validate_asset_is_active(asset_id: str, asset_dao) -> None:
     """
     Layer 2: Business validation - check if asset is active
 

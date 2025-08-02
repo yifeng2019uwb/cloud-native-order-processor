@@ -8,7 +8,7 @@ from decimal import Decimal
 import httpx
 import asyncio
 
-from common.dao.inventory import AssetDAO
+from common.dao.inventory.asset_dao import AssetDAO
 from common.entities.inventory import AssetCreate
 from common.database.dynamodb_connection import dynamodb_manager
 

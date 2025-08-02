@@ -26,15 +26,6 @@ def get_balance_dao() -> BalanceDAO:
     return BalanceDAO(dynamodb_manager.get_connection())
 
 
-def get_order_balance_service() -> "OrderBalanceService":
-    """Get OrderBalanceService instance with required DAOs"""
-    from ..services.order_balance_service import OrderBalanceService
-    return OrderBalanceService(
-        balance_dao=get_balance_dao(),
-        order_dao=get_order_dao()
-    )
-
-
 def get_asset_dao() -> AssetDAO:
     """Get AssetDAO instance with database connection"""
     return AssetDAO(dynamodb_manager.get_connection())
