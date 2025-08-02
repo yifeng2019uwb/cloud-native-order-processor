@@ -11,9 +11,7 @@ class OrderAlreadyExistsException(BaseInternalException):
     pass
 
 
-class OrderCreationException(BaseInternalException):
-    """Order creation specific failures"""
-    pass
+
 
 
 class OrderStatusException(BaseInternalException):

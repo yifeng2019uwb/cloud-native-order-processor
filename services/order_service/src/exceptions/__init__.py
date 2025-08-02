@@ -34,7 +34,6 @@ from common.exceptions import (
 # Import order service specific exceptions
 from .exceptions import (
     OrderAlreadyExistsException,
-    OrderCreationException,
     OrderStatusException,
     OrderServerException,
 )
@@ -58,7 +57,6 @@ __all__ = [
 
     # Order service specific exceptions
     "OrderAlreadyExistsException",
-    "OrderCreationException",
     "OrderStatusException",
     "OrderServerException",
 ]

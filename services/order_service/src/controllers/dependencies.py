@@ -6,7 +6,7 @@ from fastapi import Depends
 from typing import Optional
 
 from common.dao.order.order_dao import OrderDAO
-from common.database import get_order_dao
+from common.database import get_order_dao, get_transaction_manager
 
 
 async def get_order_service():
