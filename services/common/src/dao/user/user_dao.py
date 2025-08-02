@@ -46,17 +46,17 @@ class UserDAO(BaseDAO):
             # Hash password
             password_hash = self._hash_password(user_create.password)
 
-            # Create user item
+            # Create user item with new schema
             now = datetime.utcnow().isoformat()
             user_item = {
-                'user_id': user_create.username,  # Primary key
-                'username': user_create.username,
+                'Pk': user_create.username,  # Primary key
+                'username': user_create.username,  # For easy access
                 'email': user_create.email,
                 'password_hash': password_hash,
                 'first_name': user_create.first_name,
                 'last_name': user_create.last_name,
                 'phone': user_create.phone,
-                'role': user_create.role,  # Add role field
+                'role': user_create.role,
                 'created_at': now,
                 'updated_at': now
             }
@@ -65,12 +65,13 @@ class UserDAO(BaseDAO):
             created_item = self._safe_put_item(self.db.users_table, user_item)
 
             return User(
+                Pk=user_create.username,
                 username=user_create.username,
                 email=user_create.email,
                 first_name=user_create.first_name,
                 last_name=user_create.last_name,
                 phone=user_create.phone,
-                role=user_create.role,  # Add role field
+                role=user_create.role,
                 created_at=datetime.fromisoformat(created_item['created_at']),
                 updated_at=datetime.fromisoformat(created_item['updated_at'])
             )
@@ -85,7 +86,7 @@ class UserDAO(BaseDAO):
             logger.info(f"🔍 DEBUG: Looking up user by username: '{username}'")
 
             key = {
-                'user_id': username  # Use single key, not composite
+                'Pk': username  # Use Pk field
             }
 
             logger.info(f"🔍 DEBUG: Using key: {key}")
@@ -98,12 +99,13 @@ class UserDAO(BaseDAO):
                 return None
 
             return User(
+                Pk=item['Pk'],
                 username=item['username'],
                 email=item['email'],
-                first_name=item.get('first_name', ''),  # FIXED: Split field with fallback
-                last_name=item.get('last_name', ''),    # FIXED: Split field with fallback
+                first_name=item.get('first_name', ''),
+                last_name=item.get('last_name', ''),
                 phone=item.get('phone'),
-                role=item.get('role', DEFAULT_USER_ROLE),  # Add role field with default
+                role=item.get('role', DEFAULT_USER_ROLE),
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
@@ -128,12 +130,13 @@ class UserDAO(BaseDAO):
             item = items[0]
 
             return User(
+                Pk=item['Pk'],
                 username=item['username'],
                 email=item['email'],
-                first_name=item.get('first_name', ''),  # FIXED: Split field with fallback
-                last_name=item.get('last_name', ''),    # FIXED: Split field with fallback
+                first_name=item.get('first_name', ''),
+                last_name=item.get('last_name', ''),
                 phone=item.get('phone'),
-                role=item.get('role', DEFAULT_USER_ROLE),  # Add role field with default
+                role=item.get('role', DEFAULT_USER_ROLE),
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
@@ -150,7 +153,7 @@ class UserDAO(BaseDAO):
                 return None
 
             # Get the stored password hash
-            key = {'user_id': username}
+            key = {'Pk': username}
             item = self._safe_get_item(self.db.users_table, key)
             if not item:
                 return None
@@ -218,7 +221,7 @@ class UserDAO(BaseDAO):
             update_expression = "SET " + ", ".join(update_parts)
 
             # Perform the update
-            key = {'user_id': username}
+            key = {'Pk': username}
             updated_item = self._safe_update_item(
                 self.db.users_table,
                 key,
@@ -233,6 +236,7 @@ class UserDAO(BaseDAO):
 
             # Return updated user
             return User(
+                Pk=updated_item['Pk'],
                 username=updated_item['username'],
                 email=updated_item['email'],
                 first_name=updated_item.get('first_name', ''),
@@ -250,7 +254,7 @@ class UserDAO(BaseDAO):
     def delete_user(self, username: str) -> bool:
         """Delete a user by username"""
         try:
-            key = {'user_id': username}
+            key = {'Pk': username}
             return self._safe_delete_item(self.db.users_table, key)
 
         except Exception as e:

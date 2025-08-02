@@ -66,7 +66,7 @@ async def login_user(
 
         # Layer 2: Business validation only
         # Authenticate user using username
-        user = await user_dao.authenticate_user(login_data.username, login_data.password)
+        user = user_dao.authenticate_user(login_data.username, login_data.password)
         if not user:
             logger.warning(f"Authentication failed for: {login_data.username}")
             raise InvalidCredentialsException(f"Invalid credentials for user '{login_data.username}'")

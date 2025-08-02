@@ -6,7 +6,7 @@ Path: cloud-native-order-processor/services/user-service/src/controllers/balance
 from fastapi import APIRouter
 
 # Create main balance router that combines all balance-related endpoints
-router = APIRouter(prefix="/balance", tags=["balance"])
+router = APIRouter(tags=["balance"])
 
 # Import and include individual route modules
 try:

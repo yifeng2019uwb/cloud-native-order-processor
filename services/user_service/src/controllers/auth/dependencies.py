@@ -84,7 +84,7 @@ async def get_current_user(
     try:
         logger.info(f"🔍 DEBUG: get_current_user called with username: '{username}'")
 
-        user = await user_dao.get_user_by_username(username)
+        user = user_dao.get_user_by_username(username)
         logger.info(f"🔍 DEBUG: user_dao.get_user_by_username returned: {user}")
 
         if user is None:
@@ -138,7 +138,7 @@ async def get_optional_current_user(
         if email is None:
             return None
 
-        user = await user_dao.get_user_by_email(email)
+        user = user_dao.get_user_by_email(email)
         if user is None:
             return None
 

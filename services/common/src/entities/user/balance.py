@@ -15,10 +15,12 @@ from .balance_enums import TransactionType, TransactionStatus, DEFAULT_TRANSACTI
 class Balance(BaseModel):
     """User account balance entity."""
 
-    user_id: str = Field(..., description="User ID (username)")
+    Pk: str = Field(..., description="Primary key (BALANCE#{username})")
+    username: str = Field(..., description="Username for easy access")
     current_balance: Decimal = Field(default=Decimal('0.00'), description="Current account balance")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Balance creation timestamp")
     updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
+    entity_type: str = Field(default="balance", description="Entity type identifier")
 
     model_config = ConfigDict(
         json_encoders={
@@ -31,15 +33,17 @@ class Balance(BaseModel):
 class BalanceTransaction(BaseModel):
     """Balance transaction entity."""
 
+    Pk: str = Field(..., description="Primary key (TRANS#{username})")
+    username: str = Field(..., description="Username for easy access")
+    Sk: str = Field(..., description="Sort key (timestamp)")
     transaction_id: UUID = Field(default_factory=uuid4, description="Unique transaction ID")
-    user_id: str = Field(..., description="User ID (username)")
     transaction_type: TransactionType = Field(..., description="Type of transaction")
     amount: Decimal = Field(..., description="Transaction amount (positive for deposits, negative for withdrawals)")
     description: str = Field(..., description="Transaction description")
     status: TransactionStatus = Field(default=DEFAULT_TRANSACTION_STATUS, description="Transaction status")
     reference_id: Optional[str] = Field(None, description="External reference ID (e.g., order ID)")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Transaction creation timestamp")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
+    entity_type: str = Field(default="balance_transaction", description="Entity type identifier")
 
     model_config = ConfigDict(
         json_encoders={
@@ -53,14 +57,14 @@ class BalanceTransaction(BaseModel):
 class BalanceCreate(BaseModel):
     """Request model for creating a balance."""
 
-    user_id: str = Field(..., description="User ID (username)")
+    username: str = Field(..., description="Username")
     initial_balance: Decimal = Field(default=Decimal('0.00'), description="Initial balance amount")
 
 
 class BalanceTransactionCreate(BaseModel):
     """Request model for creating a balance transaction."""
 
-    user_id: str = Field(..., description="User ID (username)")
+    username: str = Field(..., description="Username")
     transaction_type: TransactionType = Field(..., description="Type of transaction")
     amount: Decimal = Field(..., description="Transaction amount")
     description: str = Field(..., description="Transaction description")
@@ -70,7 +74,7 @@ class BalanceTransactionCreate(BaseModel):
 class BalanceResponse(BaseModel):
     """Response model for balance information."""
 
-    user_id: str = Field(..., description="User ID (username)")
+    username: str = Field(..., description="Username")
     current_balance: Decimal = Field(..., description="Current account balance")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
@@ -86,7 +90,7 @@ class BalanceTransactionResponse(BaseModel):
     """Response model for balance transaction."""
 
     transaction_id: UUID = Field(..., description="Unique transaction ID")
-    user_id: str = Field(..., description="User ID (username)")
+    username: str = Field(..., description="Username")
     transaction_type: TransactionType = Field(..., description="Type of transaction")
     amount: Decimal = Field(..., description="Transaction amount")
     description: str = Field(..., description="Transaction description")

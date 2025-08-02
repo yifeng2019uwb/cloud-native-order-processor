@@ -16,7 +16,7 @@ from common.exceptions import (
 from user_exceptions import UserAlreadyExistsException
 
 
-async def validate_username_uniqueness(username: str, user_dao: Any, exclude_user_id: Optional[str] = None) -> bool:
+def validate_username_uniqueness(username: str, user_dao: Any, exclude_user_id: Optional[str] = None) -> bool:
     """
     Validate that username is unique in the system
 
@@ -32,7 +32,7 @@ async def validate_username_uniqueness(username: str, user_dao: Any, exclude_use
         UserAlreadyExistsException: If username already exists
     """
     # Query database for existing username
-    existing_user = await user_dao.get_user_by_username(username)
+    existing_user = user_dao.get_user_by_username(username)
 
     if existing_user:
         # If we're updating, exclude the current user
@@ -44,7 +44,7 @@ async def validate_username_uniqueness(username: str, user_dao: Any, exclude_use
     return True
 
 
-async def validate_email_uniqueness(email: str, user_dao: Any, exclude_user_id: Optional[str] = None) -> bool:
+def validate_email_uniqueness(email: str, user_dao: Any, exclude_user_id: Optional[str] = None) -> bool:
     """
     Validate that email is unique in the system
 
@@ -60,7 +60,7 @@ async def validate_email_uniqueness(email: str, user_dao: Any, exclude_user_id: 
         UserAlreadyExistsException: If email already exists
     """
     # Query database for existing email
-    existing_user = await user_dao.get_user_by_email(email)
+    existing_user = user_dao.get_user_by_email(email)
 
     if existing_user:
         # If we're updating, exclude the current user
@@ -72,7 +72,7 @@ async def validate_email_uniqueness(email: str, user_dao: Any, exclude_user_id: 
     return True
 
 
-async def validate_user_exists(user_id: str, user_dao: Any) -> bool:
+def validate_user_exists(user_id: str, user_dao: Any) -> bool:
     """
     Validate that user exists in the system
 
@@ -87,7 +87,7 @@ async def validate_user_exists(user_id: str, user_dao: Any) -> bool:
         UserNotFoundException: If user doesn't exist
     """
     # Query database for user existence
-    user = await user_dao.get_user_by_id(user_id)
+    user = user_dao.get_user_by_id(user_id)
 
     if not user:
         raise UserNotFoundException(f"User with ID '{user_id}' not found")

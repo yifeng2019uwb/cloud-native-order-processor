@@ -81,7 +81,8 @@ app.add_middleware(
 async def logging_middleware(request: Request, call_next):
     """Universal logging middleware that works in Lambda and K8s"""
     # TODO: Implement logging middleware
-    pass
+    response = await call_next(request)
+    return response
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -89,7 +90,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     # TODO: Implement validation error handler tomorrow
     # from exceptions.secure_exceptions import secure_validation_exception_handler
     # return await secure_validation_exception_handler(request, exc)
-    pass
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Validation error", "errors": exc.errors()}
+    )
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
@@ -97,7 +101,10 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     # TODO: Implement HTTP exception handler tomorrow
     # from exceptions.secure_exceptions import secure_general_exception_handler
     # return await secure_general_exception_handler(request, exc)
-    pass
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -105,7 +112,11 @@ async def global_exception_handler(request: Request, exc: Exception):
     # TODO: Implement global exception handler tomorrow
     # from exceptions.secure_exceptions import secure_general_exception_handler
     # return await secure_general_exception_handler(request, exc)
-    pass
+    logger.error(f"Unhandled exception: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
 
 # Import and include API routers
 try:

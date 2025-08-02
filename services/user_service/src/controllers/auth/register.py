@@ -91,8 +91,8 @@ async def register_user(
 
     try:
         # Layer 2: Business validation only
-        await validate_username_uniqueness(user_data.username, user_dao)
-        await validate_email_uniqueness(user_data.email, user_dao)
+        validate_username_uniqueness(user_data.username, user_dao)
+        validate_email_uniqueness(user_data.email, user_dao)
         validate_age_requirements(user_data.date_of_birth)
 
         # Transform API model to DAO model - proper field mapping
@@ -105,15 +105,15 @@ async def register_user(
             phone=user_data.phone
         )
 
-        # Create the user via DAO
-        created_user = await user_dao.create_user(user_create)
+        # Create the user via DAO (sync operation)
+        created_user = user_dao.create_user(user_create)
 
-        # Create initial balance record with 0 balance
+        # Create initial balance record with 0 balance (sync operation)
         initial_balance = Balance(
             user_id=created_user.username,  # Use username instead of user_id
             current_balance=Decimal('0.00')
         )
-        await balance_dao.create_balance(initial_balance)
+        balance_dao.create_balance(initial_balance)
 
         # Log successful registration
         logger.info(f"User registered successfully: {user_data.username}")

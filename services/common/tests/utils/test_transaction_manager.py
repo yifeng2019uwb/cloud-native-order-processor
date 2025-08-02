@@ -39,40 +39,47 @@ class TestTransactionManager:
 
     @pytest.fixture
     def mock_transaction(self):
-        """Create a mock balance transaction"""
+        """Mock transaction for testing"""
         return BalanceTransaction(
-            transaction_id=UUID('87654321-4321-8765-cba9-987654321cba'),
-            user_id="testuser123",  # Use string instead of UUID
+            Pk="TRANS#testuser123",
+            username="testuser123",
+            Sk="2023-01-01T00:00:00",
+            transaction_id=UUID('12345678-1234-5678-9abc-123456789abc'),
             transaction_type=TransactionType.DEPOSIT,
             amount=Decimal('50.00'),
-            description='Test deposit',
-            status=TransactionStatus.COMPLETED
+            description="Test transaction",
+            status=TransactionStatus.COMPLETED,
+            reference_id="ref123",
+            created_at=datetime.utcnow(),
+            entity_type="balance_transaction"
         )
 
     @pytest.fixture
     def mock_balance(self):
-        """Create a mock balance"""
+        """Mock balance for testing"""
         return Balance(
-            user_id="testuser123",  # Use string instead of UUID
-            current_balance=Decimal('100.00')
+            Pk="BALANCE#testuser123",
+            username="testuser123",
+            current_balance=Decimal('100.00'),
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            entity_type="balance"
         )
 
     @pytest.fixture
     def mock_order(self):
-        """Create a mock order"""
+        """Mock order for testing"""
         return Order(
-            order_id='test-order-123',
-            user_id='testuser123',  # Use string instead of UUID
+            order_id="87654321-4321-8765-cba9-987654321cba",
+            user_id="testuser123",
             order_type=OrderType.MARKET_BUY,
-            status=OrderStatus.PENDING,
-            asset_id='BTC',
+            asset_id="BTC",
             quantity=Decimal('1.0'),
             order_price=Decimal('50000.00'),
             total_amount=Decimal('50000.00'),
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
-            completed_at=None,
-            status_history=[]
+            status=OrderStatus.PENDING,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
         )
 
     @pytest.mark.asyncio

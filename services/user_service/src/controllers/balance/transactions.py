@@ -67,7 +67,7 @@ async def get_user_transactions(
         logger.info(f"Transaction history request for user: {current_user.username}")
 
         # Get transactions from database
-        transactions = await balance_dao.get_transactions_by_user_id(current_user.user_id)
+        transactions, _ = balance_dao.get_user_transactions(current_user.username)
 
         if transactions is None:
             transactions = []  # Empty list if no transactions

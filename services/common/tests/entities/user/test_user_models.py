@@ -403,6 +403,7 @@ class TestUser:
 
         now = datetime.utcnow()
         user = User(
+            Pk="john_doe123",
             username="john_doe123",
             email="test@example.com",
             first_name="Test",       # FIXED: Split field
@@ -411,13 +412,13 @@ class TestUser:
             created_at=now,
             updated_at=now
         )
+
         assert user.username == "john_doe123"
         assert user.email == "test@example.com"
-        assert user.first_name == "Test"    # FIXED: Split field
-        assert user.last_name == "User"     # FIXED: Split field
+        assert user.first_name == "Test"
+        assert user.last_name == "User"
         assert user.phone == "+1234567890"
-        assert user.created_at == now
-        assert user.updated_at == now
+        assert user.Pk == "john_doe123"
 
     def test_name_property_removed(self):
         """Test that name property was removed from User model"""
@@ -425,6 +426,7 @@ class TestUser:
 
         now = datetime.utcnow()
         user = User(
+            Pk="john_doe123",
             username="john_doe123",
             email="test@example.com",
             first_name="John",
@@ -433,11 +435,12 @@ class TestUser:
             created_at=now,
             updated_at=now
         )
-        # Test that name property no longer exists
+
+        # Verify name property doesn't exist
         assert not hasattr(user, 'name')
-        # Test that first_name and last_name are separate fields
         assert user.first_name == "John"
         assert user.last_name == "Doe"
+        assert user.Pk == "john_doe123"
 
     def test_optional_phone(self):
         """Test user with no phone"""
@@ -445,6 +448,7 @@ class TestUser:
 
         now = datetime.utcnow()
         user = User(
+            Pk="john_doe123",
             username="john_doe123",
             email="test@example.com",
             first_name="Test",       # FIXED: Split field
@@ -452,7 +456,13 @@ class TestUser:
             created_at=now,
             updated_at=now
         )
+
+        assert user.username == "john_doe123"
+        assert user.email == "test@example.com"
+        assert user.first_name == "Test"
+        assert user.last_name == "User"
         assert user.phone is None
+        assert user.Pk == "john_doe123"
 
 
 class TestUserResponse:

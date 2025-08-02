@@ -68,11 +68,14 @@ class SimpleTransactionManager:
             async with UserLock(user_id, "deposit", LOCK_TIMEOUTS["deposit"]):
                 # Create deposit transaction
                 transaction = BalanceTransaction(
-                    user_id=user_id,  # Use username directly, no UUID conversion
+                    Pk=f"TRANS#{user_id}",
+                    username=user_id,
+                    Sk=datetime.utcnow().isoformat(),
                     transaction_type=TransactionType.DEPOSIT,
                     amount=amount,
                     description="Deposit",
-                    status=TransactionStatus.COMPLETED
+                    status=TransactionStatus.COMPLETED,
+                    entity_type="balance_transaction"
                 )
 
                 # This will automatically update the balance
@@ -141,11 +144,14 @@ class SimpleTransactionManager:
 
                 # Create withdrawal transaction
                 transaction = BalanceTransaction(
-                    user_id=user_id,  # Use username directly, no UUID conversion
+                    Pk=f"TRANS#{user_id}",
+                    username=user_id,
+                    Sk=datetime.utcnow().isoformat(),
                     transaction_type=TransactionType.WITHDRAW,  # Use WITHDRAW not WITHDRAWAL
                     amount=-amount,  # Negative for withdrawal
                     description="Withdrawal",
-                    status=TransactionStatus.COMPLETED
+                    status=TransactionStatus.COMPLETED,
+                    entity_type="balance_transaction"
                 )
 
                 # This will automatically update the balance
@@ -241,8 +247,11 @@ class SimpleTransactionManager:
                 created_order = await self.order_dao.create_order(order)
 
                 # Phase 3: Create balance transaction
+                now_timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
                 transaction = BalanceTransaction(
-                    user_id=user_id,  # Use username directly, no UUID conversion
+                    Pk=f"TRANS#{user_id}",
+                    username=user_id,
+                    Sk=now_timestamp,
                     transaction_type=TransactionType.ORDER_PAYMENT,
                     amount=-total_cost,  # Negative for payment
                     description=f"Payment for buy order {created_order.order_id}",
@@ -320,8 +329,11 @@ class SimpleTransactionManager:
                 created_order = await self.order_dao.create_order(order)
 
                 # Phase 3: Create balance transaction
+                now_timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
                 transaction = BalanceTransaction(
-                    user_id=user_id,  # Use username directly, no UUID conversion
+                    Pk=f"TRANS#{user_id}",
+                    username=user_id,
+                    Sk=now_timestamp,
                     transaction_type=TransactionType.DEPOSIT,  # Use DEPOSIT for sell order receipt
                     amount=asset_amount,  # Positive for receipt
                     description=f"Receipt for sell order {created_order.order_id}",

@@ -26,15 +26,15 @@ class BalanceDAO:
         """Create a new balance record."""
         try:
             item = {
-                "PK": f"USER#{balance.user_id}",
-                "SK": "BALANCE",
+                "Pk": f"BALANCE#{balance.username}",
+                "username": balance.username,
                 "current_balance": str(balance.current_balance),
                 "created_at": balance.created_at.isoformat(),
                 "updated_at": balance.updated_at.isoformat(),
                 "entity_type": "balance"
             }
 
-            self.db.table.put_item(Item=item)
+            self.db.users_table.put_item(Item=item)
             return balance
 
         except ClientError as e:
@@ -43,10 +43,9 @@ class BalanceDAO:
     def get_balance(self, user_id: str) -> Optional[Balance]:
         """Get balance for a user."""
         try:
-            response = self.db.table.get_item(
+            response = self.db.users_table.get_item(
                 Key={
-                    "PK": f"USER#{user_id}",
-                    "SK": "BALANCE"
+                    "Pk": f"BALANCE#{user_id}"
                 }
             )
 
@@ -55,10 +54,12 @@ class BalanceDAO:
 
             item = response["Item"]
             return Balance(
-                user_id=user_id,
+                Pk=item["Pk"],
+                username=item["username"],
                 current_balance=Decimal(item["current_balance"]),
                 created_at=datetime.fromisoformat(item["created_at"]),
-                updated_at=datetime.fromisoformat(item["updated_at"])
+                updated_at=datetime.fromisoformat(item["updated_at"]),
+                entity_type=item.get("entity_type", "balance")
             )
 
         except ClientError as e:
@@ -69,10 +70,9 @@ class BalanceDAO:
         try:
             updated_at = datetime.utcnow()
 
-            response = self.db.table.update_item(
+            response = self.db.users_table.update_item(
                 Key={
-                    "PK": f"USER#{user_id}",
-                    "SK": "BALANCE"
+                    "Pk": f"BALANCE#{user_id}"
                 },
                 UpdateExpression="SET current_balance = :balance, updated_at = :updated_at",
                 ExpressionAttributeValues={
@@ -84,10 +84,12 @@ class BalanceDAO:
 
             item = response["Attributes"]
             return Balance(
-                user_id=user_id,
+                Pk=item["Pk"],
+                username=item["username"],
                 current_balance=Decimal(item["current_balance"]),
                 created_at=datetime.fromisoformat(item["created_at"]),
-                updated_at=datetime.fromisoformat(item["updated_at"])
+                updated_at=datetime.fromisoformat(item["updated_at"]),
+                entity_type=item.get("entity_type", "balance")
             )
 
         except ClientError as e:
@@ -98,21 +100,20 @@ class BalanceDAO:
         try:
             # Create transaction record
             item = {
-                "PK": f"USER#{transaction.user_id}#{transaction.transaction_id}",
-                "SK": transaction.created_at.isoformat(),
+                "Pk": f"TRANS#{transaction.username}",
+                "username": transaction.username,
+                "Sk": transaction.created_at.isoformat(),
                 "transaction_id": str(transaction.transaction_id),
-                "user_id": transaction.user_id,  # Already a string
                 "transaction_type": transaction.transaction_type.value,
                 "amount": str(transaction.amount),
                 "description": transaction.description,
                 "status": transaction.status.value,
                 "reference_id": transaction.reference_id,
                 "created_at": transaction.created_at.isoformat(),
-                "updated_at": transaction.updated_at.isoformat(),
                 "entity_type": "balance_transaction"
             }
 
-            self.db.table.put_item(Item=item)
+            self.db.users_table.put_item(Item=item)
 
             # Update balance if transaction is completed
             if transaction.status.value == "completed":
@@ -127,11 +128,12 @@ class BalanceDAO:
         """Update balance based on a completed transaction."""
         try:
             # Get current balance
-            current_balance = self.get_balance(transaction.user_id)
+            current_balance = self.get_balance(transaction.username)
             if not current_balance:
                 # Create initial balance if doesn't exist
                 current_balance = Balance(
-                    user_id=transaction.user_id,
+                    Pk=f"BALANCE#{transaction.username}",
+                    username=transaction.username,
                     current_balance=Decimal('0.00')
                 )
                 self.create_balance(current_balance)
@@ -140,7 +142,7 @@ class BalanceDAO:
             new_balance = current_balance.current_balance + transaction.amount
 
             # Update balance
-            self.update_balance(transaction.user_id, new_balance)
+            self.update_balance(transaction.username, new_balance)
 
         except Exception as e:
             raise DatabaseOperationException(f"Failed to update balance from transaction: {str(e)}")
@@ -148,28 +150,15 @@ class BalanceDAO:
     def get_transaction(self, user_id: str, transaction_id: UUID) -> Optional[BalanceTransaction]:
         """Get a specific transaction for a user."""
         try:
-            response = self.db.table.get_item(
-                Key={
-                    "PK": f"USER#{user_id}#{transaction_id}",
-                    "SK": "2023-01-01T00:00:00"  # We need to know the exact timestamp
-                }
-            )
+            # Note: This method needs GSI2 for efficient lookup by transaction_id
+            # For now, we'll need to query by user and filter
+            transactions, _ = self.get_user_transactions(user_id, limit=1000)
 
-            if "Item" not in response:
-                return None
+            for transaction in transactions:
+                if transaction.transaction_id == transaction_id:
+                    return transaction
 
-            item = response["Item"]
-            return BalanceTransaction(
-                transaction_id=UUID(item["transaction_id"]),
-                user_id=item["user_id"],  # Already a string
-                transaction_type=item["transaction_type"],
-                amount=Decimal(item["amount"]),
-                description=item["description"],
-                status=item["status"],
-                reference_id=item.get("reference_id"),
-                created_at=datetime.fromisoformat(item["created_at"]),
-                updated_at=datetime.fromisoformat(item["updated_at"])
-            )
+            return None
 
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to get transaction: {str(e)}")
@@ -179,27 +168,29 @@ class BalanceDAO:
         """Get all transactions for a user with pagination."""
         try:
             query_params = {
-                "KeyConditionExpression": Key("PK").begins_with(f"USER#{user_id}#"),
+                "KeyConditionExpression": Key("Pk").eq(f"TRANS#{user_id}"),
                 "Limit": limit
             }
 
             if start_key:
                 query_params["ExclusiveStartKey"] = start_key
 
-            response = self.db.table.query(**query_params)
+            response = self.db.users_table.query(**query_params)
 
             transactions = []
             for item in response.get("Items", []):
                 transaction = BalanceTransaction(
+                    Pk=item["Pk"],
+                    username=item["username"],
+                    Sk=item["Sk"],
                     transaction_id=UUID(item["transaction_id"]),
-                    user_id=item["user_id"],  # Already a string
                     transaction_type=item["transaction_type"],
                     amount=Decimal(item["amount"]),
                     description=item["description"],
                     status=item["status"],
                     reference_id=item.get("reference_id"),
                     created_at=datetime.fromisoformat(item["created_at"]),
-                    updated_at=datetime.fromisoformat(item["updated_at"])
+                    entity_type=item.get("entity_type", "balance_transaction")
                 )
                 transactions.append(transaction)
 
@@ -213,64 +204,9 @@ class BalanceDAO:
                                 status: str) -> BalanceTransaction:
         """Update transaction status and adjust balance if needed."""
         try:
-            updated_at = datetime.utcnow()
-
-            # We need to query first to get the SK (timestamp)
-            transaction = self.get_transaction(user_id, transaction_id)
-            if not transaction:
-                raise EntityNotFoundException(f"Transaction {transaction_id} not found")
-
-            old_status = transaction.status.value
-            transaction.status = status
-
-            response = self.db.table.update_item(
-                Key={
-                    "PK": f"USER#{user_id}#{transaction_id}",
-                    "SK": transaction.created_at.isoformat()
-                },
-                UpdateExpression="SET #status = :status, updated_at = :updated_at",
-                ExpressionAttributeNames={
-                    "#status": "status"
-                },
-                ExpressionAttributeValues={
-                    ":status": status,
-                    ":updated_at": updated_at.isoformat()
-                },
-                ReturnValues="ALL_NEW"
-            )
-
-            # Update balance if status changed to/from completed
-            if old_status != status:
-                if status == "completed" and old_status != "completed":
-                    # Transaction just completed - add to balance
-                    self._update_balance_from_transaction(transaction)
-                elif old_status == "completed" and status != "completed":
-                    # Transaction was completed but now not - reverse the balance change
-                    reversed_transaction = BalanceTransaction(
-                        transaction_id=transaction.transaction_id,
-                        user_id=transaction.user_id,
-                        transaction_type=transaction.transaction_type,
-                        amount=-transaction.amount,  # Reverse the amount
-                        description=transaction.description,
-                        status=transaction.status,
-                        reference_id=transaction.reference_id,
-                        created_at=transaction.created_at,
-                        updated_at=updated_at
-                    )
-                    self._update_balance_from_transaction(reversed_transaction)
-
-            item = response["Attributes"]
-            return BalanceTransaction(
-                transaction_id=UUID(item["transaction_id"]),
-                user_id=item["user_id"],  # Already a string
-                transaction_type=item["transaction_type"],
-                amount=Decimal(item["amount"]),
-                description=item["description"],
-                status=item["status"],
-                reference_id=item.get("reference_id"),
-                created_at=datetime.fromisoformat(item["created_at"]),
-                updated_at=datetime.fromisoformat(item["updated_at"])
-            )
+            # Note: Transactions are immutable in the current design
+            # This method would need to be redesigned if status updates are needed
+            raise DatabaseOperationException("Transaction status updates not supported in current design")
 
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to update transaction status: {str(e)}")
@@ -278,23 +214,15 @@ class BalanceDAO:
     def balance_exists(self, user_id: str) -> bool:
         """Check if balance exists for a user."""
         try:
-            response = self.db.table.get_item(
-                Key={
-                    "PK": f"USER#{user_id}",
-                    "SK": "BALANCE"
-                }
-            )
-            return "Item" in response
-        except ClientError:
+            balance = self.get_balance(user_id)
+            return balance is not None
+        except Exception:
             return False
 
     def user_has_transactions(self, user_id: str) -> bool:
         """Check if user has any transactions."""
         try:
-            response = self.db.table.query(
-                KeyConditionExpression=Key("PK").begins_with(f"USER#{user_id}#"),
-                Limit=1
-            )
-            return len(response.get("Items", [])) > 0
-        except ClientError:
+            transactions, _ = self.get_user_transactions(user_id, limit=1)
+            return len(transactions) > 0
+        except Exception:
             return False

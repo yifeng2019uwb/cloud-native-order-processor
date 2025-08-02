@@ -69,7 +69,7 @@ async def get_user_balance(
         logger.info(f"Balance request for user: {current_user.username}")
 
         # Get balance from database
-        balance = await balance_dao.get_balance_by_user_id(current_user.user_id)
+        balance = balance_dao.get_balance(current_user.username)
 
         logger.info(f"Balance retrieved successfully for user: {current_user.username}")
 

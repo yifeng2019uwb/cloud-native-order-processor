@@ -55,38 +55,38 @@ async def fetch_top_coins() -> List[dict]:
 
 async def upsert_coins_to_inventory(coins: List[dict]) -> int:
     updated_count = 0
-    async with dynamodb_manager.get_connection() as db_connection:
-        asset_dao = AssetDAO(db_connection)
-        for coin in coins:
-            try:
-                asset_id = coin["symbol"].upper()
-                name = coin["name"]
-                description = coin.get("description") or coin.get("id", "")
-                category = get_category(coin)
-                amount = Decimal("1000.0")  # Placeholder, can be dynamic
-                price_usd = Decimal(str(coin["current_price"]))
+    db_connection = dynamodb_manager.get_connection()
+    asset_dao = AssetDAO(db_connection)
+    for coin in coins:
+        try:
+            asset_id = coin["symbol"].upper()
+            name = coin["name"]
+            description = coin.get("description") or coin.get("id", "")
+            category = get_category(coin)
+            amount = Decimal("1000.0")  # Placeholder, can be dynamic
+            price_usd = Decimal(str(coin["current_price"]))
 
-                asset_create = AssetCreate(
-                    asset_id=asset_id,
-                    name=name,
-                    description=description,
-                    category=category,
-                    amount=amount,
-                    price_usd=price_usd
-                )
+            asset_create = AssetCreate(
+                asset_id=asset_id,
+                name=name,
+                description=description,
+                category=category,
+                amount=amount,
+                price_usd=price_usd
+            )
 
-                # Upsert: update if exists, else create
-                existing_asset = await asset_dao.get_asset_by_id(asset_id)
-                if existing_asset:
-                    await asset_dao.update_asset(asset_id, asset_create)
-                    logger.info(f"Updated asset: {asset_id} - {name}")
-                else:
-                    await asset_dao.create_asset(asset_create)
-                    logger.info(f"Created asset: {asset_id} - {name}")
-                updated_count += 1
-            except Exception as e:
-                logger.error(f"Failed to upsert asset {coin.get('symbol', '')}: {e}")
-                continue
+            # Upsert: update if exists, else create
+            existing_asset = await asset_dao.get_asset_by_id(asset_id)
+            if existing_asset:
+                await asset_dao.update_asset(asset_id, asset_create)
+                logger.info(f"Updated asset: {asset_id} - {name}")
+            else:
+                await asset_dao.create_asset(asset_create)
+                logger.info(f"Created asset: {asset_id} - {name}")
+            updated_count += 1
+        except Exception as e:
+            logger.error(f"Failed to upsert asset {coin.get('symbol', '')}: {e}")
+            continue
     return updated_count
 
 async def initialize_inventory_data(force_recreate: bool = False) -> dict:

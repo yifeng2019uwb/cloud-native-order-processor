@@ -151,57 +151,70 @@ async def logging_middleware(request: Request, call_next):
 
         raise  # Re-raise the exception
 
-# Import and register secure exception handlers
-try:
-    from exceptions.secure_exceptions import (
-        secure_validation_exception_handler,
-        secure_general_exception_handler,
-        secure_http_exception_handler,
-        # Single generic handler for all common package exceptions
-        secure_common_exception_handler
+# Import common package exceptions
+from common.exceptions import (
+    DatabaseConnectionException,
+    DatabaseOperationException,
+    ConfigurationException,
+    EntityValidationException,
+    EntityAlreadyExistsException,
+    EntityNotFoundException,
+    UserValidationException
+)
+
+# Import user service exceptions
+from user_exceptions import (
+    UserAlreadyExistsException,
+    InternalServerException
+)
+
+# Exception handlers
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    """Handle Pydantic validation errors"""
+    logger.warning(f"Validation error: {exc}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()}
     )
 
-    # Import common package exceptions
-    from common.exceptions import (
-        DatabaseConnectionError,
-        DatabaseOperationError,
-        ConfigurationError,
-        EntityValidationError,
-        EntityAlreadyExistsError,
-        EntityNotFoundError,
-        BusinessRuleError,
-        AWSError
+@app.exception_handler(UserValidationException)
+async def user_validation_exception_handler(request, exc):
+    """Handle user validation exceptions"""
+    logger.warning(f"User validation error: {exc}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": str(exc)}
     )
 
-    # Register secure exception handlers
-    app.add_exception_handler(RequestValidationError, secure_validation_exception_handler)
-    app.add_exception_handler(HTTPException, secure_http_exception_handler)
-    app.add_exception_handler(Exception, secure_general_exception_handler)
+@app.exception_handler(UserAlreadyExistsException)
+async def user_already_exists_exception_handler(request, exc):
+    """Handle user already exists exceptions"""
+    logger.warning(f"User already exists: {exc}")
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(exc)}
+    )
 
-    # Register single generic handler for all common package exceptions
-    app.add_exception_handler(DatabaseConnectionError, secure_common_exception_handler)
-    app.add_exception_handler(DatabaseOperationError, secure_common_exception_handler)
-    app.add_exception_handler(EntityAlreadyExistsError, secure_common_exception_handler)
-    app.add_exception_handler(EntityValidationError, secure_common_exception_handler)
-    app.add_exception_handler(EntityNotFoundError, secure_common_exception_handler)
-    app.add_exception_handler(BusinessRuleError, secure_common_exception_handler)
-    app.add_exception_handler(ConfigurationError, secure_common_exception_handler)
-    app.add_exception_handler(AWSError, secure_common_exception_handler)
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    """Handle HTTP exceptions"""
+    logger.warning(f"HTTP exception: {exc}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
 
-    logger.info("✅ Secure exception handlers registered successfully")
-    logger.info("✅ Common package exception handlers registered successfully")
-except ImportError as e:
-    logger.warning(f"⚠️ Could not import secure exception handlers: {e}")
-    logger.info("Using fallback global exception handler")
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    """Handle all other exceptions"""
+    logger.error(f"Global exception: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
 
-    # Fallback global exception handler
-    @app.exception_handler(Exception)
-    async def global_exception_handler(request, exc):
-        logger.error(f"Global exception: {exc}")
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error"}
-        )
+logger.info("✅ Exception handlers registered successfully")
 
 # Import and include API routers
 try:
@@ -231,6 +244,13 @@ try:
     logger.info("✅ Logout routes loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Logout routes not available: {e}")
+
+try:
+    from controllers.balance import router as balance_router
+    app.include_router(balance_router, tags=["balance"])
+    logger.info("✅ Balance routes loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Balance routes not available: {e}")
 
 try:
     from controllers.health import router as health_router
