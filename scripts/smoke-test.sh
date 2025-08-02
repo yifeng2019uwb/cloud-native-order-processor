@@ -11,6 +11,7 @@ FRONTEND_URL="${FRONTEND_URL:-http://localhost:30004}"
 GATEWAY_URL="${GATEWAY_URL:-http://localhost:30000}"
 USER_SERVICE_URL="${USER_SERVICE_URL:-http://localhost:8000}"
 INVENTORY_SERVICE_URL="${INVENTORY_SERVICE_URL:-http://localhost:8001}"
+ORDER_SERVICE_URL="${ORDER_SERVICE_URL:-http://localhost:8002}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -98,6 +99,7 @@ setup_port_forwarding() {
         kubectl port-forward svc/frontend 30004:80 -n order-processor &
         kubectl port-forward svc/user-service 8000:8000 -n order-processor &
         kubectl port-forward svc/inventory-service 8001:8001 -n order-processor &
+        kubectl port-forward svc/order-service 8002:8002 -n order-processor &
         sleep 5
         log_success "Port forwarding set up"
     else
@@ -118,6 +120,7 @@ main() {
     run_test "Frontend reachable" "check_service 'Frontend' '$FRONTEND_URL' ''"
     run_test "User Service reachable" "check_service 'User Service' '$USER_SERVICE_URL' ''"
     run_test "Inventory Service reachable" "check_service 'Inventory Service' '$INVENTORY_SERVICE_URL' ''"
+    run_test "Order Service reachable" "check_service 'Order Service' '$ORDER_SERVICE_URL' ''"
 
     echo ""
 
@@ -127,6 +130,7 @@ main() {
     run_test "Gateway health" "check_health 'Gateway' '$GATEWAY_URL'"
     run_test "User Service health" "check_health 'User Service' '$USER_SERVICE_URL'"
     run_test "Inventory Service health" "check_health 'Inventory Service' '$INVENTORY_SERVICE_URL'"
+    run_test "Order Service health" "check_health 'Order Service' '$ORDER_SERVICE_URL'"
 
     echo ""
 

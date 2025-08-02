@@ -35,6 +35,7 @@ services:
       - user_service
       - inventory_service
       - order_service
+      - gateway
     networks:
       - order-processor-network
     # Auto-rebuild on changes

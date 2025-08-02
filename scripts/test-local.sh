@@ -462,6 +462,7 @@ deploy_application() {
             log_info "Start services manually:"
             log_info "  cd services/user-service && python -m uvicorn src.main:app --host 0.0.0.0 --port 8000"
             log_info "  cd services/inventory-service && python -m uvicorn src.main:app --host 0.0.0.0 --port 8001"
+            log_info "  cd services/order_service && python -m uvicorn src.main:app --host 0.0.0.0 --port 8002"
             ;;
         "prod")
             log_warning "Prod environment: Application deployment not implemented yet"
@@ -500,6 +501,11 @@ run_integration_tests() {
                     log_success "Inventory service connectivity test passed"
                 else
                     log_warning "Inventory service connectivity test failed (service may not be running)"
+                fi
+                if curl -s --max-time 5 "http://localhost:8002/health" >/dev/null 2>&1; then
+                    log_success "Order service connectivity test passed"
+                else
+                    log_warning "Order service connectivity test failed (service may not be running)"
                 fi
             fi
             ;;

@@ -204,6 +204,9 @@ deploy_service() {
         inventory)
             port=8001
             ;;
+        order)
+            port=8002
+            ;;
     esac
 
     # Check Python version
@@ -360,6 +363,9 @@ deploy_kubernetes() {
 
     log_info "Building inventory service image..."
     docker build $docker_args -t order-processor-inventory_service:latest -f ../docker/inventory-service/Dockerfile ../
+
+    log_info "Building order service image..."
+    docker build $docker_args -t order-processor-order_service:latest -f ../docker/order-service/Dockerfile ../
 
     # Build gateway
     log_info "Building gateway image..."

@@ -46,6 +46,7 @@ setup_port_forwarding() {
         kubectl port-forward svc/frontend 30004:80 -n order-processor &
         kubectl port-forward svc/user-service 30001:30001 -n order-processor &
         kubectl port-forward svc/inventory-service 30002:30002 -n order-processor &
+        kubectl port-forward svc/order-service 30003:30003 -n order-processor &
         sleep 5
         log_success "Port forwarding set up"
     else
