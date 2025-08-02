@@ -50,6 +50,7 @@ class UserDAO(BaseDAO):
             now = datetime.utcnow().isoformat()
             user_item = {
                 'Pk': user_create.username,  # Primary key
+                'Sk': 'USER',  # Sort key for user records
                 'username': user_create.username,  # For easy access
                 'email': user_create.email,
                 'password_hash': password_hash,
@@ -86,7 +87,8 @@ class UserDAO(BaseDAO):
             logger.info(f"🔍 DEBUG: Looking up user by username: '{username}'")
 
             key = {
-                'Pk': username  # Use Pk field
+                'Pk': username,  # Primary key
+                'Sk': 'USER'  # Sort key for user records
             }
 
             logger.info(f"🔍 DEBUG: Using key: {key}")
@@ -153,7 +155,7 @@ class UserDAO(BaseDAO):
                 return None
 
             # Get the stored password hash
-            key = {'Pk': username}
+            key = {'Pk': username, 'Sk': 'USER'}
             item = self._safe_get_item(self.db.users_table, key)
             if not item:
                 return None
@@ -221,7 +223,7 @@ class UserDAO(BaseDAO):
             update_expression = "SET " + ", ".join(update_parts)
 
             # Perform the update
-            key = {'Pk': username}
+            key = {'Pk': username, 'Sk': 'USER'}
             updated_item = self._safe_update_item(
                 self.db.users_table,
                 key,
@@ -254,7 +256,7 @@ class UserDAO(BaseDAO):
     def delete_user(self, username: str) -> bool:
         """Delete a user by username"""
         try:
-            key = {'Pk': username}
+            key = {'Pk': username, 'Sk': 'USER'}
             return self._safe_delete_item(self.db.users_table, key)
 
         except Exception as e:

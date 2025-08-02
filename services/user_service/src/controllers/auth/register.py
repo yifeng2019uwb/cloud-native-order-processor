@@ -20,7 +20,7 @@ from api_models.auth.registration import (
 from api_models.shared.common import ErrorResponse
 
 # Import common DAO models - simple imports
-from common.entities.user import UserCreate, User, Balance
+from common.entities.user import UserCreate, User, Balance, BalanceCreate
 
 # Import dependencies and simplified exceptions
 from common.database import get_user_dao, get_balance_dao
@@ -109,12 +109,11 @@ async def register_user(
         created_user = user_dao.create_user(user_create)
 
         # Create initial balance record with 0 balance (sync operation)
-        initial_balance = Balance(
-            Pk=f"BALANCE#{created_user.username}",
+        balance_create = BalanceCreate(
             username=created_user.username,
-            current_balance=Decimal('0.00')
+            initial_balance=Decimal('0.00')
         )
-        balance_dao.create_balance(initial_balance)
+        balance_dao.create_balance_from_request(balance_create)
 
         # Log successful registration
         logger.info(f"User registered successfully: {user_data.username}")

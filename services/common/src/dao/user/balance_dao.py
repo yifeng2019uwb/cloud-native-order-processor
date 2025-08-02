@@ -40,12 +40,39 @@ class BalanceDAO:
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to create balance: {str(e)}")
 
+    def create_balance_from_request(self, balance_create: BalanceCreate) -> Balance:
+        """Create a new balance record from BalanceCreate request."""
+        try:
+            # Create Balance entity with proper PK generation
+            balance = Balance(
+                Pk=f"BALANCE#{balance_create.username}",
+                username=balance_create.username,
+                current_balance=balance_create.initial_balance
+            )
+
+            item = {
+                "Pk": balance.Pk,
+                "Sk": "BALANCE",  # Sort key for balance records
+                "username": balance.username,
+                "current_balance": str(balance.current_balance),
+                "created_at": balance.created_at.isoformat(),
+                "updated_at": balance.updated_at.isoformat(),
+                "entity_type": "balance"
+            }
+
+            self.db.users_table.put_item(Item=item)
+            return balance
+
+        except ClientError as e:
+            raise DatabaseOperationException(f"Failed to create balance: {str(e)}")
+
     def get_balance(self, user_id: str) -> Optional[Balance]:
         """Get balance for a user."""
         try:
             response = self.db.users_table.get_item(
                 Key={
-                    "Pk": f"BALANCE#{user_id}"
+                    "Pk": f"BALANCE#{user_id}",
+                    "Sk": "BALANCE"
                 }
             )
 
@@ -72,7 +99,8 @@ class BalanceDAO:
 
             response = self.db.users_table.update_item(
                 Key={
-                    "Pk": f"BALANCE#{user_id}"
+                    "Pk": f"BALANCE#{user_id}",
+                    "Sk": "BALANCE"
                 },
                 UpdateExpression="SET current_balance = :balance, updated_at = :updated_at",
                 ExpressionAttributeValues={

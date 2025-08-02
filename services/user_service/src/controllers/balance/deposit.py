@@ -99,7 +99,7 @@ async def deposit_funds(
     try:
         # Use transaction manager for atomic deposit operation
         result = await transaction_manager.deposit_funds(
-            user_id=str(current_user.user_id),
+            user_id=current_user.username,
             amount=deposit_data.amount
         )
 

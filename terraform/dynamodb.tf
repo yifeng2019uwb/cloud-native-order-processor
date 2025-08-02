@@ -9,10 +9,16 @@
 resource "aws_dynamodb_table" "users" {
   name           = local.db_names.users_table
   billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "user_id"
+  hash_key       = "Pk"
+  range_key      = "Sk"
 
   attribute {
-    name = "user_id"
+    name = "Pk"
+    type = "S"
+  }
+
+  attribute {
+    name = "Sk"
     type = "S"
   }
 
@@ -20,6 +26,8 @@ resource "aws_dynamodb_table" "users" {
     name = "email"
     type = "S"
   }
+
+
 
   global_secondary_index {
     name            = "EmailIndex"

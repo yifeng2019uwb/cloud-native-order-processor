@@ -163,7 +163,8 @@ async def update_profile(
         updated_user = user_dao.update_user(
             username=current_user.username,
             email=profile_data.email,
-            name=f"{profile_data.first_name} {profile_data.last_name}" if profile_data.first_name and profile_data.last_name else None,
+            first_name=profile_data.first_name,
+            last_name=profile_data.last_name,
             phone=profile_data.phone
         )
 
