@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.dao.inventory import AssetDAO
 from src.entities.inventory import AssetCreate, Asset, AssetUpdate
+from src.exceptions import DatabaseOperationException
 from src.exceptions.shared_exceptions import EntityAlreadyExistsException, AssetNotFoundException, AssetValidationException
 
 
@@ -1136,10 +1137,11 @@ class TestAssetDAO:
             # Reset mock for each iteration
             mock_db_connection.inventory_table.put_item.side_effect = exception
 
-            # Should raise the specific exception
-            with pytest.raises(type(exception)) as exc_info:
+            # Should raise DatabaseOperationException (our design wraps all DB exceptions)
+            with pytest.raises(DatabaseOperationException) as exc_info:
                 asset_dao.create_asset(sample_asset_create)
 
+            # Verify the original exception message is preserved
             assert str(exception) in str(exc_info.value)
 
     def test_methods_with_empty_strings(self, asset_dao, mock_db_connection):

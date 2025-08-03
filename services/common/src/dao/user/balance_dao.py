@@ -249,7 +249,7 @@ class BalanceDAO:
         try:
             balance = self.get_balance(user_id)
             return balance is not None
-        except Exception:
+        except DatabaseOperationException:
             return False
 
     def user_has_transactions(self, user_id: str) -> bool:
@@ -257,5 +257,5 @@ class BalanceDAO:
         try:
             transactions, _ = self.get_user_transactions(user_id, limit=1)
             return len(transactions) > 0
-        except Exception:
+        except DatabaseOperationException:
             return False

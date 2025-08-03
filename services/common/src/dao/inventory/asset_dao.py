@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from ..base_dao import BaseDAO
 from ...entities.inventory import Asset, AssetCreate, AssetUpdate
+from ...exceptions import DatabaseOperationException
 from ...exceptions.shared_exceptions import EntityAlreadyExistsException, AssetNotFoundException, AssetValidationException
 
 
@@ -68,7 +69,10 @@ class AssetDAO(BaseDAO):
                 created_at=datetime.fromisoformat(created_item['created_at']),
                 updated_at=datetime.fromisoformat(created_item['updated_at'])
             )
-        except Exception as e:
+        except EntityAlreadyExistsException:
+            # Re-raise entity exceptions directly
+            raise
+        except DatabaseOperationException as e:
             logger.error(f"Failed to create asset: {e}")
             raise
 
@@ -98,7 +102,7 @@ class AssetDAO(BaseDAO):
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
-        except Exception as e:
+        except DatabaseOperationException as e:
             logger.error(f"Failed to get asset by ID {asset_id}: {e}")
             raise
 
@@ -145,7 +149,7 @@ class AssetDAO(BaseDAO):
 
             return assets
 
-        except Exception as e:
+        except DatabaseOperationException as e:
             logger.error(f"Failed to get all assets: {e}")
             raise
 
@@ -189,7 +193,7 @@ class AssetDAO(BaseDAO):
 
             return assets
 
-        except Exception as e:
+        except DatabaseOperationException as e:
             logger.error(f"Failed to get assets by category {category}: {e}")
             raise
 
@@ -242,7 +246,7 @@ class AssetDAO(BaseDAO):
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
-        except Exception as e:
+        except DatabaseOperationException as e:
             logger.error(f"Failed to update asset {asset_id}: {e}")
             raise
 
@@ -260,7 +264,7 @@ class AssetDAO(BaseDAO):
 
             return success
 
-        except Exception as e:
+        except DatabaseOperationException as e:
             logger.error(f"Failed to delete asset {asset_id}: {e}")
             raise
 
@@ -275,7 +279,7 @@ class AssetDAO(BaseDAO):
 
             return self.update_asset(asset_id, asset_update)
 
-        except Exception as e:
+        except DatabaseOperationException as e:
             logger.error(f"Failed to update price for asset {asset_id}: {e}")
             raise
 
@@ -285,7 +289,7 @@ class AssetDAO(BaseDAO):
             asset_update = AssetUpdate(amount=new_amount)
             return self.update_asset(asset_id, asset_update)
 
-        except Exception as e:
+        except DatabaseOperationException as e:
             logger.error(f"Failed to update amount for asset {asset_id}: {e}")
             raise
 
@@ -295,7 +299,7 @@ class AssetDAO(BaseDAO):
             asset_update = AssetUpdate(is_active=False)
             return self.update_asset(asset_id, asset_update)
 
-        except Exception as e:
+        except DatabaseOperationException as e:
             logger.error(f"Failed to deactivate asset {asset_id}: {e}")
             raise
 
@@ -313,7 +317,7 @@ class AssetDAO(BaseDAO):
             asset_update = AssetUpdate(is_active=True)
             return self.update_asset(asset_id, asset_update)
 
-        except Exception as e:
+        except DatabaseOperationException as e:
             logger.error(f"Failed to activate asset {asset_id}: {e}")
             raise
 
@@ -338,6 +342,6 @@ class AssetDAO(BaseDAO):
                 'last_updated': datetime.utcnow().isoformat()
             }
 
-        except Exception as e:
+        except DatabaseOperationException as e:
             logger.error(f"Failed to get asset stats: {e}")
             raise

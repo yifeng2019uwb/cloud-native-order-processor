@@ -13,12 +13,9 @@ from boto3.dynamodb.conditions import Key, Attr
 from ..base_dao import BaseDAO
 from ...entities.order import Order, OrderUpdate
 from ...entities.order.enums import OrderStatus
-from ...exceptions import (
-    EntityNotFoundException,
-    EntityAlreadyExistsException,
-    OrderValidationException,
-    DatabaseOperationException
-)
+from ...exceptions import DatabaseOperationException
+from ...exceptions.shared_exceptions import EntityNotFoundException, EntityAlreadyExistsException
+from ...exceptions import OrderValidationException
 
 logger = logging.getLogger(__name__)
 

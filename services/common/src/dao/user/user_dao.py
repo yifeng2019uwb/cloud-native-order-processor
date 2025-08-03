@@ -13,6 +13,8 @@ from ..base_dao import BaseDAO
 from ...entities.user import User, UserCreate, UserLogin
 from ...entities.user import DEFAULT_USER_ROLE
 from ...exceptions.shared_exceptions import EntityAlreadyExistsException
+from ...exceptions import DatabaseOperationException
+from ...exceptions.shared_exceptions import EntityNotFoundException, InvalidCredentialsException
 
 
 logger = logging.getLogger(__name__)
@@ -78,9 +80,15 @@ class UserDAO(BaseDAO):
                 updated_at=datetime.fromisoformat(created_item['updated_at'])
             )
 
+        except EntityAlreadyExistsException:
+            # Re-raise entity exceptions directly
+            raise
         except Exception as e:
             logger.error(f"Failed to create user: {e}")
-            raise
+            # Check if it's a duplicate key error
+            if "ConditionalCheckFailedException" in str(e) or "Duplicate" in str(e):
+                raise EntityAlreadyExistsException(f"User with username '{user_create.username}' or email '{user_create.email}' already exists")
+            raise DatabaseOperationException(f"Failed to create user: {str(e)}")
 
     def get_user_by_username(self, username: str) -> Optional[User]:
         """Get user by username (Primary Key lookup)"""
@@ -116,7 +124,7 @@ class UserDAO(BaseDAO):
 
         except Exception as e:
             logger.error(f"Failed to get user by username {username}: {e}")
-            raise
+            raise DatabaseOperationException(f"Failed to get user by username: {str(e)}")
 
     def get_user_by_email(self, email: str) -> Optional[User]:
         """Get user by email (GSI lookup)"""
@@ -148,7 +156,7 @@ class UserDAO(BaseDAO):
 
         except Exception as e:
             logger.error(f"Failed to get user by email {email}: {e}")
-            raise
+            raise DatabaseOperationException(f"Failed to get user by email: {str(e)}")
 
     def authenticate_user(self, username: str, password: str) -> Optional[User]:
         """Authenticate user with username and password"""
@@ -176,7 +184,7 @@ class UserDAO(BaseDAO):
 
         except Exception as e:
             logger.error(f"Failed to authenticate user {username}: {e}")
-            raise
+            raise DatabaseOperationException(f"Failed to authenticate user: {str(e)}")
 
     def update_user(self, username: str, email: Optional[str] = None,
                     first_name: Optional[str] = None, last_name: Optional[str] = None,  # FIXED: Split parameters
@@ -255,7 +263,7 @@ class UserDAO(BaseDAO):
 
         except Exception as e:
             logger.error(f"Failed to update user {username}: {e}")
-            raise
+            raise DatabaseOperationException(f"Failed to update user: {str(e)}")
 
     def delete_user(self, username: str) -> bool:
         """Delete a user by username"""
@@ -265,4 +273,4 @@ class UserDAO(BaseDAO):
 
         except Exception as e:
             logger.error(f"Failed to delete user {username}: {e}")
-            raise
+            raise DatabaseOperationException(f"Failed to delete user: {str(e)}")
