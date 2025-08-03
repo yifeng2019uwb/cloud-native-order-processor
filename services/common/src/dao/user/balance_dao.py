@@ -68,7 +68,7 @@ class BalanceDAO:
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to create balance: {str(e)}")
 
-    def get_balance(self, user_id: str) -> Optional[Balance]:
+    def get_balance(self, user_id: str) -> Balance:
         """Get balance for a user."""
         try:
             response = self.db.users_table.get_item(
@@ -79,7 +79,7 @@ class BalanceDAO:
             )
 
             if "Item" not in response:
-                return None
+                raise EntityNotFoundException(f"Balance for user '{user_id}' not found")
 
             item = response["Item"]
             return Balance(
@@ -92,6 +92,8 @@ class BalanceDAO:
                 entity_type=item.get("entity_type", "balance")
             )
 
+        except EntityNotFoundException:
+            raise
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to get balance: {str(e)}")
 
@@ -180,7 +182,7 @@ class BalanceDAO:
         except Exception as e:
             raise DatabaseOperationException(f"Failed to update balance from transaction: {str(e)}")
 
-    def get_transaction(self, user_id: str, transaction_id: UUID) -> Optional[BalanceTransaction]:
+    def get_transaction(self, user_id: str, transaction_id: UUID) -> BalanceTransaction:
         """Get a specific transaction for a user."""
         try:
             # Note: This method needs GSI2 for efficient lookup by transaction_id
@@ -191,8 +193,10 @@ class BalanceDAO:
                 if transaction.transaction_id == transaction_id:
                     return transaction
 
-            return None
+            raise EntityNotFoundException(f"Transaction '{transaction_id}' not found for user '{user_id}'")
 
+        except EntityNotFoundException:
+            raise
         except ClientError as e:
             raise DatabaseOperationException(f"Failed to get transaction: {str(e)}")
 

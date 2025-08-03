@@ -72,7 +72,7 @@ class OrderDAO(BaseDAO):
             logger.error(f"Failed to create order {order.order_id}: {str(e)}")
             raise DatabaseOperationException(f"Failed to create order: {str(e)}")
 
-    def get_order(self, order_id: str) -> Optional[Order]:
+    def get_order(self, order_id: str) -> Order:
         """
         Get order by ID.
 
@@ -80,9 +80,10 @@ class OrderDAO(BaseDAO):
             order_id: Order ID to retrieve
 
         Returns:
-            Order entity if found, None otherwise
+            Order entity if found
 
         Raises:
+            EntityNotFoundException: If order not found
             DatabaseOperationException: If database operation fails
         """
         try:
@@ -91,11 +92,13 @@ class OrderDAO(BaseDAO):
             )
 
             if 'Item' not in response:
-                return None
+                raise EntityNotFoundException(f"Order '{order_id}' not found")
 
             item = response['Item']
             return Order(**item)
 
+        except EntityNotFoundException:
+            raise
         except Exception as e:
             logger.error(f"Failed to get order {order_id}: {str(e)}")
             raise DatabaseOperationException(f"Failed to get order: {str(e)}")

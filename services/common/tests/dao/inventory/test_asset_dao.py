@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.dao.inventory import AssetDAO
 from src.entities.inventory import AssetCreate, Asset, AssetUpdate
 from src.exceptions import DatabaseOperationException
-from src.exceptions.shared_exceptions import EntityAlreadyExistsException, AssetNotFoundException, AssetValidationException
+from src.exceptions.shared_exceptions import EntityAlreadyExistsException, EntityNotFoundException, AssetNotFoundException, AssetValidationException
 
 
 class TestAssetDAO:
@@ -221,11 +221,11 @@ class TestAssetDAO:
         # Mock database response - no item
         mock_db_connection.inventory_table.get_item.return_value = {}
 
-        # Get asset
-        result = asset_dao.get_asset_by_id('NONEXISTENT')
+        # Should raise EntityNotFoundException
+        with pytest.raises(EntityNotFoundException) as exc_info:
+            asset_dao.get_asset_by_id('NONEXISTENT')
 
-        # Should return None
-        assert result is None
+        assert "Asset 'NONEXISTENT' not found" in str(exc_info.value)
 
         # Verify database was called
         mock_db_connection.inventory_table.get_item.assert_called_once_with(
@@ -237,8 +237,8 @@ class TestAssetDAO:
         # Mock database error
         mock_db_connection.inventory_table.get_item.side_effect = Exception("Database error")
 
-        # Should raise exception
-        with pytest.raises(Exception) as exc_info:
+        # Should raise DatabaseOperationException
+        with pytest.raises(DatabaseOperationException) as exc_info:
             asset_dao.get_asset_by_id('BTC')
 
         assert "Database error" in str(exc_info.value)
@@ -572,11 +572,11 @@ class TestAssetDAO:
         # Create update data
         asset_update = AssetUpdate(description="Updated description")
 
-        # Update asset
-        result = asset_dao.update_asset('NONEXISTENT', asset_update)
+        # Should raise DatabaseOperationException
+        with pytest.raises(DatabaseOperationException) as exc_info:
+            asset_dao.update_asset('NONEXISTENT', asset_update)
 
-        # Should return None
-        assert result is None
+        assert "Failed to update asset NONEXISTENT" in str(exc_info.value)
 
     def test_update_asset_database_error(self, asset_dao, mock_db_connection):
         """Test update asset with database error"""
@@ -1148,8 +1148,11 @@ class TestAssetDAO:
         """Test methods handle empty strings appropriately"""
         # Test get_asset_by_id with empty string
         mock_db_connection.inventory_table.get_item.return_value = {}
-        result = asset_dao.get_asset_by_id('')
-        assert result is None
+
+        # Should raise EntityNotFoundException for empty string
+        with pytest.raises(EntityNotFoundException) as exc_info:
+            asset_dao.get_asset_by_id('')
+        assert "Asset '' not found" in str(exc_info.value)
 
         # Test get_assets_by_category with empty string
         mock_db_connection.inventory_table.scan.return_value = {'Items': []}

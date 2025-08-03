@@ -153,11 +153,11 @@ class TestOrderDAO:
         # Mock empty response
         mock_db_connection.orders_table.get_item.return_value = {}
 
-        # Get order
-        result = order_dao.get_order("nonexistent_order")
+        # Should raise EntityNotFoundException
+        with pytest.raises(EntityNotFoundException) as exc_info:
+            order_dao.get_order("nonexistent_order")
 
-        # Should return None
-        assert result is None
+        assert "Order 'nonexistent_order' not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_get_order_database_error(self, order_dao, mock_db_connection):

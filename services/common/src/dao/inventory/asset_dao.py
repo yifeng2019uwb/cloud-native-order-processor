@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from ..base_dao import BaseDAO
 from ...entities.inventory import Asset, AssetCreate, AssetUpdate
 from ...exceptions import DatabaseOperationException
-from ...exceptions.shared_exceptions import EntityAlreadyExistsException, AssetNotFoundException, AssetValidationException
+from ...exceptions.shared_exceptions import EntityAlreadyExistsException, EntityNotFoundException, AssetNotFoundException, AssetValidationException
 
 
 logger = logging.getLogger(__name__)
@@ -76,12 +76,12 @@ class AssetDAO(BaseDAO):
             logger.error(f"Failed to create asset: {e}")
             raise
 
-    def get_asset_by_id(self, asset_id: str) -> Optional[Asset]:
+    def get_asset_by_id(self, asset_id: str) -> Asset:
         try:
             key = {'product_id': asset_id}
             item = self._safe_get_item(self.db.inventory_table, key)
             if not item:
-                return None
+                raise EntityNotFoundException(f"Asset '{asset_id}' not found")
             return Asset(
                 asset_id=item['asset_id'],
                 name=item['name'],
@@ -102,6 +102,8 @@ class AssetDAO(BaseDAO):
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
+        except EntityNotFoundException:
+            raise
         except DatabaseOperationException as e:
             logger.error(f"Failed to get asset by ID {asset_id}: {e}")
             raise
@@ -225,7 +227,7 @@ class AssetDAO(BaseDAO):
                 expression_values
             )
             if not item:
-                return None
+                raise DatabaseOperationException(f"Failed to update asset {asset_id}")
             return Asset(
                 asset_id=item.get('asset_id', asset_id),
                 name=item['name'],

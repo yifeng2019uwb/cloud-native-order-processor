@@ -121,10 +121,11 @@ class TestBalanceDAO:
         # Mock empty response
         mock_db_connection.users_table.get_item.return_value = {}
 
-        result = balance_dao.get_balance('nonexistent')
+        # Should raise EntityNotFoundException
+        with pytest.raises(EntityNotFoundException) as exc_info:
+            balance_dao.get_balance('nonexistent')
 
-        # Verify result
-        assert result is None
+        assert "Balance for user 'nonexistent' not found" in str(exc_info.value)
 
     def test_get_balance_database_error(self, balance_dao, mock_db_connection):
         """Test balance retrieval with database error"""
@@ -269,10 +270,11 @@ class TestBalanceDAO:
         # Mock get_user_transactions to return empty list
         balance_dao.get_user_transactions = Mock(return_value=([], None))
 
-        result = balance_dao.get_transaction('testuser123', UUID('12345678-1234-5678-9abc-123456789abc'))
+        # Should raise EntityNotFoundException
+        with pytest.raises(EntityNotFoundException) as exc_info:
+            balance_dao.get_transaction('testuser123', UUID('12345678-1234-5678-9abc-123456789abc'))
 
-        # Verify result
-        assert result is None
+        assert "Transaction '12345678-1234-5678-9abc-123456789abc' not found for user 'testuser123'" in str(exc_info.value)
 
     def test_get_transaction_database_error(self, balance_dao, mock_db_connection):
         """Test transaction retrieval with database error"""

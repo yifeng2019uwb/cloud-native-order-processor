@@ -90,7 +90,7 @@ class UserDAO(BaseDAO):
                 raise EntityAlreadyExistsException(f"User with username '{user_create.username}' or email '{user_create.email}' already exists")
             raise DatabaseOperationException(f"Failed to create user: {str(e)}")
 
-    def get_user_by_username(self, username: str) -> Optional[User]:
+    def get_user_by_username(self, username: str) -> User:
         """Get user by username (Primary Key lookup)"""
         try:
             logger.info(f"🔍 DEBUG: Looking up user by username: '{username}'")
@@ -107,7 +107,7 @@ class UserDAO(BaseDAO):
 
             if not item:
                 logger.warning(f"❌ DEBUG: No user found for username: '{username}'")
-                return None
+                raise EntityNotFoundException(f"User '{username}' not found")
 
             return User(
                 Pk=item['Pk'],
@@ -122,11 +122,13 @@ class UserDAO(BaseDAO):
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
 
+        except EntityNotFoundException:
+            raise
         except Exception as e:
             logger.error(f"Failed to get user by username {username}: {e}")
             raise DatabaseOperationException(f"Failed to get user by username: {str(e)}")
 
-    def get_user_by_email(self, email: str) -> Optional[User]:
+    def get_user_by_email(self, email: str) -> User:
         """Get user by email (GSI lookup)"""
         try:
             items = self._safe_query(
@@ -136,7 +138,7 @@ class UserDAO(BaseDAO):
             )
 
             if not items:
-                return None
+                raise EntityNotFoundException(f"User with email '{email}' not found")
 
             # Should only be one user per email
             item = items[0]
@@ -154,48 +156,47 @@ class UserDAO(BaseDAO):
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
 
+        except EntityNotFoundException:
+            raise
         except Exception as e:
             logger.error(f"Failed to get user by email {email}: {e}")
             raise DatabaseOperationException(f"Failed to get user by email: {str(e)}")
 
-    def authenticate_user(self, username: str, password: str) -> Optional[User]:
+    def authenticate_user(self, username: str, password: str) -> User:
         """Authenticate user with username and password"""
         try:
             user = self.get_user_by_username(username)
-            if not user:
-                return None
 
             # Get the stored password hash
             key = {'Pk': username, 'Sk': 'USER'}
             item = self._safe_get_item(self.db.users_table, key)
             if not item:
-                return None
+                raise InvalidCredentialsException(f"Invalid credentials for user '{username}'")
 
             stored_hash = item.get('password_hash')
             if not stored_hash:
                 logger.error(f"No password hash found for user {username}")
-                return None
+                raise InvalidCredentialsException(f"Invalid credentials for user '{username}'")
 
             # Verify password
             if self._verify_password(password, stored_hash):
                 return user
             else:
-                return None
+                raise InvalidCredentialsException(f"Invalid credentials for user '{username}'")
 
+        except (EntityNotFoundException, InvalidCredentialsException):
+            raise
         except Exception as e:
             logger.error(f"Failed to authenticate user {username}: {e}")
             raise DatabaseOperationException(f"Failed to authenticate user: {str(e)}")
 
     def update_user(self, username: str, email: Optional[str] = None,
                     first_name: Optional[str] = None, last_name: Optional[str] = None,  # FIXED: Split parameters
-                    phone: Optional[str] = None) -> Optional[User]:
+                    phone: Optional[str] = None) -> User:
         """Update user information"""
         try:
             # Check if user exists
             existing_user = self.get_user_by_username(username)
-            if not existing_user:
-                logger.warning(f"User {username} not found for update")
-                return None
 
             # Build update expression and values
             update_parts = []
@@ -245,7 +246,7 @@ class UserDAO(BaseDAO):
 
             if not updated_item:
                 logger.error(f"Failed to update user {username}")
-                return None
+                raise DatabaseOperationException(f"Failed to update user {username}")
 
             # Return updated user
             return User(
@@ -261,6 +262,8 @@ class UserDAO(BaseDAO):
                 updated_at=datetime.fromisoformat(updated_item['updated_at'])
             )
 
+        except EntityNotFoundException:
+            raise
         except Exception as e:
             logger.error(f"Failed to update user {username}: {e}")
             raise DatabaseOperationException(f"Failed to update user: {str(e)}")

@@ -7,7 +7,7 @@ import os
 
 from src.dao.user import UserDAO
 from src.entities.user import UserCreate, User, UserLogin
-from src.exceptions.shared_exceptions import EntityAlreadyExistsException, EntityNotFoundException
+from src.exceptions.shared_exceptions import EntityAlreadyExistsException, EntityNotFoundException, InvalidCredentialsException
 from botocore.exceptions import ClientError
 
 
@@ -207,11 +207,11 @@ class TestUserDAO:
         # Mock empty database response
         mock_db_connection.users_table.get_item.return_value = {}
 
-        # Get user
-        result = user_dao.get_user_by_username('nonexistent')
+        # Should raise EntityNotFoundException
+        with pytest.raises(EntityNotFoundException) as exc_info:
+            user_dao.get_user_by_username('nonexistent')
 
-        # Verify result
-        assert result is None
+        assert "User 'nonexistent' not found" in str(exc_info.value)
 
     def test_get_user_by_email_found(self, user_dao, mock_db_connection):
         """Test getting user by email when user exists"""
@@ -244,11 +244,11 @@ class TestUserDAO:
         # Mock empty database response
         mock_db_connection.users_table.query.return_value = {'Items': []}
 
-        # Get user
-        result = user_dao.get_user_by_email('nonexistent@example.com')
+        # Should raise EntityNotFoundException
+        with pytest.raises(EntityNotFoundException) as exc_info:
+            user_dao.get_user_by_email('nonexistent@example.com')
 
-        # Verify result
-        assert result is None
+        assert "User with email 'nonexistent@example.com' not found" in str(exc_info.value)
 
     def test_authenticate_user_with_username_success(self, user_dao, mock_db_connection):
         """Test successful user authentication with username"""
@@ -354,22 +354,22 @@ class TestUserDAO:
         }
         mock_db_connection.users_table.get_item.return_value = {'Item': mock_item}
 
-        # Authenticate user with wrong password
-        result = user_dao.authenticate_user('john_doe123', 'wrongpassword')
+        # Should raise InvalidCredentialsException
+        with pytest.raises(InvalidCredentialsException) as exc_info:
+            user_dao.authenticate_user('john_doe123', 'wrongpassword')
 
-        # Verify result
-        assert result is None
+        assert "Invalid credentials for user 'john_doe123'" in str(exc_info.value)
 
     def test_authenticate_user_not_found(self, user_dao):
         """Test user authentication when user doesn't exist"""
         # Mock that user doesn't exist
-        user_dao.get_user_by_username = Mock(return_value=None)
+        user_dao.get_user_by_username = Mock(side_effect=EntityNotFoundException("User 'nonexistent' not found"))
 
-        # Authenticate user
-        result = user_dao.authenticate_user('nonexistent', 'ValidPass123!')
+        # Should raise EntityNotFoundException
+        with pytest.raises(EntityNotFoundException) as exc_info:
+            user_dao.authenticate_user('nonexistent', 'ValidPass123!')
 
-        # Verify result
-        assert result is None
+        assert "User 'nonexistent' not found" in str(exc_info.value)
 
     def test_update_user_success(self, user_dao, mock_db_connection):
         """Test successful user update"""
