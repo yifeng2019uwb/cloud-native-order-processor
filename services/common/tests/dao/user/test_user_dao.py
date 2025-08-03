@@ -82,6 +82,7 @@ class TestUserDAO:
         # Mock database response
         mock_created_item = {
             'Pk': 'john_doe123',
+            'Sk': 'USER',
             'username': 'john_doe123',
             'email': 'test@example.com',
             'first_name': 'Test',
@@ -119,6 +120,7 @@ class TestUserDAO:
         # Mock that username already exists
         existing_user = User(
             Pk='john_doe123',
+            Sk='USER',
             username='john_doe123',
             email='existing@example.com',
             first_name='Existing',
@@ -147,6 +149,7 @@ class TestUserDAO:
         # Mock that email already exists
         existing_user = User(
             Pk='existing_user',
+            Sk='USER',
             username='existing_user',
             email='test@example.com',
             first_name='Existing',
@@ -178,6 +181,7 @@ class TestUserDAO:
         # Mock database response
         mock_item = {
             'Pk': 'john_doe123',
+            'Sk': 'USER',
             'username': 'john_doe123',
             'email': 'test@example.com',
             'first_name': 'Test',
@@ -214,6 +218,7 @@ class TestUserDAO:
         # Mock database response
         mock_items = [{
             'Pk': 'john_doe123',
+            'Sk': 'USER',
             'username': 'john_doe123',
             'email': 'test@example.com',
             'first_name': 'Test',
@@ -253,6 +258,7 @@ class TestUserDAO:
         # Mock get_user_by_username to return a user
         mock_user = User(
             Pk='john_doe123',
+            Sk='USER',
             username='john_doe123',
             email='test@example.com',
             first_name='Test',
@@ -266,6 +272,7 @@ class TestUserDAO:
         # Mock password hash lookup
         mock_item = {
             'Pk': 'john_doe123',
+            'Sk': 'USER',
             'username': 'john_doe123',
             'email': 'test@example.com',
             'first_name': 'Test',
@@ -294,6 +301,7 @@ class TestUserDAO:
         # Mock get_user_by_username to return a user
         mock_user = User(
             Pk='test@example.com',
+            Sk='USER',
             username='test@example.com',
             email='test@example.com',
             first_name='Test',
@@ -307,6 +315,7 @@ class TestUserDAO:
         # Mock password hash lookup
         mock_item = {
             'Pk': 'test@example.com',
+            'Sk': 'USER',
             'username': 'test@example.com',
             'email': 'test@example.com',
             'first_name': 'Test',
@@ -332,6 +341,7 @@ class TestUserDAO:
         # Mock password hash lookup
         mock_item = {
             'Pk': 'john_doe123',
+            'Sk': 'USER',
             'username': 'john_doe123',
             'email': 'test@example.com',
             'first_name': 'Test',
@@ -369,6 +379,7 @@ class TestUserDAO:
         # Mock get_user_by_username to return existing user
         existing_user = User(
             Pk='john_doe123',
+            Sk='USER',
             username='john_doe123',
             email='test@example.com',
             first_name='Test',
@@ -381,6 +392,7 @@ class TestUserDAO:
         # Mock database update response
         mock_updated_item = {
             'Pk': 'john_doe123',
+            'Sk': 'USER',
             'username': 'john_doe123',
             'email': 'updated@example.com',
             'first_name': 'Updated',
@@ -406,6 +418,7 @@ class TestUserDAO:
         # Mock get_user_by_username to return existing user
         existing_user = User(
             Pk='john_doe123',
+            Sk='USER',
             username='john_doe123',
             email='test@example.com',
             first_name='Test',
@@ -419,6 +432,7 @@ class TestUserDAO:
         mock_db_connection.users_table.update_item.return_value = {
             'Attributes': {
                 'Pk': 'john_doe123',
+                'Sk': 'USER',
                 'username': 'john_doe123',
                 'email': 'taken@example.com',
                 'first_name': 'Test',
@@ -441,6 +455,7 @@ class TestUserDAO:
         # Mock get_user_by_username
         mock_user = User(
             Pk='john_doe123',
+            Sk='USER',
             username='john_doe123',
             email='test@example.com',
             first_name='Test',
@@ -454,6 +469,7 @@ class TestUserDAO:
         mock_db_connection.users_table.update_item.return_value = {
             'Attributes': {
                 'Pk': 'john_doe123',
+                'Sk': 'USER',
                 'username': 'john_doe123',
                 'email': 'test@example.com',
                 'first_name': 'Test',
@@ -553,6 +569,7 @@ class TestUserDAO:
         # Mock user lookup success
         mock_user = User(
             Pk='john_doe123',
+            Sk='USER',
             username='john_doe123',
             email='test@example.com',
             first_name='Test',
@@ -580,6 +597,7 @@ class TestUserDAO:
         # Mock get_user_by_username to return existing user
         existing_user = User(
             Pk='john_doe123',
+            Sk='USER',
             username='john_doe123',
             email='test@example.com',
             first_name='Test',
@@ -604,6 +622,7 @@ class TestUserDAO:
         # Mock that email belongs to the same user (should be allowed)
         existing_user = User(
             Pk='john_doe123',
+            Sk='USER',
             username='john_doe123',
             email='current@example.com',
             first_name='John',
@@ -617,6 +636,7 @@ class TestUserDAO:
         # Mock database update response
         mock_updated_item = {
             'Pk': 'john_doe123',
+            'Sk': 'USER',
             'username': 'john_doe123',
             'email': 'current@example.com',
             'first_name': 'John',
@@ -642,6 +662,7 @@ class TestUserDAO:
         # Mock get_user_by_username to return existing user
         existing_user = User(
             Pk='nonexistent_user',
+            Sk='USER',
             username='nonexistent_user',
             email='test@example.com',
             first_name='Test',

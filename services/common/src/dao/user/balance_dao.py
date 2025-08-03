@@ -46,6 +46,8 @@ class BalanceDAO:
         try:
             # Create Balance entity with proper PK generation
             balance = Balance(
+                Pk=balance_create.username,
+                Sk="BALANCE",
                 username=balance_create.username,
                 current_balance=balance_create.initial_balance
             )
@@ -81,6 +83,8 @@ class BalanceDAO:
 
             item = response["Item"]
             return Balance(
+                Pk=item["Pk"],
+                Sk=item["Sk"],
                 username=item["username"],
                 current_balance=Decimal(item["current_balance"]),
                 created_at=datetime.fromisoformat(item["created_at"]),
@@ -111,6 +115,8 @@ class BalanceDAO:
 
             item = response["Attributes"]
             return Balance(
+                Pk=item["Pk"],
+                Sk=item["Sk"],
                 username=item["username"],
                 current_balance=Decimal(item["current_balance"]),
                 created_at=datetime.fromisoformat(item["created_at"]),
@@ -158,6 +164,8 @@ class BalanceDAO:
             if not current_balance:
                 # Create initial balance if doesn't exist
                 current_balance = Balance(
+                    Pk=transaction.username,
+                    Sk="BALANCE",
                     username=transaction.username,
                     current_balance=Decimal('0.00')
                 )
@@ -205,7 +213,9 @@ class BalanceDAO:
             transactions = []
             for item in response.get("Items", []):
                 transaction = BalanceTransaction(
+                    Pk=item["Pk"],
                     username=item["username"],
+                    Sk=item["Sk"],
                     transaction_id=UUID(item["transaction_id"]),
                     transaction_type=item["transaction_type"],
                     amount=Decimal(item["amount"]),

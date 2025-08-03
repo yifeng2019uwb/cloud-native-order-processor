@@ -31,7 +31,7 @@ class UserLock:
     async def __aenter__(self):
         """Acquire lock when entering context"""
         try:
-            self.lock_id = await acquire_lock(
+            self.lock_id = acquire_lock(
                 self.user_id,
                 self.operation,
                 self.timeout_seconds
@@ -45,12 +45,12 @@ class UserLock:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Release lock when exiting context"""
         if self.acquired and self.lock_id:
-            await release_lock(self.user_id, self.lock_id)
+            release_lock(self.user_id, self.lock_id)
             logger.info(f"Lock released: user={self.user_id}, operation={self.operation}, lock_id={self.lock_id}")
             self.acquired = False
 
 
-async def acquire_lock(user_id: str, operation: str, timeout_seconds: int = 15) -> Optional[str]:
+def acquire_lock(user_id: str, operation: str, timeout_seconds: int = 15) -> Optional[str]:
     """
     Acquire a lock for a user operation.
 
@@ -71,10 +71,10 @@ async def acquire_lock(user_id: str, operation: str, timeout_seconds: int = 15) 
 
         # Use conditional write to acquire lock
         # Only succeeds if no lock exists or existing lock is expired
-        dynamodb_manager.get_connection().table.put_item(
+        dynamodb_manager.get_connection().users_table.put_item(
             Item={
-                "PK": f"USER#{user_id}",
-                "SK": "LOCK",
+                "Pk": f"USER#{user_id}",
+                "Sk": "LOCK",
                 "lock_id": lock_id,
                 "expires_at": expires_at.isoformat(),
                 "operation": operation,
@@ -83,7 +83,7 @@ async def acquire_lock(user_id: str, operation: str, timeout_seconds: int = 15) 
                 "updated_at": datetime.now(timezone.utc).isoformat(),
                 "entity_type": "user_lock"
             },
-            ConditionExpression="attribute_not_exists(PK) OR expires_at < :now",
+            ConditionExpression="attribute_not_exists(Pk) OR expires_at < :now",
             ExpressionAttributeValues={
                 ":now": datetime.now(timezone.utc).isoformat()
             }
@@ -101,7 +101,7 @@ async def acquire_lock(user_id: str, operation: str, timeout_seconds: int = 15) 
             raise DatabaseOperationException(f"Failed to acquire lock: {str(e)}")
 
 
-async def release_lock(user_id: str, lock_id: str) -> bool:
+def release_lock(user_id: str, lock_id: str) -> bool:
     """
     Release a lock for a user.
 
@@ -117,10 +117,10 @@ async def release_lock(user_id: str, lock_id: str) -> bool:
     """
     try:
         # Delete lock if it matches our lock_id
-        dynamodb_manager.get_connection().table.delete_item(
+        dynamodb_manager.get_connection().users_table.delete_item(
             Key={
-                "PK": f"USER#{user_id}",
-                "SK": "LOCK"
+                "Pk": f"USER#{user_id}",
+                "Sk": "LOCK"
             },
             ConditionExpression="lock_id = :lock_id",
             ExpressionAttributeValues={
@@ -140,7 +140,7 @@ async def release_lock(user_id: str, lock_id: str) -> bool:
             raise DatabaseOperationException(f"Failed to release lock: {str(e)}")
 
 
-async def get_lock_info(user_id: str) -> Optional[dict]:
+def get_lock_info(user_id: str) -> Optional[dict]:
     """
     Get information about a user's current lock.
 
@@ -151,10 +151,10 @@ async def get_lock_info(user_id: str) -> Optional[dict]:
         Lock information if exists, None otherwise
     """
     try:
-        response = dynamodb_manager.get_connection().table.get_item(
+        response = dynamodb_manager.get_connection().users_table.get_item(
             Key={
-                "PK": f"USER#{user_id}",
-                "SK": "LOCK"
+                "Pk": f"USER#{user_id}",
+                "Sk": "LOCK"
             }
         )
 
@@ -180,7 +180,7 @@ async def get_lock_info(user_id: str) -> Optional[dict]:
         raise DatabaseOperationException(f"Failed to get lock info: {str(e)}")
 
 
-async def cleanup_expired_locks() -> int:
+def cleanup_expired_locks() -> int:
     """
     Clean up expired locks from the database.
 
@@ -189,8 +189,8 @@ async def cleanup_expired_locks() -> int:
     """
     try:
         # Scan for expired locks
-        response = dynamodb_manager.get_connection().table.scan(
-            FilterExpression="SK = :sk AND expires_at < :now",
+        response = dynamodb_manager.get_connection().users_table.scan(
+            FilterExpression="Sk = :sk AND expires_at < :now",
             ExpressionAttributeValues={
                 ":sk": "LOCK",
                 ":now": datetime.now(timezone.utc).isoformat()
@@ -200,16 +200,16 @@ async def cleanup_expired_locks() -> int:
         cleaned_count = 0
         for item in response.get("Items", []):
             try:
-                dynamodb_manager.get_connection().table.delete_item(
+                dynamodb_manager.get_connection().users_table.delete_item(
                     Key={
-                        "PK": item["PK"],
-                        "SK": item["SK"]
+                        "Pk": item["Pk"],
+                        "Sk": item["Sk"]
                     }
                 )
                 cleaned_count += 1
-                logger.debug(f"Cleaned up expired lock: user={item['PK']}, lock_id={item['lock_id']}")
+                logger.debug(f"Cleaned up expired lock: user={item['Pk']}, lock_id={item['lock_id']}")
             except Exception as e:
-                logger.error(f"Failed to clean up lock: user={item['PK']}, error={str(e)}")
+                logger.error(f"Failed to clean up lock: user={item['Pk']}, error={str(e)}")
 
         if cleaned_count > 0:
             logger.info(f"Cleaned up {cleaned_count} expired locks")

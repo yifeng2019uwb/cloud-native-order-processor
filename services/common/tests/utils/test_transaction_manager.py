@@ -25,10 +25,10 @@ class TestTransactionManager:
     @pytest.fixture
     def mock_daos(self):
         """Create mock DAOs"""
-        user_dao = AsyncMock()
-        balance_dao = AsyncMock()
-        order_dao = AsyncMock()
-        asset_dao = AsyncMock()
+        user_dao = MagicMock()
+        balance_dao = MagicMock()
+        order_dao = MagicMock()
+        asset_dao = MagicMock()
         return user_dao, balance_dao, order_dao, asset_dao
 
     @pytest.fixture
@@ -59,6 +59,7 @@ class TestTransactionManager:
         """Mock balance for testing"""
         return Balance(
             Pk="BALANCE#testuser123",
+            Sk="BALANCE",
             username="testuser123",
             current_balance=Decimal('100.00'),
             created_at=datetime.utcnow(),

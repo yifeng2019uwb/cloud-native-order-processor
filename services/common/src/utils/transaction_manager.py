@@ -79,10 +79,10 @@ class SimpleTransactionManager:
                 )
 
                 # This will automatically update the balance
-                created_transaction = await self.balance_dao.create_transaction(transaction)
+                created_transaction = self.balance_dao.create_transaction(transaction)
 
                 # Get updated balance
-                balance = await self.balance_dao.get_balance(user_id)  # Use username directly
+                balance = self.balance_dao.get_balance(user_id)  # Use username directly
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
@@ -121,7 +121,7 @@ class SimpleTransactionManager:
         try:
             async with UserLock(user_id, "withdraw", LOCK_TIMEOUTS["withdraw"]):
                 # Check balance first
-                balance = await self.balance_dao.get_balance(user_id)  # Use username directly
+                balance = self.balance_dao.get_balance(user_id)  # Use username directly
                 if not balance:
                     # CRITICAL: This should NEVER happen - balance is created during user registration
                     # If this occurs, it indicates a serious system issue (database corruption, race condition, or bug)
@@ -155,10 +155,10 @@ class SimpleTransactionManager:
                 )
 
                 # This will automatically update the balance
-                created_transaction = await self.balance_dao.create_transaction(transaction)
+                created_transaction = self.balance_dao.create_transaction(transaction)
 
                 # Get updated balance
-                updated_balance = await self.balance_dao.get_balance(user_id)  # Use username directly
+                updated_balance = self.balance_dao.get_balance(user_id)  # Use username directly
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
@@ -206,7 +206,7 @@ class SimpleTransactionManager:
         try:
             async with UserLock(user_id, "buy_order", LOCK_TIMEOUTS["buy_order"]):
                 # Phase 1: Validate prerequisites
-                balance = await self.balance_dao.get_balance(user_id)  # Use username directly
+                balance = self.balance_dao.get_balance(user_id)  # Use username directly
                 if not balance:
                     # CRITICAL: This should NEVER happen - balance is created during user registration
                     # If this occurs, it indicates a serious system issue (database corruption, race condition, or bug)
@@ -244,7 +244,7 @@ class SimpleTransactionManager:
                     updated_at=now
                 )
 
-                created_order = await self.order_dao.create_order(order)
+                created_order = self.order_dao.create_order(order)
 
                 # Phase 3: Create balance transaction
                 now_timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
@@ -259,10 +259,10 @@ class SimpleTransactionManager:
                     reference_id=created_order.order_id
                 )
 
-                created_transaction = await self.balance_dao.create_transaction(transaction)
+                created_transaction = self.balance_dao.create_transaction(transaction)
 
                 # Get updated balance
-                updated_balance = await self.balance_dao.get_balance(user_id)  # Use username directly
+                updated_balance = self.balance_dao.get_balance(user_id)  # Use username directly
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
@@ -326,7 +326,7 @@ class SimpleTransactionManager:
                     updated_at=now
                 )
 
-                created_order = await self.order_dao.create_order(order)
+                created_order = self.order_dao.create_order(order)
 
                 # Phase 3: Create balance transaction
                 now_timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
@@ -341,10 +341,10 @@ class SimpleTransactionManager:
                     reference_id=created_order.order_id
                 )
 
-                created_transaction = await self.balance_dao.create_transaction(transaction)
+                created_transaction = self.balance_dao.create_transaction(transaction)
 
                 # Get updated balance
-                updated_balance = await self.balance_dao.get_balance(user_id)  # Use username directly
+                updated_balance = self.balance_dao.get_balance(user_id)  # Use username directly
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 

@@ -404,6 +404,7 @@ class TestUser:
         now = datetime.utcnow()
         user = User(
             Pk="john_doe123",
+            Sk="USER",
             username="john_doe123",
             email="test@example.com",
             first_name="Test",       # FIXED: Split field
@@ -427,6 +428,7 @@ class TestUser:
         now = datetime.utcnow()
         user = User(
             Pk="john_doe123",
+            Sk="USER",
             username="john_doe123",
             email="test@example.com",
             first_name="John",
@@ -449,6 +451,7 @@ class TestUser:
         now = datetime.utcnow()
         user = User(
             Pk="john_doe123",
+            Sk="USER",
             username="john_doe123",
             email="test@example.com",
             first_name="Test",       # FIXED: Split field

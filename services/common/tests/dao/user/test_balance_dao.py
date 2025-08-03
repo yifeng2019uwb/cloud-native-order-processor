@@ -35,6 +35,7 @@ class TestBalanceDAO:
         """Sample balance for testing"""
         return Balance(
             Pk="BALANCE#testuser123",
+            Sk="BALANCE",
             username="testuser123",
             current_balance=Decimal('100.00'),
             created_at=datetime.utcnow(),
@@ -47,8 +48,8 @@ class TestBalanceDAO:
         """Sample transaction for testing"""
         return BalanceTransaction(
             Pk="TRANS#testuser123",
-            username="testuser123",
             Sk="2023-01-01T00:00:00",
+            username="testuser123",
             transaction_id=UUID('12345678-1234-5678-9abc-123456789abc'),
             transaction_type=TransactionType.DEPOSIT,
             amount=Decimal('50.00'),
@@ -92,7 +93,8 @@ class TestBalanceDAO:
         """Test successful balance retrieval"""
         # Mock database response
         mock_item = {
-            'Pk': 'BALANCE#testuser123',
+            'Pk': 'testuser123',
+            'Sk': 'BALANCE',
             'username': 'testuser123',
             'current_balance': '100.00',
             'created_at': sample_balance.created_at.isoformat(),
@@ -105,13 +107,13 @@ class TestBalanceDAO:
 
         # Verify result
         assert result is not None
-        assert result.Pk == "BALANCE#testuser123"
+        assert result.Pk == "testuser123"
         assert result.username == "testuser123"
         assert result.current_balance == Decimal('100.00')
 
         # Verify database was called
         mock_db_connection.users_table.get_item.assert_called_once_with(
-            Key={'Pk': 'BALANCE#testuser123', 'Sk': 'BALANCE'}
+            Key={'Pk': 'testuser123', 'Sk': 'BALANCE'}
         )
 
     def test_get_balance_not_found(self, balance_dao, mock_db_connection):
@@ -140,6 +142,7 @@ class TestBalanceDAO:
         # Mock database response
         mock_updated_item = {
             'Pk': 'BALANCE#testuser123',
+            'Sk': 'BALANCE',
             'username': 'testuser123',
             'current_balance': '150.00',
             'created_at': sample_balance.created_at.isoformat(),
@@ -284,8 +287,8 @@ class TestBalanceDAO:
         # Mock database response
         mock_items = [{
             'Pk': 'TRANS#testuser123',
-            'username': 'testuser123',
             'Sk': '2023-01-01T00:00:00',
+            'username': 'testuser123',
             'transaction_id': str(sample_transaction.transaction_id),
             'transaction_type': 'deposit',
             'amount': '50.00',

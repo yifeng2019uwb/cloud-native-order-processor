@@ -183,6 +183,47 @@ Limit Sell:
 
 ## 🔧 Development Guidelines
 
+### **Async/Sync Design Pattern**
+The system uses a hybrid async/sync pattern for transaction atomicity:
+
+#### **Transaction Manager (Async)**
+- **Purpose**: Orchestrates complex multi-step transactions
+- **Pattern**: `async def` methods that use `UserLock` async context manager
+- **DAO Calls**: Synchronous (no `await` needed)
+- **Example**:
+  ```python
+  async def deposit_funds(self, user_id: str, amount: Decimal):
+      async with UserLock(user_id, "deposit", timeout):
+          # Sync DAO calls (no await)
+          transaction = self.balance_dao.create_transaction(...)
+          balance = self.balance_dao.get_balance(user_id)
+  ```
+
+#### **Lock Manager (Hybrid)**
+- **UserLock Context Manager**: `async def` (required for `async with`)
+- **Lock Functions**: `def` (sync - DynamoDB operations are sync)
+- **Pattern**: Async context manager calls sync functions
+- **Example**:
+  ```python
+  class UserLock:
+      async def __aenter__(self):
+          self.lock_id = acquire_lock(...)  # sync call
+
+      async def __aexit__(self):
+          release_lock(...)  # sync call
+  ```
+
+#### **DAOs (Sync)**
+- **All DAO methods**: `def` (synchronous)
+- **No async/await**: All database operations are sync
+- **Called by**: Transaction manager (without `await`)
+
+#### **Design Rationale**
+- **Personal project**: Low traffic, simple concurrency control
+- **User-level locking**: Sufficient for preventing race conditions
+- **Atomic operations**: Ensures data consistency
+- **Simple pattern**: Async context manager + sync database operations
+
 ### **Adding New Entities**
 1. Create entity in appropriate service directory
 2. Add to service's `__init__.py` exports
