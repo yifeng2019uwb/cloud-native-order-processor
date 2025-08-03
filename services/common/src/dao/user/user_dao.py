@@ -66,7 +66,6 @@ class UserDAO(BaseDAO):
             created_item = self._safe_put_item(self.db.users_table, user_item)
 
             return User(
-                Pk=user_create.username,
                 username=user_create.username,
                 email=user_create.email,
                 first_name=user_create.first_name,
@@ -101,7 +100,6 @@ class UserDAO(BaseDAO):
                 return None
 
             return User(
-                Pk=item['Pk'],
                 username=item['username'],
                 email=item['email'],
                 first_name=item.get('first_name', ''),
@@ -132,7 +130,6 @@ class UserDAO(BaseDAO):
             item = items[0]
 
             return User(
-                Pk=item['Pk'],
                 username=item['username'],
                 email=item['email'],
                 first_name=item.get('first_name', ''),
@@ -238,7 +235,6 @@ class UserDAO(BaseDAO):
 
             # Return updated user
             return User(
-                Pk=updated_item['Pk'],
                 username=updated_item['username'],
                 email=updated_item['email'],
                 first_name=updated_item.get('first_name', ''),

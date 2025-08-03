@@ -26,6 +26,7 @@ class UserLogin(BaseModel):
 class User(BaseModel):
     """User entity model with simple DB constraints only"""
     Pk: str = Field(..., description="Primary key (username)")
+    Sk: str = Field(..., description="Sort key (USER)")
     username: str = Field(..., max_length=30, description="Username for easy access")
     email: str = Field(..., max_length=255)
     first_name: str = Field(..., max_length=50)

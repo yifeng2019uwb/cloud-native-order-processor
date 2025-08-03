@@ -26,7 +26,8 @@ class BalanceDAO:
         """Create a new balance record."""
         try:
             item = {
-                "Pk": f"BALANCE#{balance.username}",
+                "Pk": balance.Pk,
+                "Sk": balance.Sk,
                 "username": balance.username,
                 "current_balance": str(balance.current_balance),
                 "created_at": balance.created_at.isoformat(),
@@ -45,13 +46,12 @@ class BalanceDAO:
         try:
             # Create Balance entity with proper PK generation
             balance = Balance(
-                Pk=f"BALANCE#{balance_create.username}",
                 username=balance_create.username,
                 current_balance=balance_create.initial_balance
             )
 
             item = {
-                "Pk": balance.Pk,
+                "Pk": balance_create.username,
                 "Sk": "BALANCE",  # Sort key for balance records
                 "username": balance.username,
                 "current_balance": str(balance.current_balance),
@@ -71,7 +71,7 @@ class BalanceDAO:
         try:
             response = self.db.users_table.get_item(
                 Key={
-                    "Pk": f"BALANCE#{user_id}",
+                    "Pk": user_id,
                     "Sk": "BALANCE"
                 }
             )
@@ -81,7 +81,6 @@ class BalanceDAO:
 
             item = response["Item"]
             return Balance(
-                Pk=item["Pk"],
                 username=item["username"],
                 current_balance=Decimal(item["current_balance"]),
                 created_at=datetime.fromisoformat(item["created_at"]),
@@ -99,7 +98,7 @@ class BalanceDAO:
 
             response = self.db.users_table.update_item(
                 Key={
-                    "Pk": f"BALANCE#{user_id}",
+                    "Pk": user_id,
                     "Sk": "BALANCE"
                 },
                 UpdateExpression="SET current_balance = :balance, updated_at = :updated_at",
@@ -112,7 +111,6 @@ class BalanceDAO:
 
             item = response["Attributes"]
             return Balance(
-                Pk=item["Pk"],
                 username=item["username"],
                 current_balance=Decimal(item["current_balance"]),
                 created_at=datetime.fromisoformat(item["created_at"]),
@@ -160,7 +158,6 @@ class BalanceDAO:
             if not current_balance:
                 # Create initial balance if doesn't exist
                 current_balance = Balance(
-                    Pk=f"BALANCE#{transaction.username}",
                     username=transaction.username,
                     current_balance=Decimal('0.00')
                 )
@@ -208,9 +205,7 @@ class BalanceDAO:
             transactions = []
             for item in response.get("Items", []):
                 transaction = BalanceTransaction(
-                    Pk=item["Pk"],
                     username=item["username"],
-                    Sk=item["Sk"],
                     transaction_id=UUID(item["transaction_id"]),
                     transaction_type=item["transaction_type"],
                     amount=Decimal(item["amount"]),

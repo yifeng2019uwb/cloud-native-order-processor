@@ -15,7 +15,8 @@ from .balance_enums import TransactionType, TransactionStatus, DEFAULT_TRANSACTI
 class Balance(BaseModel):
     """User account balance entity."""
 
-    Pk: str = Field(..., description="Primary key (BALANCE#{username})")
+    Pk: str = Field(..., description="Primary key (username)")
+    Sk: str = Field(..., description="Sort key (BALANCE)")
     username: str = Field(..., description="Username for easy access")
     current_balance: Decimal = Field(default=Decimal('0.00'), description="Current account balance")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Balance creation timestamp")
@@ -35,7 +36,7 @@ class BalanceTransaction(BaseModel):
 
     Pk: str = Field(..., description="Primary key (TRANS#{username})")
     username: str = Field(..., description="Username for easy access")
-    Sk: str = Field(..., description="Sort key (timestamp)")
+    Sk: str = Field(..., description="Sort key (ISO timestamp string)")
     transaction_id: UUID = Field(default_factory=uuid4, description="Unique transaction ID")
     transaction_type: TransactionType = Field(..., description="Type of transaction")
     amount: Decimal = Field(..., description="Transaction amount (positive for deposits, negative for withdrawals)")
