@@ -80,15 +80,12 @@ class UserDAO(BaseDAO):
                 updated_at=datetime.fromisoformat(created_item['updated_at'])
             )
 
-        except EntityAlreadyExistsException:
-            # Re-raise entity exceptions directly
-            raise
         except Exception as e:
-            logger.error(f"Failed to create user: {e}")
+            logger.error(f"Failed to create user '{user_create.username}': {e}")
             # Check if it's a duplicate key error
             if "ConditionalCheckFailedException" in str(e) or "Duplicate" in str(e):
                 raise EntityAlreadyExistsException(f"User with username '{user_create.username}' or email '{user_create.email}' already exists")
-            raise DatabaseOperationException(f"Failed to create user: {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while creating user '{user_create.username}': {str(e)}")
 
     def get_user_by_username(self, username: str) -> User:
         """Get user by username (Primary Key lookup)"""
@@ -106,7 +103,7 @@ class UserDAO(BaseDAO):
             logger.info(f"🔍 DEBUG: Database returned item: {item}")
 
             if not item:
-                logger.warning(f"❌ DEBUG: No user found for username: '{username}'")
+                logger.warning(f"User '{username}' not found")
                 raise EntityNotFoundException(f"User '{username}' not found")
 
             return User(
@@ -126,7 +123,7 @@ class UserDAO(BaseDAO):
             raise
         except Exception as e:
             logger.error(f"Failed to get user by username {username}: {e}")
-            raise DatabaseOperationException(f"Failed to get user by username: {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving user by username '{username}': {str(e)}")
 
     def get_user_by_email(self, email: str) -> User:
         """Get user by email (GSI lookup)"""
@@ -160,7 +157,7 @@ class UserDAO(BaseDAO):
             raise
         except Exception as e:
             logger.error(f"Failed to get user by email {email}: {e}")
-            raise DatabaseOperationException(f"Failed to get user by email: {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving user by email '{email}': {str(e)}")
 
     def authenticate_user(self, username: str, password: str) -> User:
         """Authenticate user with username and password"""
@@ -184,11 +181,9 @@ class UserDAO(BaseDAO):
             else:
                 raise InvalidCredentialsException(f"Invalid credentials for user '{username}'")
 
-        except (EntityNotFoundException, InvalidCredentialsException):
-            raise
         except Exception as e:
-            logger.error(f"Failed to authenticate user {username}: {e}")
-            raise DatabaseOperationException(f"Failed to authenticate user: {str(e)}")
+            logger.error(f"Failed to authenticate user '{username}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while authenticating user '{username}': {str(e)}")
 
     def update_user(self, username: str, email: Optional[str] = None,
                     first_name: Optional[str] = None, last_name: Optional[str] = None,  # FIXED: Split parameters
@@ -262,11 +257,9 @@ class UserDAO(BaseDAO):
                 updated_at=datetime.fromisoformat(updated_item['updated_at'])
             )
 
-        except EntityNotFoundException:
-            raise
         except Exception as e:
-            logger.error(f"Failed to update user {username}: {e}")
-            raise DatabaseOperationException(f"Failed to update user: {str(e)}")
+            logger.error(f"Failed to update user '{username}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while updating user '{username}': {str(e)}")
 
     def delete_user(self, username: str) -> bool:
         """Delete a user by username"""
@@ -275,5 +268,5 @@ class UserDAO(BaseDAO):
             return self._safe_delete_item(self.db.users_table, key)
 
         except Exception as e:
-            logger.error(f"Failed to delete user {username}: {e}")
-            raise DatabaseOperationException(f"Failed to delete user: {str(e)}")
+            logger.error(f"Failed to delete user '{username}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while deleting user '{username}': {str(e)}")

@@ -69,18 +69,16 @@ class AssetDAO(BaseDAO):
                 created_at=datetime.fromisoformat(created_item['created_at']),
                 updated_at=datetime.fromisoformat(created_item['updated_at'])
             )
-        except EntityAlreadyExistsException:
-            # Re-raise entity exceptions directly
-            raise
-        except DatabaseOperationException as e:
-            logger.error(f"Failed to create asset: {e}")
-            raise
+        except Exception as e:
+            logger.error(f"Failed to create asset '{asset_create.asset_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while creating asset '{asset_create.asset_id}': {str(e)}")
 
     def get_asset_by_id(self, asset_id: str) -> Asset:
         try:
             key = {'product_id': asset_id}
             item = self._safe_get_item(self.db.inventory_table, key)
             if not item:
+                logger.warning(f"Asset '{asset_id}' not found")
                 raise EntityNotFoundException(f"Asset '{asset_id}' not found")
             return Asset(
                 asset_id=item['asset_id'],
@@ -102,11 +100,9 @@ class AssetDAO(BaseDAO):
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
-        except EntityNotFoundException:
-            raise
-        except DatabaseOperationException as e:
-            logger.error(f"Failed to get asset by ID {asset_id}: {e}")
-            raise
+        except Exception as e:
+            logger.error(f"Failed to get asset '{asset_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving asset '{asset_id}': {str(e)}")
 
     def get_all_assets(self, active_only: bool = False) -> List[Asset]:
         """Get all assets, optionally filter by active status"""
@@ -151,9 +147,9 @@ class AssetDAO(BaseDAO):
 
             return assets
 
-        except DatabaseOperationException as e:
+        except Exception as e:
             logger.error(f"Failed to get all assets: {e}")
-            raise
+            raise DatabaseOperationException(f"Database operation failed while retrieving all assets: {str(e)}")
 
     def get_assets_by_category(self, category: str) -> List[Asset]:
         """Get assets by category"""
@@ -195,11 +191,11 @@ class AssetDAO(BaseDAO):
 
             return assets
 
-        except DatabaseOperationException as e:
-            logger.error(f"Failed to get assets by category {category}: {e}")
-            raise
+        except Exception as e:
+            logger.error(f"Failed to get assets by category '{category}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving assets by category '{category}': {str(e)}")
 
-    def update_asset(self, asset_id: str, asset_update: AssetUpdate) -> Optional[Asset]:
+    def update_asset(self, asset_id: str, asset_update: AssetUpdate) -> Asset:
         try:
             updates = {}
             for field in [
@@ -226,8 +222,6 @@ class AssetDAO(BaseDAO):
                 update_expression,
                 expression_values
             )
-            if not item:
-                raise DatabaseOperationException(f"Failed to update asset {asset_id}")
             return Asset(
                 asset_id=item.get('asset_id', asset_id),
                 name=item['name'],
@@ -248,9 +242,9 @@ class AssetDAO(BaseDAO):
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
-        except DatabaseOperationException as e:
-            logger.error(f"Failed to update asset {asset_id}: {e}")
-            raise
+        except Exception as e:
+            logger.error(f"Failed to update asset '{asset_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while updating asset '{asset_id}': {str(e)}")
 
     def delete_asset(self, asset_id: str) -> bool:
         """Delete asset by asset_id"""
@@ -266,11 +260,11 @@ class AssetDAO(BaseDAO):
 
             return success
 
-        except DatabaseOperationException as e:
-            logger.error(f"Failed to delete asset {asset_id}: {e}")
-            raise
+        except Exception as e:
+            logger.error(f"Failed to delete asset '{asset_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while deleting asset '{asset_id}': {str(e)}")
 
-    def update_asset_price(self, asset_id: str, new_price: float) -> Optional[Asset]:
+    def update_asset_price(self, asset_id: str, new_price: float) -> Asset:
         """Update only the price of an asset (convenience method)"""
         try:
             asset_update = AssetUpdate(price_usd=new_price)
@@ -281,47 +275,39 @@ class AssetDAO(BaseDAO):
 
             return self.update_asset(asset_id, asset_update)
 
-        except DatabaseOperationException as e:
-            logger.error(f"Failed to update price for asset {asset_id}: {e}")
-            raise
+        except Exception as e:
+            logger.error(f"Failed to update price for asset '{asset_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while updating price for asset '{asset_id}': {str(e)}")
 
-    def update_asset_amount(self, asset_id: str, new_amount: float) -> Optional[Asset]:
+    def update_asset_amount(self, asset_id: str, new_amount: float) -> Asset:
         """Update only the amount of an asset (convenience method for inventory management)"""
         try:
             asset_update = AssetUpdate(amount=new_amount)
             return self.update_asset(asset_id, asset_update)
 
-        except DatabaseOperationException as e:
-            logger.error(f"Failed to update amount for asset {asset_id}: {e}")
-            raise
+        except Exception as e:
+            logger.error(f"Failed to update amount for asset '{asset_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while updating amount for asset '{asset_id}': {str(e)}")
 
-    def deactivate_asset(self, asset_id: str) -> Optional[Asset]:
+    def deactivate_asset(self, asset_id: str) -> Asset:
         """Deactivate an asset (convenience method)"""
         try:
             asset_update = AssetUpdate(is_active=False)
             return self.update_asset(asset_id, asset_update)
 
-        except DatabaseOperationException as e:
-            logger.error(f"Failed to deactivate asset {asset_id}: {e}")
-            raise
+        except Exception as e:
+            logger.error(f"Failed to deactivate asset '{asset_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while deactivating asset '{asset_id}': {str(e)}")
 
-    def activate_asset(self, asset_id: str) -> Optional[Asset]:
-        """Activate an asset (only if price > 0)"""
+    def activate_asset(self, asset_id: str) -> Asset:
+        """Activate an asset (convenience method)"""
         try:
-            # First check if asset has valid price
-            asset = self.get_asset_by_id(asset_id)
-            if not asset:
-                raise AssetNotFoundException(f"Asset {asset_id} not found")
-
-            if asset.price_usd <= 0:
-                raise AssetValidationException(f"Cannot activate asset {asset_id} with zero or negative price")
-
             asset_update = AssetUpdate(is_active=True)
             return self.update_asset(asset_id, asset_update)
 
-        except DatabaseOperationException as e:
-            logger.error(f"Failed to activate asset {asset_id}: {e}")
-            raise
+        except Exception as e:
+            logger.error(f"Failed to activate asset '{asset_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while activating asset '{asset_id}': {str(e)}")
 
     def get_asset_stats(self) -> Dict[str, Any]:
         """Get summary statistics about assets"""
@@ -344,6 +330,6 @@ class AssetDAO(BaseDAO):
                 'last_updated': datetime.utcnow().isoformat()
             }
 
-        except DatabaseOperationException as e:
+        except Exception as e:
             logger.error(f"Failed to get asset stats: {e}")
-            raise
+            raise DatabaseOperationException(f"Database operation failed while retrieving asset statistics: {str(e)}")

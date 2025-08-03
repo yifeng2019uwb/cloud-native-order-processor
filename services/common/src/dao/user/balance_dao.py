@@ -79,6 +79,7 @@ class BalanceDAO:
             )
 
             if "Item" not in response:
+                logger.warning(f"Balance for user '{user_id}' not found")
                 raise EntityNotFoundException(f"Balance for user '{user_id}' not found")
 
             item = response["Item"]
@@ -92,10 +93,9 @@ class BalanceDAO:
                 entity_type=item.get("entity_type", "balance")
             )
 
-        except EntityNotFoundException:
-            raise
-        except ClientError as e:
-            raise DatabaseOperationException(f"Failed to get balance: {str(e)}")
+        except Exception as e:
+            logger.error(f"Failed to get balance for user '{user_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving balance for user '{user_id}': {str(e)}")
 
     def update_balance(self, user_id: str, current_balance: Decimal) -> Balance:
         """Update balance for a user."""
@@ -126,8 +126,9 @@ class BalanceDAO:
                 entity_type=item.get("entity_type", "balance")
             )
 
-        except ClientError as e:
-            raise DatabaseOperationException(f"Failed to update balance: {str(e)}")
+        except Exception as e:
+            logger.error(f"Failed to update balance for user '{user_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while updating balance for user '{user_id}': {str(e)}")
 
     def create_transaction(self, transaction: BalanceTransaction) -> BalanceTransaction:
         """Create a new balance transaction and update balance."""
@@ -155,8 +156,9 @@ class BalanceDAO:
 
             return transaction
 
-        except ClientError as e:
-            raise DatabaseOperationException(f"Failed to create transaction: {str(e)}")
+        except Exception as e:
+            logger.error(f"Failed to create transaction for user '{transaction.username}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while creating transaction for user '{transaction.username}': {str(e)}")
 
     def _update_balance_from_transaction(self, transaction: BalanceTransaction):
         """Update balance based on a completed transaction."""
@@ -180,7 +182,7 @@ class BalanceDAO:
             self.update_balance(transaction.username, new_balance)
 
         except Exception as e:
-            raise DatabaseOperationException(f"Failed to update balance from transaction: {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while updating balance from transaction for user '{transaction.username}': {str(e)}")
 
     def get_transaction(self, user_id: str, transaction_id: UUID) -> BalanceTransaction:
         """Get a specific transaction for a user."""
@@ -193,12 +195,12 @@ class BalanceDAO:
                 if transaction.transaction_id == transaction_id:
                     return transaction
 
+            logger.warning(f"Transaction '{transaction_id}' not found for user '{user_id}'")
             raise EntityNotFoundException(f"Transaction '{transaction_id}' not found for user '{user_id}'")
 
-        except EntityNotFoundException:
-            raise
-        except ClientError as e:
-            raise DatabaseOperationException(f"Failed to get transaction: {str(e)}")
+        except Exception as e:
+            logger.error(f"Failed to get transaction '{transaction_id}' for user '{user_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving transaction '{transaction_id}' for user '{user_id}': {str(e)}")
 
     def get_user_transactions(self, user_id: str, limit: int = 50,
                             start_key: Optional[dict] = None) -> tuple[List[BalanceTransaction], Optional[dict]]:
@@ -234,8 +236,9 @@ class BalanceDAO:
             last_evaluated_key = response.get("LastEvaluatedKey")
             return transactions, last_evaluated_key
 
-        except ClientError as e:
-            raise DatabaseOperationException(f"Failed to get user transactions: {str(e)}")
+        except Exception as e:
+            logger.error(f"Failed to get transactions for user '{user_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving transactions for user '{user_id}': {str(e)}")
 
     def update_transaction_status(self, user_id: str, transaction_id: UUID,
                                 status: str) -> BalanceTransaction:
@@ -245,8 +248,9 @@ class BalanceDAO:
             # This method would need to be redesigned if status updates are needed
             raise DatabaseOperationException("Transaction status updates not supported in current design")
 
-        except ClientError as e:
-            raise DatabaseOperationException(f"Failed to update transaction status: {str(e)}")
+        except Exception as e:
+            logger.error(f"Failed to update transaction status for user '{user_id}' and transaction '{transaction_id}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while updating transaction status for user '{user_id}' and transaction '{transaction_id}': {str(e)}")
 
     def balance_exists(self, user_id: str) -> bool:
         """Check if balance exists for a user."""

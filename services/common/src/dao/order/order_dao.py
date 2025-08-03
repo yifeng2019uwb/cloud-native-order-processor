@@ -66,11 +66,9 @@ class OrderDAO(BaseDAO):
             logger.info(f"Created order {order.order_id} for user {order.user_id}")
             return order
 
-        except EntityAlreadyExistsException:
-            raise
         except Exception as e:
-            logger.error(f"Failed to create order {order.order_id}: {str(e)}")
-            raise DatabaseOperationException(f"Failed to create order: {str(e)}")
+            logger.error(f"Failed to create order '{order.order_id}': {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while creating order '{order.order_id}': {str(e)}")
 
     def get_order(self, order_id: str) -> Order:
         """
@@ -92,18 +90,17 @@ class OrderDAO(BaseDAO):
             )
 
             if 'Item' not in response:
+                logger.warning(f"Order '{order_id}' not found")
                 raise EntityNotFoundException(f"Order '{order_id}' not found")
 
             item = response['Item']
             return Order(**item)
 
-        except EntityNotFoundException:
-            raise
         except Exception as e:
-            logger.error(f"Failed to get order {order_id}: {str(e)}")
-            raise DatabaseOperationException(f"Failed to get order: {str(e)}")
+            logger.error(f"Failed to get order '{order_id}': {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving order '{order_id}': {str(e)}")
 
-    def update_order(self, order_id: str, updates: OrderUpdate) -> Optional[Order]:
+    def update_order(self, order_id: str, updates: OrderUpdate) -> Order:
         """
         Update existing order (only status-related fields).
 
@@ -112,7 +109,7 @@ class OrderDAO(BaseDAO):
             updates: OrderUpdate object with changes
 
         Returns:
-            Updated order if successful, None if not found
+            Updated order if successful
 
         Raises:
             EntityNotFoundException: If order not found
@@ -121,8 +118,6 @@ class OrderDAO(BaseDAO):
         try:
             # Get existing order
             existing_order = self.get_order(order_id)
-            if not existing_order:
-                raise EntityNotFoundException(f"Order {order_id} not found")
 
             # Prepare update expression
             update_expression = "SET updated_at = :updated_at"
@@ -168,11 +163,9 @@ class OrderDAO(BaseDAO):
             updated_item = response['Attributes']
             return Order(**updated_item)
 
-        except EntityNotFoundException:
-            raise
         except Exception as e:
-            logger.error(f"Failed to update order {order_id}: {str(e)}")
-            raise DatabaseOperationException(f"Failed to update order: {str(e)}")
+            logger.error(f"Failed to update order '{order_id}': {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while updating order '{order_id}': {str(e)}")
 
     def get_orders_by_user(self, user_id: str, limit: int = 50, offset: int = 0) -> List[Order]:
         """
@@ -206,8 +199,8 @@ class OrderDAO(BaseDAO):
             return orders
 
         except Exception as e:
-            logger.error(f"Failed to get orders for user {user_id}: {str(e)}")
-            raise DatabaseOperationException(f"Failed to get orders for user: {str(e)}")
+            logger.error(f"Failed to get orders for user '{user_id}': {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving orders for user '{user_id}': {str(e)}")
 
     def get_orders_by_user_and_asset(self, user_id: str, asset_id: str, limit: int = 50, offset: int = 0) -> List[Order]:
         """
@@ -244,8 +237,8 @@ class OrderDAO(BaseDAO):
             return orders
 
         except Exception as e:
-            logger.error(f"Failed to get orders for user {user_id} and asset {asset_id}: {str(e)}")
-            raise DatabaseOperationException(f"Failed to get orders for user and asset: {str(e)}")
+            logger.error(f"Failed to get orders for user '{user_id}' and asset '{asset_id}': {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving orders for user '{user_id}' and asset '{asset_id}': {str(e)}")
 
     def get_orders_by_user_and_status(self, user_id: str, status: OrderStatus, limit: int = 50, offset: int = 0) -> List[Order]:
         """
@@ -275,12 +268,12 @@ class OrderDAO(BaseDAO):
             return filtered_orders[:limit]
 
         except Exception as e:
-            logger.error(f"Failed to get orders for user {user_id} with status {status}: {str(e)}")
-            raise DatabaseOperationException(f"Failed to get orders for user and status: {str(e)}")
+            logger.error(f"Failed to get orders for user '{user_id}' with status '{status.value}': {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving orders for user '{user_id}' with status '{status.value}': {str(e)}")
 
-    def update_order_status(self, order_id: str, new_status: OrderStatus, reason: str = None) -> Optional[Order]:
+    def update_order_status(self, order_id: str, new_status: OrderStatus, reason: str = None) -> Order:
         """
-        Update order status with validation.
+        Update order status with optional reason.
 
         Args:
             order_id: Order ID to update
@@ -288,39 +281,48 @@ class OrderDAO(BaseDAO):
             reason: Optional reason for status change
 
         Returns:
-            Updated order if successful, None if not found
+            Updated order
 
         Raises:
             EntityNotFoundException: If order not found
-            OrderValidationException: If invalid status transition
             DatabaseOperationException: If database operation fails
         """
         try:
             # Get existing order
             existing_order = self.get_order(order_id)
-            if not existing_order:
-                raise EntityNotFoundException(f"Order {order_id} not found")
 
-            # Validate status transition
-            can_transition, error_msg = existing_order.can_transition_to(new_status)
-            if not can_transition:
-                raise OrderValidationException(f"Invalid status transition: {error_msg}")
+            # Prepare update expression
+            update_expression = "SET #status = :status, updated_at = :updated_at"
+            expression_values = {
+                ':status': new_status.value,
+                ':updated_at': datetime.now(timezone.utc).isoformat(),
+                '#status': 'status'
+            }
 
-            # Create update object
-            updates = OrderUpdate(status=new_status)
+            # Add reason if provided
+            if reason:
+                update_expression += ", status_reason = :reason"
+                expression_values[':reason'] = reason
 
-            # Add completion timestamp if transitioning to completed
-            if new_status == OrderStatus.COMPLETED:
-                updates.completed_at = datetime.now(timezone.utc)
+            # Update GSI2-SK for status change
+            new_gsi2_sk = f"{existing_order.asset_id}#{new_status.value}#{existing_order.created_at.isoformat()}"
+            update_expression += ", GSI2-SK = :gsi2_sk"
+            expression_values[':gsi2_sk'] = new_gsi2_sk
 
-            # Update the order
-            return self.update_order(order_id, updates)
+            # Perform update
+            response = self.db.orders_table.update_item(
+                Key={'order_id': order_id},
+                UpdateExpression=update_expression,
+                ExpressionAttributeValues=expression_values,
+                ReturnValues='ALL_NEW'
+            )
 
-        except (EntityNotFoundException, OrderValidationException):
-            raise
+            updated_item = response['Attributes']
+            return Order(**updated_item)
+
         except Exception as e:
-            logger.error(f"Failed to update order status {order_id} to {new_status}: {str(e)}")
-            raise DatabaseOperationException(f"Failed to update order status: {str(e)}")
+            logger.error(f"Failed to update order status '{order_id}': {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while updating order status for order '{order_id}': {str(e)}")
 
     def order_exists(self, order_id: str) -> bool:
         """
@@ -344,8 +346,8 @@ class OrderDAO(BaseDAO):
             return 'Item' in response
 
         except Exception as e:
-            logger.error(f"Failed to check if order {order_id} exists: {str(e)}")
-            raise DatabaseOperationException(f"Failed to check order existence: {str(e)}")
+            logger.error(f"Failed to check if order '{order_id}' exists: {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while checking existence of order '{order_id}': {str(e)}")
 
     # Future implementation methods (commented out for now)
     # def get_orders_by_status(self, status: OrderStatus, limit: int = 50) -> List[Order]:

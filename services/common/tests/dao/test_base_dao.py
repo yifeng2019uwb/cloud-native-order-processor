@@ -6,6 +6,7 @@ import os
 # Add the common directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.dao.base_dao import BaseDAO
+from src.exceptions.shared_exceptions import EntityNotFoundException
 
 
 class TestBaseDAO:
@@ -37,15 +38,15 @@ class TestBaseDAO:
         mock_db_connection.users_table.get_item.assert_called_once_with(Key={"PK": "test_user", "SK": "PROFILE"})
 
     def test_safe_get_item_not_found(self, base_dao, mock_db_connection):
-        """Test item not found"""
-        # Mock no item response
-        mock_db_connection.users_table.get_item.return_value = {}
+        """Test _safe_get_item when item not found"""
+        # Mock empty response
+        mock_db_connection.test_table.get_item.return_value = {}
 
-        # Call method
-        result = base_dao._safe_get_item(mock_db_connection.users_table, {"PK": "nonexistent", "SK": "PROFILE"})
+        # Should raise EntityNotFoundException
+        with pytest.raises(EntityNotFoundException) as exc_info:
+            base_dao._safe_get_item(mock_db_connection.test_table, {'PK': 'nonexistent', 'SK': 'PROFILE'})
 
-        # Should return None
-        assert result is None
+        assert "Item not found with key" in str(exc_info.value)
 
     def test_safe_get_item_exception(self, base_dao, mock_db_connection):
         """Test exception handling in safe_get_item"""

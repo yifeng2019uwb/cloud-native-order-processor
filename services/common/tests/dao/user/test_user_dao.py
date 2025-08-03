@@ -9,6 +9,7 @@ from src.dao.user import UserDAO
 from src.entities.user import UserCreate, User, UserLogin
 from src.exceptions.shared_exceptions import EntityAlreadyExistsException, EntityNotFoundException, InvalidCredentialsException
 from botocore.exceptions import ClientError
+from src.exceptions.exceptions import DatabaseOperationException
 
 
 class TestUserDAO:
@@ -76,8 +77,7 @@ class TestUserDAO:
     def test_create_user_success(self, user_dao, mock_db_connection):
         """Test successful user creation"""
         # Mock that user doesn't exist initially
-        user_dao.get_user_by_username = Mock(return_value=None)
-        user_dao.get_user_by_email = Mock(return_value=None)
+        mock_db_connection.users_table.get_item.return_value = {}
 
         # Mock database response
         mock_created_item = {
@@ -118,18 +118,19 @@ class TestUserDAO:
     def test_create_user_username_exists(self, user_dao, mock_db_connection):
         """Test user creation with existing username"""
         # Mock that username already exists
-        existing_user = User(
-            Pk='john_doe123',
-            Sk='USER',
-            username='john_doe123',
-            email='existing@example.com',
-            first_name='Existing',
-            last_name='User',
-            phone='+1234567890',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        )
-        user_dao.get_user_by_username = Mock(return_value=existing_user)
+        existing_user_item = {
+            'Pk': 'john_doe123',
+            'Sk': 'USER',
+            'username': 'john_doe123',
+            'email': 'existing@example.com',
+            'first_name': 'Existing',
+            'last_name': 'User',
+            'phone': '+1234567890',
+            'role': 'user',
+            'created_at': '2023-01-01T00:00:00',
+            'updated_at': '2023-01-01T00:00:00'
+        }
+        mock_db_connection.users_table.get_item.return_value = {'Item': existing_user_item}
 
         # Create user
         user_create = UserCreate(
@@ -147,21 +148,24 @@ class TestUserDAO:
     def test_create_user_email_exists(self, user_dao, mock_db_connection):
         """Test user creation with existing email"""
         # Mock that email already exists
-        existing_user = User(
-            Pk='existing_user',
-            Sk='USER',
-            username='existing_user',
-            email='test@example.com',
-            first_name='Existing',
-            last_name='User',
-            phone='+1234567890',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        )
-        user_dao.get_user_by_email = Mock(return_value=existing_user)
+        existing_user_item = {
+            'Pk': 'existing_user',
+            'Sk': 'USER',
+            'username': 'existing_user',
+            'email': 'test@example.com',
+            'first_name': 'Existing',
+            'last_name': 'User',
+            'phone': '+1234567890',
+            'role': 'user',
+            'created_at': '2023-01-01T00:00:00',
+            'updated_at': '2023-01-01T00:00:00'
+        }
 
-        # Mock that username doesn't exist initially
-        user_dao.get_user_by_username = Mock(return_value=None)
+        # First call returns empty (username doesn't exist), second call returns existing user (email exists)
+        mock_db_connection.users_table.get_item.side_effect = [
+            {},  # Username doesn't exist
+            {'Item': existing_user_item}  # Email exists
+        ]
 
         # Create user
         user_create = UserCreate(
@@ -211,7 +215,7 @@ class TestUserDAO:
         with pytest.raises(EntityNotFoundException) as exc_info:
             user_dao.get_user_by_username('nonexistent')
 
-        assert "User 'nonexistent' not found" in str(exc_info.value)
+        assert "Item not found with key" in str(exc_info.value)
 
     def test_get_user_by_email_found(self, user_dao, mock_db_connection):
         """Test getting user by email when user exists"""
@@ -248,7 +252,7 @@ class TestUserDAO:
         with pytest.raises(EntityNotFoundException) as exc_info:
             user_dao.get_user_by_email('nonexistent@example.com')
 
-        assert "User with email 'nonexistent@example.com' not found" in str(exc_info.value)
+        assert "Item not found with key" in str(exc_info.value)
 
     def test_authenticate_user_with_username_success(self, user_dao, mock_db_connection):
         """Test successful user authentication with username"""
@@ -547,20 +551,20 @@ class TestUserDAO:
         # Mock get_user_by_username to raise exception
         user_dao.get_user_by_username = Mock(side_effect=Exception("Username lookup failed"))
 
-        # Should raise exception and be caught/logged
-        with pytest.raises(Exception) as exc_info:
-            user_dao.authenticate_user("john_doe123", "password")
+        # Should raise DatabaseOperationException
+        with pytest.raises(DatabaseOperationException) as exc_info:
+            user_dao.authenticate_user('testuser', 'password123')
 
         assert "Username lookup failed" in str(exc_info.value)
 
     def test_authenticate_user_get_user_by_username_exception_with_email(self, user_dao):
-        """Test authenticate user when get_user_by_username raises exception (even with email-like input)"""
+        """Test authenticate user when get_user_by_username raises exception (email-like username)"""
         # Mock get_user_by_username to raise exception
         user_dao.get_user_by_username = Mock(side_effect=Exception("Username lookup failed"))
 
-        # Should raise exception and be caught/logged (even if input looks like email)
-        with pytest.raises(Exception) as exc_info:
-            user_dao.authenticate_user("test@example.com", "password")
+        # Should raise DatabaseOperationException
+        with pytest.raises(DatabaseOperationException) as exc_info:
+            user_dao.authenticate_user('test@example.com', 'password123')
 
         assert "Username lookup failed" in str(exc_info.value)
 

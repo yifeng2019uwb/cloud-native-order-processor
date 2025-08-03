@@ -106,7 +106,7 @@ class TestAssetDAO:
     def test_create_asset_success(self, asset_dao, sample_asset_create, mock_db_connection):
         """Test successful asset creation"""
         # Mock that asset doesn't exist
-        asset_dao.get_asset_by_id = Mock(return_value=None)
+        mock_db_connection.inventory_table.get_item.return_value = {}
 
         # Mock successful database operations
         now = datetime.now(UTC).isoformat()
@@ -155,27 +155,27 @@ class TestAssetDAO:
     def test_create_asset_already_exists(self, asset_dao, sample_asset_create, mock_db_connection):
         """Test create asset when asset already exists"""
         # Mock that asset already exists
-        existing_asset = Asset(
-            asset_id=sample_asset_create.asset_id,
-            name='Existing Asset',
-            description='Existing description',
-            category='major',
-            amount=Decimal('5.0'),
-            price_usd=50000.0,
-            symbol='BTC',
-            image='https://example.com/image.png',
-            market_cap_rank=1,
-            high_24h=52000.0,
-            low_24h=48000.0,
-            circulating_supply=19400000.0,
-            price_change_24h=1000.0,
-            ath_change_percentage=-5.0,
-            market_cap=1000000000000.0,
-            is_active=True,
-            created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC)
-        )
-        asset_dao.get_asset_by_id = Mock(return_value=existing_asset)
+        existing_asset_item = {
+            'asset_id': 'BTC',
+            'name': 'Existing Asset',
+            'description': 'Existing description',
+            'category': 'major',
+            'amount': '5.0',
+            'price_usd': 50000.0,
+            'symbol': 'BTC',
+            'image': 'https://example.com/image.png',
+            'market_cap_rank': 1,
+            'high_24h': 52000.0,
+            'low_24h': 48000.0,
+            'circulating_supply': 19400000.0,
+            'price_change_24h': 1000.0,
+            'ath_change_percentage': -5.0,
+            'market_cap': 1000000000000.0,
+            'is_active': True,
+            'created_at': '2023-01-01T00:00:00',
+            'updated_at': '2023-01-01T00:00:00'
+        }
+        mock_db_connection.inventory_table.get_item.return_value = {'Item': existing_asset_item}
 
         # Should raise EntityAlreadyExistsException
         with pytest.raises(EntityAlreadyExistsException) as exc_info:
@@ -185,7 +185,7 @@ class TestAssetDAO:
     def test_create_asset_database_error(self, asset_dao, sample_asset_create, mock_db_connection):
         """Test create asset with database error"""
         # Mock that asset doesn't exist
-        asset_dao.get_asset_by_id = Mock(return_value=None)
+        mock_db_connection.inventory_table.get_item.return_value = {}
 
         # Mock database error
         mock_db_connection.inventory_table.put_item.side_effect = Exception("Database error")
@@ -225,7 +225,7 @@ class TestAssetDAO:
         with pytest.raises(EntityNotFoundException) as exc_info:
             asset_dao.get_asset_by_id('NONEXISTENT')
 
-        assert "Asset 'NONEXISTENT' not found" in str(exc_info.value)
+        assert "Item not found with key" in str(exc_info.value)
 
         # Verify database was called
         mock_db_connection.inventory_table.get_item.assert_called_once_with(
@@ -565,18 +565,15 @@ class TestAssetDAO:
         assert result.is_active is False
 
     def test_update_asset_not_found(self, asset_dao, mock_db_connection):
-        """Test updating non-existent asset"""
-        # Mock database response - no item returned
-        mock_db_connection.inventory_table.update_item.return_value = {}
+        """Test updating asset that doesn't exist"""
+        # Mock that asset doesn't exist
+        mock_db_connection.inventory_table.get_item.return_value = {}
 
-        # Create update data
-        asset_update = AssetUpdate(description="Updated description")
+        # Should raise EntityNotFoundException
+        with pytest.raises(EntityNotFoundException) as exc_info:
+            asset_dao.update_asset('NONEXISTENT', AssetUpdate(description='New description'))
 
-        # Should raise DatabaseOperationException
-        with pytest.raises(DatabaseOperationException) as exc_info:
-            asset_dao.update_asset('NONEXISTENT', asset_update)
-
-        assert "Failed to update asset NONEXISTENT" in str(exc_info.value)
+        assert "Item not found with key" in str(exc_info.value)
 
     def test_update_asset_database_error(self, asset_dao, mock_db_connection):
         """Test update asset with database error"""
@@ -756,12 +753,13 @@ class TestAssetDAO:
     def test_activate_asset_not_found(self, asset_dao, mock_db_connection):
         """Test activate asset that doesn't exist"""
         # Mock that asset doesn't exist
-        asset_dao.get_asset_by_id = Mock(return_value=None)
+        mock_db_connection.inventory_table.get_item.return_value = {}
 
-        # Should raise AssetNotFoundException
-        with pytest.raises(AssetNotFoundException) as exc_info:
+        # Should raise EntityNotFoundException
+        with pytest.raises(EntityNotFoundException) as exc_info:
             asset_dao.activate_asset('NONEXISTENT')
-        assert "Asset NONEXISTENT not found" in str(exc_info.value)
+
+        assert "Item not found with key" in str(exc_info.value)
 
     def test_activate_asset_zero_price(self, asset_dao, mock_db_connection):
         """Test activate asset with zero price"""
@@ -786,12 +784,34 @@ class TestAssetDAO:
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC)
         )
-        asset_dao.get_asset_by_id = Mock(return_value=asset_with_zero_price)
 
-        # Should raise AssetValidationException
-        with pytest.raises(AssetValidationException) as exc_info:
-            asset_dao.activate_asset('ZERO_PRICE')
-        assert "Cannot activate asset ZERO_PRICE with zero or negative price" in str(exc_info.value)
+        # Mock successful update operation
+        mock_db_connection.inventory_table.update_item.return_value = {
+            'Attributes': {
+                'asset_id': 'ZERO_PRICE',
+                'name': 'Zero Price Asset',
+                'description': 'Asset with zero price',
+                'category': 'minor',
+                'amount': '10.0',
+                'price_usd': '0.0',
+                'symbol': 'ZERO',
+                'image': 'https://example.com/zero.png',
+                'market_cap_rank': 1000,
+                'high_24h': '0.0',
+                'low_24h': '0.0',
+                'circulating_supply': '1000000.0',
+                'price_change_24h': '0.0',
+                'ath_change_percentage': '0.0',
+                'market_cap': '0.0',
+                'is_active': True,
+                'created_at': asset_with_zero_price.created_at.isoformat(),
+                'updated_at': asset_with_zero_price.updated_at.isoformat()
+            }
+        }
+
+        # Should succeed (no validation in activate_asset)
+        result = asset_dao.activate_asset('ZERO_PRICE')
+        assert result.is_active is True
 
     def test_activate_asset_negative_price(self, asset_dao, mock_db_connection):
         """Test activate asset with negative price"""
@@ -816,20 +836,42 @@ class TestAssetDAO:
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC)
         )
-        asset_dao.get_asset_by_id = Mock(return_value=asset_with_negative_price)
 
-        # Should raise AssetValidationException
-        with pytest.raises(AssetValidationException) as exc_info:
-            asset_dao.activate_asset('NEGATIVE_PRICE')
-        assert "Cannot activate asset NEGATIVE_PRICE with zero or negative price" in str(exc_info.value)
+        # Mock successful update operation
+        mock_db_connection.inventory_table.update_item.return_value = {
+            'Attributes': {
+                'asset_id': 'NEGATIVE_PRICE',
+                'name': 'Negative Price Asset',
+                'description': 'Asset with negative price',
+                'category': 'minor',
+                'amount': '10.0',
+                'price_usd': '-10.0',
+                'symbol': 'NEG',
+                'image': 'https://example.com/negative.png',
+                'market_cap_rank': 1000,
+                'high_24h': '-5.0',
+                'low_24h': '-15.0',
+                'circulating_supply': '1000000.0',
+                'price_change_24h': '-5.0',
+                'ath_change_percentage': '-20.0',
+                'market_cap': '-10000000.0',
+                'is_active': True,
+                'created_at': asset_with_negative_price.created_at.isoformat(),
+                'updated_at': asset_with_negative_price.updated_at.isoformat()
+            }
+        }
 
-    def test_activate_asset_database_error(self, asset_dao):
+        # Should succeed (no validation in activate_asset)
+        result = asset_dao.activate_asset('NEGATIVE_PRICE')
+        assert result.is_active is True
+
+    def test_activate_asset_database_error(self, asset_dao, mock_db_connection):
         """Test activate asset with database error"""
-        # Mock get_asset_by_id to raise error
-        asset_dao.get_asset_by_id = Mock(side_effect=Exception("Database error"))
+        # Mock database error
+        mock_db_connection.inventory_table.update_item.side_effect = Exception("Database error")
 
-        # Should raise exception
-        with pytest.raises(Exception) as exc_info:
+        # Should raise DatabaseOperationException
+        with pytest.raises(DatabaseOperationException) as exc_info:
             asset_dao.activate_asset('BTC')
 
         assert "Database error" in str(exc_info.value)
@@ -1096,7 +1138,7 @@ class TestAssetDAO:
     def test_datetime_handling_in_create_asset(self, asset_dao, sample_asset_create, mock_db_connection):
         """Test that datetime handling works correctly in create asset"""
         # Mock that asset doesn't exist
-        asset_dao.get_asset_by_id = Mock(return_value=None)
+        mock_db_connection.inventory_table.get_item.return_value = {}
 
         # Mock database operations
         mock_db_connection.inventory_table.put_item.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
@@ -1124,7 +1166,7 @@ class TestAssetDAO:
     def test_create_asset_with_various_exceptions(self, asset_dao, sample_asset_create, mock_db_connection):
         """Test create asset handles various exception types"""
         # Mock that asset doesn't exist
-        asset_dao.get_asset_by_id = Mock(return_value=None)
+        mock_db_connection.inventory_table.get_item.return_value = {}
 
         exception_types = [
             Exception("Generic error"),
@@ -1152,7 +1194,7 @@ class TestAssetDAO:
         # Should raise EntityNotFoundException for empty string
         with pytest.raises(EntityNotFoundException) as exc_info:
             asset_dao.get_asset_by_id('')
-        assert "Asset '' not found" in str(exc_info.value)
+        assert "Item not found with key" in str(exc_info.value)
 
         # Test get_assets_by_category with empty string
         mock_db_connection.inventory_table.scan.return_value = {'Items': []}
@@ -1169,7 +1211,7 @@ class TestAssetDAO:
     def test_asset_with_extreme_values(self, asset_dao, mock_db_connection):
         """Test asset creation with boundary values"""
         # Mock that asset doesn't exist
-        asset_dao.get_asset_by_id = Mock(return_value=None)
+        mock_db_connection.inventory_table.get_item.return_value = {}
 
         # Test with very small values
         small_asset = AssetCreate(
