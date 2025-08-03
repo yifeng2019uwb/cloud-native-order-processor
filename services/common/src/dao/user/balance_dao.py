@@ -14,15 +14,16 @@ from botocore.exceptions import ClientError
 from ...database.dynamodb_connection import DynamoDBConnection
 from ...entities.user import Balance, BalanceTransaction, BalanceCreate, BalanceTransactionCreate, BalanceResponse
 from ...exceptions import DatabaseOperationException, EntityNotFoundException
+from ..base_dao import BaseDAO
 
 logger = logging.getLogger(__name__)
 
 
-class BalanceDAO:
+class BalanceDAO(BaseDAO):
     """Data Access Object for balance operations."""
 
     def __init__(self, db_connection: DynamoDBConnection):
-        self.db = db_connection
+        super().__init__(db_connection)
         self.table_name = "users"  # Using the same user table for balance data
 
     def create_balance(self, balance: Balance) -> Balance:

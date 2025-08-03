@@ -33,45 +33,41 @@ class UserDAO(BaseDAO):
 
     def create_user(self, user_create: UserCreate) -> User:
         """Create a new user"""
-        try:
-            # Hash password
-            password_hash = self._hash_password(user_create.password)
+        # Simplified: base_dao._safe_put_item handles all exception cases
+        # Hash password
+        password_hash = self._hash_password(user_create.password)
 
-            # Create user item with new schema
-            now = datetime.utcnow().isoformat()
-            user_item = {
-                'Pk': user_create.username,  # Primary key
-                'Sk': 'USER',  # Sort key for user records
-                'username': user_create.username,  # For easy access
-                'email': user_create.email,
-                'password_hash': password_hash,
-                'first_name': user_create.first_name,
-                'last_name': user_create.last_name,
-                'phone': user_create.phone,
-                'role': user_create.role,
-                'created_at': now,
-                'updated_at': now
-            }
+        # Create user item with new schema
+        now = datetime.utcnow().isoformat()
+        user_item = {
+            'Pk': user_create.username,  # Primary key
+            'Sk': 'USER',  # Sort key for user records
+            'username': user_create.username,  # For easy access
+            'email': user_create.email,
+            'password_hash': password_hash,
+            'first_name': user_create.first_name,
+            'last_name': user_create.last_name,
+            'phone': user_create.phone,
+            'role': user_create.role,
+            'created_at': now,
+            'updated_at': now
+        }
 
-            # Save to users table
-            created_item = self._safe_put_item(self.db.users_table, user_item)
+        # Save to users table
+        created_item = self._safe_put_item(self.db.users_table, user_item)
 
-            return User(
-                Pk=user_create.username,
-                Sk='USER',
-                username=user_create.username,
-                email=user_create.email,
-                first_name=user_create.first_name,
-                last_name=user_create.last_name,
-                phone=user_create.phone,
-                role=user_create.role,
-                created_at=datetime.fromisoformat(created_item['created_at']),
-                updated_at=datetime.fromisoformat(created_item['updated_at'])
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to create user '{user_create.username}': {e}")
-            raise DatabaseOperationException(f"Database operation failed while creating user '{user_create.username}': {str(e)}")
+        return User(
+            Pk=user_create.username,
+            Sk='USER',
+            username=user_create.username,
+            email=user_create.email,
+            first_name=user_create.first_name,
+            last_name=user_create.last_name,
+            phone=user_create.phone,
+            role=user_create.role,
+            created_at=datetime.fromisoformat(created_item['created_at']),
+            updated_at=datetime.fromisoformat(created_item['updated_at'])
+        )
 
     def get_user_by_username(self, username: str) -> User:
         """Get user by username (Primary Key lookup)"""
