@@ -2,6 +2,7 @@
 Balance DAO for user service database operations.
 """
 
+import logging
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List
@@ -13,6 +14,8 @@ from botocore.exceptions import ClientError
 from ...database.dynamodb_connection import DynamoDBConnection
 from ...entities.user import Balance, BalanceTransaction, BalanceCreate, BalanceTransactionCreate, BalanceResponse
 from ...exceptions import DatabaseOperationException, EntityNotFoundException
+
+logger = logging.getLogger(__name__)
 
 
 class BalanceDAO:

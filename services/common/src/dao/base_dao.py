@@ -22,8 +22,6 @@ class BaseDAO(ABC):
                 logging.warning(f"Item not found with key {key}")
                 raise EntityNotFoundException(f"Item not found with key {key}")
             return item
-        except EntityNotFoundException:
-            raise
         except Exception as e:
             logging.error(f"Failed to get item with key {key}: {e}")
             raise DatabaseOperationException(f"Database operation failed while retrieving item with key {key}: {str(e)}")

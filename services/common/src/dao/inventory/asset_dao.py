@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from ..base_dao import BaseDAO
 from ...entities.inventory import Asset, AssetCreate, AssetUpdate
 from ...exceptions import DatabaseOperationException
-from ...exceptions.shared_exceptions import EntityAlreadyExistsException, EntityNotFoundException, AssetNotFoundException, AssetValidationException
+from ...exceptions.shared_exceptions import EntityNotFoundException, AssetNotFoundException, AssetValidationException
 
 
 logger = logging.getLogger(__name__)
@@ -22,10 +22,6 @@ class AssetDAO(BaseDAO):
 
     def create_asset(self, asset_create: AssetCreate) -> Asset:
         try:
-            existing_asset = self.get_asset_by_id(asset_create.asset_id)
-            if existing_asset:
-                raise EntityAlreadyExistsException(f"Asset with ID {asset_create.asset_id} already exists")
-
             now = datetime.now(UTC).isoformat()
             asset_item = {
                 'product_id': asset_create.asset_id,

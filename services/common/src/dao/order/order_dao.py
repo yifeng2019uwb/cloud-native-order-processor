@@ -14,7 +14,7 @@ from ..base_dao import BaseDAO
 from ...entities.order import Order, OrderUpdate
 from ...entities.order.enums import OrderStatus
 from ...exceptions import DatabaseOperationException
-from ...exceptions.shared_exceptions import EntityNotFoundException, EntityAlreadyExistsException
+from ...exceptions.shared_exceptions import EntityNotFoundException
 from ...exceptions import OrderValidationException
 
 logger = logging.getLogger(__name__)
@@ -38,14 +38,9 @@ class OrderDAO(BaseDAO):
             Created order
 
         Raises:
-            EntityAlreadyExistsException: If order with same ID already exists
             DatabaseOperationException: If database operation fails
         """
         try:
-            # Check if order already exists
-            if self.order_exists(order.order_id):
-                raise EntityAlreadyExistsException(f"Order with ID {order.order_id} already exists")
-
             # Prepare item for DynamoDB
             item = order.model_dump()
 
