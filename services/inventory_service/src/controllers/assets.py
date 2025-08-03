@@ -92,7 +92,7 @@ async def list_assets(
         )
 
         # Get assets from database
-        all_assets = await asset_dao.get_all_assets(active_only=active_only)
+        all_assets = asset_dao.get_all_assets(active_only=active_only)
 
         # Apply limit if specified
         if limit:
@@ -102,7 +102,7 @@ async def list_assets(
 
         # Get total count for metadata
         if active_only:
-            total_assets = await asset_dao.get_all_assets(active_only=False)
+            total_assets = asset_dao.get_all_assets(active_only=False)
             total_count = len(total_assets)
         else:
             total_count = len(all_assets)
@@ -161,10 +161,10 @@ async def get_asset_by_id(
 
         # Layer 1: Field validation already handled by API model
         # Layer 2: Business validation - check if asset exists
-        await validate_asset_exists(asset_id, asset_dao)
+        validate_asset_exists(asset_id, asset_dao)
 
         # Get asset from database (already validated to exist)
-        asset = await asset_dao.get_asset_by_id(asset_id)
+        asset = asset_dao.get_asset_by_id(asset_id)
 
         logger.info(f"Asset found: {asset.name} ({asset.asset_id})")
 

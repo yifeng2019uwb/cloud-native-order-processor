@@ -27,7 +27,7 @@ async def test_list_assets_success():
     """Test list_assets with mocked AssetDAO"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class:
         # Setup mock AssetDAO
-        mock_dao = AsyncMock()
+        mock_dao = MagicMock()
         mock_dao_class.return_value = mock_dao
 
         # Mock asset data with proper attributes
@@ -89,7 +89,7 @@ async def test_list_assets_success():
 async def test_list_assets_with_limit():
     """Test list_assets with limit parameter"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class:
-        mock_dao = AsyncMock()
+        mock_dao = MagicMock()
         mock_dao_class.return_value = mock_dao
 
         # Create more mock assets with proper attributes
@@ -120,7 +120,7 @@ async def test_list_assets_with_limit():
 async def test_list_assets_without_limit():
     """Test list_assets without limit parameter"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class:
-        mock_dao = AsyncMock()
+        mock_dao = MagicMock()
         mock_dao_class.return_value = mock_dao
 
         # Create mock assets
@@ -148,7 +148,7 @@ async def test_list_assets_without_limit():
     async def test_get_asset_by_id_success():
         """Test get_asset_by_id with valid asset ID"""
         with patch('controllers.assets.AssetDAO') as mock_dao_class:
-            mock_dao = AsyncMock()
+            mock_dao = MagicMock()
             mock_dao_class.return_value = mock_dao
 
             # Create mock asset
@@ -179,7 +179,7 @@ async def test_list_assets_without_limit():
 async def test_get_asset_by_id_not_found():
     """Test get_asset_by_id with non-existent asset ID"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class:
-        mock_dao = AsyncMock()
+        mock_dao = MagicMock()
         mock_dao_class.return_value = mock_dao
 
         # Mock DAO to return None (asset not found)
@@ -198,7 +198,7 @@ async def test_get_asset_by_id_not_found():
     async def test_get_asset_by_id_case_insensitive():
         """Test get_asset_by_id handles case insensitivity"""
         with patch('controllers.assets.AssetDAO') as mock_dao_class:
-            mock_dao = AsyncMock()
+            mock_dao = MagicMock()
             mock_dao_class.return_value = mock_dao
 
             # Create mock asset
@@ -235,7 +235,7 @@ class TestAssetsControllerExceptionHandling:
     async def test_list_assets_database_error_handling(self):
         """Test that database errors are properly converted to internal exceptions"""
         # Mock the asset DAO to raise an exception
-        mock_asset_dao = AsyncMock()
+        mock_asset_dao = MagicMock()
         mock_asset_dao.get_all_assets.side_effect = Exception("Database connection failed")
 
         with pytest.raises(InternalServerException) as exc_info:
@@ -249,7 +249,7 @@ class TestAssetsControllerExceptionHandling:
     async def test_get_asset_by_id_database_error_handling(self):
         """Test that database errors in get_asset_by_id are properly handled"""
         # Mock the asset DAO to raise an exception
-        mock_asset_dao = AsyncMock()
+        mock_asset_dao = MagicMock()
         mock_asset_dao.get_asset_by_id.side_effect = Exception("Database query failed")
 
         with pytest.raises(InternalServerException) as exc_info:
@@ -263,7 +263,7 @@ class TestAssetsControllerExceptionHandling:
     async def test_list_assets_with_common_package_exception(self):
         """Test handling of common package exceptions in list_assets"""
         # Mock the asset DAO to raise a common package exception
-        mock_asset_dao = AsyncMock()
+        mock_asset_dao = MagicMock()
         mock_asset_dao.get_all_assets.side_effect = DatabaseOperationException(
             "Connection failed", service="dynamodb"
         )
@@ -279,7 +279,7 @@ class TestAssetsControllerExceptionHandling:
     async def test_get_asset_by_id_with_common_package_exception(self):
         """Test handling of common package exceptions in get_asset_by_id"""
         # Mock the asset DAO to raise a common package exception
-        mock_asset_dao = AsyncMock()
+        mock_asset_dao = MagicMock()
         mock_asset_dao.get_asset_by_id.side_effect = DatabaseOperationException(
             "Operation failed", operation="get_item"
         )
@@ -295,7 +295,7 @@ class TestAssetsControllerExceptionHandling:
     async def test_assets_controller_error_context(self):
         """Test that assets controller provides proper error context"""
         # Mock the asset DAO to raise an exception
-        mock_asset_dao = AsyncMock()
+        mock_asset_dao = MagicMock()
         mock_asset_dao.get_asset_by_id.side_effect = Exception("Test database error")
 
         with pytest.raises(InternalServerException) as exc_info:
@@ -310,7 +310,7 @@ class TestAssetsControllerExceptionHandling:
     async def test_assets_controller_exception_flow(self):
         """Test the complete exception flow in assets controller"""
         # Mock the asset DAO to raise a common package exception
-        mock_asset_dao = AsyncMock()
+        mock_asset_dao = MagicMock()
         mock_asset_dao.get_all_assets.side_effect = DatabaseOperationException(
             "Connection failed", service="dynamodb", region="us-east-1"
         )
@@ -336,7 +336,7 @@ class TestAssetsControllerExceptionHandling:
         complex_error = ComplexDatabaseError("Complex error", {"level": "critical", "retry_count": 3})
 
         # Mock the asset DAO to raise the complex exception
-        mock_asset_dao = AsyncMock()
+        mock_asset_dao = MagicMock()
         mock_asset_dao.get_asset_by_id.side_effect = complex_error
 
         with pytest.raises(InternalServerException) as exc_info:
@@ -358,7 +358,7 @@ class TestAssetsControllerExceptionHandling:
         ]
 
         for exc, expected_exception_type in exceptions_to_test:
-            mock_asset_dao = AsyncMock()
+            mock_asset_dao = MagicMock()
             mock_asset_dao.get_asset_by_id.side_effect = exc
 
             with pytest.raises(expected_exception_type) as exc_info:
@@ -380,7 +380,7 @@ class TestAssetsControllerExceptionHandling:
         ]
 
         for validation_error in validation_errors:
-            mock_asset_dao = AsyncMock()
+            mock_asset_dao = MagicMock()
             mock_asset_dao.get_asset_by_id.side_effect = validation_error
 
             with pytest.raises(AssetValidationException) as exc_info:

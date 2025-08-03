@@ -11,6 +11,7 @@ import asyncio
 from common.dao.inventory.asset_dao import AssetDAO
 from common.entities.inventory import AssetCreate
 from common.database.dynamodb_connection import dynamodb_manager
+from common.exceptions import EntityNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -76,14 +77,21 @@ async def upsert_coins_to_inventory(coins: List[dict]) -> int:
             )
 
             # Upsert: update if exists, else create
-            existing_asset = await asset_dao.get_asset_by_id(asset_id)
-            if existing_asset:
-                await asset_dao.update_asset(asset_id, asset_create)
+            try:
+                existing_asset = asset_dao.get_asset_by_id(asset_id)
+                asset_dao.update_asset(asset_id, asset_create)
                 logger.info(f"Updated asset: {asset_id} - {name}")
-            else:
-                await asset_dao.create_asset(asset_create)
-                logger.info(f"Created asset: {asset_id} - {name}")
-            updated_count += 1
+                updated_count += 1
+            except Exception as e:
+                # Check if it's EntityNotFoundException (asset doesn't exist)
+                if isinstance(e, EntityNotFoundException):
+                    # Asset doesn't exist, create it
+                    asset_dao.create_asset(asset_create)
+                    logger.info(f"Created asset: {asset_id} - {name}")
+                    updated_count += 1
+                else:
+                    # Other exception, re-raise to be caught by outer try-catch
+                    raise e
         except Exception as e:
             logger.error(f"Failed to upsert asset {coin.get('symbol', '')}: {e}")
             continue
