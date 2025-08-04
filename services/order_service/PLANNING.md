@@ -33,10 +33,10 @@ asset_balances (PK: username, SK: ASSET#{asset_id})
 
 ### **4. Asset Transactions** 🆕 **New Entity**
 ```
-asset_transactions (PK: TRANS_ASSETID_username, SK: timestamp)
+asset_transactions (PK: TRANS#{username}#{asset_id}, SK: timestamp)
 ```
 **Fields:**
-- `Pk`: TRANS_{asset_id}_{username} (e.g., "TRANS_BTC_john_doe")
+- `Pk`: TRANS#{username}#{asset_id} (e.g., "TRANS#john_doe#BTC")
 - `Sk`: timestamp (ISO format)
 - `username`: username
 - `asset_id`: asset identifier
@@ -89,24 +89,28 @@ def get_user_asset_orders(username: str, asset_id: str) -> List[Order]:
 ## 🔄 **Transaction Flow Logic**
 
 ### **Buy Order Flow:**
-1. **Validate Order**: Check user has sufficient USD balance
-2. **Create Order**: Save order with PENDING status
-3. **Execute Order**:
-   - Deduct USD from user balance
-   - Add asset quantity to user's asset balance
+1. **Create Order**: Save order with PENDING status
+2. **Acquire User Lock**: Prevent concurrent balance modifications
+3. **Validate USD Balance**: Check user has sufficient USD balance
+4. **Execute Transaction**:
+   - Update USD balance (deduct amount)
+   - Update/create asset balance (add quantity)
    - Create asset transaction record
    - Update order status to COMPLETED
-4. **Update Balances**: Recalculate asset current_value
+5. **Release Lock**: Allow other operations
+6. **Update Asset Value**: Recalculate asset current_value (optional, can be done asynchronously)
 
 ### **Sell Order Flow:**
-1. **Validate Order**: Check user has sufficient asset quantity
-2. **Create Order**: Save order with PENDING status
-3. **Execute Order**:
-   - Deduct asset quantity from user's asset balance
-   - Add USD to user balance
+1. **Create Order**: Save order with PENDING status
+2. **Acquire User Lock**: Prevent concurrent balance modifications
+3. **Validate Asset Balance**: Check user has sufficient asset quantity
+4. **Execute Transaction**:
+   - Update asset balance (deduct quantity)
+   - Update USD balance (add amount)
    - Create asset transaction record
    - Update order status to COMPLETED
-4. **Update Balances**: Recalculate asset current_value
+5. **Release Lock**: Allow other operations
+6. **Update Asset Value**: Recalculate asset current_value (optional, can be done asynchronously)
 
 ## 📊 **Portfolio Management**
 
