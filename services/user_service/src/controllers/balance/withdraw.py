@@ -99,7 +99,7 @@ async def withdraw_funds(
     try:
         # Use transaction manager for atomic withdrawal operation
         result = await transaction_manager.withdraw_funds(
-            user_id=str(current_user.user_id),
+            user_id=current_user.username,
             amount=withdraw_data.amount
         )
 
