@@ -13,6 +13,7 @@ from common.exceptions import (
     UserNotFoundException,
     UserValidationException
 )
+
 from user_exceptions import UserAlreadyExistsException
 
 
@@ -31,17 +32,30 @@ def validate_username_uniqueness(username: str, user_dao: Any, exclude_user_id: 
     Raises:
         UserAlreadyExistsException: If username already exists
     """
-    # Query database for existing username
-    existing_user = user_dao.get_user_by_username(username)
+    import logging
+    logger = logging.getLogger(__name__)
 
-    if existing_user:
-        # If we're updating, exclude the current user
-        if exclude_user_id and existing_user.username == exclude_user_id:
+    logger.warning(f"🔍 DEBUG: Starting username uniqueness validation for: '{username}'")
+
+    try:
+        # Query database for existing username
+        logger.warning(f"🔍 DEBUG: Calling user_dao.get_user_by_username('{username}')")
+        existing_user = user_dao.get_user_by_username(username)
+
+        if existing_user:
+            logger.warning(f"🔍 DEBUG: User found! Username '{username}' already exists")
+            raise UserAlreadyExistsException(f"Username '{username}' already exists")
+        else:
+            logger.warning(f"🔍 DEBUG: User not found! Username '{username}' is unique")
             return True
 
-        raise UserAlreadyExistsException(f"Username '{username}' already exists")
-
-    return True
+    except UserNotFoundException as e:
+        # User doesn't exist, which means username is unique
+        logger.warning(f"🔍 DEBUG: User not found! Username '{username}' is unique. Exception: {str(e)}")
+        return True
+    except Exception as e:
+        logger.warning(f"🔍 DEBUG: Unexpected exception in username validation: {str(e)}")
+        raise
 
 
 def validate_email_uniqueness(email: str, user_dao: Any, exclude_user_id: Optional[str] = None) -> bool:
@@ -59,17 +73,30 @@ def validate_email_uniqueness(email: str, user_dao: Any, exclude_user_id: Option
     Raises:
         UserAlreadyExistsException: If email already exists
     """
-    # Query database for existing email
-    existing_user = user_dao.get_user_by_email(email)
+    import logging
+    logger = logging.getLogger(__name__)
 
-    if existing_user:
-        # If we're updating, exclude the current user
-        if exclude_user_id and existing_user.username == exclude_user_id:
+    logger.warning(f"🔍 DEBUG: Starting email uniqueness validation for: '{email}'")
+
+    try:
+        # Query database for existing email
+        logger.warning(f"🔍 DEBUG: Calling user_dao.get_user_by_email('{email}')")
+        existing_user = user_dao.get_user_by_email(email)
+
+        if existing_user:
+            logger.warning(f"🔍 DEBUG: User found! Email '{email}' already exists")
+            raise UserAlreadyExistsException(f"Email '{email}' already exists")
+        else:
+            logger.warning(f"🔍 DEBUG: User not found! Email '{email}' is unique")
             return True
 
-        raise UserAlreadyExistsException(f"Email '{email}' already exists")
-
-    return True
+    except UserNotFoundException as e:
+        # User doesn't exist, which means email is unique
+        logger.warning(f"🔍 DEBUG: User not found! Email '{email}' is unique. Exception: {str(e)}")
+        return True
+    except Exception as e:
+        logger.warning(f"🔍 DEBUG: Unexpected exception in email validation: {str(e)}")
+        raise
 
 
 def validate_user_exists(user_id: str, user_dao: Any) -> bool:

@@ -215,10 +215,25 @@ async def http_exception_handler(request, exc):
         content={"detail": exc.detail}
     )
 
+@app.exception_handler(DatabaseOperationException)
+async def database_operation_exception_handler(request, exc):
+    """Handle database operation exceptions"""
+    import traceback
+    logger.error(f"Database operation exception: {exc}")
+    logger.error(f"Exception type: {type(exc).__name__}")
+    logger.error(f"Full traceback: {traceback.format_exc()}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)}
+    )
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Handle all other exceptions"""
+    import traceback
     logger.error(f"Global exception: {exc}")
+    logger.error(f"Exception type: {type(exc).__name__}")
+    logger.error(f"Full traceback: {traceback.format_exc()}")
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}

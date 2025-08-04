@@ -4,7 +4,6 @@ import logging
 from boto3.dynamodb.conditions import Key, Attr
 
 from ..exceptions import DatabaseOperationException
-from ..exceptions.shared_exceptions import EntityNotFoundException
 
 
 class BaseDAO(ABC):
@@ -13,15 +12,12 @@ class BaseDAO(ABC):
     def __init__(self, db_connection):
         self.db = db_connection
 
-    def _safe_get_item(self, table, key: Dict[str, Any]) -> Dict[str, Any]:
+    def _safe_get_item(self, table, key: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Safely get item from DynamoDB table"""
         try:
             response = table.get_item(Key=key)
             item = response.get('Item')
-            if not item:
-                logging.warning(f"Item not found with key {key}")
-                raise EntityNotFoundException(f"Item not found with key {key}")
-            return item
+            return item  # Return None if item doesn't exist
         except Exception as e:
             logging.error(f"Failed to get item with key {key}: {e}")
             raise DatabaseOperationException(f"Database operation failed while retrieving item with key {key}: {str(e)}")

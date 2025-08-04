@@ -90,6 +90,36 @@ class BalanceDAO(BaseDAO):
             logger.error(f"Failed to update balance for user '{user_id}': {e}")
             raise DatabaseOperationException(f"Database operation failed while updating balance for user '{user_id}': {str(e)}")
 
+    def create_balance(self, balance_create: BalanceCreate) -> Balance:
+        """Create a new balance record for a user."""
+        try:
+            now = datetime.utcnow()
+            balance_item = {
+                "Pk": balance_create.username,
+                "Sk": "BALANCE",
+                "username": balance_create.username,
+                "current_balance": str(balance_create.initial_balance),
+                "created_at": now.isoformat(),
+                "updated_at": now.isoformat(),
+                "entity_type": "balance"
+            }
+
+            self.db.users_table.put_item(Item=balance_item)
+
+            return Balance(
+                Pk=balance_item["Pk"],
+                Sk=balance_item["Sk"],
+                username=balance_item["username"],
+                current_balance=balance_create.initial_balance,
+                created_at=now,
+                updated_at=now,
+                entity_type="balance"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to create balance for user '{balance_create.username}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while creating balance for user '{balance_create.username}': {str(e)}")
+
     def create_transaction(self, transaction: BalanceTransaction) -> BalanceTransaction:
         """Create a new balance transaction."""
         try:

@@ -89,13 +89,27 @@ async def register_user(
         }
     )
 
+    logger.warning(f"🔍 DEBUG: [REGISTER] Starting registration for user: {user_data.username}")
+    logger.warning(f"🔍 DEBUG: [REGISTER] User data received: username={user_data.username}, email={user_data.email}")
+    logger.warning(f"🔍 DEBUG: [REGISTER] user_dao type: {type(user_dao)}")
+    logger.warning(f"🔍 DEBUG: [REGISTER] balance_dao type: {type(balance_dao)}")
+
     try:
         # Layer 2: Business validation only
+        logger.warning(f"🔍 DEBUG: [REGISTER] About to call validate_username_uniqueness for: {user_data.username}")
         validate_username_uniqueness(user_data.username, user_dao)
+        logger.warning(f"🔍 DEBUG: [REGISTER] validate_username_uniqueness completed successfully")
+
+        logger.warning(f"🔍 DEBUG: [REGISTER] About to call validate_email_uniqueness for: {user_data.email}")
         validate_email_uniqueness(user_data.email, user_dao)
+        logger.warning(f"🔍 DEBUG: [REGISTER] validate_email_uniqueness completed successfully")
+
+        logger.warning(f"🔍 DEBUG: [REGISTER] About to call validate_age_requirements")
         validate_age_requirements(user_data.date_of_birth)
+        logger.warning(f"🔍 DEBUG: [REGISTER] validate_age_requirements completed successfully")
 
         # Transform API model to DAO model - proper field mapping
+        logger.warning(f"🔍 DEBUG: [REGISTER] About to create UserCreate object")
         user_create = UserCreate(
             username=user_data.username,
             email=user_data.email,
@@ -104,16 +118,24 @@ async def register_user(
             last_name=user_data.last_name,
             phone=user_data.phone
         )
+        logger.warning(f"🔍 DEBUG: [REGISTER] UserCreate object created successfully")
 
         # Create the user via DAO (sync operation)
+        logger.warning(f"🔍 DEBUG: [REGISTER] About to call user_dao.create_user")
         created_user = user_dao.create_user(user_create)
+        logger.warning(f"🔍 DEBUG: [REGISTER] user_dao.create_user completed successfully")
 
         # Create initial balance record with 0 balance (sync operation)
+        logger.warning(f"🔍 DEBUG: [REGISTER] About to create BalanceCreate object")
         balance_create = BalanceCreate(
             username=created_user.username,
             initial_balance=Decimal('0.00')
         )
-        balance_dao.create_balance_from_request(balance_create)
+        logger.warning(f"🔍 DEBUG: [REGISTER] BalanceCreate object created successfully")
+
+        logger.warning(f"🔍 DEBUG: [REGISTER] About to call balance_dao.create_balance")
+        balance_dao.create_balance(balance_create)
+        logger.warning(f"🔍 DEBUG: [REGISTER] balance_dao.create_balance completed successfully")
 
         # Log successful registration
         logger.info(f"User registered successfully: {user_data.username}")

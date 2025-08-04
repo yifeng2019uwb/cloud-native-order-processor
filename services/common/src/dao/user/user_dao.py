@@ -12,7 +12,7 @@ from ..base_dao import BaseDAO
 from ...entities.user import User, UserCreate, UserLogin
 from ...entities.user import DEFAULT_USER_ROLE
 from ...exceptions import DatabaseOperationException
-from ...exceptions.shared_exceptions import EntityNotFoundException, InvalidCredentialsException
+from ...exceptions.shared_exceptions import InvalidCredentialsException, UserNotFoundException
 from ...security import PasswordManager
 
 
@@ -80,6 +80,9 @@ class UserDAO(BaseDAO):
         item = self._safe_get_item(self.db.users_table, key)
         logger.info(f"🔍 DEBUG: Database returned item: {item}")
 
+        if not item:
+            raise UserNotFoundException(f"User with username '{username}' not found")
+
         return User(
             Pk=item['Pk'],
             Sk=item['Sk'],
@@ -103,7 +106,7 @@ class UserDAO(BaseDAO):
         )
 
         if not items:
-            raise EntityNotFoundException(f"User with email '{email}' not found")
+            raise UserNotFoundException(f"User with email '{email}' not found")
 
         # Should only be one user per email
         item = items[0]

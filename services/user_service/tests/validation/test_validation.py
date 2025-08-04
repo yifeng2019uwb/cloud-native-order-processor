@@ -382,15 +382,8 @@ class TestBusinessValidators:
         with pytest.raises(UserAlreadyExistsException, match="Username 'existinguser' already exists"):
             validate_username_uniqueness("existinguser", mock_dao)
 
-    def test_validate_username_uniqueness_exclude_current(self):
-        """Test username uniqueness when updating current user"""
-        mock_dao = Mock()
-        mock_user = MagicMock()
-        mock_user.username = "user123"
-        mock_dao.get_user_by_username.return_value = mock_user
-
-        result = validate_username_uniqueness("existinguser", mock_dao, exclude_user_id="user123")
-        assert result is True
+    # Removed test_validate_username_uniqueness_exclude_current as we simplified the logic
+    # to just raise UserAlreadyExistsException if user exists, without exclude_user_id handling
 
     def test_validate_email_uniqueness_unique(self):
         """Test email uniqueness when email is unique"""

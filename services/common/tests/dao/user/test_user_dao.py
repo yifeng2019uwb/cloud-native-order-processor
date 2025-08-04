@@ -7,7 +7,7 @@ import os
 
 from src.dao.user import UserDAO
 from src.entities.user import UserCreate, User, UserLogin
-from src.exceptions.shared_exceptions import EntityAlreadyExistsException, EntityNotFoundException, InvalidCredentialsException
+from src.exceptions.shared_exceptions import EntityAlreadyExistsException, EntityNotFoundException, InvalidCredentialsException, UserNotFoundException
 from botocore.exceptions import ClientError
 from src.exceptions.exceptions import DatabaseOperationException
 
@@ -158,11 +158,11 @@ class TestUserDAO:
         # Mock empty database response
         mock_db_connection.users_table.get_item.return_value = {}
 
-        # Should raise DatabaseOperationException (base_dao catches EntityNotFoundException)
-        with pytest.raises(DatabaseOperationException) as exc_info:
+        # Should raise UserNotFoundException
+        with pytest.raises(UserNotFoundException) as exc_info:
             user_dao.get_user_by_username('nonexistent')
 
-        assert "Database operation failed while retrieving item" in str(exc_info.value)
+        assert "User with username 'nonexistent' not found" in str(exc_info.value)
 
     def test_get_user_by_email_found(self, user_dao, mock_db_connection):
         """Test getting user by email when user exists"""
@@ -195,8 +195,8 @@ class TestUserDAO:
         # Mock empty database response
         mock_db_connection.users_table.query.return_value = {'Items': []}
 
-        # Should raise EntityNotFoundException
-        with pytest.raises(EntityNotFoundException) as exc_info:
+        # Should raise UserNotFoundException
+        with pytest.raises(UserNotFoundException) as exc_info:
             user_dao.get_user_by_email('nonexistent@example.com')
 
         assert "User with email 'nonexistent@example.com' not found" in str(exc_info.value)

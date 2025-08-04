@@ -43,9 +43,9 @@ class TestBaseDAO:
         # Mock empty response
         mock_db_connection.test_table.get_item.return_value = {}
 
-        # Should raise DatabaseOperationException (wraps EntityNotFoundException)
-        with pytest.raises(DatabaseOperationException):
-            base_dao._safe_get_item(mock_db_connection.test_table, {'PK': 'nonexistent', 'SK': 'PROFILE'})
+        # Should return None when item not found
+        result = base_dao._safe_get_item(mock_db_connection.test_table, {'PK': 'nonexistent', 'SK': 'PROFILE'})
+        assert result is None
 
     def test_safe_get_item_exception(self, base_dao, mock_db_connection):
         """Test exception handling in safe_get_item"""
