@@ -127,11 +127,18 @@ except ImportError as e:
     logger.warning(f"⚠️ Health routes not available: {e}")
 
 try:
-    from controllers.orders import router as orders_router
-    app.include_router(orders_router, prefix="/orders", tags=["orders"])
-    logger.info("✅ Orders routes loaded successfully")
+    from controllers.create_order import router as create_order_router
+    from controllers.get_order import router as get_order_router
+    from controllers.list_orders import router as list_orders_router
+
+    # Include all order controllers
+    app.include_router(create_order_router, prefix="/orders", tags=["orders"])
+    app.include_router(get_order_router, prefix="/orders", tags=["orders"])
+    app.include_router(list_orders_router, prefix="/orders", tags=["orders"])
+
+    logger.info("✅ Order controllers loaded successfully")
 except ImportError as e:
-    logger.warning(f"⚠️ Orders routes not available: {e}")
+    logger.warning(f"⚠️ Order controllers not available: {e}")
 
 # Root endpoint
 @app.get("/")
@@ -191,8 +198,6 @@ async def startup_event():
     logger.info("  POST /orders - Create new order")
     logger.info("  GET  /orders/{order_id} - Get order by ID")
     logger.info("  GET  /orders - List user orders")
-    logger.info("  PUT  /orders/{order_id} - Update order")
-    logger.info("  DELETE /orders/{order_id} - Cancel order")
     logger.info("  GET  /docs - API documentation")
 
     logger.info("✅ Order Service startup complete!")

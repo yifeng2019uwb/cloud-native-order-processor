@@ -1,50 +1,89 @@
 """
-Dependency injection for Order Service controllers
+Dependencies for Order Service controllers
 Path: services/order_service/src/controllers/dependencies.py
+
+Provides dependency injection for:
+- Database connections
+- Service instances
+- Authentication
+- Authorization
 """
-from fastapi import Depends
+import logging
 from typing import Optional
+from fastapi import Depends, HTTPException, status, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+# Import common package dependencies
+from common.database import get_order_dao
 from common.dao.order.order_dao import OrderDAO
-from common.database import get_order_dao, get_transaction_manager
+
+# Order service removed - business logic now in controllers
+
+# Import JWT utilities
+from common.security import TokenManager
+
+logger = logging.getLogger(__name__)
+
+# Security scheme for JWT tokens
+security = HTTPBearer(auto_error=False)
+
+# Initialize TokenManager
+token_manager = TokenManager()
 
 
-async def get_order_service():
+def get_order_dao_dependency() -> OrderDAO:
+    """Get OrderDAO instance"""
+    return get_order_dao()
+
+
+# Order service removed - business logic now in controllers
+
+
+async def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> dict:
     """
-    Dependency to get order service instance
+    Get current user from JWT token
+
+    This is a simplified version - in production, you'd want to:
+    - Validate token signature
+    - Check token expiration
+    - Verify user exists in database
+    - Return proper user entity
     """
-    # TODO: Implement order service dependency
-    # order_dao = OrderDAO(get_dynamodb())
-    # return OrderService(order_dao)
-    raise NotImplementedError("Order service dependency not implemented yet")
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+
+    try:
+        # Verify and decode JWT token
+        token_data = token_manager.verify_access_token(credentials.credentials)
+
+        # Extract user information from token
+        user_info = {
+            "user_id": token_data.get("sub"),  # Subject (user ID)
+            "username": token_data.get("username"),
+            "role": token_data.get("role", "customer")
+        }
+
+        logger.info(f"User authenticated: {user_info['username']}")
+        return user_info
+
+    except Exception as e:
+        logger.warning(f"Authentication failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials"
+        )
 
 
-async def get_current_user():
+def get_transaction_manager():
     """
-    Dependency to get current authenticated user
+    Get transaction manager for order operations
 
-    TODO: Implement authentication dependency
-    - Extract JWT token from request
-    - Validate token
-    - Return user information
+    TODO: Implement transaction manager for atomic operations
+    For now, return None to indicate no transaction management
     """
-    # TODO: Implement authentication dependency
-    # token = extract_token_from_request()
-    # user = validate_token(token)
-    # return user
-    raise NotImplementedError("Authentication dependency not implemented yet")
-
-
-async def get_user_orders_only():
-    """
-    Dependency to ensure user can only access their own orders
-
-    TODO: Implement authorization dependency
-    - Check user ownership of orders
-    - Validate access permissions
-    - Return authorization context
-    """
-    # TODO: Implement authorization dependency
-    # user = await get_current_user()
-    # return user.id
-    raise NotImplementedError("Authorization dependency not implemented yet")
+    return None

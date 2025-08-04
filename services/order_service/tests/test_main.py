@@ -9,8 +9,7 @@ def test_order_service_import():
     try:
         from src.api_models import order_requests, order_responses
         from src.exceptions import exceptions
-        from src.controllers import orders, health
-        from src.services import order_service
+        from src.controllers import create_order, get_order, list_orders, health
         assert True
     except ImportError as e:
         pytest.fail(f"Failed to import order service modules: {e}")
