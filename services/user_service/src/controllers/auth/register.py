@@ -30,7 +30,7 @@ from user_exceptions import (
     UserValidationException,
     InternalServerException
 )
-from controllers.token_utilis import create_access_token
+from common.security import TokenManager
 
 # Import business validation functions only (Layer 2)
 from validation.business_validators import (

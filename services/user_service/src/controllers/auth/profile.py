@@ -24,14 +24,14 @@ from common.entities.user import User
 
 # Import dependencies
 from common.database import get_user_dao
-from controllers.token_utilis import verify_access_token
+from common.security import TokenManager
 
 # Import exceptions
-from user_exceptions import (
-    UserNotFoundException,
+from common.exceptions.shared_exceptions import (
+    EntityNotFoundException as UserNotFoundException,
     TokenExpiredException,
-    UserAlreadyExistsException,
-    UserValidationException
+    EntityAlreadyExistsException as UserAlreadyExistsException,
+    EntityValidationException as UserValidationException
 )
 
 # Import business validation functions only (Layer 2)
@@ -53,8 +53,11 @@ async def get_current_user(
 ) -> User:
     """Extract and validate user from JWT token"""
     try:
-        # Use existing token verification utility
-        username = verify_access_token(credentials.credentials)
+        # Initialize TokenManager
+        token_manager = TokenManager()
+
+        # Use centralized token verification
+        username = token_manager.verify_access_token(credentials.credentials)
 
         if not username:
             raise TokenExpiredException("Token has expired")

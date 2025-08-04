@@ -3,7 +3,7 @@ FastAPI dependencies for authentication
 """
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError
 import logging
@@ -11,7 +11,8 @@ import logging
 from common.entities.user import UserResponse
 from common.dao.user import UserDAO
 from common.database import get_user_dao as get_common_user_dao
-from controllers.token_utilis import verify_access_token
+from common.security import TokenManager, AuditLogger
+from common.exceptions.shared_exceptions import TokenExpiredException, TokenInvalidException
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +21,14 @@ security = HTTPBearer(auto_error=True)
 
 
 async def verify_token_dependency(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> str:
     """
     Verify JWT token from Authorization header
 
     Args:
+        request: FastAPI request object for audit logging
         credentials: HTTP authorization credentials
 
     Returns:
@@ -34,29 +37,47 @@ async def verify_token_dependency(
     Raises:
         HTTPException: If token is invalid or expired
     """
+    # Initialize security managers
+    token_manager = TokenManager()
+    audit_logger = AuditLogger()
+
+    # Get client IP for audit logging
+    client_ip = request.client.host if request.client else None
+
     try:
         logger.info(f"🔍 DEBUG: Verifying token: {credentials.credentials[:20]}...")
 
-        username = verify_access_token(credentials.credentials)
+        username = token_manager.verify_access_token(credentials.credentials)
         logger.info(f"🔍 DEBUG: Token verification returned username: '{username}'")
 
         if username is None:
             logger.error("❌ DEBUG: Token verification returned None")
+            audit_logger.log_access_denied("unknown", "/api", "Invalid token", client_ip)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         return username
-    except JWTError as e:
-        logger.warning(f"Token verification failed: {e}")
+    except TokenExpiredException as e:
+        logger.warning(f"Token expired: {e}")
+        audit_logger.log_access_denied("unknown", "/api", "Token expired", client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except TokenInvalidException as e:
+        logger.warning(f"Token invalid: {e}")
+        audit_logger.log_access_denied("unknown", "/api", "Invalid token", client_ip)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
         )
     except Exception as e:
         logger.error(f"Unexpected error in token verification: {e}")
+        audit_logger.log_access_denied("unknown", "/api", "Token verification failed", client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token verification failed",
@@ -134,18 +155,24 @@ async def get_optional_current_user(
         return None
 
     try:
-        email = verify_access_token(credentials.credentials)
-        if email is None:
+        # Initialize TokenManager
+        token_manager = TokenManager()
+
+        username = token_manager.verify_access_token(credentials.credentials)
+        if username is None:
             return None
 
-        user = await user_dao.get_user_by_email(email)
+        user = user_dao.get_user_by_username(username)
         if user is None:
             return None
 
         return UserResponse(
+            username=user.username,
             email=user.email,
-            name=user.name,
+            first_name=user.first_name,
+            last_name=user.last_name,
             phone=user.phone,
+            role=user.role,
             created_at=user.created_at,
             updated_at=user.updated_at
         )

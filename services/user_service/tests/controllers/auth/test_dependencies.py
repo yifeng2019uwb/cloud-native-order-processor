@@ -92,35 +92,69 @@ async def test_get_current_user_database_error():
 @pytest.mark.asyncio
 async def test_verify_token_dependency_valid():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
-    with patch("controllers.auth.dependencies.verify_access_token", return_value="user1"):
-        username = await dependencies.verify_token_dependency(creds)
+
+    # Mock request object
+    mock_request = MagicMock()
+    mock_request.client.host = "127.0.0.1"
+
+    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
+        mock_token_manager = MagicMock()
+        mock_token_manager.verify_access_token.return_value = "user1"
+        mock_token_manager_class.return_value = mock_token_manager
+
+        username = await dependencies.verify_token_dependency(mock_request, creds)
         assert username == "user1"
 
 @pytest.mark.asyncio
 async def test_verify_token_dependency_none():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
-    with patch("src.controllers.auth.dependencies.verify_access_token", return_value=None):
+
+    # Mock request object
+    mock_request = MagicMock()
+    mock_request.client.host = "127.0.0.1"
+
+    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
+        mock_token_manager = MagicMock()
+        mock_token_manager.verify_access_token.return_value = None
+        mock_token_manager_class.return_value = mock_token_manager
+
         with pytest.raises(HTTPException) as exc_info:
-            await dependencies.verify_token_dependency(creds)
+            await dependencies.verify_token_dependency(mock_request, creds)
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
 
 @pytest.mark.asyncio
 async def test_verify_token_dependency_jwt_error():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
-    with patch("controllers.auth.dependencies.verify_access_token", side_effect=JWTError("bad token")):
+
+    # Mock request object
+    mock_request = MagicMock()
+    mock_request.client.host = "127.0.0.1"
+
+    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
+        mock_token_manager = MagicMock()
+        mock_token_manager.verify_access_token.side_effect = TokenInvalidException("bad token")
+        mock_token_manager_class.return_value = mock_token_manager
+
         with pytest.raises(HTTPException) as exc_info:
-            await dependencies.verify_token_dependency(creds)
+            await dependencies.verify_token_dependency(mock_request, creds)
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert "bad token" in exc_info.value.detail
 
 @pytest.mark.asyncio
 async def test_verify_token_dependency_general_error():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
-    with patch("controllers.auth.dependencies.verify_access_token", side_effect=Exception("fail")):
+
+    # Mock request object
+    mock_request = MagicMock()
+    mock_request.client.host = "127.0.0.1"
+
+    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
+        mock_token_manager = MagicMock()
+        mock_token_manager.verify_access_token.side_effect = Exception("fail")
+        mock_token_manager_class.return_value = mock_token_manager
+
         with pytest.raises(HTTPException) as exc_info:
-            await dependencies.verify_token_dependency(creds)
+            await dependencies.verify_token_dependency(mock_request, creds)
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert "fail" in exc_info.value.detail
 
 @pytest.mark.asyncio
 async def test_get_optional_current_user_none():
@@ -130,7 +164,11 @@ async def test_get_optional_current_user_none():
 @pytest.mark.asyncio
 async def test_get_optional_current_user_invalid_token():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
-    with patch("src.controllers.auth.dependencies.verify_access_token", return_value=None):
+    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
+        mock_token_manager = MagicMock()
+        mock_token_manager.verify_access_token.return_value = None
+        mock_token_manager_class.return_value = mock_token_manager
+
         result = await dependencies.get_optional_current_user(creds)
         assert result is None
 
@@ -138,8 +176,12 @@ async def test_get_optional_current_user_invalid_token():
 async def test_get_optional_current_user_user_not_found():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
     mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_email = MagicMock(return_value=None)
-    with patch("src.controllers.auth.dependencies.verify_access_token", return_value="user@email.com"):
+    mock_user_dao.get_user_by_username = MagicMock(return_value=None)
+    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
+        mock_token_manager = MagicMock()
+        mock_token_manager.verify_access_token.return_value = "user1"
+        mock_token_manager_class.return_value = mock_token_manager
+
         result = await dependencies.get_optional_current_user(creds, user_dao=mock_user_dao)
         assert result is None
 
