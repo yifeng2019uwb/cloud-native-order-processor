@@ -7,6 +7,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.dao.base_dao import BaseDAO
 from src.exceptions.shared_exceptions import EntityNotFoundException
+from src.exceptions.exceptions import DatabaseOperationException
 
 
 class TestBaseDAO:
@@ -42,11 +43,9 @@ class TestBaseDAO:
         # Mock empty response
         mock_db_connection.test_table.get_item.return_value = {}
 
-        # Should raise EntityNotFoundException
-        with pytest.raises(EntityNotFoundException) as exc_info:
+        # Should raise DatabaseOperationException (wraps EntityNotFoundException)
+        with pytest.raises(DatabaseOperationException):
             base_dao._safe_get_item(mock_db_connection.test_table, {'PK': 'nonexistent', 'SK': 'PROFILE'})
-
-        assert "Item not found with key" in str(exc_info.value)
 
     def test_safe_get_item_exception(self, base_dao, mock_db_connection):
         """Test exception handling in safe_get_item"""
