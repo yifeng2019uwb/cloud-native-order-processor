@@ -18,6 +18,10 @@ services/common/src/
 ├── exceptions/        # Shared exception classes
 ├── health/           # Health check utilities
 ├── aws/              # AWS utilities (STS, etc.)
+├── security/         # Security management (NEW)
+│   ├── password_manager.py    # Password hashing and validation
+│   ├── token_manager.py       # JWT token management
+│   └── audit_logger.py        # Security event logging
 └── utils/            # Common utilities (pagination, etc.)
 ```
 
@@ -59,13 +63,18 @@ Entities are organized by service domain to avoid naming conflicts and improve m
 ## 🗄️ Data Access Objects (DAOs)
 
 ### **User DAO**
-- `UserDAO` - User CRUD operations
+- `UserDAO` - User CRUD operations with integrated security
 - `BalanceDAO` - Balance and transaction management
 
 **Key Methods:**
-- `create_user()`, `get_user_by_username()`, `update_user()`
+- `create_user()`, `get_user_by_username()`, `update_user()`, `authenticate_user()`
 - `create_balance()`, `get_balance()`, `update_balance()`
 - `create_transaction()`, `get_user_transactions()`, `update_transaction_status()`
+
+**Security Integration:**
+- Password hashing via `PasswordManager`
+- Password verification via `PasswordManager`
+- Centralized security operations
 
 ### **Order DAO**
 - `OrderDAO` - Order lifecycle management
@@ -81,6 +90,33 @@ Entities are organized by service domain to avoid naming conflicts and improve m
 **Key Methods:**
 - `create_asset()`, `get_asset()`, `update_asset()`
 - `get_assets()`, `activate_asset()`, `deactivate_asset()`
+
+## 🔐 Security Management
+
+### **Security Components**
+The common package now includes centralized security management:
+
+#### **PasswordManager**
+- **Purpose**: Centralized password hashing and verification
+- **Features**: bcrypt-based hashing, password strength validation
+- **Integration**: Used by `UserDAO` for all password operations
+- **Methods**: `hash_password()`, `verify_password()`, `validate_password_strength()`
+
+#### **TokenManager**
+- **Purpose**: JWT token creation, verification, and management
+- **Features**: Access token generation, payload decoding, expiration checking
+- **Methods**: `create_access_token()`, `verify_access_token()`, `decode_token_payload()`, `is_token_expired()`
+
+#### **AuditLogger**
+- **Purpose**: Security event logging and audit trails
+- **Features**: Structured logging for login, logout, password changes, access denied events
+- **Methods**: `log_login_success()`, `log_login_failure()`, `log_password_change()`, `log_access_denied()`
+
+### **Security Integration**
+- **UserDAO**: Integrated with `PasswordManager` for password operations
+- **Services**: Can use `TokenManager` for JWT operations
+- **Audit**: All services can use `AuditLogger` for security event tracking
+- **Centralized**: All security operations use common components
 
 ## 🔗 Database Dependencies
 
@@ -267,10 +303,11 @@ The system uses a hybrid async/sync pattern for transaction atomicity:
 ## 🧪 Testing
 
 ### **Current Coverage**
-- **Total Coverage**: 92.93%
+- **Total Coverage**: 96.81%
 - **Entities**: 100% coverage
-- **DAOs**: 95%+ coverage (except Balance DAO)
+- **DAOs**: 95%+ coverage (UserDAO: 99%, Balance DAO: 85%)
 - **Database**: 92% coverage
+- **Security**: 100% coverage (PasswordManager, TokenManager, AuditLogger)
 - **Utilities**: 100% coverage
 
 ### **Test Structure**
@@ -279,6 +316,7 @@ tests/
 ├── entities/          # Entity model tests
 ├── dao/              # DAO operation tests
 ├── database/         # Database connection tests
+├── security/         # Security component tests (NEW)
 └── conftest.py       # Test configuration and fixtures
 ```
 
@@ -289,6 +327,8 @@ tests/
 - `boto3==1.29.7` - AWS SDK
 - `fastapi==0.104.1` - Web framework
 - `python-dotenv==1.0.0` - Environment management
+- `bcrypt==4.0.1` - Password hashing
+- `python-jose[cryptography]==3.3.0` - JWT token management
 
 ### **Development Dependencies**
 - `pytest==7.4.3` - Testing framework
@@ -297,20 +337,59 @@ tests/
 
 ## 🔄 Version History
 
-### **v1.0.0** (Current)
+### **v1.1.0** (Current)
 - ✅ Service-based entity organization
 - ✅ Complete DAO implementations
 - ✅ Order-balance integration design
 - ✅ Balance transaction system
 - ✅ Database dependency injection
-- ✅ Comprehensive test coverage
+- ✅ **Security Manager Integration** (NEW)
+- ✅ **Centralized Password Management** (NEW)
+- ✅ **JWT Token Management** (NEW)
+- ✅ **Security Audit Logging** (NEW)
+- ✅ **UserDAO Security Integration** (NEW)
+- ✅ Comprehensive test coverage (96.81%)
 
-### **Planned v1.1.0**
+### **Planned v1.2.0**
 - 🔄 Limit order implementation
 - 🔄 Transaction atomicity
 - 🔄 Enhanced validation framework
-- 🔄 Improved test coverage
+- 🔄 Service integration with security components
+- 🔄 Gateway JWT integration
 
 ---
 
 **Note**: This package serves as the foundation for all microservices. Changes here affect the entire system, so thorough testing and documentation are required for all modifications.
+
+## 🔐 Security Integration Notes
+
+### **For Service Integration**
+Services can now use the centralized security components:
+
+```python
+# Import security components
+from common.security import PasswordManager, TokenManager, AuditLogger
+
+# Use in services
+password_manager = PasswordManager()
+token_manager = TokenManager()
+audit_logger = AuditLogger()
+
+# Password operations
+hashed_password = password_manager.hash_password("user_password")
+is_valid = password_manager.verify_password("user_password", hashed_password)
+
+# Token operations
+token_data = token_manager.create_access_token("username", "role")
+username = token_manager.verify_access_token(token)
+
+# Audit logging
+audit_logger.log_login_success("username", ip_address="192.168.1.1")
+audit_logger.log_access_denied("username", "/admin", "insufficient_permissions")
+```
+
+### **Migration from Service-Specific Security**
+- Remove duplicate password hashing logic from services
+- Replace service-specific JWT utilities with `TokenManager`
+- Add audit logging for security events
+- Update tests to use centralized security components
