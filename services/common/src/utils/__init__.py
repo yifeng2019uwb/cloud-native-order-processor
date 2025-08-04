@@ -8,8 +8,6 @@ from .lock_manager import (
     UserLock,
     acquire_lock,
     release_lock,
-    get_lock_info,
-    cleanup_expired_locks,
     LOCK_TIMEOUTS
 )
 
@@ -23,9 +21,6 @@ __all__ = [
     "UserLock",
     "acquire_lock",
     "release_lock",
-    "get_lock_info",
-    "cleanup_expired_locks",
-
     "LOCK_TIMEOUTS",
 
     # Transaction Manager

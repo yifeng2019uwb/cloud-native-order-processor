@@ -60,34 +60,7 @@ class TestBalanceDAO:
             entity_type="balance_transaction"
         )
 
-    def test_create_balance_success(self, balance_dao, sample_balance, mock_db_connection):
-        """Test successful balance creation"""
-        # Mock successful database operation
-        mock_db_connection.users_table.put_item.return_value = None
 
-        result = balance_dao.create_balance(sample_balance)
-
-        # Verify result
-        assert result == sample_balance
-        assert result.Pk == "BALANCE#testuser123"
-        assert result.username == "testuser123"
-
-        # Verify database was called
-        mock_db_connection.users_table.put_item.assert_called_once()
-        call_args = mock_db_connection.users_table.put_item.call_args[1]['Item']
-        assert call_args['Pk'] == "BALANCE#testuser123"
-        assert call_args['username'] == "testuser123"
-
-    def test_create_balance_database_error(self, balance_dao, sample_balance, mock_db_connection):
-        """Test balance creation with database error"""
-        # Mock database error
-        mock_db_connection.users_table.put_item.side_effect = ClientError(
-            {'Error': {'Code': 'InternalServerError', 'Message': 'Database error'}},
-            'PutItem'
-        )
-
-        with pytest.raises(DatabaseOperationException):
-            balance_dao.create_balance(sample_balance)
 
     def test_get_balance_success(self, balance_dao, sample_balance, mock_db_connection):
         """Test successful balance retrieval"""
@@ -230,33 +203,9 @@ class TestBalanceDAO:
             balance_dao.create_transaction(sample_transaction)
 
     def test_create_transaction_with_balance_update(self, balance_dao, sample_transaction, sample_balance, mock_db_connection):
-        """Test transaction creation with balance update"""
+        """Test transaction creation (balance update is now handled separately)"""
         # Mock successful database operations
         mock_db_connection.users_table.put_item.return_value = None
-
-        # Mock balance retrieval
-        mock_db_connection.users_table.get_item.return_value = {
-            'Item': {
-                'Pk': 'testuser123',
-                'Sk': 'BALANCE',
-                'username': 'testuser123',
-                'current_balance': '100.00',
-                'created_at': '2023-01-01T00:00:00',
-                'updated_at': '2023-01-01T00:00:00'
-            }
-        }
-
-        # Mock update_item response for balance update
-        mock_db_connection.users_table.update_item.return_value = {
-            'Attributes': {
-                'Pk': 'testuser123',
-                'Sk': 'BALANCE',
-                'username': 'testuser123',
-                'current_balance': '150.00',
-                'created_at': '2023-01-01T00:00:00',
-                'updated_at': '2023-01-01T00:00:00'
-            }
-        }
 
         # Create transaction with completed status
         sample_transaction.status = TransactionStatus.COMPLETED
@@ -265,24 +214,22 @@ class TestBalanceDAO:
         # Verify result
         assert result == sample_transaction
 
-        # Verify balance was updated (should be called twice: once for get, once for update)
-        assert mock_db_connection.users_table.get_item.call_count >= 1
-        assert mock_db_connection.users_table.put_item.call_count >= 1
+        # Verify only transaction was created (balance update is now separate)
+        assert mock_db_connection.users_table.put_item.call_count == 1
 
     def test_create_transaction_with_initial_balance(self, balance_dao, sample_transaction, mock_db_connection):
-        """Test transaction creation when balance doesn't exist"""
+        """Test transaction creation (balance existence is now handled separately)"""
         # Mock successful database operations
         mock_db_connection.users_table.put_item.return_value = None
-
-        # Mock balance retrieval returns empty (balance doesn't exist)
-        mock_db_connection.users_table.get_item.return_value = {}
 
         # Create transaction with completed status
         sample_transaction.status = TransactionStatus.COMPLETED
 
-        # Should raise DatabaseOperationException since balance doesn't exist
-        with pytest.raises(DatabaseOperationException):
-            balance_dao.create_transaction(sample_transaction)
+        # Should succeed since create_transaction no longer checks balance
+        result = balance_dao.create_transaction(sample_transaction)
+
+        # Verify result
+        assert result == sample_transaction
 
     def test_get_transaction_success(self, balance_dao, sample_transaction, mock_db_connection):
         """Test successful transaction retrieval"""
@@ -353,59 +300,3 @@ class TestBalanceDAO:
         # Verify result
         assert len(transactions) == 0
         assert last_key is None
-
-    def test_update_transaction_status_success(self, balance_dao, sample_transaction, mock_db_connection):
-        """Test transaction status update (not supported in current design)"""
-        # Transaction status updates are not supported in the current design
-        with pytest.raises(DatabaseOperationException) as exc_info:
-            balance_dao.update_transaction_status('testuser123', sample_transaction.transaction_id, 'pending')
-
-        assert "Transaction status updates not supported" in str(exc_info.value)
-
-    def test_update_transaction_status_database_error(self, balance_dao, sample_transaction, mock_db_connection):
-        """Test transaction status update with database error (not supported in current design)"""
-        # Transaction status updates are not supported in the current design
-        with pytest.raises(DatabaseOperationException) as exc_info:
-            balance_dao.update_transaction_status('testuser123', sample_transaction.transaction_id, 'pending')
-
-        assert "Transaction status updates not supported" in str(exc_info.value)
-
-    def test_balance_exists_true(self, balance_dao, sample_balance, mock_db_connection):
-        """Test balance exists check when balance exists"""
-        # Mock balance retrieval returns balance
-        balance_dao.get_balance = Mock(return_value=sample_balance)
-
-        result = balance_dao.balance_exists('testuser123')
-
-        # Verify result
-        assert result is True
-
-    def test_balance_exists_false(self, balance_dao, mock_db_connection):
-        """Test balance exists check when balance doesn't exist"""
-        # Mock balance retrieval returns None
-        balance_dao.get_balance = Mock(return_value=None)
-
-        result = balance_dao.balance_exists('testuser123')
-
-        # Verify result
-        assert result is False
-
-    def test_user_has_transactions_true(self, balance_dao, sample_transaction, mock_db_connection):
-        """Test user has transactions check when transactions exist"""
-        # Mock transactions retrieval returns transactions
-        balance_dao.get_user_transactions = Mock(return_value=([sample_transaction], None))
-
-        result = balance_dao.user_has_transactions('testuser123')
-
-        # Verify result
-        assert result is True
-
-    def test_user_has_transactions_false(self, balance_dao, mock_db_connection):
-        """Test user has transactions check when no transactions exist"""
-        # Mock transactions retrieval returns empty list
-        balance_dao.get_user_transactions = Mock(return_value=([], None))
-
-        result = balance_dao.user_has_transactions('testuser123')
-
-        # Verify result
-        assert result is False

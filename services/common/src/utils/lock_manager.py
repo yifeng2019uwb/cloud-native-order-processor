@@ -140,92 +140,14 @@ def release_lock(user_id: str, lock_id: str) -> bool:
             raise DatabaseOperationException(f"Failed to release lock: {str(e)}")
 
 
-def get_lock_info(user_id: str) -> Optional[dict]:
-    """
-    Get information about a user's current lock.
 
-    Args:
-        user_id: User ID
-
-    Returns:
-        Lock information if exists, None otherwise
-    """
-    try:
-        response = dynamodb_manager.get_connection().users_table.get_item(
-            Key={
-                "Pk": f"USER#{user_id}",
-                "Sk": "LOCK"
-            }
-        )
-
-        if "Item" in response:
-            item = response["Item"]
-            # Check if lock is expired
-            expires_at = datetime.fromisoformat(item["expires_at"].replace('Z', '+00:00'))
-            if expires_at > datetime.now(timezone.utc):
-                return {
-                    "lock_id": item["lock_id"],
-                    "operation": item["operation"],
-                    "expires_at": item["expires_at"],
-                    "created_at": item["created_at"]
-                }
-            else:
-                logger.debug(f"Lock expired: user={user_id}, lock_id={item['lock_id']}")
-                return None
-        else:
-            return None
-
-    except Exception as e:
-        logger.error(f"Error getting lock info: user={user_id}, error={str(e)}")
-        raise DatabaseOperationException(f"Failed to get lock info: {str(e)}")
-
-
-def cleanup_expired_locks() -> int:
-    """
-    Clean up expired locks from the database.
-
-    Returns:
-        Number of locks cleaned up
-    """
-    try:
-        # Scan for expired locks
-        response = dynamodb_manager.get_connection().users_table.scan(
-            FilterExpression="Sk = :sk AND expires_at < :now",
-            ExpressionAttributeValues={
-                ":sk": "LOCK",
-                ":now": datetime.now(timezone.utc).isoformat()
-            }
-        )
-
-        cleaned_count = 0
-        for item in response.get("Items", []):
-            try:
-                dynamodb_manager.get_connection().users_table.delete_item(
-                    Key={
-                        "Pk": item["Pk"],
-                        "Sk": item["Sk"]
-                    }
-                )
-                cleaned_count += 1
-                logger.debug(f"Cleaned up expired lock: user={item['Pk']}, lock_id={item['lock_id']}")
-            except Exception as e:
-                logger.error(f"Failed to clean up lock: user={item['Pk']}, error={str(e)}")
-
-        if cleaned_count > 0:
-            logger.info(f"Cleaned up {cleaned_count} expired locks")
-
-        return cleaned_count
-
-    except Exception as e:
-        logger.error(f"Error during lock cleanup: {str(e)}")
-        raise DatabaseOperationException(f"Failed to cleanup expired locks: {str(e)}")
 
 
 # Lock timeout configuration - Reduced for personal project with minimal traffic
 LOCK_TIMEOUTS = {
-    "deposit": 5,       # Simple operation - reduced from 10s
-    "withdraw": 8,      # Includes validation - reduced from 15s
-    "buy_order": 12,    # Complex operation - reduced from 25s
-    "sell_order": 12,   # Complex operation - reduced from 25s
-    "get_balance": 2,   # Optional lock for consistency - reduced from 5s
+    "deposit": 5,       # Simple operation - 5s
+    "withdraw": 5,      # Includes validation - 5s
+    "buy_order": 5,     # Complex operation - 5s
+    "sell_order": 5,    # Complex operation - 5s
+    "get_balance": 1,   # Optional lock for consistency - 1s
 }

@@ -26,51 +26,7 @@ class BalanceDAO(BaseDAO):
         super().__init__(db_connection)
         self.table_name = "users"  # Using the same user table for balance data
 
-    def create_balance(self, balance: Balance) -> Balance:
-        """Create a new balance record."""
-        try:
-            item = {
-                "Pk": balance.Pk,
-                "Sk": balance.Sk,
-                "username": balance.username,
-                "current_balance": str(balance.current_balance),
-                "created_at": balance.created_at.isoformat(),
-                "updated_at": balance.updated_at.isoformat(),
-                "entity_type": "balance"
-            }
 
-            self.db.users_table.put_item(Item=item)
-            return balance
-
-        except ClientError as e:
-            raise DatabaseOperationException(f"Failed to create balance: {str(e)}")
-
-    def create_balance_from_request(self, balance_create: BalanceCreate) -> Balance:
-        """Create a new balance record from BalanceCreate request."""
-        try:
-            # Create Balance entity with proper PK generation
-            balance = Balance(
-                Pk=balance_create.username,
-                Sk="BALANCE",
-                username=balance_create.username,
-                current_balance=balance_create.initial_balance
-            )
-
-            item = {
-                "Pk": balance_create.username,
-                "Sk": "BALANCE",  # Sort key for balance records
-                "username": balance.username,
-                "current_balance": str(balance.current_balance),
-                "created_at": balance.created_at.isoformat(),
-                "updated_at": balance.updated_at.isoformat(),
-                "entity_type": "balance"
-            }
-
-            self.db.users_table.put_item(Item=item)
-            return balance
-
-        except ClientError as e:
-            raise DatabaseOperationException(f"Failed to create balance: {str(e)}")
 
     def get_balance(self, user_id: str) -> Balance:
         """Get balance for a user."""
@@ -135,7 +91,7 @@ class BalanceDAO(BaseDAO):
             raise DatabaseOperationException(f"Database operation failed while updating balance for user '{user_id}': {str(e)}")
 
     def create_transaction(self, transaction: BalanceTransaction) -> BalanceTransaction:
-        """Create a new balance transaction and update balance."""
+        """Create a new balance transaction."""
         try:
             # Create transaction record
             item = {
@@ -154,10 +110,6 @@ class BalanceDAO(BaseDAO):
 
             self.db.users_table.put_item(Item=item)
 
-            # Update balance if transaction is completed
-            if transaction.status.value == "completed":
-                self._update_balance_from_transaction(transaction)
-
             return transaction
 
         except Exception as e:
@@ -165,24 +117,18 @@ class BalanceDAO(BaseDAO):
             raise DatabaseOperationException(f"Database operation failed while creating transaction for user '{transaction.username}': {str(e)}")
 
     def _update_balance_from_transaction(self, transaction: BalanceTransaction):
-        """Update balance based on a completed transaction."""
-        try:
-            # Get current balance
-            current_balance = self.get_balance(transaction.username)
-            if not current_balance:
-                # Create initial balance if doesn't exist
-                current_balance = Balance(
-                    Pk=transaction.username,
-                    Sk="BALANCE",
-                    username=transaction.username,
-                    current_balance=Decimal('0.00')
-                )
-                self.create_balance(current_balance)
+        """
+        Update balance based on a completed transaction.
 
+        Note: This method assumes balance records exist (created during user registration).
+        All transactions in this simplified system are immediately completed.
+        """
+        try:
+            # Get current balance and update it
+            current_balance = self.get_balance(transaction.username)
             # Calculate new balance value
             new_balance = current_balance.current_balance + transaction.amount
-
-            # Update balance
+            # Update existing balance
             self.update_balance(transaction.username, new_balance)
 
         except Exception as e:
@@ -243,31 +189,3 @@ class BalanceDAO(BaseDAO):
         except Exception as e:
             logger.error(f"Failed to get transactions for user '{user_id}': {e}")
             raise DatabaseOperationException(f"Database operation failed while retrieving transactions for user '{user_id}': {str(e)}")
-
-    def update_transaction_status(self, user_id: str, transaction_id: UUID,
-                                status: str) -> BalanceTransaction:
-        """Update transaction status and adjust balance if needed."""
-        try:
-            # Note: Transactions are immutable in the current design
-            # This method would need to be redesigned if status updates are needed
-            raise DatabaseOperationException("Transaction status updates not supported in current design")
-
-        except Exception as e:
-            logger.error(f"Failed to update transaction status for user '{user_id}' and transaction '{transaction_id}': {e}")
-            raise DatabaseOperationException(f"Database operation failed while updating transaction status for user '{user_id}' and transaction '{transaction_id}': {str(e)}")
-
-    def balance_exists(self, user_id: str) -> bool:
-        """Check if balance exists for a user."""
-        try:
-            balance = self.get_balance(user_id)
-            return balance is not None
-        except DatabaseOperationException:
-            return False
-
-    def user_has_transactions(self, user_id: str) -> bool:
-        """Check if user has any transactions."""
-        try:
-            transactions, _ = self.get_user_transactions(user_id, limit=1)
-            return len(transactions) > 0
-        except DatabaseOperationException:
-            return False

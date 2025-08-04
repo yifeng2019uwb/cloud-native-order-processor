@@ -159,7 +159,8 @@ from common.exceptions import (
     EntityValidationException,
     EntityAlreadyExistsException,
     EntityNotFoundException,
-    UserValidationException
+    UserValidationException,
+    InvalidCredentialsException
 )
 
 # Import user service exceptions
@@ -193,6 +194,15 @@ async def user_already_exists_exception_handler(request, exc):
     logger.warning(f"User already exists: {exc}")
     return JSONResponse(
         status_code=409,
+        content={"detail": str(exc)}
+    )
+
+@app.exception_handler(InvalidCredentialsException)
+async def invalid_credentials_exception_handler(request, exc):
+    """Handle invalid credentials exceptions"""
+    logger.warning(f"Invalid credentials: {exc}")
+    return JSONResponse(
+        status_code=401,
         content={"detail": str(exc)}
     )
 

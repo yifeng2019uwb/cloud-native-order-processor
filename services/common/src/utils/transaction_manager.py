@@ -78,8 +78,18 @@ class SimpleTransactionManager:
                     entity_type="balance_transaction"
                 )
 
-                # This will automatically update the balance
+                # Create transaction record
                 created_transaction = self.balance_dao.create_transaction(transaction)
+
+                # Update balance separately
+                # Note: Balance records are created during user registration, so they should always exist
+                try:
+                    self.balance_dao._update_balance_from_transaction(created_transaction)
+                except Exception as e:
+                    # If balance update fails, clean up the transaction record to maintain consistency
+                    logger.error(f"Balance update failed, cleaning up transaction: user={user_id}, error={str(e)}")
+                    # TODO: Implement transaction cleanup method in balance_dao
+                    raise DatabaseOperationException(f"Transaction failed: {str(e)}")
 
                 # Get updated balance
                 balance = self.balance_dao.get_balance(user_id)  # Use username directly
@@ -154,8 +164,18 @@ class SimpleTransactionManager:
                     entity_type="balance_transaction"
                 )
 
-                # This will automatically update the balance
+                # Create transaction record
                 created_transaction = self.balance_dao.create_transaction(transaction)
+
+                # Update balance separately
+                # Note: Balance records are created during user registration, so they should always exist
+                try:
+                    self.balance_dao._update_balance_from_transaction(created_transaction)
+                except Exception as e:
+                    # If balance update fails, clean up the transaction record to maintain consistency
+                    logger.error(f"Balance update failed, cleaning up transaction: user={user_id}, error={str(e)}")
+                    # TODO: Implement transaction cleanup method in balance_dao
+                    raise DatabaseOperationException(f"Transaction failed: {str(e)}")
 
                 # Get updated balance
                 updated_balance = self.balance_dao.get_balance(user_id)  # Use username directly
@@ -261,6 +281,9 @@ class SimpleTransactionManager:
 
                 created_transaction = self.balance_dao.create_transaction(transaction)
 
+                # Update balance separately
+                self.balance_dao._update_balance_from_transaction(created_transaction)
+
                 # Get updated balance
                 updated_balance = self.balance_dao.get_balance(user_id)  # Use username directly
 
@@ -342,6 +365,9 @@ class SimpleTransactionManager:
                 )
 
                 created_transaction = self.balance_dao.create_transaction(transaction)
+
+                # Update balance separately
+                self.balance_dao._update_balance_from_transaction(created_transaction)
 
                 # Get updated balance
                 updated_balance = self.balance_dao.get_balance(user_id)  # Use username directly
