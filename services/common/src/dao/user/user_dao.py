@@ -1,4 +1,3 @@
-import bcrypt
 from typing import Optional
 from datetime import datetime
 import logging
@@ -14,6 +13,7 @@ from ...entities.user import User, UserCreate, UserLogin
 from ...entities.user import DEFAULT_USER_ROLE
 from ...exceptions import DatabaseOperationException
 from ...exceptions.shared_exceptions import EntityNotFoundException, InvalidCredentialsException
+from ...security import PasswordManager
 
 
 logger = logging.getLogger(__name__)
@@ -22,20 +22,16 @@ logger = logging.getLogger(__name__)
 class UserDAO(BaseDAO):
     """Data Access Object for user operations"""
 
-    def _hash_password(self, password: str) -> str:
-        """Hash password with bcrypt"""
-        salt = bcrypt.gensalt()
-        return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
-
-    def _verify_password(self, password: str, hashed: str) -> bool:
-        """Verify password against hash"""
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+    def __init__(self, db_connection):
+        """Initialize UserDAO with database connection and password manager"""
+        super().__init__(db_connection)
+        self.password_manager = PasswordManager()
 
     def create_user(self, user_create: UserCreate) -> User:
         """Create a new user"""
         # Simplified: base_dao._safe_put_item handles all exception cases
         # Hash password
-        password_hash = self._hash_password(user_create.password)
+        password_hash = self.password_manager.hash_password(user_create.password)
 
         # Create user item with new schema
         now = datetime.utcnow().isoformat()
@@ -140,7 +136,7 @@ class UserDAO(BaseDAO):
             raise InvalidCredentialsException(f"Invalid credentials for user '{username}'")
 
         # Verify password
-        if self._verify_password(password, stored_hash):
+        if self.password_manager.verify_password(password, stored_hash):
             return user
         else:
             raise InvalidCredentialsException(f"Invalid credentials for user '{username}'")

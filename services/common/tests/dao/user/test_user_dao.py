@@ -55,24 +55,24 @@ class TestUserDAO:
     def test_hash_password(self, user_dao):
         """Test password hashing"""
         password = "TestPassword123!"
-        hashed = user_dao._hash_password(password)
+        hashed = user_dao.password_manager.hash_password(password)
 
         # Check that hash is different from original
         assert hashed != password
 
         # Check that hash can be verified
-        assert bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+        assert user_dao.password_manager.verify_password(password, hashed)
 
     def test_verify_password(self, user_dao):
         """Test password verification"""
         password = "TestPassword123!"
-        hashed = user_dao._hash_password(password)
+        hashed = user_dao.password_manager.hash_password(password)
 
         # Correct password should verify
-        assert user_dao._verify_password(password, hashed) is True
+        assert user_dao.password_manager.verify_password(password, hashed) is True
 
         # Wrong password should not verify
-        assert user_dao._verify_password("WrongPassword123!", hashed) is False
+        assert user_dao.password_manager.verify_password("WrongPassword123!", hashed) is False
 
     def test_create_user_success(self, user_dao, mock_db_connection):
         """Test successful user creation"""
@@ -204,7 +204,7 @@ class TestUserDAO:
     def test_authenticate_user_with_username_success(self, user_dao, mock_db_connection):
         """Test successful user authentication with username"""
         # Mock password verification to return True
-        user_dao._verify_password = Mock(return_value=True)
+        user_dao.password_manager.verify_password = Mock(return_value=True)
 
         # Mock get_user_by_username to return a user
         mock_user = User(
@@ -247,7 +247,7 @@ class TestUserDAO:
     def test_authenticate_user_with_email_like_username(self, user_dao, mock_db_connection):
         """Test successful user authentication with email-like username"""
         # Mock password verification to return True
-        user_dao._verify_password = Mock(return_value=True)
+        user_dao.password_manager.verify_password = Mock(return_value=True)
 
         # Mock get_user_by_username to return a user
         mock_user = User(
