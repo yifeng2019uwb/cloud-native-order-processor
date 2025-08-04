@@ -69,6 +69,23 @@ GSI: UserOrdersIndex (PK: username, SK: ASSET_ID)
 - `updated_at`: timestamp
 - `entity_type`: "order"
 
+**GSI Query Patterns:**
+```python
+# Get all orders for a user
+def get_orders_by_user(username: str) -> List[Order]:
+    # Query GSI: UserOrdersIndex
+    # PK: username, SK: ASSET_ID
+    # Returns all orders for user across all assets
+    return order_dao.query_user_orders(username)
+
+# Get user orders for specific asset
+def get_user_asset_orders(username: str, asset_id: str) -> List[Order]:
+    # Query GSI: UserOrdersIndex
+    # PK: username, SK: ASSET_ID
+    # Returns orders for specific asset
+    return order_dao.query_user_asset_orders(username, asset_id)
+```
+
 ## 🔄 **Transaction Flow Logic**
 
 ### **Buy Order Flow:**
@@ -147,6 +164,9 @@ def calculate_portfolio_value(user_id: str) -> dict:
 ### **3. Enhanced Order DAO**
 - `services/common/src/dao/order/`
   - Update existing `order_dao.py` with GSI support
+  - Add `query_user_orders(username)` method
+  - Add `query_user_asset_orders(username, asset_id)` method
+  - Update `create_order()` to populate GSI fields
 
 ## 🔧 **Enhanced Transaction Manager**
 
@@ -162,6 +182,10 @@ def calculate_portfolio_value(user_id: str) -> dict:
 1. Create new entities (AssetBalance, AssetTransaction)
 2. Create new DAOs (AssetBalanceDAO, AssetTransactionDAO)
 3. Update Order entity and DAO with GSI support
+   - Add GSI fields to Order entity
+   - Implement `query_user_orders()` method
+   - Implement `query_user_asset_orders()` method
+   - Update `create_order()` to populate GSI fields
 4. Enhance TransactionManager with multi-asset support
 5. Update unit tests
 
