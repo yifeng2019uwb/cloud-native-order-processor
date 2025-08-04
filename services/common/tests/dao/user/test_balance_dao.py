@@ -13,6 +13,7 @@ from boto3.dynamodb.conditions import Key
 from common.dao.user.balance_dao import BalanceDAO
 from common.entities.user import Balance, BalanceTransaction, TransactionType, TransactionStatus
 from common.exceptions import DatabaseOperationException, EntityNotFoundException
+from common.exceptions.shared_exceptions import BalanceNotFoundException
 
 
 class TestBalanceDAO:
@@ -94,8 +95,8 @@ class TestBalanceDAO:
         # Mock empty database response
         mock_db_connection.users_table.get_item.return_value = {}
 
-        # Should raise DatabaseOperationException (wraps EntityNotFoundException)
-        with pytest.raises(DatabaseOperationException):
+        # Should raise BalanceNotFoundException
+        with pytest.raises(BalanceNotFoundException):
             balance_dao.get_balance('nonexistent')
 
     def test_get_balance_database_error(self, balance_dao, mock_db_connection):

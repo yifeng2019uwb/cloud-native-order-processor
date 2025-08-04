@@ -75,7 +75,7 @@ class AssetDAO(BaseDAO):
             item = self._safe_get_item(self.db.inventory_table, key)
             if not item:
                 logger.warning(f"Asset '{asset_id}' not found")
-                raise EntityNotFoundException(f"Asset '{asset_id}' not found")
+                raise AssetNotFoundException(f"Asset '{asset_id}' not found")
             return Asset(
                 asset_id=item['asset_id'],
                 name=item['name'],

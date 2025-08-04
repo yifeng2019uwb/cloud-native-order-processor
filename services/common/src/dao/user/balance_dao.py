@@ -13,7 +13,8 @@ from botocore.exceptions import ClientError
 
 from ...database.dynamodb_connection import DynamoDBConnection
 from ...entities.user import Balance, BalanceTransaction, BalanceCreate, BalanceTransactionCreate, BalanceResponse
-from ...exceptions import DatabaseOperationException, EntityNotFoundException
+from ...exceptions import DatabaseOperationException
+from ...exceptions.shared_exceptions import BalanceNotFoundException, TransactionNotFoundException
 from ..base_dao import BaseDAO
 
 logger = logging.getLogger(__name__)
@@ -30,32 +31,25 @@ class BalanceDAO(BaseDAO):
 
     def get_balance(self, user_id: str) -> Balance:
         """Get balance for a user."""
-        try:
-            response = self.db.users_table.get_item(
-                Key={
-                    "Pk": user_id,
-                    "Sk": "BALANCE"
-                }
-            )
+        key = {
+            "Pk": user_id,
+            "Sk": "BALANCE"
+        }
 
-            if "Item" not in response:
-                logger.warning(f"Balance for user '{user_id}' not found")
-                raise EntityNotFoundException(f"Balance for user '{user_id}' not found")
+        item = self._safe_get_item(self.db.users_table, key)
 
-            item = response["Item"]
-            return Balance(
-                Pk=item["Pk"],
-                Sk=item["Sk"],
-                username=item["username"],
-                current_balance=Decimal(item["current_balance"]),
-                created_at=datetime.fromisoformat(item["created_at"]),
-                updated_at=datetime.fromisoformat(item["updated_at"]),
-                entity_type=item.get("entity_type", "balance")
-            )
+        if not item:
+            raise BalanceNotFoundException(f"Balance for user '{user_id}' not found")
 
-        except Exception as e:
-            logger.error(f"Failed to get balance for user '{user_id}': {e}")
-            raise DatabaseOperationException(f"Database operation failed while retrieving balance for user '{user_id}': {str(e)}")
+        return Balance(
+            Pk=item["Pk"],
+            Sk=item["Sk"],
+            username=item["username"],
+            current_balance=Decimal(item["current_balance"]),
+            created_at=datetime.fromisoformat(item["created_at"]),
+            updated_at=datetime.fromisoformat(item["updated_at"]),
+            entity_type=item.get("entity_type", "balance")
+        )
 
     def update_balance(self, user_id: str, current_balance: Decimal) -> Balance:
         """Update balance for a user."""
@@ -176,7 +170,7 @@ class BalanceDAO(BaseDAO):
                     return transaction
 
             logger.warning(f"Transaction '{transaction_id}' not found for user '{user_id}'")
-            raise EntityNotFoundException(f"Transaction '{transaction_id}' not found for user '{user_id}'")
+            raise TransactionNotFoundException(f"Transaction '{transaction_id}' not found for user '{user_id}'")
 
         except Exception as e:
             logger.error(f"Failed to get transaction '{transaction_id}' for user '{user_id}': {e}")

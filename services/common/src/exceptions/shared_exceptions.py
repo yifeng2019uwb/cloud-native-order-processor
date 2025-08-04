@@ -81,6 +81,16 @@ class AssetNotFoundException(SharedException):
     pass
 
 
+class BalanceNotFoundException(SharedException):
+    """Balance not found exception"""
+    pass
+
+
+class TransactionNotFoundException(SharedException):
+    """Transaction not found exception"""
+    pass
+
+
 # ========================================
 # VALIDATION EXCEPTIONS (422 scenarios)
 # ========================================

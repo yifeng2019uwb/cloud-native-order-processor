@@ -14,7 +14,7 @@ from ..base_dao import BaseDAO
 from ...entities.order import Order, OrderUpdate
 from ...entities.order.enums import OrderStatus
 from ...exceptions import DatabaseOperationException
-from ...exceptions.shared_exceptions import EntityNotFoundException
+from ...exceptions.shared_exceptions import OrderNotFoundException
 from ...exceptions import OrderValidationException
 
 logger = logging.getLogger(__name__)
@@ -76,24 +76,16 @@ class OrderDAO(BaseDAO):
             Order entity if found
 
         Raises:
-            EntityNotFoundException: If order not found
+            OrderNotFoundException: If order not found
             DatabaseOperationException: If database operation fails
         """
-        try:
-            response = self.db.orders_table.get_item(
-                Key={'order_id': order_id}
-            )
+        key = {'order_id': order_id}
+        item = self._safe_get_item(self.db.orders_table, key)
 
-            if 'Item' not in response:
-                logger.warning(f"Order '{order_id}' not found")
-                raise EntityNotFoundException(f"Order '{order_id}' not found")
+        if not item:
+            raise OrderNotFoundException(f"Order '{order_id}' not found")
 
-            item = response['Item']
-            return Order(**item)
-
-        except Exception as e:
-            logger.error(f"Failed to get order '{order_id}': {str(e)}")
-            raise DatabaseOperationException(f"Database operation failed while retrieving order '{order_id}': {str(e)}")
+        return Order(**item)
 
     def update_order(self, order_id: str, updates: OrderUpdate) -> Order:
         """

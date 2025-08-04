@@ -21,6 +21,7 @@ from src.exceptions import (
     OrderValidationException,
     DatabaseOperationException
 )
+from src.exceptions.shared_exceptions import OrderNotFoundException
 
 
 class TestOrderDAO:
@@ -150,8 +151,8 @@ class TestOrderDAO:
         # Mock empty response
         mock_db_connection.orders_table.get_item.return_value = {}
 
-        # Should raise DatabaseOperationException (wraps EntityNotFoundException)
-        with pytest.raises(DatabaseOperationException):
+        # Should raise OrderNotFoundException
+        with pytest.raises(OrderNotFoundException):
             order_dao.get_order("nonexistent_order")
 
     @pytest.mark.asyncio
