@@ -18,7 +18,7 @@ services/common/src/
 ├── exceptions/        # Shared exception classes
 ├── health/           # Health check utilities
 ├── aws/              # AWS utilities (STS, etc.)
-├── security/         # Security management (NEW)
+├── security/         # Security management ✅ COMPLETED
 │   ├── password_manager.py    # Password hashing and validation
 │   ├── token_manager.py       # JWT token management
 │   └── audit_logger.py        # Security event logging
@@ -63,8 +63,8 @@ Entities are organized by service domain to avoid naming conflicts and improve m
 ## 🗄️ Data Access Objects (DAOs)
 
 ### **User DAO**
-- `UserDAO` - User CRUD operations with integrated security
-- `BalanceDAO` - Balance and transaction management
+- `UserDAO` - User CRUD operations with integrated security ✅ COMPLETED
+- `BalanceDAO` - Balance and transaction management ✅ COMPLETED
 
 **Key Methods:**
 - `create_user()`, `get_user_by_username()`, `update_user()`, `authenticate_user()`
@@ -72,12 +72,12 @@ Entities are organized by service domain to avoid naming conflicts and improve m
 - `create_transaction()`, `get_user_transactions()`, `update_transaction_status()`
 
 **Security Integration:**
-- Password hashing via `PasswordManager`
-- Password verification via `PasswordManager`
-- Centralized security operations
+- Password hashing via `PasswordManager` ✅ COMPLETED
+- Password verification via `PasswordManager` ✅ COMPLETED
+- Centralized security operations ✅ COMPLETED
 
 ### **Order DAO**
-- `OrderDAO` - Order lifecycle management
+- `OrderDAO` - Order lifecycle management ✅ COMPLETED
 
 **Key Methods:**
 - `create_order()`, `get_order()`, `update_order()`
@@ -85,38 +85,68 @@ Entities are organized by service domain to avoid naming conflicts and improve m
 - `get_orders_by_user_and_asset()`, `get_orders_by_user_and_status()`
 
 ### **Inventory DAO**
-- `AssetDAO` - Asset management
+- `AssetDAO` - Asset management ✅ COMPLETED
 
 **Key Methods:**
 - `create_asset()`, `get_asset()`, `update_asset()`
 - `get_assets()`, `activate_asset()`, `deactivate_asset()`
 
-## 🔐 Security Management
+## 🔐 Security Management ✅ COMPLETED
 
 ### **Security Components**
 The common package now includes centralized security management:
 
-#### **PasswordManager**
+#### **PasswordManager** ✅ COMPLETED
 - **Purpose**: Centralized password hashing and verification
 - **Features**: bcrypt-based hashing, password strength validation
 - **Integration**: Used by `UserDAO` for all password operations
 - **Methods**: `hash_password()`, `verify_password()`, `validate_password_strength()`
 
-#### **TokenManager**
+#### **TokenManager** ✅ COMPLETED
 - **Purpose**: JWT token creation, verification, and management
 - **Features**: Access token generation, payload decoding, expiration checking
 - **Methods**: `create_access_token()`, `verify_access_token()`, `decode_token_payload()`, `is_token_expired()`
 
-#### **AuditLogger**
+#### **AuditLogger** ✅ COMPLETED
 - **Purpose**: Security event logging and audit trails
 - **Features**: Structured logging for login, logout, password changes, access denied events
 - **Methods**: `log_login_success()`, `log_login_failure()`, `log_password_change()`, `log_access_denied()`
 
-### **Security Integration**
+### **Security Integration** ✅ COMPLETED
 - **UserDAO**: Integrated with `PasswordManager` for password operations
 - **Services**: Can use `TokenManager` for JWT operations
 - **Audit**: All services can use `AuditLogger` for security event tracking
 - **Centralized**: All security operations use common components
+
+## 🚨 Exception Handling ✅ COMPLETED
+
+### **Domain-Specific Exceptions**
+All DAOs now properly raise specific exceptions instead of generic ones:
+
+- **`UserNotFoundException`**: When user lookup returns None
+- **`BalanceNotFoundException`**: When balance lookup returns None
+- **`TransactionNotFoundException`**: When transaction lookup returns None
+- **`AssetNotFoundException`**: When asset lookup returns None
+- **`OrderNotFoundException`**: When order lookup returns None
+
+### **Exception Hierarchy**
+```
+SharedException (Base)
+├── UserNotFoundException
+├── BalanceNotFoundException
+├── TransactionNotFoundException
+├── AssetNotFoundException
+├── OrderNotFoundException
+└── ... (other domain exceptions)
+```
+
+### **DAO Exception Pattern**
+```python
+# All DAOs use _safe_get_item from BaseDAO
+item = self._safe_get_item(self.db.table, key)
+if not item:
+    raise SpecificNotFoundException(f"Item not found")
+```
 
 ## 🔗 Database Dependencies
 
@@ -186,7 +216,7 @@ Limit Sell:
   - Database transactions for order-balance operations
   - Rollback mechanisms for partial failures
 - [ ] **Balance DAO Tests**
-  - Improve test coverage (currently 18%)
+  - Improve test coverage (currently 85%)
   - Integration tests for order-balance flow
 
 ### **Medium Priority**
@@ -300,15 +330,15 @@ The system uses a hybrid async/sync pattern for transaction atomicity:
 - Provides asset listing and details
 - Supports asset activation/deactivation
 
-## 🧪 Testing
+## 🧪 Testing ✅ COMPLETED
 
 ### **Current Coverage**
-- **Total Coverage**: 96.81%
-- **Entities**: 100% coverage
-- **DAOs**: 95%+ coverage (UserDAO: 99%, Balance DAO: 85%)
-- **Database**: 92% coverage
-- **Security**: 100% coverage (PasswordManager, TokenManager, AuditLogger)
-- **Utilities**: 100% coverage
+- **Total Coverage**: 96.81% ✅
+- **Entities**: 100% coverage ✅
+- **DAOs**: 95%+ coverage ✅ (UserDAO: 99%, Balance DAO: 85%)
+- **Database**: 92% coverage ✅
+- **Security**: 100% coverage ✅ (PasswordManager, TokenManager, AuditLogger)
+- **Utilities**: 100% coverage ✅
 
 ### **Test Structure**
 ```
@@ -316,9 +346,15 @@ tests/
 ├── entities/          # Entity model tests
 ├── dao/              # DAO operation tests
 ├── database/         # Database connection tests
-├── security/         # Security component tests (NEW)
+├── security/         # Security component tests ✅ COMPLETED
 └── conftest.py       # Test configuration and fixtures
 ```
+
+### **Exception Testing** ✅ COMPLETED
+- All DAOs properly test domain-specific exceptions
+- `_safe_get_item` returns `None` for missing items
+- DAOs raise specific exceptions when items not found
+- Comprehensive test coverage for all exception scenarios
 
 ## 📚 Dependencies
 
@@ -327,8 +363,8 @@ tests/
 - `boto3==1.29.7` - AWS SDK
 - `fastapi==0.104.1` - Web framework
 - `python-dotenv==1.0.0` - Environment management
-- `bcrypt==4.0.1` - Password hashing
-- `python-jose[cryptography]==3.3.0` - JWT token management
+- `bcrypt==4.0.1` - Password hashing ✅ COMPLETED
+- `python-jose[cryptography]==3.3.0` - JWT token management ✅ COMPLETED
 
 ### **Development Dependencies**
 - `pytest==7.4.3` - Testing framework
@@ -337,31 +373,35 @@ tests/
 
 ## 🔄 Version History
 
-### **v1.1.0** (Current)
+### **v1.2.0** (Current) ✅ COMPLETED
+- ✅ **Security Manager Integration** - Complete centralized security
+- ✅ **PasswordManager** - bcrypt-based password hashing and validation
+- ✅ **TokenManager** - JWT token creation, verification, and management
+- ✅ **AuditLogger** - Security event logging and audit trails
+- ✅ **UserDAO Security Integration** - Integrated with PasswordManager
+- ✅ **Domain-Specific Exceptions** - All DAOs raise specific exceptions
+- ✅ **Exception Handling Refactor** - Consistent exception patterns
+- ✅ **Comprehensive Test Coverage** - 96.81% overall coverage
+- ✅ **Service Integration** - All services using centralized security
+
+### **v1.1.0** ✅ COMPLETED
 - ✅ Service-based entity organization
 - ✅ Complete DAO implementations
 - ✅ Order-balance integration design
 - ✅ Balance transaction system
 - ✅ Database dependency injection
-- ✅ **Security Manager Integration** (NEW)
-- ✅ **Centralized Password Management** (NEW)
-- ✅ **JWT Token Management** (NEW)
-- ✅ **Security Audit Logging** (NEW)
-- ✅ **UserDAO Security Integration** (NEW)
-- ✅ Comprehensive test coverage (96.81%)
 
-### **Planned v1.2.0**
+### **Planned v1.3.0**
 - 🔄 Limit order implementation
-- 🔄 Transaction atomicity
+- 🔄 Transaction atomicity improvements
 - 🔄 Enhanced validation framework
-- 🔄 Service integration with security components
-- 🔄 Gateway JWT integration
+- 🔄 Advanced caching strategies
 
 ---
 
 **Note**: This package serves as the foundation for all microservices. Changes here affect the entire system, so thorough testing and documentation are required for all modifications.
 
-## 🔐 Security Integration Notes
+## 🔐 Security Integration Notes ✅ COMPLETED
 
 ### **For Service Integration**
 Services can now use the centralized security components:
@@ -388,8 +428,8 @@ audit_logger.log_login_success("username", ip_address="192.168.1.1")
 audit_logger.log_access_denied("username", "/admin", "insufficient_permissions")
 ```
 
-### **Migration from Service-Specific Security**
-- Remove duplicate password hashing logic from services
-- Replace service-specific JWT utilities with `TokenManager`
-- Add audit logging for security events
-- Update tests to use centralized security components
+### **Migration from Service-Specific Security** ✅ COMPLETED
+- ✅ Remove duplicate password hashing logic from services
+- ✅ Replace service-specific JWT utilities with `TokenManager`
+- ✅ Add audit logging for security events
+- ✅ Update tests to use centralized security components
