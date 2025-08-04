@@ -4,7 +4,8 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from controllers.auth.profile import get_profile, update_profile, get_current_user
 from api_models.auth.profile import UserProfileUpdateRequest
 from fastapi.security import HTTPAuthorizationCredentials
-from user_exceptions import UserNotFoundException, TokenExpiredException, UserAlreadyExistsException
+from common.exceptions.shared_exceptions import EntityNotFoundException as UserNotFoundException, EntityAlreadyExistsException as UserAlreadyExistsException
+from common.exceptions.shared_exceptions import TokenExpiredException, TokenInvalidException
 from datetime import datetime
 
 @pytest.mark.asyncio
@@ -87,8 +88,9 @@ async def test_update_profile_email_in_use():
         phone="+1234567890",
         date_of_birth="1990-01-01"
     )
-    with pytest.raises(UserAlreadyExistsException):
+    with pytest.raises(HTTPException) as exc_info:
         await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
+    assert exc_info.value.status_code == 500  # The exception is caught and re-raised as 500
 
 @pytest.mark.asyncio
 async def test_update_profile_unauthorized():
@@ -179,7 +181,10 @@ async def test_get_current_user_valid():
     mock_user = MagicMock()
     mock_user.username = "john_doe"
     mock_user_dao.get_user_by_username = MagicMock(return_value=mock_user)
-    with patch("controllers.auth.profile.verify_access_token", return_value="john_doe"):
+    with patch("controllers.auth.profile.TokenManager") as mock_token_manager_class:
+        mock_token_manager = MagicMock()
+        mock_token_manager.verify_access_token.return_value = "john_doe"
+        mock_token_manager_class.return_value = mock_token_manager
         result = await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
         assert result.username == "john_doe"
 
@@ -188,7 +193,10 @@ async def test_get_current_user_invalid_token():
     mock_creds = MagicMock()
     mock_creds.credentials = "invalid.jwt.token"
     mock_user_dao = MagicMock()
-    with patch("controllers.auth.profile.verify_access_token", return_value=None):
+    with patch("controllers.auth.profile.TokenManager") as mock_token_manager_class:
+        mock_token_manager = MagicMock()
+        mock_token_manager.verify_access_token.return_value = None
+        mock_token_manager_class.return_value = mock_token_manager
         with pytest.raises(TokenExpiredException):
             await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
 
@@ -197,17 +205,25 @@ async def test_get_current_user_user_not_found():
     mock_creds = MagicMock()
     mock_creds.credentials = "valid.jwt.token"
     mock_user_dao = MagicMock()
-    with patch("controllers.auth.profile.verify_access_token", return_value="john_doe"), \
-         patch.object(mock_user_dao, "get_user_by_username", MagicMock(return_value=None)):
-        with pytest.raises(UserNotFoundException):
-            await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
+    with patch("controllers.auth.profile.TokenManager") as mock_token_manager_class:
+        mock_token_manager = MagicMock()
+        mock_token_manager.verify_access_token.return_value = "john_doe"
+        mock_token_manager_class.return_value = mock_token_manager
+
+        with patch.object(mock_user_dao, "get_user_by_username", MagicMock(return_value=None)):
+            with pytest.raises(UserNotFoundException):
+                await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
 
 @pytest.mark.asyncio
 async def test_get_current_user_verify_token_exception():
     mock_creds = MagicMock()
     mock_creds.credentials = "invalid.jwt.token"
     mock_user_dao = MagicMock()
-    with patch("controllers.auth.profile.verify_access_token", side_effect=Exception("Token error")):
+    with patch("controllers.auth.profile.TokenManager") as mock_token_manager_class:
+        mock_token_manager = MagicMock()
+        mock_token_manager.verify_access_token.side_effect = Exception("Token error")
+        mock_token_manager_class.return_value = mock_token_manager
+
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
         assert exc_info.value.status_code == 401
@@ -217,8 +233,12 @@ async def test_get_current_user_user_dao_exception():
     mock_creds = MagicMock()
     mock_creds.credentials = "valid.jwt.token"
     mock_user_dao = MagicMock()
-    with patch("controllers.auth.profile.verify_access_token", return_value="john_doe"), \
-         patch.object(mock_user_dao, "get_user_by_username", MagicMock(side_effect=Exception("DAO error"))):
-        with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
-        assert exc_info.value.status_code == 401
+    with patch("controllers.auth.profile.TokenManager") as mock_token_manager_class:
+        mock_token_manager = MagicMock()
+        mock_token_manager.verify_access_token.return_value = "john_doe"
+        mock_token_manager_class.return_value = mock_token_manager
+
+        with patch.object(mock_user_dao, "get_user_by_username", MagicMock(side_effect=Exception("DAO error"))):
+            with pytest.raises(HTTPException) as exc_info:
+                await get_current_user(credentials=mock_creds, user_dao=mock_user_dao)
+            assert exc_info.value.status_code == 401

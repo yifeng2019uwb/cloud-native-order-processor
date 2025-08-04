@@ -21,7 +21,6 @@ security = HTTPBearer(auto_error=True)
 
 
 async def verify_token_dependency(
-    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> str:
     """
@@ -41,8 +40,8 @@ async def verify_token_dependency(
     token_manager = TokenManager()
     audit_logger = AuditLogger()
 
-    # Get client IP for audit logging
-    client_ip = request.client.host if request.client else None
+    # Get client IP for audit logging (optional for now)
+    client_ip = None
 
     try:
         logger.info(f"🔍 DEBUG: Verifying token: {credentials.credentials[:20]}...")

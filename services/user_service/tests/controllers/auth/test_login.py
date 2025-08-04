@@ -3,7 +3,7 @@ from fastapi import HTTPException, status
 from unittest.mock import AsyncMock, patch, MagicMock
 from controllers.auth.login import login_user
 from api_models.auth.login import UserLoginRequest
-from user_exceptions import InvalidCredentialsException
+from common.exceptions.shared_exceptions import InvalidCredentialsException
 import pydantic
 
 @pytest.mark.asyncio
@@ -50,13 +50,8 @@ async def test_login_invalid_credentials():
     mock_user_dao.authenticate_user = MagicMock(return_value=None)
     login_data = UserLoginRequest(username="john_doe", password="WrongPassword1!")
 
-    # Mock request object
-    mock_request = MagicMock()
-    mock_request.client.host = "127.0.0.1"
-    mock_request.headers.get.return_value = "test-user-agent"
-
     with pytest.raises(InvalidCredentialsException) as exc_info:
-        await login_user(mock_request, login_data, user_dao=mock_user_dao)
+        await login_user(login_data, user_dao=mock_user_dao)
     assert "Invalid credentials for user 'john_doe'" in str(exc_info.value)
 
 @pytest.mark.asyncio
@@ -71,11 +66,6 @@ async def test_login_database_error():
     mock_user_dao.authenticate_user = MagicMock(side_effect=Exception("db error"))
     login_data = UserLoginRequest(username="john_doe", password="Password123!")
 
-    # Mock request object
-    mock_request = MagicMock()
-    mock_request.client.host = "127.0.0.1"
-    mock_request.headers.get.return_value = "test-user-agent"
-
     with pytest.raises(HTTPException) as exc_info:
-        await login_user(mock_request, login_data, user_dao=mock_user_dao)
+        await login_user(login_data, user_dao=mock_user_dao)
     assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR

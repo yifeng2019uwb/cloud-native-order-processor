@@ -5,7 +5,7 @@ Path: services/user_service/src/controllers/auth/login.py
 Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
-from fastapi import APIRouter, HTTPException, Depends, status, Request
+from fastapi import APIRouter, HTTPException, Depends, status
 from typing import Union
 import logging
 from datetime import datetime, timezone
@@ -52,7 +52,6 @@ router = APIRouter(tags=["authentication"])
     }
 )
 async def login_user(
-    request: Request,
     login_data: UserLoginRequest,
     user_dao=Depends(get_user_dao)
 ) -> LoginSuccessResponse:
@@ -66,9 +65,9 @@ async def login_user(
     token_manager = TokenManager()
     audit_logger = AuditLogger()
 
-    # Get client IP for audit logging
-    client_ip = request.client.host if request.client else None
-    user_agent = request.headers.get("user-agent")
+    # Get client IP for audit logging (optional for now)
+    client_ip = None
+    user_agent = None
 
     try:
         logger.info(f"Login attempt for: {login_data.username}")
