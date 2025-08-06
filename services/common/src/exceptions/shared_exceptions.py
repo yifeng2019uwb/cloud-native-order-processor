@@ -86,6 +86,11 @@ class BalanceNotFoundException(SharedException):
     pass
 
 
+class AssetBalanceNotFoundException(SharedException):
+    """Asset balance not found exception"""
+    pass
+
+
 class TransactionNotFoundException(SharedException):
     """Transaction not found exception"""
     pass

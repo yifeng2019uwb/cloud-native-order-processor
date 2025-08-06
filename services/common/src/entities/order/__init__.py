@@ -8,7 +8,6 @@ from .order import (
     Order,
     OrderCreate,
     OrderResponse,
-    OrderListResponse,
     OrderUpdate
 )
 from .utils import (
@@ -29,7 +28,6 @@ __all__ = [
     "Order",
     "OrderResponse",
     "OrderUpdate",
-    "OrderListResponse",
 
     # Utilities
     "OrderIdGenerator",

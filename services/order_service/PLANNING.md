@@ -25,18 +25,14 @@ asset_balances (PK: username, SK: ASSET#{asset_id})
 - `username`: username
 - `asset_id`: asset identifier
 - `quantity`: current asset quantity (non-negative)
-- `average_purchase_price`: average purchase price in USD
-- `total_bought`: total quantity bought (for audit)
-- `total_sold`: total quantity sold (for audit)
-- `last_transaction_at`: timestamp of last transaction
 - `created_at`: timestamp
 - `updated_at`: timestamp
-- `entity_type`: "asset_balance"
 
 **Note**: Market value calculation happens at API level, not stored in DB
 - Get current market price from external service
 - Calculate: quantity * current_market_price
 - Return in API response, not stored in DB
+- Simplified design: removed audit fields for personal project efficiency
 
 ### **4. Asset Transactions** 🆕 **New Entity**
 ```
@@ -49,12 +45,13 @@ asset_transactions (PK: TRANS#{username}#{asset_id}, SK: timestamp)
 - `asset_id`: asset identifier
 - `transaction_type`: BUY/SELL
 - `quantity`: transaction quantity
-- `price_per_unit`: price per unit in USD (market price at transaction time)
+- `price`: price per unit in USD (market price at transaction time)
 - `total_amount`: total transaction value
 - `order_id`: reference to order
 - `status`: COMPLETED/PENDING/FAILED
 - `created_at`: timestamp
-- `entity_type`: "asset_transaction"
+
+**Note**: Simplified field naming for consistency and clarity
 
 ### **5. Orders** 🔄 **Enhanced Entity**
 ```
@@ -165,15 +162,14 @@ def calculate_portfolio_value(username: str) -> dict:
 
 ## 🏛️ **New Entities to Create**
 
-### **1. Asset Balance Entity**
-- `services/common/src/entities/asset_balance/`
-  - `asset_balance.py`: Main entity
-  - `enums.py`: Transaction types, status
+### **1. Asset Entities (Combined)**
+- `services/common/src/entities/asset/`
+  - `asset_balance.py`: Asset balance entity
+  - `asset_transaction.py`: Asset transaction entity
+  - `enums.py`: Combined enums for asset types and statuses
+  - `__init__.py`: Export all asset entities
 
-### **2. Asset Transaction Entity**
-- `services/common/src/entities/asset_transaction/`
-  - `asset_transaction.py`: Main entity
-  - `enums.py`: Transaction types, status
+**Note**: Combined asset_balance and asset_transaction into single asset folder for better organization
 
 ### **3. Enhanced Order Entity**
 - `services/common/src/entities/order/`
@@ -182,13 +178,18 @@ def calculate_portfolio_value(username: str) -> dict:
 
 ## 🗄️ **New DAOs to Create**
 
-### **1. Asset Balance DAO**
-- `services/common/src/dao/asset_balance/`
+### **1. Asset DAOs (Combined)**
+- `services/common/src/dao/asset/`
   - `asset_balance_dao.py`: CRUD operations for asset balances
-
-### **2. Asset Transaction DAO**
-- `services/common/src/dao/asset_transaction/`
   - `asset_transaction_dao.py`: CRUD operations for asset transactions
+  - `__init__.py`: Export all asset DAOs
+
+**Key Methods:**
+- `AssetBalanceDAO.upsert_asset_balance()`: Create or update balance atomically
+- `AssetTransactionDAO.create_asset_transaction()`: Create transaction record
+- `AssetTransactionDAO.get_user_asset_transactions()`: Get transactions for specific asset
+
+**Note**: Combined into single asset folder for better organization. Used upsert pattern for efficient balance updates.
 
 ### **3. Enhanced Order DAO**
 - `services/common/src/dao/order/`
@@ -206,8 +207,13 @@ def calculate_portfolio_value(username: str) -> dict:
 ## 📋 **Implementation Phases**
 
 ### **Phase 1: Common Package Updates**
-1. Create new entities (AssetBalance, AssetTransaction)
-2. Create new DAOs (AssetBalanceDAO, AssetTransactionDAO)
+1. ✅ Create new entities (AssetBalance, AssetTransaction) - **COMPLETED**
+   - Combined into `services/common/src/entities/asset/` folder
+   - Simplified fields for personal project efficiency
+2. ✅ Create new DAOs (AssetBalanceDAO, AssetTransactionDAO) - **COMPLETED**
+   - Combined into `services/common/src/dao/asset/` folder
+   - Used upsert pattern for efficient balance updates
+   - Proper exception handling with defined exceptions
 3. Update Order entity and DAO with GSI support
    - Change SK from `created_at` to `ORDER`
    - Update GSI to `UserOrdersIndex (PK: username, SK: ASSET_ID)`
@@ -260,11 +266,20 @@ def calculate_portfolio_value(username: str) -> dict:
 ### **✅ Timestamp Format:**
 - Use ISO format for all timestamps (consistent with existing codebase)
 
+### **✅ Implementation Improvements:**
+- **File Organization**: Combined asset entities and DAOs into single folders for better organization
+- **Simplified Fields**: Removed audit fields (total_bought, total_sold, average_purchase_price) for personal project efficiency
+- **Upsert Pattern**: Used atomic upsert operations for asset balance updates instead of separate create/update methods
+- **Field Naming**: Simplified `price_per_unit` to `price` for consistency
+- **Exception Handling**: Used defined exception classes for proper error handling
+
 ## 📝 **Next Steps**
 
 1. ✅ Review and approve this planning document
-2. Start with Phase 1: Common package updates
-3. Create entities and DAOs
+2. ✅ Start with Phase 1: Common package updates
+3. ✅ Create entities and DAOs - **COMPLETED**
 4. Update transaction manager
 5. Test common package changes
 6. Proceed to Phase 2: Order service updates
+
+**Current Status**: Asset entities and DAOs completed. Ready to proceed with Order entity updates and TransactionManager enhancement.

@@ -12,7 +12,7 @@ from .lock_manager import (
 )
 
 from .transaction_manager import (
-    SimpleTransactionManager,
+    TransactionManager,
     TransactionResult
 )
 
@@ -24,6 +24,6 @@ __all__ = [
     "LOCK_TIMEOUTS",
 
     # Transaction Manager
-    "SimpleTransactionManager",
+    "TransactionManager",
     "TransactionResult"
 ]

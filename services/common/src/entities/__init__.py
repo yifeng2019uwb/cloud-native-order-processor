@@ -27,8 +27,7 @@ from .order import (
     Order,
     OrderCreate,
     OrderResponse,
-    OrderUpdate,
-    OrderListResponse
+    OrderUpdate
 )
 
 __all__ = [
@@ -75,6 +74,5 @@ __all__ = [
     "Order",
     "OrderCreate",
     "OrderResponse",
-    "OrderUpdate",
-    "OrderListResponse"
+    "OrderUpdate"
 ]

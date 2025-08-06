@@ -22,6 +22,8 @@ class AssetTransactionDAO(BaseDAO):
     def __init__(self, db_connection):
         """Initialize AssetTransactionDAO with database connection"""
         super().__init__(db_connection)
+        # Table reference - change here if we need to switch tables
+        self.table = self.db.users_table
 
     def create_asset_transaction(self, transaction_create: AssetTransactionCreate) -> AssetTransaction:
         """Create a new asset transaction"""
@@ -42,7 +44,7 @@ class AssetTransactionDAO(BaseDAO):
             'created_at': now
         }
 
-        created_item = self._safe_put_item(self.db.asset_transactions_table, transaction_item)
+        created_item = self._safe_put_item(self.table, transaction_item)
 
         return AssetTransaction(
             Pk=created_item['Pk'],
@@ -65,7 +67,7 @@ class AssetTransactionDAO(BaseDAO):
             'Sk': timestamp
         }
 
-        item = self._safe_get_item(self.db.asset_transactions_table, key)
+        item = self._safe_get_item(self.table, key)
 
         if not item:
             raise TransactionNotFoundException(f"Asset transaction not found for user '{username}', asset '{asset_id}', timestamp '{timestamp}'")
@@ -88,7 +90,7 @@ class AssetTransactionDAO(BaseDAO):
         """Get all transactions for a user and specific asset"""
         key_condition = Key('Pk').eq(f"TRANS#{username}#{asset_id}")
 
-        items = self._safe_query(self.db.asset_transactions_table, key_condition, limit=limit)
+        items = self._safe_query(self.table, key_condition, limit=limit)
 
         transactions = []
         for item in items:
@@ -124,4 +126,4 @@ class AssetTransactionDAO(BaseDAO):
             'Sk': timestamp
         }
 
-        return self._safe_delete_item(self.db.asset_transactions_table, key)
+        return self._safe_delete_item(self.table, key)

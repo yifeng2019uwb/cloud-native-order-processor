@@ -22,6 +22,8 @@ class AssetBalanceDAO(BaseDAO):
     def __init__(self, db_connection):
         """Initialize AssetBalanceDAO with database connection"""
         super().__init__(db_connection)
+        # Table reference - change here if we need to switch tables
+        self.table = self.db.users_table
 
     def upsert_asset_balance(self, username: str, asset_id: str, quantity: Decimal) -> AssetBalance:
         """Create or update asset balance atomically"""
@@ -50,7 +52,7 @@ class AssetBalanceDAO(BaseDAO):
                 'Sk': f"ASSET#{asset_id}"
             }
             updated_item = self._safe_update_item(
-                self.db.asset_balances_table,
+                self.table,
                 key,
                 update_expression,
                 expression_values
@@ -69,7 +71,7 @@ class AssetBalanceDAO(BaseDAO):
         except DatabaseOperationException:
             # Item doesn't exist, create new one
             balance_item['created_at'] = now
-            created_item = self._safe_put_item(self.db.asset_balances_table, balance_item)
+            created_item = self._safe_put_item(self.table, balance_item)
 
             return AssetBalance(
                 Pk=created_item['Pk'],
@@ -88,7 +90,7 @@ class AssetBalanceDAO(BaseDAO):
             'Sk': f"ASSET#{asset_id}"
         }
 
-        item = self._safe_get_item(self.db.asset_balances_table, key)
+        item = self._safe_get_item(self.table, key)
 
         if not item:
             raise AssetBalanceNotFoundException(f"Asset balance not found for user '{username}' and asset '{asset_id}'")
@@ -107,7 +109,7 @@ class AssetBalanceDAO(BaseDAO):
         """Get all asset balances for a user"""
         key_condition = Key('Pk').eq(username) & Key('Sk').begins_with('ASSET#')
 
-        items = self._safe_query(self.db.asset_balances_table, key_condition)
+        items = self._safe_query(self.table, key_condition)
 
         balances = []
         for item in items:
@@ -131,4 +133,4 @@ class AssetBalanceDAO(BaseDAO):
             'Sk': f"ASSET#{asset_id}"
         }
 
-        return self._safe_delete_item(self.db.asset_balances_table, key)
+        return self._safe_delete_item(self.table, key)

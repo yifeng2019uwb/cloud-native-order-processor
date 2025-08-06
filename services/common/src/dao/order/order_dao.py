@@ -26,6 +26,8 @@ class OrderDAO(BaseDAO):
     def __init__(self, db_connection):
         """Initialize Order DAO with DynamoDB connection"""
         super().__init__(db_connection)
+        # Table reference - change here if we need to switch tables
+        self.table = self.db.orders_table
 
     def create_order(self, order: Order) -> Order:
         """
@@ -51,14 +53,14 @@ class OrderDAO(BaseDAO):
             if not order.updated_at:
                 item['updated_at'] = now.isoformat()
 
-            # Add GSI2 attributes
-            item['GSI2-PK'] = order.user_id
-            item['GSI2-SK'] = order.gsi2_sort_key
+            # Add GSI attributes for UserOrdersIndex
+            item['GSI-PK'] = order.username
+            item['GSI-SK'] = order.asset_id
 
             # Insert into DynamoDB
-            self.db.orders_table.put_item(Item=item)
+            self.table.put_item(Item=item)
 
-            logger.info(f"Created order {order.order_id} for user {order.user_id}")
+            logger.info(f"Created order {order.order_id} for user {order.username}")
             return order
 
         except Exception as e:
@@ -79,8 +81,8 @@ class OrderDAO(BaseDAO):
             OrderNotFoundException: If order not found
             DatabaseOperationException: If database operation fails
         """
-        key = {'order_id': order_id}
-        item = self._safe_get_item(self.db.orders_table, key)
+        key = {'Pk': order_id, 'Sk': 'ORDER'}
+        item = self._safe_get_item(self.table, key)
 
         if not item:
             raise OrderNotFoundException(f"Order '{order_id}' not found")
@@ -103,9 +105,6 @@ class OrderDAO(BaseDAO):
             DatabaseOperationException: If database operation fails
         """
         try:
-            # Get existing order
-            existing_order = self.get_order(order_id)
-
             # Prepare update expression
             update_expression = "SET updated_at = :updated_at"
             expression_values = {
@@ -118,30 +117,9 @@ class OrderDAO(BaseDAO):
                 expression_values[':status'] = updates.status.value
                 expression_values['#status'] = 'status'
 
-            # Add executed quantity update if provided
-            if updates.executed_quantity is not None:
-                update_expression += ", executed_quantity = :executed_quantity"
-                expression_values[':executed_quantity'] = str(updates.executed_quantity)
-
-            # Add executed price update if provided
-            if updates.executed_price is not None:
-                update_expression += ", executed_price = :executed_price"
-                expression_values[':executed_price'] = str(updates.executed_price)
-
-            # Add completed_at update if provided
-            if updates.completed_at is not None:
-                update_expression += ", completed_at = :completed_at"
-                expression_values[':completed_at'] = updates.completed_at.isoformat()
-
-            # Update GSI2-SK if status changed
-            if updates.status is not None:
-                new_gsi2_sk = f"{existing_order.asset_id}#{updates.status.value}#{existing_order.created_at.isoformat()}"
-                update_expression += ", GSI2-SK = :gsi2_sk"
-                expression_values[':gsi2_sk'] = new_gsi2_sk
-
             # Perform update
-            response = self.db.orders_table.update_item(
-                Key={'order_id': order_id},
+            response = self.table.update_item(
+                Key={'Pk': order_id, 'Sk': 'ORDER'},
                 UpdateExpression=update_expression,
                 ExpressionAttributeValues=expression_values,
                 ReturnValues='ALL_NEW'
@@ -154,12 +132,12 @@ class OrderDAO(BaseDAO):
             logger.error(f"Failed to update order '{order_id}': {str(e)}")
             raise DatabaseOperationException(f"Database operation failed while updating order '{order_id}': {str(e)}")
 
-    def get_orders_by_user(self, user_id: str, limit: int = 50, offset: int = 0) -> List[Order]:
+    def get_orders_by_user(self, username: str, limit: int = 50, offset: int = 0) -> List[Order]:
         """
         Get all orders for a user.
 
         Args:
-            user_id: User ID to get orders for
+            username: Username to get orders for
             limit: Maximum number of orders to return
             offset: Number of orders to skip
 
@@ -170,9 +148,9 @@ class OrderDAO(BaseDAO):
             DatabaseOperationError: If database operation fails
         """
         try:
-            response = self.db.orders_table.query(
-                IndexName='GSI2',
-                KeyConditionExpression=Key('GSI2-PK').eq(user_id),
+            response = self.table.query(
+                IndexName='UserOrdersIndex',
+                KeyConditionExpression=Key('GSI-PK').eq(username),
                 Limit=limit,
                 ScanIndexForward=False  # Most recent first
             )
@@ -186,15 +164,15 @@ class OrderDAO(BaseDAO):
             return orders
 
         except Exception as e:
-            logger.error(f"Failed to get orders for user '{user_id}': {str(e)}")
-            raise DatabaseOperationException(f"Database operation failed while retrieving orders for user '{user_id}': {str(e)}")
+            logger.error(f"Failed to get orders for user '{username}': {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}': {str(e)}")
 
-    def get_orders_by_user_and_asset(self, user_id: str, asset_id: str, limit: int = 50, offset: int = 0) -> List[Order]:
+    def get_orders_by_user_and_asset(self, username: str, asset_id: str, limit: int = 50, offset: int = 0) -> List[Order]:
         """
         Get user's orders for specific asset.
 
         Args:
-            user_id: User ID to get orders for
+            username: Username to get orders for
             asset_id: Asset ID to filter by
             limit: Maximum number of orders to return
             offset: Number of orders to skip
@@ -206,11 +184,9 @@ class OrderDAO(BaseDAO):
             DatabaseOperationError: If database operation fails
         """
         try:
-            asset_prefix = f"{asset_id}#"
-
-            response = self.db.orders_table.query(
-                IndexName='GSI2',
-                KeyConditionExpression=Key('GSI2-PK').eq(user_id) & Key('GSI2-SK').begins_with(asset_prefix),
+            response = self.table.query(
+                IndexName='UserOrdersIndex',
+                KeyConditionExpression=Key('GSI-PK').eq(username) & Key('GSI-SK').eq(asset_id),
                 Limit=limit,
                 ScanIndexForward=False  # Most recent first
             )
@@ -224,15 +200,15 @@ class OrderDAO(BaseDAO):
             return orders
 
         except Exception as e:
-            logger.error(f"Failed to get orders for user '{user_id}' and asset '{asset_id}': {str(e)}")
-            raise DatabaseOperationException(f"Database operation failed while retrieving orders for user '{user_id}' and asset '{asset_id}': {str(e)}")
+            logger.error(f"Failed to get orders for user '{username}' and asset '{asset_id}': {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}' and asset '{asset_id}': {str(e)}")
 
-    def get_orders_by_user_and_status(self, user_id: str, status: OrderStatus, limit: int = 50, offset: int = 0) -> List[Order]:
+    def get_orders_by_user_and_status(self, username: str, status: OrderStatus, limit: int = 50, offset: int = 0) -> List[Order]:
         """
         Get user's orders by status.
 
         Args:
-            user_id: User ID to get orders for
+            username: Username to get orders for
             status: Order status to filter by
             limit: Maximum number of orders to return
             offset: Number of orders to skip
@@ -245,7 +221,7 @@ class OrderDAO(BaseDAO):
         """
         try:
             # Query all user orders and filter by status
-            all_orders = self.get_orders_by_user(user_id, limit=1000)  # Get more to filter
+            all_orders = self.get_orders_by_user(username, limit=1000)  # Get more to filter
             filtered_orders = [order for order in all_orders if order.status == status]
 
             # Apply limit and offset
@@ -275,9 +251,6 @@ class OrderDAO(BaseDAO):
             DatabaseOperationException: If database operation fails
         """
         try:
-            # Get existing order
-            existing_order = self.get_order(order_id)
-
             # Prepare update expression
             update_expression = "SET #status = :status, updated_at = :updated_at"
             expression_values = {
@@ -291,14 +264,9 @@ class OrderDAO(BaseDAO):
                 update_expression += ", status_reason = :reason"
                 expression_values[':reason'] = reason
 
-            # Update GSI2-SK for status change
-            new_gsi2_sk = f"{existing_order.asset_id}#{new_status.value}#{existing_order.created_at.isoformat()}"
-            update_expression += ", GSI2-SK = :gsi2_sk"
-            expression_values[':gsi2_sk'] = new_gsi2_sk
-
             # Perform update
-            response = self.db.orders_table.update_item(
-                Key={'order_id': order_id},
+            response = self.table.update_item(
+                Key={'Pk': order_id, 'Sk': 'ORDER'},
                 UpdateExpression=update_expression,
                 ExpressionAttributeValues=expression_values,
                 ReturnValues='ALL_NEW'
@@ -325,8 +293,8 @@ class OrderDAO(BaseDAO):
             DatabaseOperationError: If database operation fails
         """
         try:
-            response = self.db.orders_table.get_item(
-                Key={'order_id': order_id},
+            response = self.table.get_item(
+                Key={'Pk': order_id, 'Sk': 'ORDER'},
                 ProjectionExpression='order_id'
             )
 
@@ -335,24 +303,3 @@ class OrderDAO(BaseDAO):
         except Exception as e:
             logger.error(f"Failed to check if order '{order_id}' exists: {str(e)}")
             raise DatabaseOperationException(f"Database operation failed while checking existence of order '{order_id}': {str(e)}")
-
-    # Future implementation methods (commented out for now)
-    # def get_orders_by_status(self, status: OrderStatus, limit: int = 50) -> List[Order]:
-    #     """Get orders by status (admin functionality) - TODO: Add later"""
-    #     pass
-    #
-    # def get_order_count_by_user(self, user_id: str) -> int:
-    #     """Count user's total orders - TODO: Add for analytics/metrics"""
-    #     pass
-    #
-    # def get_order_count_by_status(self, status: OrderStatus) -> int:
-    #     """Count orders by status - TODO: Add for analytics/metrics"""
-    #     pass
-    #
-    # def get_total_value_by_asset(self, user_id: str, asset_id: str) -> Decimal:
-    #     """Get total completed value for specific asset - TODO: Add later"""
-    #     pass
-    #
-    # def get_total_value_by_user(self, user_id: str) -> Decimal:
-    #     """Get total completed value for user - TODO: Add later"""
-    #     pass

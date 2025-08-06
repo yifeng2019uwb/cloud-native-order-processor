@@ -1,16 +1,292 @@
 """
-Order response models for the Order Service API
-Path: services/order_service/src/api_models/order_responses.py
+Order Service API Models - Consolidated
+
+Defines all request and response models for order service endpoints.
+Layer 1: Model validation (field format, basic sanitization)
+Layer 2: Business validation (in service layer)
 """
 
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 # Import proper enums from common package
 from common.entities.order.enums import OrderType, OrderStatus
 
+# Import centralized field validation functions
+from validation.field_validators import (
+    validate_asset_id, validate_quantity, validate_price,
+    validate_order_id
+)
+
+# Import custom exceptions
+from exceptions import OrderValidationException
+
+
+# ============================================================================
+# REQUEST MODELS
+# ============================================================================
+
+class OrderCreateRequest(BaseModel):
+    """
+    Request model for creating new orders
+    Supports both market and limit orders
+
+    Layer 1 Validation: Field format, basic sanitization
+    """
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "order_type": "market_buy",
+                "asset_id": "BTC",
+                "quantity": 0.5,
+                "price": None
+            }
+        }
+    )
+
+    order_type: OrderType = Field(
+        ...,
+        description="Type of order: market_buy, market_sell, limit_buy, limit_sell"
+    )
+
+    asset_id: str = Field(
+        ...,
+        description="Asset identifier (e.g., BTC, ETH)"
+    )
+
+    quantity: Decimal = Field(
+        ...,
+        gt=0,
+        description="Quantity to trade"
+    )
+
+    price: Optional[Decimal] = Field(
+        None,
+        gt=0,
+        description="Price for limit orders, None for market orders"
+    )
+
+    @field_validator('asset_id')
+    @classmethod
+    def validate_asset_id_format(cls, v: str) -> str:
+        """Layer 1: Basic format validation for asset_id"""
+        return validate_asset_id(v)
+
+    @field_validator('quantity')
+    @classmethod
+    def validate_quantity_format(cls, v: Decimal) -> Decimal:
+        """Layer 1: Basic format validation for quantity"""
+        return validate_quantity(v)
+
+    @field_validator('price')
+    @classmethod
+    def validate_price_format(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+        """Layer 1: Basic format validation for price"""
+        if v is not None:
+            return validate_price(v)
+        return v
+
+
+class OrderCancelRequest(BaseModel):
+    """
+    Request model for cancelling orders
+    Only limit orders can be cancelled by users
+
+    Layer 1 Validation: Field format, basic sanitization
+    """
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "order_id": "ord_20250730_143052_a1b2c3d4e5f6"
+            }
+        }
+    )
+
+    order_id: str = Field(
+        ...,
+        description="Order ID to cancel"
+    )
+
+    @field_validator('order_id')
+    @classmethod
+    def validate_order_id_format(cls, v: str) -> str:
+        """Layer 1: Basic format validation for order_id"""
+        return validate_order_id(v)
+
+
+class OrderFilterRequest(BaseModel):
+    """
+    Request model for filtering orders
+    Simple filtering by asset_id and order_type
+
+    Layer 1 Validation: Field format, basic sanitization
+    """
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "asset_id": "BTC",
+                "order_type": "market_buy",
+                "limit": 50,
+                "offset": 0
+            }
+        }
+    )
+
+    asset_id: Optional[str] = Field(
+        None,
+        description="Filter by asset ID"
+    )
+
+    order_type: Optional[OrderType] = Field(
+        None,
+        description="Filter by order type"
+    )
+
+    limit: int = Field(
+        default=50,
+        ge=1,
+        le=100,
+        description="Maximum number of orders to return"
+    )
+
+    offset: int = Field(
+        default=0,
+        ge=0,
+        description="Number of orders to skip"
+    )
+
+    @field_validator('asset_id')
+    @classmethod
+    def validate_asset_id_format(cls, v: Optional[str]) -> Optional[str]:
+        """Layer 1: Basic format validation for asset_id"""
+        if v is not None:
+            return validate_asset_id(v)
+        return v
+
+
+class GetOrderRequest(BaseModel):
+    """
+    Request model for getting a single order by ID
+    Simple path parameter model
+
+    Layer 1 Validation: Field format, basic sanitization
+    """
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "order_id": "ord_20250730_143052_a1b2c3d4e5f6"
+            }
+        }
+    )
+
+    order_id: str = Field(
+        ...,
+        description="Order ID to retrieve"
+    )
+
+    @field_validator('order_id')
+    @classmethod
+    def validate_order_id_format(cls, v: str) -> str:
+        """Layer 1: Basic format validation for order_id"""
+        return validate_order_id(v)
+
+
+class OrderListRequest(BaseModel):
+    """
+    Request model for listing orders
+
+    Layer 1 Validation: Field format, basic sanitization
+    """
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "status": "pending",
+                "asset_id": "BTC",
+                "limit": 50,
+                "offset": 0
+            }
+        }
+    )
+
+    status: Optional[OrderStatus] = Field(
+        None,
+        description="Filter by order status"
+    )
+
+    asset_id: Optional[str] = Field(
+        None,
+        description="Filter by asset ID"
+    )
+
+    limit: int = Field(
+        default=50,
+        ge=1,
+        le=100,
+        description="Maximum number of orders to return"
+    )
+
+    offset: int = Field(
+        default=0,
+        ge=0,
+        description="Number of orders to skip"
+    )
+
+    @field_validator('asset_id')
+    @classmethod
+    def validate_asset_id_format(cls, v: Optional[str]) -> Optional[str]:
+        """Layer 1: Basic format validation for asset_id"""
+        if v is not None:
+            return validate_asset_id(v)
+        return v
+
+
+class OrderHistoryRequest(BaseModel):
+    """
+    Request model for getting order history for a specific asset
+    Simple API to list all orders for a specific asset
+
+    Layer 1 Validation: Field format, basic sanitization
+    """
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "asset_id": "BTC",
+                "limit": 50,
+                "offset": 0
+            }
+        }
+    )
+
+    asset_id: str = Field(
+        ...,
+        description="Asset identifier to get history for (e.g., BTC, ETH)"
+    )
+
+    limit: int = Field(
+        default=50,
+        ge=1,
+        le=100,
+        description="Maximum number of orders to return"
+    )
+
+    offset: int = Field(
+        default=0,
+        ge=0,
+        description="Number of orders to skip"
+    )
+
+    @field_validator('asset_id')
+    @classmethod
+    def validate_asset_id_format(cls, v: str) -> str:
+        """Layer 1: Basic format validation for asset_id"""
+        return validate_asset_id(v)
+
+
+# ============================================================================
+# RESPONSE MODELS
+# ============================================================================
 
 class OrderSummary(BaseModel):
     """
@@ -25,8 +301,7 @@ class OrderSummary(BaseModel):
                 "order_type": "market_buy",
                 "asset_id": "BTC",
                 "quantity": 0.5,
-                "order_price": 2500.00,
-                "total_amount": 22500.00,
+                "price": 45000.00,
                 "created_at": "2025-07-30T14:30:52Z"
             }
         }
@@ -52,14 +327,9 @@ class OrderSummary(BaseModel):
         description="Quantity traded"
     )
 
-    order_price: Optional[Decimal] = Field(
+    price: Optional[Decimal] = Field(
         None,
         description="Price for limit orders, None for market orders"
-    )
-
-    total_amount: Decimal = Field(
-        ...,
-        description="Total order value"
     )
 
     created_at: datetime = Field(
@@ -80,10 +350,8 @@ class OrderData(BaseModel):
                 "order_type": "market_buy",
                 "asset_id": "BTC",
                 "quantity": 0.5,
-                "order_price": 45000.00,
-                "total_amount": 22500.00,
-                "created_at": "2025-07-30T14:30:52Z",
-                "expires_at": None
+                "price": 45000.00,
+                "created_at": "2025-07-30T14:30:52Z"
             }
         }
     )
@@ -108,25 +376,14 @@ class OrderData(BaseModel):
         description="Quantity traded"
     )
 
-    order_price: Optional[Decimal] = Field(
+    price: Optional[Decimal] = Field(
         None,
         description="Price for limit orders, None for market orders"
-    )
-
-    total_amount: Decimal = Field(
-        ...,
-        description="Total order value"
     )
 
     created_at: datetime = Field(
         ...,
         description="Order creation timestamp"
-    )
-
-    # Additional fields for limit orders only
-    expires_at: Optional[datetime] = Field(
-        None,
-        description="Expiration time for limit orders"
     )
 
 
@@ -146,10 +403,8 @@ class OrderCreateResponse(BaseModel):
                     "order_type": "market_buy",
                     "asset_id": "BTC",
                     "quantity": 0.5,
-                    "order_price": 45000.00,
-                    "total_amount": 22500.00,
-                    "created_at": "2025-07-30T14:30:52Z",
-                    "expires_at": None
+                    "price": 45000.00,
+                    "created_at": "2025-07-30T14:30:52Z"
                 },
                 "timestamp": "2025-07-30T14:30:52Z"
             }
@@ -193,10 +448,8 @@ class GetOrderResponse(BaseModel):
                     "order_type": "market_buy",
                     "asset_id": "BTC",
                     "quantity": 0.5,
-                    "order_price": 45000.00,
-                    "total_amount": 22500.00,
-                    "created_at": "2025-07-30T14:30:52Z",
-                    "expires_at": None
+                    "price": 45000.00,
+                    "created_at": "2025-07-30T14:30:52Z"
                 },
                 "timestamp": "2025-07-30T14:30:52Z"
             }
@@ -241,8 +494,7 @@ class OrderListResponse(BaseModel):
                         "order_type": "market_buy",
                         "asset_id": "BTC",
                         "quantity": 0.5,
-                        "order_price": 45000.00,
-                        "total_amount": 22500.00,
+                        "price": 45000.00,
                         "created_at": "2025-07-30T14:30:52Z"
                     }
                 ],
@@ -316,44 +568,6 @@ class OrderCancelResponse(BaseModel):
     )
 
 
-class ErrorResponse(BaseModel):
-    """
-    Standard error response model
-    Consistent error format across all endpoints
-    """
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "success": False,
-                "message": "Order not found",
-                "error_code": "ORDER_NOT_FOUND",
-                "timestamp": "2025-07-30T14:30:52Z"
-            }
-        }
-    )
-
-    success: bool = Field(
-        default=False,
-        description="Always false for error responses"
-    )
-
-    message: str = Field(
-        ...,
-        description="User-friendly error message"
-    )
-
-    error_code: str = Field(
-        ...,
-        description="Machine-readable error code"
-    )
-
-    timestamp: datetime = Field(
-        ...,
-        description="Response timestamp"
-    )
-
-
 class OrderHistoryItem(BaseModel):
     """
     Individual order item in history response
@@ -367,8 +581,7 @@ class OrderHistoryItem(BaseModel):
                 "order_type": "market_buy",
                 "asset_id": "BTC",
                 "quantity": 0.5,
-                "order_price": 45000.00,
-                "total_amount": 22500.00,
+                "price": 45000.00,
                 "status": "completed",
                 "created_at": "2025-07-30T14:30:52Z"
             }
@@ -379,8 +592,7 @@ class OrderHistoryItem(BaseModel):
     order_type: OrderType = Field(..., description="Type of order")
     asset_id: str = Field(..., description="Asset identifier")
     quantity: Decimal = Field(..., description="Order quantity")
-    order_price: Optional[Decimal] = Field(None, description="Order price (for limit orders)")
-    total_amount: Decimal = Field(..., description="Total order value")
+    price: Optional[Decimal] = Field(None, description="Order price (for limit orders)")
     status: OrderStatus = Field(..., description="Current order status")
     created_at: datetime = Field(..., description="Order creation timestamp")
 
@@ -401,8 +613,7 @@ class OrderHistoryResponse(BaseModel):
                         "order_type": "market_buy",
                         "asset_id": "BTC",
                         "quantity": 0.5,
-                        "order_price": 45000.00,
-                        "total_amount": 22500.00,
+                        "price": 45000.00,
                         "status": "completed",
                         "created_at": "2025-07-30T14:30:52Z"
                     }

@@ -3,24 +3,31 @@ API Models Package for Order Service
 Path: services/order_service/src/api_models/__init__.py
 """
 
-# Request models
-from .order_requests import OrderCreateRequest, GetOrderRequest, OrderListRequest, OrderFilterRequest, OrderCancelRequest, OrderHistoryRequest
+# Order models (consolidated)
+from .order import (
+    # Request models
+    OrderCreateRequest, GetOrderRequest, OrderListRequest, OrderFilterRequest,
+    OrderCancelRequest, OrderHistoryRequest,
+    # Response models
+    OrderData, OrderCreateResponse, GetOrderResponse, OrderListResponse,
+    OrderSummary, OrderCancelResponse, OrderHistoryItem, OrderHistoryResponse
+)
 
-# Response models
-from .order_responses import OrderData, OrderCreateResponse, GetOrderResponse, OrderListResponse, OrderSummary, OrderCancelResponse, OrderHistoryItem, OrderHistoryResponse
+# Asset models (for portfolio functionality)
+from .asset_requests import GetAssetBalanceRequest, GetAssetBalancesRequest, GetAssetTransactionsRequest, GetPortfolioRequest
+from .asset_responses import AssetBalanceData, AssetTransactionData, PortfolioAssetData, GetAssetBalanceResponse, GetAssetBalancesResponse, GetAssetTransactionsResponse, GetPortfolioResponse
 
 # Shared models
 from .shared.common import BaseResponse, SuccessResponse, ErrorResponse, ValidationErrorResponse
 
 __all__ = [
-    # Request models
+    # Order models
     "OrderCreateRequest",
     "GetOrderRequest",
     "OrderListRequest",
     "OrderFilterRequest",
     "OrderCancelRequest",
     "OrderHistoryRequest",
-    # Response models
     "OrderData",
     "OrderCreateResponse",
     "GetOrderResponse",
@@ -29,6 +36,18 @@ __all__ = [
     "OrderCancelResponse",
     "OrderHistoryItem",
     "OrderHistoryResponse",
+    # Asset models (for portfolio functionality)
+    "GetAssetBalanceRequest",
+    "GetAssetBalancesRequest",
+    "GetAssetTransactionsRequest",
+    "GetPortfolioRequest",
+    "AssetBalanceData",
+    "AssetTransactionData",
+    "PortfolioAssetData",
+    "GetAssetBalanceResponse",
+    "GetAssetBalancesResponse",
+    "GetAssetTransactionsResponse",
+    "GetPortfolioResponse",
     # Shared models
     "BaseResponse",
     "SuccessResponse",

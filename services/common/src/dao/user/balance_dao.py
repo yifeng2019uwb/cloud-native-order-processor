@@ -26,6 +26,8 @@ class BalanceDAO(BaseDAO):
     def __init__(self, db_connection: DynamoDBConnection):
         super().__init__(db_connection)
         self.table_name = "users"  # Using the same user table for balance data
+        # Table reference - change here if we need to switch tables
+        self.table = self.db.users_table
 
 
 
@@ -36,7 +38,7 @@ class BalanceDAO(BaseDAO):
             "Sk": "BALANCE"
         }
 
-        item = self._safe_get_item(self.db.users_table, key)
+        item = self._safe_get_item(self.table, key)
 
         if not item:
             raise BalanceNotFoundException(f"Balance for user '{user_id}' not found")
@@ -56,7 +58,7 @@ class BalanceDAO(BaseDAO):
         try:
             updated_at = datetime.utcnow()
 
-            response = self.db.users_table.update_item(
+            response = self.table.update_item(
                 Key={
                     "Pk": user_id,
                     "Sk": "BALANCE"
@@ -98,7 +100,7 @@ class BalanceDAO(BaseDAO):
                 "entity_type": "balance"
             }
 
-            self.db.users_table.put_item(Item=balance_item)
+            self.table.put_item(Item=balance_item)
 
             return Balance(
                 Pk=balance_item["Pk"],
@@ -132,7 +134,7 @@ class BalanceDAO(BaseDAO):
                 "entity_type": "balance_transaction"
             }
 
-            self.db.users_table.put_item(Item=item)
+            self.table.put_item(Item=item)
 
             return transaction
 
@@ -188,7 +190,7 @@ class BalanceDAO(BaseDAO):
             if start_key:
                 query_params["ExclusiveStartKey"] = start_key
 
-            response = self.db.users_table.query(**query_params)
+            response = self.table.query(**query_params)
 
             transactions = []
             for item in response.get("Items", []):

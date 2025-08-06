@@ -20,6 +20,12 @@ logger = logging.getLogger(__name__)
 class AssetDAO(BaseDAO):
     """Data Access Object for asset operations"""
 
+    def __init__(self, db_connection):
+        """Initialize AssetDAO with database connection"""
+        super().__init__(db_connection)
+        # Table reference - change here if we need to switch tables
+        self.table = self.db.inventory_table
+
     def create_asset(self, asset_create: AssetCreate) -> Asset:
         try:
             now = datetime.now(UTC).isoformat()
@@ -44,7 +50,7 @@ class AssetDAO(BaseDAO):
                 'created_at': now,
                 'updated_at': now
             }
-            created_item = self._safe_put_item(self.db.inventory_table, asset_item)
+            created_item = self._safe_put_item(self.table, asset_item)
             return Asset(
                 asset_id=asset_create.asset_id,
                 name=asset_create.name,
@@ -72,7 +78,7 @@ class AssetDAO(BaseDAO):
     def get_asset_by_id(self, asset_id: str) -> Asset:
         try:
             key = {'product_id': asset_id}
-            item = self._safe_get_item(self.db.inventory_table, key)
+            item = self._safe_get_item(self.table, key)
             if not item:
                 logger.warning(f"Asset '{asset_id}' not found")
                 raise AssetNotFoundException(f"Asset '{asset_id}' not found")
@@ -110,7 +116,7 @@ class AssetDAO(BaseDAO):
             if active_only:
                 scan_kwargs['FilterExpression'] = Attr('is_active').eq(True)
 
-            response = self.db.inventory_table.scan(**scan_kwargs)
+            response = self.table.scan(**scan_kwargs)
             items = response.get('Items', [])
 
             logger.info(f"🔍 DEBUG: Found {len(items)} assets")
@@ -153,7 +159,7 @@ class AssetDAO(BaseDAO):
             logger.info(f"🔍 DEBUG: Getting assets by category: '{category}'")
 
             # Scan with filter expression
-            response = self.db.inventory_table.scan(
+            response = self.table.scan(
                 FilterExpression=Attr('category').eq(category.lower())
             )
             items = response.get('Items', [])
@@ -213,7 +219,7 @@ class AssetDAO(BaseDAO):
             update_expression = "SET " + ", ".join(set_clauses)
             key = {'product_id': asset_id}
             item = self._safe_update_item(
-                self.db.inventory_table,
+                self.table,
                 key,
                 update_expression,
                 expression_values
@@ -249,7 +255,7 @@ class AssetDAO(BaseDAO):
                 'product_id': asset_id  # Using existing table schema
             }
 
-            success = self._safe_delete_item(self.db.inventory_table, key)
+            success = self._safe_delete_item(self.table, key)
 
             if success:
                 logger.info(f"Asset deleted successfully: {asset_id}")

@@ -26,6 +26,8 @@ class UserDAO(BaseDAO):
         """Initialize UserDAO with database connection and password manager"""
         super().__init__(db_connection)
         self.password_manager = PasswordManager()
+        # Table reference - change here if we need to switch tables
+        self.table = self.db.users_table
 
     def create_user(self, user_create: UserCreate) -> User:
         """Create a new user"""
@@ -50,7 +52,7 @@ class UserDAO(BaseDAO):
         }
 
         # Save to users table
-        created_item = self._safe_put_item(self.db.users_table, user_item)
+        created_item = self._safe_put_item(self.table, user_item)
 
         return User(
             Pk=user_create.username,
@@ -77,7 +79,7 @@ class UserDAO(BaseDAO):
 
         logger.info(f"🔍 DEBUG: Using key: {key}")
 
-        item = self._safe_get_item(self.db.users_table, key)
+        item = self._safe_get_item(self.table, key)
         logger.info(f"🔍 DEBUG: Database returned item: {item}")
 
         if not item:
@@ -100,7 +102,7 @@ class UserDAO(BaseDAO):
         """Get user by email (GSI lookup)"""
         # Simplified: base_dao._safe_query handles database exceptions
         items = self._safe_query(
-            self.db.users_table,
+            self.table,
             Key('email').eq(email),
             index_name='EmailIndex'
         )
@@ -131,7 +133,7 @@ class UserDAO(BaseDAO):
 
         # Get the stored password hash
         key = {'Pk': username, 'Sk': 'USER'}
-        item = self._safe_get_item(self.db.users_table, key)
+        item = self._safe_get_item(self.table, key)
 
         stored_hash = item.get('password_hash')
         if not stored_hash:
@@ -191,7 +193,7 @@ class UserDAO(BaseDAO):
         # Perform the update
         key = {'Pk': username, 'Sk': 'USER'}
         updated_item = self._safe_update_item(
-            self.db.users_table,
+            self.table,
             key,
             update_expression,
             expression_values,
@@ -216,4 +218,4 @@ class UserDAO(BaseDAO):
         """Delete a user by username"""
         # Simplified: base_dao._safe_delete_item handles database exceptions
         key = {'Pk': username, 'Sk': 'USER'}
-        return self._safe_delete_item(self.db.users_table, key)
+        return self._safe_delete_item(self.table, key)
