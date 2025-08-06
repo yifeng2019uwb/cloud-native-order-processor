@@ -257,12 +257,14 @@ class TransactionManager:
                 # Phase 2: Create order
                 now = datetime.now(timezone.utc)
                 order = Order(
+                    Pk=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
+                    Sk="ORDER",
                     order_id=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
                     username=username,  # Use username directly
                     order_type=OrderType.MARKET_BUY,
                     asset_id=order_data["asset_id"],
                     quantity=order_data["quantity"],
-                    price=order_data["order_price"],
+                    price=order_data["price"],
                     total_amount=total_cost,
                     status=OrderStatus.PENDING,
                     created_at=now,
@@ -310,7 +312,7 @@ class TransactionManager:
                     asset_id=order_data["asset_id"],
                     transaction_type=AssetTransactionType.BUY,
                     quantity=asset_quantity,
-                    price=order_data["order_price"],
+                    price=order_data["price"],
                     order_id=created_order.order_id
                 )
 
@@ -372,12 +374,14 @@ class TransactionManager:
                 # Phase 2: Create order
                 now = datetime.now(timezone.utc)
                 order = Order(
+                    Pk=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
+                    Sk="ORDER",
                     order_id=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
                     username=username,  # Use username directly
                     order_type=OrderType.MARKET_SELL,
                     asset_id=order_data["asset_id"],
                     quantity=order_data["quantity"],
-                    price=order_data["order_price"],
+                    price=order_data["price"],
                     total_amount=asset_amount,
                     status=OrderStatus.PENDING,
                     created_at=now,

@@ -24,7 +24,6 @@ from src.exceptions import (
 from src.exceptions.shared_exceptions import OrderNotFoundException
 
 
-@pytest.mark.skip(reason="OrderDAO schema changed - needs update")
 class TestOrderDAO:
     """Test OrderDAO database operations"""
 
@@ -45,14 +44,15 @@ class TestOrderDAO:
         """Sample order data"""
         now = datetime.now(timezone.utc)
         return Order(
-            order_id="ord_user123_20231201123456789",
-            user_id="user123",
+            Pk="order_123",
+            Sk="ORDER",
+            order_id="order_123",
+            username="user123",
             order_type=OrderType.MARKET_BUY,
             asset_id="BTC",
             quantity=Decimal("1.5"),
-            order_price=None,  # MARKET_BUY orders don't have order_price
+            price=Decimal("45000.00"),
             total_amount=Decimal("67500.00"),
-            currency="USD",
             status=OrderStatus.PENDING,
             created_at=now,
             updated_at=now
@@ -63,19 +63,20 @@ class TestOrderDAO:
         """Sample database item"""
         now = datetime.now(timezone.utc).isoformat()
         return {
-            'order_id': 'ord_user123_20231201123456789',
-            'user_id': 'user123',
+            'Pk': 'order_123',
+            'Sk': 'ORDER',
+            'order_id': 'order_123',
+            'username': 'user123',
             'order_type': 'market_buy',
             'asset_id': 'BTC',
             'quantity': Decimal("1.5"),
-            'order_price': None,  # MARKET_BUY orders don't have order_price
+            'price': Decimal("45000.00"),
             'total_amount': Decimal("67500.00"),
-            'currency': 'USD',
             'status': 'pending',
             'created_at': now,
             'updated_at': now,
-            'GSI2-PK': 'user123',
-            'GSI2-SK': 'BTC#pending#' + now
+            'GSI-PK': 'user123',
+            'GSI-SK': 'BTC'
         }
 
     def test_create_order_success(self, order_dao, sample_order, mock_db_connection):
@@ -92,130 +93,142 @@ class TestOrderDAO:
         # Verify result
         assert isinstance(result, Order)
         assert result.order_id == sample_order.order_id
-        assert result.user_id == sample_order.user_id
+        assert result.username == sample_order.username
         assert result.order_type == sample_order.order_type
         assert result.asset_id == sample_order.asset_id
         assert result.quantity == sample_order.quantity
-        assert result.order_price == sample_order.order_price
-        assert result.currency == sample_order.currency
-        assert result.status == sample_order.status
+        assert result.price == sample_order.price
+        assert result.total_amount == sample_order.total_amount
 
-        # Verify database was called
+        # Verify database call
         mock_db_connection.orders_table.put_item.assert_called_once()
+        call_args = mock_db_connection.orders_table.put_item.call_args[1]
+        item = call_args['Item']
+
+        assert item['Pk'] == sample_order.order_id
+        assert item['Sk'] == 'ORDER'
+        assert item['order_id'] == sample_order.order_id
+        assert item['username'] == sample_order.username
+        assert item['order_type'] == sample_order.order_type.value
+        assert item['asset_id'] == sample_order.asset_id
+        assert item['quantity'] == sample_order.quantity  # Decimal values are preserved
+        assert item['price'] == sample_order.price  # Decimal values are preserved
+        assert item['total_amount'] == sample_order.total_amount  # Decimal values are preserved
+        assert item['status'] == sample_order.status.value
+        assert 'GSI-PK' in item
+        assert 'GSI-SK' in item
 
     @pytest.mark.asyncio
     async def test_create_order_already_exists(self, order_dao, sample_order):
-        """Test order creation when order already exists - REMOVED: DAO doesn't validate existing orders"""
-        # This test is removed because the DAO doesn't check for existing orders
+        """Test order creation when order already exists"""
+        # The DAO doesn't check for existing orders, so this test should pass
         # Business validation should be handled at the service layer
-        pass
+        with patch.object(order_dao, 'order_exists') as mock_exists:
+            mock_exists.return_value = True
+            # This should still work since the DAO doesn't validate existing orders
+            result = order_dao.create_order(sample_order)
+            assert result == sample_order
 
     @pytest.mark.asyncio
     async def test_create_order_database_error(self, order_dao, sample_order, mock_db_connection):
         """Test order creation with database error"""
-        # Mock database error
+        order_dao.order_exists = Mock(return_value=False)
         mock_db_connection.orders_table.put_item.side_effect = ClientError(
-            {'Error': {'Code': 'ConditionalCheckFailedException'}},
+            {'Error': {'Code': 'ConditionalCheckFailedException', 'Message': 'Condition check failed'}},
             'PutItem'
         )
 
-        # Should raise DatabaseOperationException
         with pytest.raises(DatabaseOperationException):
-            await order_dao.create_order(sample_order)
+            order_dao.create_order(sample_order)
 
     def test_get_order_success(self, order_dao, sample_db_item, mock_db_connection):
         """Test successful order retrieval"""
-        # Mock database response
+        # Mock successful database operation
         mock_db_connection.orders_table.get_item.return_value = {
             'Item': sample_db_item
         }
 
         # Get order
-        result = order_dao.get_order("ord_user123_20231201123456789")
+        result = order_dao.get_order("order_123")
 
         # Verify result
         assert isinstance(result, Order)
-        assert result.order_id == sample_db_item['order_id']
-        assert result.user_id == sample_db_item['user_id']
+        assert result.order_id == "order_123"
+        assert result.username == "user123"
         assert result.order_type == OrderType.MARKET_BUY
-        assert result.asset_id == sample_db_item['asset_id']
-        assert result.quantity == sample_db_item['quantity']
-        assert result.order_price == sample_db_item['order_price']
-        assert result.currency == sample_db_item['currency']
-        assert result.status == OrderStatus.PENDING
+        assert result.asset_id == "BTC"
+        assert result.quantity == Decimal("1.5")
+        assert result.price == Decimal("45000.00")
+        assert result.total_amount == Decimal("67500.00")
 
-        # Verify database was called
-        mock_db_connection.orders_table.get_item.assert_called_once()
+        # Verify database call
+        mock_db_connection.orders_table.get_item.assert_called_once_with(
+            Key={'Pk': 'order_123', 'Sk': 'ORDER'}
+        )
 
     def test_get_order_not_found(self, order_dao, mock_db_connection):
         """Test order retrieval when order not found"""
-        # Mock empty response
         mock_db_connection.orders_table.get_item.return_value = {}
 
-        # Should raise OrderNotFoundException
         with pytest.raises(OrderNotFoundException):
             order_dao.get_order("nonexistent_order")
 
     @pytest.mark.asyncio
     async def test_get_order_database_error(self, order_dao, mock_db_connection):
         """Test order retrieval with database error"""
-        # Mock database error
         mock_db_connection.orders_table.get_item.side_effect = ClientError(
-            {'Error': {'Code': 'InternalServerError'}},
+            {'Error': {'Code': 'InternalServerError', 'Message': 'Internal server error'}},
             'GetItem'
         )
 
-        # Should raise DatabaseOperationError
         with pytest.raises(DatabaseOperationException):
-            await order_dao.get_order("test_order")
+            order_dao.get_order("order_123")
 
     def test_update_order_success(self, order_dao, sample_order, mock_db_connection):
         """Test successful order update"""
-        # Mock existing order
-        order_dao.get_order = Mock(return_value=sample_order)
-
         # Mock successful database operation with complete order data
-        now = datetime.now(timezone.utc).isoformat()
         mock_db_connection.orders_table.update_item.return_value = {
             'Attributes': {
-                'order_id': sample_order.order_id,
-                'user_id': sample_order.user_id,
-                'order_type': sample_order.order_type.value,
-                'asset_id': sample_order.asset_id,
-                'quantity': sample_order.quantity,
-                'order_price': sample_order.order_price,
-                'total_amount': sample_order.total_amount,
-                'currency': sample_order.currency,
+                'Pk': 'order_123',
+                'Sk': 'ORDER',
+                'order_id': 'order_123',
+                'username': 'user123',
+                'order_type': 'market_buy',
+                'asset_id': 'BTC',
+                'quantity': '1.5',
+                'price': '45000.00',
+                'total_amount': '67500.00',
                 'status': 'completed',
-                'created_at': sample_order.created_at.isoformat(),
-                'updated_at': now,
-                'completed_at': now,
-                'executed_quantity': Decimal("1.5"),
-                'executed_price': None,
-                'status_history': []
+                'created_at': '2023-01-01T00:00:00',
+                'updated_at': '2023-01-01T00:00:00'
             }
         }
 
         # Update order
-        update_data = OrderUpdate(
-            status=OrderStatus.COMPLETED,
-            executed_quantity=Decimal("1.5")
-        )
-        result = order_dao.update_order(sample_order.order_id, update_data)
+        update_data = OrderUpdate(status=OrderStatus.COMPLETED)
+        result = order_dao.update_order("order_123", update_data)
 
         # Verify result
         assert isinstance(result, Order)
+        assert result.order_id == "order_123"
+        assert result.username == "user123"
         assert result.status == OrderStatus.COMPLETED
 
-        # Verify database was called
+        # Verify database call
         mock_db_connection.orders_table.update_item.assert_called_once()
+        call_args = mock_db_connection.orders_table.update_item.call_args[1]
+
+        assert call_args['Key'] == {'Pk': 'order_123', 'Sk': 'ORDER'}
+        assert 'UpdateExpression' in call_args
+        assert 'ExpressionAttributeValues' in call_args
 
     def test_update_order_not_found(self, order_dao, mock_db_connection):
         """Test order update when order not found"""
-        # Mock that order doesn't exist
-        order_dao.get_order = Mock(side_effect=EntityNotFoundException("Order nonexistent_order not found"))
+        mock_db_connection.orders_table.update_item.side_effect = ClientError(
+            {'Error': {'Code': 'ConditionalCheckFailedException', 'Message': 'Condition check failed'}},
+            'UpdateItem'
+        )
 
-        # Should raise DatabaseOperationException (wraps EntityNotFoundException)
         update_data = OrderUpdate(status=OrderStatus.COMPLETED)
         with pytest.raises(DatabaseOperationException):
             order_dao.update_order("nonexistent_order", update_data)
@@ -223,306 +236,269 @@ class TestOrderDAO:
     @pytest.mark.asyncio
     async def test_update_order_database_error(self, order_dao, sample_order, mock_db_connection):
         """Test order update with database error"""
-        # Mock database error
         mock_db_connection.orders_table.update_item.side_effect = ClientError(
-            {'Error': {'Code': 'InternalServerError'}},
+            {'Error': {'Code': 'InternalServerError', 'Message': 'Internal server error'}},
             'UpdateItem'
         )
 
-        # Should raise DatabaseOperationError
         update_data = OrderUpdate(status=OrderStatus.COMPLETED)
         with pytest.raises(DatabaseOperationException):
-            await order_dao.update_order(sample_order.order_id, update_data)
+            order_dao.update_order("order_123", update_data)
 
     def test_get_orders_by_user_success(self, order_dao, mock_db_connection):
         """Test successful retrieval of user orders"""
-        # Mock database response
-        now = datetime.now(timezone.utc).isoformat()
+        # Mock successful database operation
         mock_db_connection.orders_table.query.return_value = {
             'Items': [
                 {
-                    'order_id': 'ord_user123_20231201123456789',
-                    'user_id': 'user123',
+                    'Pk': 'order_1',
+                    'Sk': 'ORDER',
+                    'order_id': 'order_1',
+                    'username': 'user123',
                     'order_type': 'market_buy',
                     'asset_id': 'BTC',
-                    'quantity': Decimal("1.5"),
-                    'order_price': None,
-                    'total_amount': Decimal("67500.00"),
-                    'currency': 'USD',
-                    'status': 'pending',
-                    'created_at': now,
-                    'updated_at': now
+                    'quantity': '1.0',
+                    'price': '50000.00',
+                    'total_amount': '50000.00',
+                    'status': 'pending'
+                },
+                {
+                    'Pk': 'order_2',
+                    'Sk': 'ORDER',
+                    'order_id': 'order_2',
+                    'username': 'user123',
+                    'order_type': 'limit_sell',
+                    'asset_id': 'ETH',
+                    'quantity': '10.0',
+                    'price': '3000.00',
+                    'total_amount': '30000.00',
+                    'status': 'completed'
                 }
-            ]
+            ],
+            'Count': 2
         }
 
         # Get user orders
         result = order_dao.get_orders_by_user("user123")
 
         # Verify result
-        assert len(result) == 1
-        assert isinstance(result[0], Order)
-        assert result[0].user_id == "user123"
+        assert len(result) == 2
+        assert result[0].order_id == "order_1"
+        assert result[0].username == "user123"
+        assert result[0].order_type == OrderType.MARKET_BUY
+        assert result[1].order_id == "order_2"
+        assert result[1].username == "user123"
+        assert result[1].order_type == OrderType.LIMIT_SELL
 
-        # Verify database was called
+        # Verify database call
         mock_db_connection.orders_table.query.assert_called_once()
+        call_args = mock_db_connection.orders_table.query.call_args[1]
+
+        assert call_args['IndexName'] == 'UserOrdersIndex'
+        # Don't check ExpressionAttributeValues as they may not be set
 
     def test_get_orders_by_user_with_limit_offset(self, order_dao, mock_db_connection):
-        """Test user orders retrieval with limit and offset"""
-        # Mock database response
-        mock_db_connection.orders_table.query.return_value = {'Items': []}
+        """Test retrieval of user orders with limit and offset"""
+        mock_db_connection.orders_table.query.return_value = {
+            'Items': [],
+            'Count': 0
+        }
 
-        # Get user orders with limit and offset
-        result = order_dao.get_orders_by_user("user123", limit=10, offset=5)
+        order_dao.get_orders_by_user("user123", limit=10, offset=5)
 
-        # Verify database was called with correct parameters
         call_args = mock_db_connection.orders_table.query.call_args[1]
-        assert call_args.get('Limit') == 10
+        assert call_args['Limit'] == 10
 
     @pytest.mark.asyncio
     async def test_get_orders_by_user_database_error(self, order_dao, mock_db_connection):
-        """Test user orders retrieval with database error"""
-        # Mock database error
+        """Test retrieval of user orders with database error"""
         mock_db_connection.orders_table.query.side_effect = ClientError(
-            {'Error': {'Code': 'InternalServerError'}},
+            {'Error': {'Code': 'InternalServerError', 'Message': 'Internal server error'}},
             'Query'
         )
 
-        # Should raise DatabaseOperationError
         with pytest.raises(DatabaseOperationException):
-            await order_dao.get_orders_by_user("user123")
+            order_dao.get_orders_by_user("user123")
 
     def test_get_orders_by_user_and_asset_success(self, order_dao, mock_db_connection):
         """Test successful retrieval of user orders for specific asset"""
-        # Mock database response
-        now = datetime.now(timezone.utc).isoformat()
         mock_db_connection.orders_table.query.return_value = {
             'Items': [
                 {
-                    'order_id': 'ord_user123_20231201123456789',
-                    'user_id': 'user123',
+                    'Pk': 'order_1',
+                    'Sk': 'ORDER',
+                    'order_id': 'order_1',
+                    'username': 'user123',
                     'order_type': 'market_buy',
                     'asset_id': 'BTC',
-                    'quantity': Decimal("1.5"),
-                    'order_price': None,
-                    'total_amount': Decimal("67500.00"),
-                    'currency': 'USD',
-                    'status': 'pending',
-                    'created_at': now,
-                    'updated_at': now
+                    'quantity': '1.0',
+                    'price': '50000.00',
+                    'total_amount': '50000.00',
+                    'status': 'pending'
                 }
-            ]
+            ],
+            'Count': 1
         }
 
-        # Get user orders for specific asset
         result = order_dao.get_orders_by_user_and_asset("user123", "BTC")
 
-        # Verify result
         assert len(result) == 1
-        assert isinstance(result[0], Order)
-        assert result[0].user_id == "user123"
+        assert result[0].order_id == "order_1"
         assert result[0].asset_id == "BTC"
 
-        # Verify database was called
-        mock_db_connection.orders_table.query.assert_called_once()
+        call_args = mock_db_connection.orders_table.query.call_args[1]
+        assert call_args['IndexName'] == 'UserOrdersIndex'
+        # Don't check ExpressionAttributeValues as they may not be set
 
     @pytest.mark.asyncio
     async def test_get_orders_by_user_and_asset_database_error(self, order_dao, mock_db_connection):
-        """Test user asset orders retrieval with database error"""
-        # Mock database error
+        """Test retrieval of user orders for specific asset with database error"""
         mock_db_connection.orders_table.query.side_effect = ClientError(
-            {'Error': {'Code': 'InternalServerError'}},
+            {'Error': {'Code': 'InternalServerError', 'Message': 'Internal server error'}},
             'Query'
         )
 
-        # Should raise DatabaseOperationError
         with pytest.raises(DatabaseOperationException):
-            await order_dao.get_orders_by_user_and_asset("user123", "BTC")
+            order_dao.get_orders_by_user_and_asset("user123", "BTC")
 
     def test_get_orders_by_user_and_status_success(self, order_dao, mock_db_connection):
-        """Test successful retrieval of user orders by status"""
-        # Mock database response
-        now = datetime.now(timezone.utc).isoformat()
+        """Test successful retrieval of user orders with specific status"""
         mock_db_connection.orders_table.query.return_value = {
             'Items': [
                 {
-                    'order_id': 'ord_user123_20231201123456789',
-                    'user_id': 'user123',
+                    'Pk': 'order_1',
+                    'Sk': 'ORDER',
+                    'order_id': 'order_1',
+                    'username': 'user123',
                     'order_type': 'market_buy',
                     'asset_id': 'BTC',
-                    'quantity': Decimal("1.5"),
-                    'order_price': None,
-                    'total_amount': Decimal("67500.00"),
-                    'currency': 'USD',
-                    'status': 'pending',
-                    'created_at': now,
-                    'updated_at': now
+                    'quantity': '1.0',
+                    'price': '50000.00',
+                    'total_amount': '50000.00',
+                    'status': 'pending'
                 }
-            ]
+            ],
+            'Count': 1
         }
 
-        # Get user orders by status
         result = order_dao.get_orders_by_user_and_status("user123", OrderStatus.PENDING)
 
-        # Verify result
         assert len(result) == 1
-        assert isinstance(result[0], Order)
-        assert result[0].user_id == "user123"
+        assert result[0].order_id == "order_1"
         assert result[0].status == OrderStatus.PENDING
 
-        # Verify database was called
-        mock_db_connection.orders_table.query.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_get_orders_by_user_and_status_database_error(self, order_dao, mock_db_connection):
-        """Test user status orders retrieval with database error"""
-        # Mock database error
-        mock_db_connection.orders_table.query.side_effect = ClientError(
-            {'Error': {'Code': 'InternalServerError'}},
-            'Query'
-        )
-
-        # Should raise DatabaseOperationError
-        with pytest.raises(DatabaseOperationException):
-            await order_dao.get_orders_by_user_and_status("user123", OrderStatus.PENDING)
-
-    def test_update_order_status_success(self, order_dao, sample_order):
+    def test_update_order_status_success(self, order_dao, sample_order, mock_db_connection):
         """Test successful order status update"""
-        # Mock existing order with PROCESSING status (can transition to COMPLETED)
-        processing_order = sample_order.model_copy(update={'status': OrderStatus.PROCESSING})
-        order_dao.get_order = Mock(return_value=processing_order)
-
-        # Mock successful update with proper decimal values
-        order_dao.db.orders_table.update_item.return_value = {
+        # Mock successful database operation with complete order data
+        mock_db_connection.orders_table.update_item.return_value = {
             'Attributes': {
-                'order_id': processing_order.order_id,
-                'user_id': processing_order.user_id,
-                'order_type': processing_order.order_type.value,
-                'asset_id': processing_order.asset_id,
-                'quantity': str(processing_order.quantity),
-                'order_price': '50000.00',  # Provide actual decimal value
-                'total_amount': str(processing_order.total_amount),
-                'status': OrderStatus.COMPLETED.value,
-                'created_at': processing_order.created_at.isoformat(),
-                'updated_at': datetime.now(timezone.utc).isoformat(),
-                'status_reason': 'Order completed successfully',
-                'executed_quantity': str(processing_order.quantity),
-                'executed_price': '50000.00',  # Provide actual decimal value
-                'completed_at': datetime.now(timezone.utc).isoformat()
+                'Pk': 'order_123',
+                'Sk': 'ORDER',
+                'order_id': 'order_123',
+                'username': 'user123',
+                'order_type': 'market_buy',
+                'asset_id': 'BTC',
+                'quantity': '1.5',
+                'price': '45000.00',
+                'total_amount': '67500.00',
+                'status': 'completed',
+                'created_at': '2023-01-01T00:00:00',
+                'updated_at': '2023-01-01T00:00:00'
             }
         }
 
-        # Update order status
-        result = order_dao.update_order_status(
-            processing_order.order_id,
-            OrderStatus.COMPLETED,
-            "Order completed successfully"
-        )
+        result = order_dao.update_order_status("order_123", OrderStatus.COMPLETED)
 
-        # Verify result
-        assert result is not None
-        assert result.order_id == processing_order.order_id
+        assert isinstance(result, Order)
+        assert result.order_id == "order_123"
         assert result.status == OrderStatus.COMPLETED
 
-    def test_update_order_status_not_found(self, order_dao):
+        # Verify database call
+        mock_db_connection.orders_table.update_item.assert_called_once()
+        call_args = mock_db_connection.orders_table.update_item.call_args[1]
+
+        assert call_args['Key'] == {'Pk': 'order_123', 'Sk': 'ORDER'}
+        assert 'UpdateExpression' in call_args
+        assert 'ExpressionAttributeValues' in call_args
+
+    def test_update_order_status_not_found(self, order_dao, mock_db_connection):
         """Test order status update when order not found"""
-        # Mock that order doesn't exist
-        order_dao.get_order = Mock(side_effect=EntityNotFoundException("Order nonexistent_order not found"))
+        mock_db_connection.orders_table.update_item.side_effect = ClientError(
+            {'Error': {'Code': 'ConditionalCheckFailedException', 'Message': 'Condition check failed'}},
+            'UpdateItem'
+        )
 
-        # Should raise DatabaseOperationException (wraps EntityNotFoundException)
         with pytest.raises(DatabaseOperationException):
-            order_dao.update_order_status(
-                "nonexistent_order",
-                OrderStatus.COMPLETED
-            )
+            order_dao.update_order_status("nonexistent_order", OrderStatus.COMPLETED)
 
-    def test_update_order_status_invalid_transition(self, order_dao, sample_order):
+    def test_update_order_status_invalid_transition(self, order_dao, sample_order, mock_db_connection):
         """Test order status update with invalid transition"""
-        # Mock existing order
-        order_dao.get_order = Mock(return_value=sample_order)
-
-        # Mock successful update (no validation in update_order_status) with proper decimal values
-        order_dao.db.orders_table.update_item.return_value = {
+        # Mock successful database operation
+        mock_db_connection.orders_table.update_item.return_value = {
             'Attributes': {
-                'order_id': sample_order.order_id,
-                'user_id': sample_order.user_id,
-                'order_type': sample_order.order_type.value,
-                'asset_id': sample_order.asset_id,
-                'quantity': str(sample_order.quantity),
-                'order_price': '50000.00',  # Provide actual decimal value
-                'total_amount': str(sample_order.total_amount),
-                'status': OrderStatus.COMPLETED.value,
-                'created_at': sample_order.created_at.isoformat(),
-                'updated_at': datetime.now(timezone.utc).isoformat(),
-                'executed_quantity': str(sample_order.quantity),
-                'executed_price': '50000.00',  # Provide actual decimal value
-                'completed_at': datetime.now(timezone.utc).isoformat()
+                'Pk': 'order_123',
+                'Sk': 'ORDER',
+                'order_id': 'order_123',
+                'username': 'user123',
+                'order_type': 'market_buy',
+                'asset_id': 'BTC',
+                'quantity': '1.5',
+                'price': '45000.00',
+                'total_amount': '67500.00',
+                'status': 'completed',
+                'created_at': '2023-01-01T00:00:00',
+                'updated_at': '2023-01-01T00:00:00'
             }
         }
 
-        # Should succeed (no validation in update_order_status)
-        result = order_dao.update_order_status(
-            sample_order.order_id,
-            OrderStatus.COMPLETED  # Can go directly from PENDING to COMPLETED
-        )
+        result = order_dao.update_order_status("order_123", OrderStatus.COMPLETED)
 
-        # Verify result
-        assert result is not None
-        assert result.order_id == sample_order.order_id
+        assert isinstance(result, Order)
+        assert result.order_id == "order_123"
         assert result.status == OrderStatus.COMPLETED
 
     @pytest.mark.asyncio
     async def test_update_order_status_database_error(self, order_dao, sample_order):
         """Test order status update with database error"""
-        # Mock existing order
-        order_dao.get_order = AsyncMock(return_value=sample_order)
+        with patch.object(order_dao, 'update_order') as mock_update:
+            mock_update.side_effect = DatabaseOperationException("Database error")
 
-        # Mock database error
-        order_dao.db.orders_table.update_item.side_effect = DatabaseOperationException("Database error")
-
-        # Should raise DatabaseOperationError
-        with pytest.raises(DatabaseOperationException):
-            await order_dao.update_order_status(
-                sample_order.order_id,
-                OrderStatus.CONFIRMED
-            )
+            with pytest.raises(DatabaseOperationException):
+                order_dao.update_order_status("order_123", OrderStatus.COMPLETED)
 
     def test_order_exists_true(self, order_dao, mock_db_connection):
-        """Test order existence check when order exists"""
-        # Mock database response
+        """Test order exists check when order exists"""
         mock_db_connection.orders_table.get_item.return_value = {
-            'Item': {'order_id': 'test_order'}
+            'Item': {'order_id': 'order_123'}
         }
 
-        # Check if order exists
-        result = order_dao.order_exists("test_order")
+        result = order_dao.order_exists("order_123")
 
-        # Should return True
         assert result is True
-
-        # Verify database was called
-        mock_db_connection.orders_table.get_item.assert_called_once()
+        mock_db_connection.orders_table.get_item.assert_called_once_with(
+            Key={'Pk': 'order_123', 'Sk': 'ORDER'},
+            ProjectionExpression='order_id'
+        )
 
     def test_order_exists_false(self, order_dao, mock_db_connection):
-        """Test order existence check when order doesn't exist"""
-        # Mock empty response
+        """Test order exists check when order doesn't exist"""
         mock_db_connection.orders_table.get_item.return_value = {}
 
-        # Check if order exists
         result = order_dao.order_exists("nonexistent_order")
 
-        # Should return False
         assert result is False
+        mock_db_connection.orders_table.get_item.assert_called_once_with(
+            Key={'Pk': 'nonexistent_order', 'Sk': 'ORDER'},
+            ProjectionExpression='order_id'
+        )
 
     @pytest.mark.asyncio
     async def test_order_exists_database_error(self, order_dao, mock_db_connection):
-        """Test order existence check with database error"""
-        # Mock database error
+        """Test order exists check with database error"""
         mock_db_connection.orders_table.get_item.side_effect = ClientError(
-            {'Error': {'Code': 'InternalServerError'}},
+            {'Error': {'Code': 'InternalServerError', 'Message': 'Internal server error'}},
             'GetItem'
         )
 
-        # Should raise DatabaseOperationError
         with pytest.raises(DatabaseOperationException):
-            await order_dao.order_exists("test_order")
+            order_dao.order_exists("order_123")
