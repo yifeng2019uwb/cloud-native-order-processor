@@ -7,7 +7,7 @@ import pytest
 def test_order_service_import():
     """Test that order service modules can be imported"""
     try:
-        from src.api_models import order, asset_requests, asset_responses
+        from src.api_models import order, asset
         from src.exceptions import exceptions
         from src.controllers import create_order, get_order, list_orders, health
         assert True

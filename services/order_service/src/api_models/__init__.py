@@ -13,9 +13,15 @@ from .order import (
     OrderSummary, OrderCancelResponse, OrderHistoryItem, OrderHistoryResponse
 )
 
-# Asset models (for portfolio functionality)
-from .asset_requests import GetAssetBalanceRequest, GetAssetBalancesRequest, GetAssetTransactionsRequest, GetPortfolioRequest
-from .asset_responses import AssetBalanceData, AssetTransactionData, PortfolioAssetData, GetAssetBalanceResponse, GetAssetBalancesResponse, GetAssetTransactionsResponse, GetPortfolioResponse
+# Asset models (consolidated into single file)
+from .asset import (
+    # Request models
+    GetAssetBalanceRequest, GetAssetBalancesRequest, GetAssetTransactionsRequest, GetPortfolioRequest,
+    # Data models
+    AssetBalanceData, AssetTransactionData, PortfolioAssetData,
+    # Response models
+    GetAssetBalanceResponse, GetAssetBalancesResponse, GetAssetTransactionsResponse, GetPortfolioResponse
+)
 
 # Shared models
 from .shared.common import BaseResponse, SuccessResponse, ErrorResponse, ValidationErrorResponse
@@ -36,7 +42,7 @@ __all__ = [
     "OrderCancelResponse",
     "OrderHistoryItem",
     "OrderHistoryResponse",
-    # Asset models (for portfolio functionality)
+    # Asset models (consolidated)
     "GetAssetBalanceRequest",
     "GetAssetBalancesRequest",
     "GetAssetTransactionsRequest",
