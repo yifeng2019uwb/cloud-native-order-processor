@@ -153,6 +153,62 @@ Track design decisions, options considered, and rationale for each component to 
 
 ---
 
+## ⚡ **Quick Decision Log**
+*For tiny decisions that don't need full template*
+
+| Date | Component | Decision | Why |
+|------|-----------|----------|-----|
+| 8/6 | API Models | Consolidate files | Better organization |
+| 8/7 | Order Entity | Change SK to ORDER | Better GSI queries |
+| [Date] | [Component] | [Decision] | [Why] |
+
+---
+
+## 🏗️ **Architecture Sketches**
+*Simple ASCII diagrams for key flows*
+
+### **Basic Request Flow**
+```
+User Request → Gateway → Service → Database
+     ↓           ↓         ↓         ↓
+   Frontend   Auth Check  Business   DynamoDB
+             Rate Limit   Logic
+```
+
+### **Authentication Flow**
+```
+Login → Gateway → User Service → Redis
+  ↓        ↓           ↓         ↓
+Frontend  JWT Check  Validate   Session
+         Rate Limit  Credentials Store
+```
+
+### **Order Processing Flow**
+```
+Order → Gateway → Order Service → Asset Service → Database
+  ↓        ↓           ↓            ↓            ↓
+Frontend  Auth Check  Validate    Check        Update
+         Rate Limit  Order       Balance      Balances
+```
+
+### **Multi-Asset Portfolio Flow**
+```
+Portfolio → Gateway → Order Service → Asset DAOs → DynamoDB
+Request        ↓           ↓            ↓           ↓
+              Auth      Calculate    Get Asset    Return
+              Check     Portfolio    Balances     Data
+```
+
+### **Service Discovery Flow**
+```
+Service A → Gateway → Service B
+    ↓         ↓         ↓
+Internal   Route to   Process
+Request    Service    Request
+```
+
+---
+
 ## 🎯 **How to Use This Template**
 
 ### **Before Starting Development:**

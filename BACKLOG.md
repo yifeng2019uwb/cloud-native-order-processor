@@ -43,6 +43,9 @@ Update the existing order entity to support efficient multi-asset queries throug
 - [ ] Test new GSI query patterns
 - [ ] Update all unit tests
 
+**Dependencies:**
+- ✅ **None** - Can start immediately
+
 ---
 
 ### **📋 TO DO**
@@ -66,6 +69,10 @@ Debug and fix API integration issues between frontend and backend services.
 - [ ] Test all API integrations end-to-end
 - [ ] Add API integration tests
 
+**Dependencies:**
+- 🔄 **ORDER-001**: Update Order Entity with GSI Support (In Progress)
+- 🔄 **INFRA-001**: Local Kubernetes Development Setup (Order Service integration)
+
 #### **FRONTEND-003: Fix Authentication State Management**
 - **Component**: Frontend (React)
 - **Type**: Bug
@@ -82,6 +89,10 @@ Fix authentication state management issues in the frontend application.
 - [ ] Add proper authentication guards
 - [ ] Implement proper error handling for auth failures
 - [ ] Test authentication flow end-to-end
+
+**Dependencies:**
+- 🔄 **INFRA-001**: Local Kubernetes Development Setup (Gateway integration)
+- 📋 **SEC-003**: Token Blacklist Implementation
 
 #### **FRONTEND-004: Add Order Management UI**
 - **Component**: Frontend (React)
@@ -101,6 +112,11 @@ Add comprehensive order management UI for creating and managing trading orders.
 - [ ] Add real-time order updates
 - [ ] Test order management workflow
 
+**Dependencies:**
+- ✅ **ORDER-001**: Update Order Entity with GSI Support
+- ✅ **ORDER-002**: Enhance TransactionManager for Multi-Asset Support
+- 🔄 **INFRA-001**: Local Kubernetes Development Setup (Order Service integration)
+
 #### **FRONTEND-005: Improve Error Handling**
 - **Component**: Frontend (React)
 - **Type**: Story
@@ -117,6 +133,10 @@ Improve error handling and user feedback across the frontend application.
 - [ ] Create error recovery mechanisms
 - [ ] Add error logging and reporting
 - [ ] Test error scenarios
+
+**Dependencies:**
+- ✅ **FRONTEND-002**: Debug API Integration Issues
+- ✅ **FRONTEND-003**: Fix Authentication State Management
 
 ## **🔧 Infrastructure & DevOps**
 
@@ -157,6 +177,9 @@ Set up comprehensive local Kubernetes development environment with proper networ
   - [ ] Update port configuration (NodePort 30003)
   - [ ] Test end-to-end order processing in Kubernetes
 
+**Dependencies:**
+- ✅ **None** - Can start immediately
+
 #### **INFRA-002: Local Development Pipeline**
 - **Component**: DevOps
 - **Type**: Story
@@ -188,6 +211,9 @@ Create comprehensive local development pipeline with automated testing, security
   - [ ] Environment-specific configuration management
   - [ ] Secure secrets handling for local development
 
+**Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup
+
 #### **INFRA-003: Local Infrastructure Setup**
 - **Component**: Infrastructure
 - **Type**: Story
@@ -213,6 +239,10 @@ Create comprehensive local infrastructure setup with Docker, Kubernetes (Kind), 
   - [ ] Infrastructure diagrams for local setup
   - [ ] Local development runbooks
   - [ ] Security best practices for local development
+
+**Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup
+- ✅ **INFRA-002**: Local Development Pipeline
 
 ## **🌐 API Gateway & Frontend**
 
@@ -242,6 +272,10 @@ Enhance API Gateway with advanced features for production use.
   - [ ] Optimize request routing
   - [ ] Add health check endpoints
 
+**Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup (Gateway integration)
+- 📋 **SEC-003**: Token Blacklist Implementation
+
 #### **FRONTEND-001: Enhanced Trading Interface**
 - **Component**: Frontend (React)
 - **Type**: Epic
@@ -267,6 +301,11 @@ Build comprehensive trading interface with real-time data and portfolio manageme
   - [ ] Responsive design for mobile
   - [ ] Dark/light theme support
   - [ ] Accessibility compliance
+
+**Dependencies:**
+- ✅ **FRONTEND-004**: Add Order Management UI
+- ✅ **FRONTEND-005**: Improve Error Handling
+- ✅ **ORDER-002**: Enhance TransactionManager for Multi-Asset Support
 
 ## **🗄️ Database & Caching**
 
@@ -296,6 +335,10 @@ Implement comprehensive caching strategy and optimize Redis usage.
   - [ ] Implement cache performance alerts
   - [ ] Add cache debugging tools
 
+**Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup (Redis integration)
+- ✅ **ORDER-002**: Enhance TransactionManager for Multi-Asset Support
+
 #### **DB-002: DynamoDB Optimization**
 - **Component**: Database
 - **Type**: Story
@@ -321,6 +364,10 @@ Optimize DynamoDB usage for cost efficiency and performance.
   - [ ] Test disaster recovery procedures
   - [ ] Add point-in-time recovery
   - [ ] Document recovery runbooks
+
+**Dependencies:**
+- ✅ **ORDER-001**: Update Order Entity with GSI Support
+- ✅ **DAO-001**: Add Pagination for All DAO List APIs
 
 ## **🔍 Monitoring & Observability**
 
@@ -355,6 +402,10 @@ Implement comprehensive monitoring and observability across all system component
   - [ ] Implement escalation procedures
   - [ ] Add alert acknowledgment and resolution tracking
 
+**Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup
+- ✅ **INFRA-002**: Local Development Pipeline
+
 #### **MONITOR-002: Business Intelligence Dashboard**
 - **Component**: Monitoring
 - **Type**: Story
@@ -380,6 +431,10 @@ Create business intelligence dashboards for trading analytics and system perform
   - [ ] Feature usage analytics
   - [ ] Performance impact analysis
   - [ ] User feedback integration
+
+**Dependencies:**
+- ✅ **MONITOR-001**: Comprehensive Monitoring System
+- ✅ **FRONTEND-001**: Enhanced Trading Interface
 
 ## **🔐 Security & Compliance**
 
@@ -413,6 +468,10 @@ Implement comprehensive security measures for production deployment.
   - [ ] Add data retention policies
   - [ ] Configure privacy controls
   - [ ] Document security procedures
+
+**Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup
+- ✅ **SEC-003**: Token Blacklist Implementation
 
 #### **SEC-003: Token Blacklist Implementation**
 - **Component**: Security
@@ -450,6 +509,10 @@ Implement JWT token blacklist functionality for secure logout and token invalida
   - [ ] Security tests for token validation
   - [ ] Performance tests for blacklist operations
 
+**Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup (Redis integration)
+- ✅ **GATEWAY-001**: Advanced Gateway Features
+
 #### **SEC-004: Penetration Testing & Security Audit**
 - **Component**: Security
 - **Type**: Story
@@ -475,6 +538,10 @@ Conduct comprehensive security testing and audit of the entire system.
   - [ ] Access control audit
   - [ ] Data protection assessment
   - [ ] Incident response testing
+
+**Dependencies:**
+- ✅ **SEC-002**: Security Hardening
+- ✅ **SEC-003**: Token Blacklist Implementation
 
 ## **📊 Performance & Scaling**
 
@@ -509,6 +576,11 @@ Optimize system performance across all components for production scale.
   - [ ] Add read replicas where needed
   - [ ] Optimize backup and recovery procedures
 
+**Dependencies:**
+- ✅ **DB-001**: Redis Optimization & Caching Strategy
+- ✅ **DB-002**: DynamoDB Optimization
+- ✅ **FRONTEND-001**: Enhanced Trading Interface
+
 #### **PERF-002: Load Testing & Capacity Planning**
 - **Component**: Performance
 - **Type**: Story
@@ -534,6 +606,10 @@ Conduct comprehensive load testing and capacity planning for production deployme
   - [ ] Plan for growth scenarios
   - [ ] Document scaling strategies
   - [ ] Create capacity planning models
+
+**Dependencies:**
+- ✅ **PERF-001**: Performance Optimization
+- ✅ **MONITOR-001**: Comprehensive Monitoring System
 
 ## **🧪 Testing & Quality Assurance**
 
@@ -568,6 +644,10 @@ Implement comprehensive testing strategy across all system components.
   - [ ] Implement test result notifications
   - [ ] Add test environment management
 
+**Dependencies:**
+- ✅ **INFRA-002**: Local Development Pipeline
+- ✅ **PERF-002**: Load Testing & Capacity Planning
+
 #### **TEST-002: Chaos Engineering**
 - **Component**: Testing
 - **Type**: Story
@@ -593,6 +673,10 @@ Implement chaos engineering practices to improve system resilience.
   - [ ] Add chaos testing to CI/CD pipeline
   - [ ] Create chaos testing dashboards
   - [ ] Document chaos engineering procedures
+
+**Dependencies:**
+- ✅ **TEST-001**: Comprehensive Testing Strategy
+- ✅ **MONITOR-001**: Comprehensive Monitoring System
 
 ---
 
@@ -780,3 +864,4 @@ Set up basic infrastructure with Docker and Kubernetes.
 *Last Updated: 8/6/2025*
 *Next Review: Next development session*
 *📋 Updated: INFRA-001 status to In Progress (80% complete)*
+*📋 Added: Dependencies section to all backlog items*
