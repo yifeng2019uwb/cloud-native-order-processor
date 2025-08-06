@@ -97,6 +97,9 @@ Entities are organized by service domain to avoid naming conflicts and improve m
 - Password verification via `PasswordManager` ✅ COMPLETED
 - Centralized security operations ✅ COMPLETED
 
+### **Database Design Reference**
+- **[DATABASE_DESIGN.md](./docs/DATABASE_DESIGN.md)**: Complete database schema documentation with query patterns and design decisions
+
 ### **Order DAO**
 - `OrderDAO` - Order lifecycle management ✅ COMPLETED
 
