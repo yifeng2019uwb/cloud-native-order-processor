@@ -11,7 +11,8 @@ from typing import Union, Optional
 from fastapi import APIRouter, Depends, status, Query
 
 # Import API models
-from api_models.order_responses import OrderListResponse, OrderSummary, ErrorResponse
+from api_models.order import OrderListResponse, OrderSummary
+from api_models.shared.common import ErrorResponse
 
 # Import common entities
 from common.entities.order.enums import OrderType

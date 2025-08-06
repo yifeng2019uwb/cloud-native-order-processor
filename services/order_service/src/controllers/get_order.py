@@ -11,7 +11,8 @@ from typing import Union
 from fastapi import APIRouter, Depends, status
 
 # Import API models
-from api_models.order_responses import GetOrderResponse, OrderData, ErrorResponse
+from api_models.order import GetOrderResponse, OrderData
+from api_models.shared.common import ErrorResponse
 
 # Import dependencies
 from controllers.dependencies import get_current_user, get_order_dao_dependency

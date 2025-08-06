@@ -13,8 +13,8 @@ from typing import Union
 from fastapi import APIRouter, Depends, status, Request
 
 # Import API models
-from api_models.order_requests import OrderCreateRequest
-from api_models.order_responses import OrderCreateResponse, OrderData, ErrorResponse
+from api_models.order import OrderCreateRequest, OrderCreateResponse, OrderData
+from api_models.shared.common import ErrorResponse
 
 # Import common entities
 from common.entities.order import OrderCreate
