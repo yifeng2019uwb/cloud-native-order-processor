@@ -3,6 +3,14 @@
 ## 🎯 **Overview**
 Redesign the order service to support multi-asset portfolio management with proper balance tracking and transaction management.
 
+## 🏗️ **Design Philosophy & Trade-offs** 🎯
+- **DynamoDB Optimization**: Serverless, pay-per-use, minimal operational overhead
+- **Single-Table Design**: Simplified queries and reduced complexity for personal project scale
+- **Atomic Operations**: Using conditional expressions (`upsert_asset_balance`) instead of complex DynamoDB transactions (cost optimization)
+- **PK/SK Strategy**: Optimized for 80% use cases (user-specific queries) over complex multi-dimensional access patterns
+- **Cost Efficiency**: Minimize RCU/WCU usage through efficient key design and query patterns
+- **Development Velocity**: Prioritize rapid iteration and learning over enterprise-grade complexity
+
 ## 🏗️ **Database Schema Design**
 
 ### **1. Users** ✅ **Unchanged**

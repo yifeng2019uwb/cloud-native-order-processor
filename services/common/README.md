@@ -42,6 +42,14 @@ Entities are organized by service domain to avoid naming conflicts and improve m
 - **Composite Keys**: Efficient querying with PK/SK patterns
 - **GSI Support**: Global Secondary Indexes for complex queries
 
+### **Design Philosophy & Trade-offs** 🎯
+- **DynamoDB Choice**: Serverless, pay-per-use, minimal operational overhead
+- **Single-Table Design**: Simplified queries and reduced complexity for personal project scale
+- **Atomic Operations**: Using conditional expressions instead of complex DynamoDB transactions (cost optimization)
+- **PK/SK Strategy**: Optimized for 80% use cases (user-specific queries) over complex multi-dimensional access patterns
+- **Cost Efficiency**: Minimize RCU/WCU usage through efficient key design and query patterns
+- **Development Velocity**: Prioritize rapid iteration and learning over enterprise-grade complexity
+
 ## 📊 Entities
 
 ### **User Entities**

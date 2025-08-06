@@ -11,6 +11,14 @@ A comprehensive, production-ready cloud-native microservice platform demonstrati
 
 ## 🏗️ Architecture Overview
 
+### **Design Philosophy & Trade-offs** 🎯
+- **DynamoDB Choice**: Serverless, pay-per-use, no maintenance overhead
+- **Single-Table Design**: Simplified queries, reduced complexity for personal project scale
+- **Simplified Atomic Operations**: Using conditional expressions instead of complex transactions
+- **PK/SK Design**: Optimized for 80% use cases (user-specific queries) over complex multi-dimensional access patterns
+- **Cost Optimization**: Minimize DynamoDB RCU/WCU usage through efficient key design
+- **Development Speed**: Prioritize rapid iteration over enterprise-grade complexity
+
 ### **Complete System Architecture** ✅ **WORKING**
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
