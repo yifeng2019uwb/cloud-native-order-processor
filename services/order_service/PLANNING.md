@@ -24,12 +24,19 @@ asset_balances (PK: username, SK: ASSET#{asset_id})
 - `Sk`: ASSET#{asset_id} (e.g., "ASSET#BTC", "ASSET#ETH")
 - `username`: username
 - `asset_id`: asset identifier
-- `quantity`: current asset quantity
-- `current_value`: current USD value
+- `quantity`: current asset quantity (non-negative)
 - `average_purchase_price`: average purchase price in USD
+- `total_bought`: total quantity bought (for audit)
+- `total_sold`: total quantity sold (for audit)
+- `last_transaction_at`: timestamp of last transaction
 - `created_at`: timestamp
 - `updated_at`: timestamp
 - `entity_type`: "asset_balance"
+
+**Note**: Market value calculation happens at API level, not stored in DB
+- Get current market price from external service
+- Calculate: quantity * current_market_price
+- Return in API response, not stored in DB
 
 ### **4. Asset Transactions** 🆕 **New Entity**
 ```
@@ -37,12 +44,12 @@ asset_transactions (PK: TRANS#{username}#{asset_id}, SK: timestamp)
 ```
 **Fields:**
 - `Pk`: TRANS#{username}#{asset_id} (e.g., "TRANS#john_doe#BTC")
-- `Sk`: timestamp (ISO format)
+- `Sk`: timestamp (ISO format string)
 - `username`: username
 - `asset_id`: asset identifier
 - `transaction_type`: BUY/SELL
 - `quantity`: transaction quantity
-- `price_per_unit`: price per unit in USD
+- `price_per_unit`: price per unit in USD (market price at transaction time)
 - `total_amount`: total transaction value
 - `order_id`: reference to order
 - `status`: COMPLETED/PENDING/FAILED
@@ -57,7 +64,7 @@ GSI: UserOrdersIndex (PK: username, SK: ASSET_ID)
 **Fields:**
 - `Pk`: order_id (generated)
 - `Sk`: ORDER
-- `user_id`: username
+- `username`: username (changed from user_id for consistency)
 - `asset_id`: asset identifier
 - `order_type`: BUY/SELL
 - `quantity`: order quantity
@@ -76,14 +83,14 @@ def get_orders_by_user(username: str) -> List[Order]:
     # Query GSI: UserOrdersIndex
     # PK: username, SK: ASSET_ID
     # Returns all orders for user across all assets
-    return order_dao.query_user_orders(username)
+    return order_dao.get_orders_by_user(username)
 
 # Get user orders for specific asset
 def get_user_asset_orders(username: str, asset_id: str) -> List[Order]:
     # Query GSI: UserOrdersIndex
     # PK: username, SK: ASSET_ID
     # Returns orders for specific asset
-    return order_dao.query_user_asset_orders(username, asset_id)
+    return order_dao.get_orders_by_user_and_asset(username, asset_id)
 ```
 
 ## 🔄 **Transaction Flow Logic**
@@ -98,7 +105,6 @@ def get_user_asset_orders(username: str, asset_id: str) -> List[Order]:
    - Create asset transaction record
    - Update order status to COMPLETED
 5. **Release Lock**: Allow other operations
-6. **Update Asset Value**: Recalculate asset current_value (optional, can be done asynchronously)
 
 ### **Sell Order Flow:**
 1. **Create Order**: Save order with PENDING status
@@ -110,26 +116,32 @@ def get_user_asset_orders(username: str, asset_id: str) -> List[Order]:
    - Create asset transaction record
    - Update order status to COMPLETED
 5. **Release Lock**: Allow other operations
-6. **Update Asset Value**: Recalculate asset current_value (optional, can be done asynchronously)
 
 ## 📊 **Portfolio Management**
 
 ### **Portfolio Calculation:**
 ```python
-def calculate_portfolio_value(user_id: str) -> dict:
+def calculate_portfolio_value(username: str) -> dict:
     # Get USD balance
-    usd_balance = usd_balance_dao.get_balance(user_id)
+    usd_balance = usd_balance_dao.get_balance(username)
 
     # Get all asset balances
-    asset_balances = asset_balance_dao.get_all_asset_balances(user_id)
+    asset_balances = asset_balance_dao.get_all_asset_balances(username)
 
     # Calculate totals
     total_usd = usd_balance.current_balance
-    total_asset_value = sum(balance.current_value for balance in asset_balances)
+    total_asset_value = 0
+
+    # Calculate current market value for each asset
+    for balance in asset_balances:
+        current_market_price = get_current_market_price(balance.asset_id)
+        asset_current_value = balance.quantity * current_market_price
+        total_asset_value += asset_current_value
+
     total_portfolio_value = total_usd + total_asset_value
 
     return {
-        "user_id": user_id,
+        "username": username,
         "usd_balance": total_usd,
         "asset_balances": asset_balances,
         "total_asset_value": total_asset_value,
@@ -137,6 +149,19 @@ def calculate_portfolio_value(user_id: str) -> dict:
         "asset_count": len(asset_balances)
     }
 ```
+
+## 🔍 **Validation Strategy**
+
+### **Service Level Validation:**
+- **Asset Existence**: Validate asset_id exists in inventory at order creation
+- **Balance Validation**: Check sufficient USD/asset balance at transaction execution
+- **Business Rules**: Complex validation logic in service layer
+- **Cross-Entity Consistency**: Ensure data consistency across related entities
+
+### **Database Level Validation:**
+- **Non-negative Quantities**: Enforce at database level
+- **Required Fields**: Enforce at database level
+- **Data Types**: Enforce at database level
 
 ## 🏛️ **New Entities to Create**
 
@@ -168,8 +193,7 @@ def calculate_portfolio_value(user_id: str) -> dict:
 ### **3. Enhanced Order DAO**
 - `services/common/src/dao/order/`
   - Update existing `order_dao.py` with GSI support
-  - Add `query_user_orders(username)` method
-  - Add `query_user_asset_orders(username, asset_id)` method
+  - Keep existing method names: `get_orders_by_user()`, `get_orders_by_user_and_asset()`
   - Update `create_order()` to populate GSI fields
 
 ## 🔧 **Enhanced Transaction Manager**
@@ -178,7 +202,6 @@ def calculate_portfolio_value(user_id: str) -> dict:
 - `execute_buy_order()`: Handle buy order execution
 - `execute_sell_order()`: Handle sell order execution
 - `update_asset_balance()`: Update asset balance after transaction
-- `calculate_asset_value()`: Calculate current asset value
 
 ## 📋 **Implementation Phases**
 
@@ -186,10 +209,9 @@ def calculate_portfolio_value(user_id: str) -> dict:
 1. Create new entities (AssetBalance, AssetTransaction)
 2. Create new DAOs (AssetBalanceDAO, AssetTransactionDAO)
 3. Update Order entity and DAO with GSI support
-   - Add GSI fields to Order entity
-   - Implement `query_user_orders()` method
-   - Implement `query_user_asset_orders()` method
-   - Update `create_order()` to populate GSI fields
+   - Change SK from `created_at` to `ORDER`
+   - Update GSI to `UserOrdersIndex (PK: username, SK: ASSET_ID)`
+   - Change `user_id` to `username` for consistency
 4. Enhance TransactionManager with multi-asset support
 5. Update unit tests
 
@@ -209,21 +231,38 @@ def calculate_portfolio_value(user_id: str) -> dict:
 ## 🎯 **Key Benefits**
 
 1. **Multi-Asset Support**: Users can hold multiple cryptocurrencies
-2. **Real-time Portfolio**: Calculate total portfolio value
+2. **Real-time Portfolio**: Calculate total portfolio value with current market prices
 3. **Transaction History**: Complete audit trail for all asset transactions
 4. **Efficient Queries**: GSI for user order history
 5. **Scalable Design**: Easy to add new assets
+6. **Clean Separation**: Market values calculated at API level, not stored in DB
 
-## ❓ **Open Questions**
+## 🔧 **Design Decisions Made**
 
-1. **Asset Price Updates**: How often should we update `current_value`?
-2. **Market Price Integration**: How to get real-time asset prices?
-3. **Order Matching**: Will we implement order matching engine?
-4. **Portfolio Caching**: Should we cache portfolio calculations?
+### **✅ Breaking Changes:**
+- Change Order SK from `created_at` to `ORDER`
+- Update GSI structure to `UserOrdersIndex`
+- Change `user_id` to `username` for consistency
+
+### **✅ Validation Strategy:**
+- Service level: Business logic validation
+- Database level: Basic constraints (non-negative, required fields)
+
+### **✅ Market Value Handling:**
+- Remove `current_value` from asset balance entity
+- Calculate market values at API level using external price service
+- Store only facts in database (quantity, purchase price)
+
+### **✅ Migration Strategy:**
+- Start fresh with new data (no existing data to migrate)
+- No complex migration scripts needed
+
+### **✅ Timestamp Format:**
+- Use ISO format for all timestamps (consistent with existing codebase)
 
 ## 📝 **Next Steps**
 
-1. Review and approve this planning document
+1. ✅ Review and approve this planning document
 2. Start with Phase 1: Common package updates
 3. Create entities and DAOs
 4. Update transaction manager
