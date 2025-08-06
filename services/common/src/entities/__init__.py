@@ -8,6 +8,18 @@ from .user import User, UserCreate, UserLogin, UserResponse, UserRole, DEFAULT_U
 # Import asset entities
 from .inventory import Asset, AssetCreate, AssetResponse, AssetUpdate, AssetListResponse
 
+# Import asset entities (balance and transaction)
+from .asset import (
+    AssetBalance,
+    AssetBalanceCreate,
+    AssetBalanceResponse,
+    AssetTransaction,
+    AssetTransactionCreate,
+    AssetTransactionResponse,
+    AssetTransactionType,
+    AssetTransactionStatus
+)
+
 # Import order entities
 from .order import (
     OrderType,
@@ -39,6 +51,21 @@ __all__ = [
     "AssetResponse",
     "AssetUpdate",
     "AssetListResponse",
+
+    # Asset Balance enums
+    "AssetBalanceStatus",
+    "AssetTransactionType",
+    "AssetTransactionStatus",
+
+    # Asset Balance models
+    "AssetBalance",
+    "AssetBalanceCreate",
+    "AssetBalanceResponse",
+
+    # Asset Transaction models
+    "AssetTransaction",
+    "AssetTransactionCreate",
+    "AssetTransactionResponse",
 
     # Order enums
     "OrderType",
