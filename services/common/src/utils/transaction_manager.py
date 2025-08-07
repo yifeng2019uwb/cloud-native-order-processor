@@ -18,7 +18,7 @@ from ..entities.user import BalanceTransaction, TransactionType, TransactionStat
 from ..entities.order import Order, OrderStatus, OrderType
 from ..entities.asset import AssetTransactionCreate, AssetTransactionType, AssetTransactionStatus
 from ..exceptions import DatabaseOperationException, EntityNotFoundException, LockAcquisitionException, InsufficientBalanceException
-from ..exceptions.shared_exceptions import UserValidationException
+from ..exceptions.shared_exceptions import UserValidationException, AssetBalanceNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +212,10 @@ class TransactionManager:
     async def create_buy_order_with_balance_update(
         self,
         username: str,
-        order_data: Dict[str, Any],
+        asset_id: str,
+        quantity: Decimal,
+        price: Decimal,
+        order_type: OrderType,
         total_cost: Decimal
     ) -> TransactionResult:
         """
@@ -248,8 +251,8 @@ class TransactionManager:
                         f"Insufficient balance for buy order. "
                         f"Current balance: ${balance.current_balance:.2f}, "
                         f"Order cost: ${total_cost:.2f}, "
-                        f"Asset: {order_data.get('asset_id', 'Unknown')}, "
-                        f"Quantity: {order_data.get('quantity', 'Unknown')}, "
+                        f"Asset: {asset_id}, "
+                        f"Quantity: {quantity}, "
                         f"Shortfall: ${shortfall:.2f}. "
                         f"Please deposit additional funds or reduce order quantity."
                     )
@@ -261,12 +264,12 @@ class TransactionManager:
                     Sk="ORDER",
                     order_id=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
                     username=username,  # Use username directly
-                    order_type=OrderType.MARKET_BUY,
-                    asset_id=order_data["asset_id"],
-                    quantity=order_data["quantity"],
-                    price=order_data["price"],
+                    order_type=order_type,
+                    asset_id=asset_id,
+                    quantity=quantity,
+                    price=price,
                     total_amount=total_cost,
-                    status=OrderStatus.PENDING,
+                    status=OrderStatus.COMPLETED,  # Market orders are completed immediately
                     created_at=now,
                     updated_at=now
                 )
@@ -283,7 +286,8 @@ class TransactionManager:
                     amount=-total_cost,  # Negative for payment
                     description=f"Payment for buy order {created_order.order_id}",
                     status=TransactionStatus.COMPLETED,
-                    reference_id=created_order.order_id
+                    reference_id=created_order.order_id,
+                    created_at=now
                 )
 
                 created_transaction = self.balance_dao.create_transaction(transaction)
@@ -292,30 +296,24 @@ class TransactionManager:
                 self.balance_dao._update_balance_from_transaction(created_transaction)
 
                 # Phase 4: Update asset balance
-                asset_quantity = order_data["quantity"]
                 try:
-                    # Get current asset balance or create new one
-                    current_asset_balance = self.asset_balance_dao.get_asset_balance(username, order_data["asset_id"])
-                    new_quantity = current_asset_balance.quantity + asset_quantity
-                except Exception:
-                    # Asset balance doesn't exist, create new one
-                    new_quantity = asset_quantity
-
-                # Upsert asset balance
-                updated_asset_balance = self.asset_balance_dao.upsert_asset_balance(
-                    username, order_data["asset_id"], new_quantity
-                )
+                    asset_quantity = created_order.quantity
+                    updated_asset_balance = self.asset_balance_dao.upsert_asset_balance(
+                        username, created_order.asset_id, asset_quantity
+                    )
+                except Exception as e:
+                    logger.error(f"Error in Phase 4: {str(e)}")
+                    raise
 
                 # Phase 5: Create asset transaction record
                 asset_transaction_create = AssetTransactionCreate(
                     username=username,
-                    asset_id=order_data["asset_id"],
+                    asset_id=created_order.asset_id,
                     transaction_type=AssetTransactionType.BUY,
                     quantity=asset_quantity,
-                    price=order_data["price"],
+                    price=created_order.price,
                     order_id=created_order.order_id
                 )
-
                 created_asset_transaction = self.asset_transaction_dao.create_asset_transaction(asset_transaction_create)
 
                 # Get updated balance
@@ -324,7 +322,7 @@ class TransactionManager:
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
                 logger.info(f"Buy order executed successfully: user={username}, order_id={created_order.order_id}, "
-                           f"asset={order_data['asset_id']}, quantity={asset_quantity}, "
+                           f"asset={created_order.asset_id}, quantity={asset_quantity}, "
                            f"total_cost={total_cost}, lock_duration={lock_duration}s")
 
                 return TransactionResult(
@@ -353,7 +351,10 @@ class TransactionManager:
     async def create_sell_order_with_balance_update(
         self,
         username: str,
-        order_data: Dict[str, Any],
+        asset_id: str,
+        quantity: Decimal,
+        price: Decimal,
+        order_type: OrderType,
         asset_amount: Decimal
     ) -> TransactionResult:
         """
@@ -378,12 +379,12 @@ class TransactionManager:
                     Sk="ORDER",
                     order_id=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
                     username=username,  # Use username directly
-                    order_type=OrderType.MARKET_SELL,
-                    asset_id=order_data["asset_id"],
-                    quantity=order_data["quantity"],
-                    price=order_data["price"],
+                    order_type=order_type,
+                    asset_id=asset_id,
+                    quantity=quantity,
+                    price=price,
                     total_amount=asset_amount,
-                    status=OrderStatus.PENDING,
+                    status=OrderStatus.COMPLETED,  # Market orders are completed immediately
                     created_at=now,
                     updated_at=now
                 )
@@ -408,6 +409,29 @@ class TransactionManager:
                 # Update balance separately
                 self.balance_dao._update_balance_from_transaction(created_transaction)
 
+                # Phase 4: Update asset balance (reduce quantity for sell order)
+                try:
+                    asset_quantity = created_order.quantity
+                    # For sell orders, we need to reduce the asset balance by the quantity being sold
+                    # Use negative quantity to reduce the balance
+                    updated_asset_balance = self.asset_balance_dao.upsert_asset_balance(
+                        username, created_order.asset_id, -asset_quantity
+                    )
+                except Exception as e:
+                    logger.error(f"Error in Phase 4 (asset balance update): {str(e)}")
+                    raise
+
+                # Phase 5: Create asset transaction record
+                asset_transaction_create = AssetTransactionCreate(
+                    username=username,
+                    asset_id=created_order.asset_id,
+                    transaction_type=AssetTransactionType.SELL,
+                    quantity=asset_quantity,
+                    price=created_order.price,
+                    order_id=created_order.order_id
+                )
+                created_asset_transaction = self.asset_transaction_dao.create_asset_transaction(asset_transaction_create)
+
                 # Get updated balance
                 updated_balance = self.balance_dao.get_balance(username)  # Use username directly
 
@@ -422,7 +446,8 @@ class TransactionManager:
                         "order": created_order,
                         "transaction": created_transaction,
                         "balance": updated_balance,
-                        "asset_amount": asset_amount
+                        "asset_amount": asset_amount,
+                        "asset_transaction": created_asset_transaction
                     },
                     lock_duration=lock_duration
                 )

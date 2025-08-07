@@ -27,6 +27,10 @@ class AssetTransactionDAO(BaseDAO):
 
     def create_asset_transaction(self, transaction_create: AssetTransactionCreate) -> AssetTransaction:
         """Create a new asset transaction"""
+        logger.info(f"Creating asset transaction: user={transaction_create.username}, "
+                   f"asset={transaction_create.asset_id}, type={transaction_create.transaction_type.value}, "
+                   f"quantity={transaction_create.quantity}, price={transaction_create.price}")
+
         now = datetime.utcnow().isoformat()
         timestamp_iso = now.replace('+00:00', 'Z')
 
@@ -44,20 +48,23 @@ class AssetTransactionDAO(BaseDAO):
             'created_at': now
         }
 
-        created_item = self._safe_put_item(self.table, transaction_item)
+        self._safe_put_item(self.table, transaction_item)
+        logger.info(f"Asset transaction created: user={transaction_create.username}, "
+                   f"asset={transaction_create.asset_id}, type={transaction_create.transaction_type.value}, "
+                   f"quantity={transaction_create.quantity}")
 
         return AssetTransaction(
-            Pk=created_item['Pk'],
-            Sk=created_item['Sk'],
-            username=created_item['username'],
-            asset_id=created_item['asset_id'],
+            Pk=transaction_item['Pk'],
+            Sk=transaction_item['Sk'],
+            username=transaction_item['username'],
+            asset_id=transaction_item['asset_id'],
             transaction_type=transaction_create.transaction_type,
-            quantity=Decimal(created_item['quantity']),
-            price=Decimal(created_item['price']),
-            total_amount=Decimal(created_item['total_amount']),
-            order_id=created_item.get('order_id'),
-            status=created_item['status'],
-            created_at=datetime.fromisoformat(created_item['created_at'])
+            quantity=Decimal(transaction_item['quantity']),
+            price=Decimal(transaction_item['price']),
+            total_amount=Decimal(transaction_item['total_amount']),
+            order_id=transaction_item.get('order_id'),
+            status=transaction_item['status'],
+            created_at=datetime.fromisoformat(transaction_item['created_at'])
         )
 
     def get_asset_transaction(self, username: str, asset_id: str, timestamp: str) -> AssetTransaction:

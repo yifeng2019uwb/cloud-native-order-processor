@@ -17,6 +17,7 @@ from common.exceptions import (
 
     # Validation (422)
     OrderValidationException,
+    UserValidationException,
 
     # Internal Server (500) - general use by services
     InternalServerException,
@@ -47,6 +48,7 @@ __all__ = [
     "UserNotFoundException",
     "AssetNotFoundException",
     "OrderValidationException",
+    "UserValidationException",
     "InternalServerException",
 
     # Common exceptions (handled internally, NOT mapped)

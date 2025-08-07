@@ -16,13 +16,24 @@ from api_models.asset import GetPortfolioRequest, GetPortfolioResponse, Portfoli
 from api_models.shared.common import ErrorResponse
 
 # Import dependencies
-from controllers.dependencies import get_current_user, get_balance_dao_dependency, get_asset_balance_dao_dependency
-from common.dao.user import BalanceDAO
+from controllers.dependencies import (
+    get_current_user, get_balance_dao_dependency,
+    get_asset_balance_dao_dependency, get_user_dao_dependency,
+    get_asset_dao_dependency
+)
+from common.dao.user import BalanceDAO, UserDAO
 from common.dao.asset import AssetBalanceDAO
+from common.dao.inventory import AssetDAO
+
+# Import business validators
+from validation.business_validators import validate_user_permissions
 
 # Import exceptions
-from common.exceptions import DatabaseOperationException
-from src.exceptions import InternalServerException, UserValidationException
+from common.exceptions import (
+    DatabaseOperationException,
+    InternalServerException,
+    UserValidationException
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["portfolio"])
@@ -59,7 +70,9 @@ async def get_user_portfolio(
     request: Request,
     current_user: dict = Depends(get_current_user),
     balance_dao: BalanceDAO = Depends(get_balance_dao_dependency),
-    asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency)
+    asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency),
+    user_dao: UserDAO = Depends(get_user_dao_dependency),
+    asset_dao: AssetDAO = Depends(get_asset_dao_dependency)
 ) -> GetPortfolioResponse:
     """
     Get user's complete portfolio with calculated market values
@@ -81,6 +94,13 @@ async def get_user_portfolio(
     )
 
     try:
+        # Business validation (Layer 2)
+        validate_user_permissions(
+            username=username,
+            action="view_portfolio",
+            user_dao=user_dao
+        )
+
         # Validate user access (users can only view their own portfolio)
         if current_user["username"] != username:
             logger.warning(f"Unauthorized portfolio access attempt: {current_user['username']} tried to access {username}'s portfolio")
@@ -98,9 +118,9 @@ async def get_user_portfolio(
         total_asset_value = Decimal('0')
 
         for asset_balance in asset_balances:
-            # Get current market price (placeholder for now)
-            # In production, this would come from a real-time price feed
-            current_price = get_current_market_price(asset_balance.asset_id)
+            # Get current market price from real-time service
+            from controllers.dependencies import get_current_market_price
+            current_price = get_current_market_price(asset_balance.asset_id, asset_dao)
 
             # Calculate market value
             market_value = asset_balance.quantity * current_price
@@ -154,28 +174,3 @@ async def get_user_portfolio(
     except Exception as e:
         logger.error(f"Unexpected error during portfolio retrieval: user={username}, error={str(e)}", exc_info=True)
         raise InternalServerException("Service temporarily unavailable")
-
-
-def get_current_market_price(asset_id: str) -> Decimal:
-    """
-    Get current market price for an asset
-
-    TODO: Replace with real-time price feed integration
-    For now, returns placeholder prices for common assets
-    """
-    # Placeholder prices for common assets
-    # In production, this would integrate with a real-time price feed
-    price_map = {
-        "BTC": Decimal("50000.00"),
-        "ETH": Decimal("3000.00"),
-        "ADA": Decimal("0.50"),
-        "DOT": Decimal("7.00"),
-        "LINK": Decimal("15.00"),
-        "LTC": Decimal("150.00"),
-        "XRP": Decimal("0.75"),
-        "BCH": Decimal("300.00"),
-        "XLM": Decimal("0.25"),
-        "EOS": Decimal("3.50")
-    }
-
-    return price_map.get(asset_id.upper(), Decimal("100.00"))  # Default price for unknown assets

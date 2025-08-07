@@ -15,12 +15,21 @@ from api_models.order import GetOrderResponse, OrderData
 from api_models.shared.common import ErrorResponse
 
 # Import dependencies
-from controllers.dependencies import get_current_user, get_order_dao_dependency
+from controllers.dependencies import (
+    get_current_user, get_order_dao_dependency,
+    get_user_dao_dependency
+)
 from common.dao.order.order_dao import OrderDAO
+from common.dao.user import UserDAO
 
 # Import exceptions
-from common.exceptions.shared_exceptions import OrderNotFoundException
-from src.exceptions import InternalServerException
+from common.exceptions import (
+    OrderNotFoundException,
+    InternalServerException
+)
+
+# Import business validators
+from validation.business_validators import validate_order_retrieval_business_rules
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["orders"])
@@ -51,18 +60,27 @@ router = APIRouter(tags=["orders"])
 async def get_order(
     order_id: str,
     current_user: dict = Depends(get_current_user),
-    order_dao: OrderDAO = Depends(get_order_dao_dependency)
+    order_dao: OrderDAO = Depends(get_order_dao_dependency),
+    user_dao: UserDAO = Depends(get_user_dao_dependency)
 ) -> GetOrderResponse:
     """
     Get order by ID with user authorization
     """
     try:
+        # Business validation (Layer 2)
+        validate_order_retrieval_business_rules(
+            order_id=order_id,
+            username=current_user["username"],
+            order_dao=order_dao,
+            user_dao=user_dao
+        )
+
         # Get order from database
         order = order_dao.get_order(order_id)
 
         # Check if order belongs to user
-        if order.user_id != current_user["user_id"]:
-            logger.warning(f"Unauthorized access attempt: user_id={current_user['user_id']}, order_id={order_id}")
+        if order.username != current_user["username"]:
+            logger.warning(f"Unauthorized access attempt: username={current_user['username']}, order_id={order_id}")
             raise OrderNotFoundException(f"Order '{order_id}' not found")
 
         logger.info(f"Order retrieved: user={current_user['username']}, order_id={order_id}")
@@ -73,10 +91,8 @@ async def get_order(
             order_type=order.order_type,
             asset_id=order.asset_id,
             quantity=order.quantity,
-            order_price=order.order_price,
-            total_amount=order.total_amount,
-            created_at=order.created_at,
-            expires_at=order.expires_at
+            price=order.price,
+            created_at=order.created_at
         )
 
         return GetOrderResponse(

@@ -43,8 +43,14 @@ class OrderDAO(BaseDAO):
             DatabaseOperationException: If database operation fails
         """
         try:
-            # Prepare item for DynamoDB
+            # Prepare item for DynamoDB with proper serialization
             item = order.model_dump()
+
+            # Convert datetime objects to ISO strings for DynamoDB
+            if isinstance(item.get('created_at'), datetime):
+                item['created_at'] = item['created_at'].isoformat()
+            if isinstance(item.get('updated_at'), datetime):
+                item['updated_at'] = item['updated_at'].isoformat()
 
             # Ensure timestamps are set
             now = datetime.now(timezone.utc)
@@ -58,9 +64,11 @@ class OrderDAO(BaseDAO):
             item['GSI-SK'] = order.asset_id
 
             # Insert into DynamoDB
+            logger.debug(f"Order item prepared: {item}")
             self.table.put_item(Item=item)
 
-            logger.info(f"Created order {order.order_id} for user {order.username}")
+            logger.info(f"Order created successfully: id={order.order_id}, user={order.username}, "
+                       f"asset={order.asset_id}, type={order.order_type.value}")
             return order
 
         except Exception as e:

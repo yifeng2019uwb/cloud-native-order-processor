@@ -19,20 +19,30 @@ from api_models.shared.common import ErrorResponse
 from common.entities.order.enums import OrderType, OrderStatus
 
 # Import dependencies
-from controllers.dependencies import get_current_user, get_transaction_manager
+from controllers.dependencies import (
+    get_current_user, get_transaction_manager,
+    get_asset_dao_dependency, get_user_dao_dependency,
+    get_balance_dao_dependency, get_asset_balance_dao_dependency
+)
 from common.utils.transaction_manager import TransactionManager
+
+# Import DAOs
+from common.dao.inventory import AssetDAO
+from common.dao.user import UserDAO, BalanceDAO
+from common.dao.asset import AssetBalanceDAO
 
 # Import exceptions
 from common.exceptions import (
     InsufficientBalanceException,
     DatabaseOperationException,
-    LockAcquisitionException
-)
-from src.exceptions import (
+    LockAcquisitionException,
     OrderValidationException,
     InternalServerException,
     UserValidationException
 )
+
+# Import business validators
+from validation.business_validators import validate_order_creation_business_rules
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["orders"])
@@ -73,7 +83,11 @@ async def create_order(
     order_data: OrderCreateRequest,
     request: Request,
     current_user: dict = Depends(get_current_user),
-    transaction_manager: TransactionManager = Depends(get_transaction_manager)
+    transaction_manager: TransactionManager = Depends(get_transaction_manager),
+    asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
+    user_dao: UserDAO = Depends(get_user_dao_dependency),
+    balance_dao: BalanceDAO = Depends(get_balance_dao_dependency),
+    asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency)
 ) -> OrderCreateResponse:
     """
     Create a new order with atomic operations using TransactionManager
@@ -97,30 +111,34 @@ async def create_order(
     )
 
     try:
-        # Calculate total amount for the order
-        total_amount = Decimal('0')
-        if order_data.price:
-            total_amount = order_data.quantity * order_data.price
-        else:
-            # For market orders without price, use a placeholder price
-            # In production, this would come from a real-time price feed
-            placeholder_price = Decimal('50000')  # Placeholder BTC price
-            total_amount = order_data.quantity * placeholder_price
+        # Business validation (Layer 2)
+        validate_order_creation_business_rules(
+            order_type=order_data.order_type,
+            asset_id=order_data.asset_id,
+            quantity=order_data.quantity,
+            order_price=order_data.price,
+            expires_at=None,  # Not implemented for market orders yet
+            username=current_user["username"],
+            asset_dao=asset_dao,
+            user_dao=user_dao,
+            balance_dao=balance_dao,
+            asset_balance_dao=asset_balance_dao
+        )
 
-        # Prepare order data for TransactionManager
-        order_data_dict = {
-            "asset_id": order_data.asset_id,
-            "quantity": order_data.quantity,
-            "price": order_data.price or placeholder_price,
-            "order_type": order_data.order_type
-        }
+        # Calculate total amount for the order using current market price
+        from controllers.dependencies import get_current_market_price
+        current_price = get_current_market_price(order_data.asset_id, asset_dao)
+        total_amount = order_data.quantity * current_price
 
         # Execute order based on type using TransactionManager
         if order_data.order_type in [OrderType.MARKET_BUY, OrderType.LIMIT_BUY]:
             # Buy order - validate USD balance and update asset balance
             result = await transaction_manager.create_buy_order_with_balance_update(
                 username=current_user["username"],
-                order_data=order_data_dict,
+                asset_id=order_data.asset_id,
+                quantity=order_data.quantity,
+                price=current_price,
+                order_type=order_data.order_type,
                 total_cost=total_amount
             )
 
@@ -133,7 +151,10 @@ async def create_order(
             # Sell order - validate asset balance and update USD balance
             result = await transaction_manager.create_sell_order_with_balance_update(
                 username=current_user["username"],
-                order_data=order_data_dict,
+                asset_id=order_data.asset_id,
+                quantity=order_data.quantity,
+                price=current_price,
+                order_type=order_data.order_type,
                 asset_amount=total_amount
             )
 

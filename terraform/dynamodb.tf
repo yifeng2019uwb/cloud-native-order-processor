@@ -42,35 +42,33 @@ resource "aws_dynamodb_table" "users" {
 resource "aws_dynamodb_table" "orders" {
   name           = local.db_names.orders_table
   billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "order_id"
-  range_key      = "user_id"
+  hash_key       = "Pk"
+  range_key      = "Sk"
 
   attribute {
-    name = "order_id"
+    name = "Pk"
     type = "S"
   }
 
   attribute {
-    name = "user_id"
+    name = "Sk"
     type = "S"
   }
 
   attribute {
-    name = "status"
+    name = "GSI-PK"
+    type = "S"
+  }
+
+  attribute {
+    name = "GSI-SK"
     type = "S"
   }
 
   global_secondary_index {
     name            = "UserOrdersIndex"
-    hash_key        = "user_id"
-    range_key       = "order_id"
-    projection_type = "ALL"
-  }
-
-  global_secondary_index {
-    name            = "StatusIndex"
-    hash_key        = "status"
-    range_key       = "order_id"
+    hash_key        = "GSI-PK"
+    range_key       = "GSI-SK"
     projection_type = "ALL"
   }
 

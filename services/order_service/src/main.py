@@ -21,6 +21,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from common.exceptions.shared_exceptions import UserValidationException, OrderValidationException
 
 # Load environment variables from services/.env
 try:
@@ -104,6 +105,22 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail}
+    )
+
+@app.exception_handler(UserValidationException)
+async def user_validation_exception_handler(request: Request, exc: UserValidationException):
+    """Handle user validation exceptions"""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": str(exc)}
+    )
+
+@app.exception_handler(OrderValidationException)
+async def order_validation_exception_handler(request: Request, exc: OrderValidationException):
+    """Handle order validation exceptions"""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": str(exc)}
     )
 
 @app.exception_handler(Exception)

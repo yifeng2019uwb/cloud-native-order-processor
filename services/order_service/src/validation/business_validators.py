@@ -13,11 +13,139 @@ from typing import Optional
 from common.entities.order.enums import OrderType, OrderStatus
 
 # Import custom exceptions
-from exceptions import OrderValidationException, AssetNotFoundException, OrderNotFoundException
+from common.exceptions import OrderValidationException, AssetNotFoundException, OrderNotFoundException
 
-# Import DAOs (to be implemented)
-# from dao.order_dao import OrderDAO
-# from dao.asset_dao import AssetDAO
+# Import DAOs from common package
+from common.dao.inventory import AssetDAO
+from common.dao.order import OrderDAO
+from common.dao.user import UserDAO, BalanceDAO
+from common.dao.asset import AssetBalanceDAO
+
+
+def _validate_username_exists_and_active(username: str, user_dao: UserDAO) -> None:
+    """
+    Private method to validate username exists and is active
+
+    Args:
+        username: Username to validate
+        user_dao: User DAO instance
+
+    Raises:
+        OrderValidationException: If user doesn't exist or is not active
+    """
+    try:
+        user = user_dao.get_user_by_username(username)
+        # User exists, consider them active (no is_active field in current User entity)
+        # TODO: Add is_active field to User entity if needed for account suspension
+    except Exception as e:
+        raise OrderValidationException(f"User '{username}' not found or invalid")
+
+
+def _validate_asset_exists_and_tradeable(asset_id: str, asset_dao: AssetDAO) -> None:
+    """
+    Private method to validate asset exists and is tradeable
+
+    Args:
+        asset_id: Asset ID to validate
+        asset_dao: Asset DAO instance
+
+    Raises:
+        OrderValidationException: If asset doesn't exist or is not tradeable
+    """
+    try:
+        asset = asset_dao.get_asset_by_id(asset_id)
+        if not asset.is_active:
+            raise OrderValidationException(f"Asset {asset_id} is not tradeable")
+    except AssetNotFoundException:
+        raise OrderValidationException(f"Asset {asset_id} not found")
+
+
+def _validate_asset_exists(asset_id: str, asset_dao: AssetDAO) -> None:
+        """
+        Private method to validate asset exists (without tradeable check)
+
+        Args:
+            asset_id: Asset ID to validate
+            asset_dao: Asset DAO instance
+
+        Raises:
+            OrderValidationException: If asset doesn't exist
+        """
+        try:
+            asset_dao.get_asset_by_id(asset_id)
+        except AssetNotFoundException:
+            raise OrderValidationException(f"Asset {asset_id} not found")
+
+
+def _validate_user_balance_for_buy_order(
+    username: str,
+    quantity: Decimal,
+    order_price: Optional[Decimal],
+    balance_dao: BalanceDAO,
+    asset_dao: AssetDAO,
+    asset_id: str
+) -> None:
+    """
+    Private method to validate user has sufficient balance for buy orders
+
+    Args:
+        username: Username to check balance for
+        quantity: Order quantity
+        order_price: Order price (None for market orders)
+        balance_dao: Balance DAO instance
+        asset_id: Asset ID for market price lookup
+
+    Raises:
+        OrderValidationException: If insufficient balance
+    """
+    try:
+        user_balance = balance_dao.get_balance(username)
+
+                # For market orders, we need to get real market price
+        if order_price is None:
+            # Import here to avoid circular imports
+            from controllers.dependencies import get_current_market_price
+
+            # Get current market price using DAO
+            try:
+                market_price = get_current_market_price(asset_id, asset_dao)
+                required_amount = quantity * market_price
+            except Exception as e:
+                # No fallback - if we can't get market price, we can't validate the order
+                raise OrderValidationException(f"Unable to validate market order for {asset_id}: {str(e)}")
+        else:
+            required_amount = quantity * order_price
+
+        if user_balance.current_balance < required_amount:
+            raise OrderValidationException(f"Insufficient balance for this order. Required: ${required_amount}, Available: ${user_balance.current_balance}")
+    except Exception as e:
+        raise OrderValidationException(f"Unable to verify user balance: {str(e)}")
+
+
+def _validate_user_asset_quantity_for_sell_order(
+    username: str,
+    asset_id: str,
+    quantity: Decimal,
+    asset_balance_dao: AssetBalanceDAO
+) -> None:
+    """
+    Private method to validate user has sufficient asset quantity for sell orders
+
+    Args:
+        username: Username to check asset balance for
+        asset_id: Asset ID to check
+        quantity: Order quantity
+        asset_balance_dao: Asset balance DAO instance
+
+    Raises:
+        OrderValidationException: If insufficient asset quantity
+    """
+    try:
+        asset_balance = asset_balance_dao.get_asset_balance(username, asset_id)
+        if asset_balance.quantity < quantity:
+            raise OrderValidationException(f"Insufficient {asset_id} quantity for this sell order. Required: {quantity}, Available: {asset_balance.quantity}")
+    except Exception as e:
+        raise OrderValidationException(f"Insufficient {asset_id} quantity for this sell order")
 
 
 def validate_order_creation_business_rules(
@@ -26,13 +154,17 @@ def validate_order_creation_business_rules(
     quantity: Decimal,
     order_price: Optional[Decimal],
     expires_at: Optional[datetime],
-    # order_dao: OrderDAO,
-    # asset_dao: AssetDAO,
+    username: str,
+    asset_dao: AssetDAO,
+    user_dao: UserDAO,
+    balance_dao: BalanceDAO,
+    asset_balance_dao: AssetBalanceDAO,
 ) -> None:
     """
     Layer 2: Business validation for order creation
 
     Validates:
+    - Username exists and is active
     - Asset exists and is tradeable
     - User has sufficient balance (for buy orders)
     - User has sufficient quantity (for sell orders)
@@ -40,13 +172,11 @@ def validate_order_creation_business_rules(
     - Market conditions
     """
 
-    # TODO: Uncomment when DAOs are implemented
-    # # Check if asset exists and is tradeable
-    # asset = asset_dao.get_asset(asset_id)
-    # if not asset:
-    #     raise AssetNotFoundException(f"Asset {asset_id} not found")
-    # if not asset.is_tradeable:
-    #     raise OrderValidationException(f"Asset {asset_id} is not tradeable")
+    # Check if username exists and is active
+    _validate_username_exists_and_active(username, user_dao)
+
+    # Check if asset exists and is tradeable
+    _validate_asset_exists_and_tradeable(asset_id, asset_dao)
 
     # Business rule: order_price required for limit orders
     if order_type in [OrderType.LIMIT_BUY, OrderType.LIMIT_SELL]:
@@ -54,9 +184,7 @@ def validate_order_creation_business_rules(
             raise OrderValidationException(f"order_price is required for {order_type.value} orders")
         if expires_at is None:
             raise OrderValidationException("expires_at is required for limit orders")
-    elif order_type in [OrderType.MARKET_BUY, OrderType.MARKET_SELL]:
-        if order_price is not None:
-            raise OrderValidationException(f"order_price should not be specified for {order_type.value} orders")
+    # For market orders, price is ignored and will be set to current market price
 
     # Business rule: Check minimum order size
     if quantity < Decimal("0.001"):
@@ -66,124 +194,130 @@ def validate_order_creation_business_rules(
     if quantity > Decimal("1000"):
         raise OrderValidationException("Order quantity exceeds maximum threshold (1000)")
 
-    # TODO: Uncomment when user balance/portfolio is implemented
-    # # Business rule: Check user balance for buy orders
-    # if order_type in [OrderType.MARKET_BUY, OrderType.LIMIT_BUY]:
-    #     user_balance = user_dao.get_balance(user_id)
-    #     required_amount = quantity * (order_price or current_market_price)
-    #     if user_balance < required_amount:
-    #         raise OrderValidationException("Insufficient balance for this order")
+    # Business rule: Check user balance for buy orders
+    if order_type in [OrderType.MARKET_BUY, OrderType.LIMIT_BUY]:
+        _validate_user_balance_for_buy_order(username, quantity, order_price, balance_dao, asset_dao, asset_id)
 
-    # TODO: Uncomment when user portfolio is implemented
-    # # Business rule: Check user portfolio for sell orders
-    # if order_type in [OrderType.MARKET_SELL, OrderType.LIMIT_SELL]:
-    #     user_quantity = user_dao.get_asset_quantity(user_id, asset_id)
-    #     if user_quantity < quantity:
-    #         raise OrderValidationException("Insufficient quantity for this sell order")
+    # Business rule: Check user portfolio for sell orders
+    if order_type in [OrderType.MARKET_SELL, OrderType.LIMIT_SELL]:
+        _validate_user_asset_quantity_for_sell_order(username, asset_id, quantity, asset_balance_dao)
 
 
 def validate_order_cancellation_business_rules(
     order_id: str,
-    user_id: str,
-    # order_dao: OrderDAO,
+    username: str,
+    order_dao: OrderDAO,
+    user_dao: UserDAO,
 ) -> None:
     """
     Layer 2: Business validation for order cancellation
 
     Validates:
+    - Username exists and is active
     - Order exists and belongs to user
     - Order is in cancellable state
     - User has permission to cancel
     """
 
-    # TODO: Uncomment when DAO is implemented
-    # # Check if order exists and belongs to user
-    # order = order_dao.get_order(order_id)
-    # if not order:
-    #     raise OrderNotFoundException(f"Order {order_id} not found")
-    # if order.user_id != user_id:
-    #     raise OrderValidationException("You can only cancel your own orders")
+    # Check if username exists and is active
+    _validate_username_exists_and_active(username, user_dao)
 
-    # Business rule: Only limit orders can be cancelled
-    # if order.order_type in [OrderType.MARKET_BUY, OrderType.MARKET_SELL]:
-    #     raise OrderValidationException("Market orders cannot be cancelled")
+    # Check if order exists and belongs to user
+    try:
+        order = order_dao.get_order(order_id)
+        if order.username != username:
+            raise OrderValidationException("You can only cancel your own orders")
 
-    # Business rule: Only pending orders can be cancelled
-    # if order.status not in [OrderStatus.PENDING, OrderStatus.QUEUED]:
-    #     raise OrderValidationException(f"Order in {order.status.value} state cannot be cancelled")
+        # Business rule: Only limit orders can be cancelled
+        if order.order_type in [OrderType.MARKET_BUY, OrderType.MARKET_SELL]:
+            raise OrderValidationException("Market orders cannot be cancelled")
+
+        # Business rule: Only pending orders can be cancelled
+        if order.status not in [OrderStatus.PENDING, OrderStatus.QUEUED]:
+            raise OrderValidationException(f"Order in {order.status.value} state cannot be cancelled")
+
+    except OrderNotFoundException:
+        raise OrderValidationException(f"Order {order_id} not found")
 
 
 def validate_order_retrieval_business_rules(
     order_id: str,
-    user_id: str,
-    # order_dao: OrderDAO,
+    username: str,
+    order_dao: OrderDAO,
+    user_dao: UserDAO,
 ) -> None:
     """
     Layer 2: Business validation for order retrieval
 
     Validates:
+    - Username exists and is active
     - Order exists and belongs to user
     - User has permission to view
     """
 
-    # TODO: Uncomment when DAO is implemented
-    # # Check if order exists and belongs to user
-    # order = order_dao.get_order(order_id)
-    # if not order:
-    #     raise OrderNotFoundException(f"Order {order_id} not found")
-    # if order.user_id != user_id:
-    #     raise OrderValidationException("You can only view your own orders")
+    # Check if username exists and is active
+    _validate_username_exists_and_active(username, user_dao)
+
+    # Check if order exists and belongs to user
+    try:
+        order = order_dao.get_order(order_id)
+        if order.username != username:
+            raise OrderValidationException("You can only view your own orders")
+    except OrderNotFoundException:
+        raise OrderValidationException(f"Order {order_id} not found")
 
 
 def validate_order_listing_business_rules(
-    user_id: str,
+    username: str,
     status: Optional[OrderStatus],
     asset_id: Optional[str],
-    # order_dao: OrderDAO,
-    # asset_dao: AssetDAO,
+    asset_dao: AssetDAO,
+    user_dao: UserDAO,
 ) -> None:
     """
     Layer 2: Business validation for order listing
 
     Validates:
+    - Username exists and is active
     - User has permission to list orders
     - Asset exists (if filtering by asset)
     - Status is valid (if filtering by status)
     """
 
-    # TODO: Uncomment when DAO is implemented
-    # # Check if asset exists (if filtering by asset)
-    # if asset_id:
-    #     asset = asset_dao.get_asset(asset_id)
-    #     if not asset:
-    #         raise AssetNotFoundException(f"Asset {asset_id} not found")
+    # Check if username exists and is active
+    _validate_username_exists_and_active(username, user_dao)
+
+    # Check if asset exists (if filtering by asset)
+    if asset_id:
+        _validate_asset_exists(asset_id, asset_dao)
 
 
 def validate_order_history_business_rules(
     asset_id: str,
-    user_id: str,
-    # asset_dao: AssetDAO,
+    username: str,
+    asset_dao: AssetDAO,
+    user_dao: UserDAO,
 ) -> None:
     """
     Layer 2: Business validation for order history
 
     Validates:
+    - Username exists and is active
     - Asset exists
     - User has permission to view history
     """
 
-    # TODO: Uncomment when DAO is implemented
-    # # Check if asset exists
-    # asset = asset_dao.get_asset(asset_id)
-    # if not asset:
-    #     raise AssetNotFoundException(f"Asset {asset_id} not found")
+    # Check if username exists and is active
+    _validate_username_exists_and_active(username, user_dao)
+
+    # Check if asset exists
+    _validate_asset_exists(asset_id, asset_dao)
 
 
 def validate_market_conditions(
     asset_id: str,
     order_type: OrderType,
     quantity: Decimal,
-    # market_service: MarketService,
 ) -> None:
     """
     Layer 2: Market condition validation
@@ -194,24 +328,22 @@ def validate_market_conditions(
     - Price impact is acceptable
     """
 
-    # TODO: Implement when market service is available
-    # # Check if market is open
-    # if not market_service.is_market_open(asset_id):
-    #     raise OrderValidationException(f"Market for {asset_id} is currently closed")
+    # Basic market condition checks (placeholder for future market service integration)
 
-    # # Check liquidity for large orders
-    # if quantity > Decimal("100"):
-    #     available_liquidity = market_service.get_available_liquidity(asset_id)
-    #     if quantity > available_liquidity * Decimal("0.1"):  # 10% of available liquidity
-    #         raise OrderValidationException("Order size too large for current market liquidity")
+    # Check if market is open (simplified - always assume open for now)
+    # In a real implementation, this would check market hours, holidays, etc.
 
-    pass
+    # Check liquidity for large orders (simplified threshold)
+    if quantity > Decimal("100"):
+        # For now, just warn about large orders
+        # In a real implementation, this would check actual market liquidity
+        pass
 
 
 def validate_user_permissions(
-    user_id: str,
+    username: str,
     action: str,
-    # user_service: UserService,
+    user_dao: UserDAO,
 ) -> None:
     """
     Layer 2: User permission validation
@@ -222,14 +354,10 @@ def validate_user_permissions(
     - User is not rate limited
     """
 
-    # TODO: Implement when user service is available
-    # # Check if user account is active
-    # user = user_service.get_user(user_id)
-    # if not user.is_active:
-    #     raise OrderValidationException("User account is not active")
+    # Check if user account is active
+    _validate_username_exists_and_active(username, user_dao)
 
-    # # Check if user is rate limited
-    # if user_service.is_rate_limited(user_id, action):
-    #     raise OrderValidationException("Rate limit exceeded for this action")
-
+    # Basic rate limiting check (simplified)
+    # In a real implementation, this would check against a rate limiting service
+    # For now, we'll assume no rate limiting issues
     pass

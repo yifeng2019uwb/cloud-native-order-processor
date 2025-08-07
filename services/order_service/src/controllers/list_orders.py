@@ -18,11 +18,19 @@ from api_models.shared.common import ErrorResponse
 from common.entities.order.enums import OrderType
 
 # Import dependencies
-from controllers.dependencies import get_current_user, get_order_dao_dependency
+from controllers.dependencies import (
+    get_current_user, get_order_dao_dependency,
+    get_asset_dao_dependency, get_user_dao_dependency
+)
 from common.dao.order.order_dao import OrderDAO
+from common.dao.inventory import AssetDAO
+from common.dao.user import UserDAO
 
 # Import exceptions
-from src.exceptions import InternalServerException
+from common.exceptions import InternalServerException
+
+# Import business validators
+from validation.business_validators import validate_order_listing_business_rules
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["orders"])
@@ -52,14 +60,25 @@ async def list_orders(
     limit: int = Query(50, ge=1, le=100, description="Maximum number of orders to return"),
     offset: int = Query(0, ge=0, description="Number of orders to skip"),
     current_user: dict = Depends(get_current_user),
-    order_dao: OrderDAO = Depends(get_order_dao_dependency)
+    order_dao: OrderDAO = Depends(get_order_dao_dependency),
+    asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
+    user_dao: UserDAO = Depends(get_user_dao_dependency)
 ) -> OrderListResponse:
     """
     List user orders with optional filters and pagination
     """
     try:
+        # Business validation (Layer 2)
+        validate_order_listing_business_rules(
+            username=current_user["username"],
+            status=None,  # Not implemented yet
+            asset_id=asset_id,
+            asset_dao=asset_dao,
+            user_dao=user_dao
+        )
+
         # Get all orders for user
-        orders = order_dao.get_orders_by_user(current_user["user_id"])
+        orders = order_dao.get_orders_by_user(current_user["username"])  # Use username instead of user_id
 
         # Apply filters
         filtered_orders = []
@@ -87,8 +106,7 @@ async def list_orders(
                 order_type=order.order_type,
                 asset_id=order.asset_id,
                 quantity=order.quantity,
-                order_price=order.order_price,
-                total_amount=order.total_amount,
+                price=order.price,
                 created_at=order.created_at
             )
             order_summaries.append(order_summary)

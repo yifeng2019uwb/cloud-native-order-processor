@@ -56,6 +56,7 @@ class BalanceDAO(BaseDAO):
     def update_balance(self, user_id: str, current_balance: Decimal) -> Balance:
         """Update balance for a user."""
         try:
+            logger.info(f"Updating balance: user={user_id}, new_balance={current_balance}")
             updated_at = datetime.utcnow()
 
             response = self.table.update_item(
@@ -70,6 +71,7 @@ class BalanceDAO(BaseDAO):
                 },
                 ReturnValues="ALL_NEW"
             )
+            logger.info(f"Balance updated successfully: user={user_id}, new_balance={current_balance}")
 
             item = response["Attributes"]
             return Balance(
@@ -119,6 +121,10 @@ class BalanceDAO(BaseDAO):
     def create_transaction(self, transaction: BalanceTransaction) -> BalanceTransaction:
         """Create a new balance transaction."""
         try:
+            logger.info(f"Creating balance transaction: user={transaction.username}, "
+                       f"type={transaction.transaction_type.value}, amount={transaction.amount}, "
+                       f"description={transaction.description}")
+
             # Create transaction record
             item = {
                 "Pk": f"TRANS#{transaction.username}",
@@ -134,7 +140,10 @@ class BalanceDAO(BaseDAO):
                 "entity_type": "balance_transaction"
             }
 
+            logger.debug(f"Transaction item prepared: {item}")
             self.table.put_item(Item=item)
+            logger.info(f"Balance transaction created successfully: user={transaction.username}, "
+                       f"amount={transaction.amount}, reference_id={transaction.reference_id}")
 
             return transaction
 
@@ -150,12 +159,20 @@ class BalanceDAO(BaseDAO):
         All transactions in this simplified system are immediately completed.
         """
         try:
+            logger.info(f"Updating balance from transaction: user={transaction.username}, "
+                       f"transaction_amount={transaction.amount}, type={transaction.transaction_type.value}")
+
             # Get current balance and update it
             current_balance = self.get_balance(transaction.username)
             # Calculate new balance value
             new_balance = current_balance.current_balance + transaction.amount
+            logger.debug(f"Balance calculation: current={current_balance.current_balance}, "
+                        f"transaction={transaction.amount}, new={new_balance}")
+
             # Update existing balance
             self.update_balance(transaction.username, new_balance)
+            logger.info(f"Balance updated from transaction: user={transaction.username}, "
+                       f"new_balance={new_balance}")
 
         except Exception as e:
             raise DatabaseOperationException(f"Database operation failed while updating balance from transaction for user '{transaction.username}': {str(e)}")

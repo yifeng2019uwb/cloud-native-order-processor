@@ -230,7 +230,10 @@ class TestTransactionManager:
 
             result = await transaction_manager.create_buy_order_with_balance_update(
                 username="testuser123",
-                order_data=order_data,
+                asset_id="BTC",
+                quantity=Decimal("1.0"),
+                price=Decimal("50000.00"),
+                order_type=OrderType.MARKET_BUY,
                 total_cost=Decimal("50000.00")
             )
 
@@ -263,7 +266,10 @@ class TestTransactionManager:
             with pytest.raises(InsufficientBalanceException):
                 await transaction_manager.create_buy_order_with_balance_update(
                     username="testuser123",
-                    order_data=order_data,
+                    asset_id="BTC",
+                    quantity=Decimal("1.0"),
+                    price=Decimal("50000.00"),
+                    order_type=OrderType.MARKET_BUY,
                     total_cost=Decimal("100000.00")  # More than available balance
                 )
 
@@ -296,7 +302,10 @@ class TestTransactionManager:
             with pytest.raises(DatabaseOperationException):
                 await transaction_manager.create_buy_order_with_balance_update(
                     username="testuser123",
-                    order_data=order_data,
+                    asset_id="BTC",
+                    quantity=Decimal("1.0"),
+                    price=Decimal("50000.00"),
+                    order_type=OrderType.MARKET_BUY,
                     total_cost=Decimal("50000.00")
                 )
 
@@ -326,7 +335,10 @@ class TestTransactionManager:
 
             result = await transaction_manager.create_sell_order_with_balance_update(
                 username="testuser123",
-                order_data=order_data,
+                asset_id="BTC",
+                quantity=Decimal("1.0"),
+                price=Decimal("50000.00"),
+                order_type=OrderType.MARKET_SELL,
                 asset_amount=Decimal("50000.00")  # USD amount from sell
             )
 
@@ -358,6 +370,9 @@ class TestTransactionManager:
             with pytest.raises(DatabaseOperationException):
                 await transaction_manager.create_sell_order_with_balance_update(
                     username="testuser123",
-                    order_data=order_data,
+                    asset_id="BTC",
+                    quantity=Decimal("1.0"),
+                    price=Decimal("50000.00"),
+                    order_type=OrderType.MARKET_SELL,
                     asset_amount=Decimal("50000.00")  # USD amount from sell
                 )

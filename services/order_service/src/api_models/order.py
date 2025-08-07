@@ -17,11 +17,12 @@ from common.entities.order.enums import OrderType, OrderStatus
 # Import centralized field validation functions
 from validation.field_validators import (
     validate_asset_id, validate_quantity, validate_price,
-    validate_order_id
+    validate_order_id, validate_order_type, validate_order_status,
+    validate_limit, validate_offset
 )
 
 # Import custom exceptions
-from exceptions import OrderValidationException
+from common.exceptions import OrderValidationException
 
 
 # ============================================================================
@@ -86,6 +87,13 @@ class OrderCreateRequest(BaseModel):
         """Layer 1: Basic format validation for price"""
         if v is not None:
             return validate_price(v)
+        return v
+
+    @field_validator('order_type')
+    @classmethod
+    def validate_order_type_format(cls, v: OrderType) -> OrderType:
+        """Layer 1: Basic format validation for order_type"""
+        # Pydantic already validates against enum, but we can add custom logic if needed
         return v
 
 
@@ -165,6 +173,25 @@ class OrderFilterRequest(BaseModel):
             return validate_asset_id(v)
         return v
 
+    @field_validator('order_type')
+    @classmethod
+    def validate_order_type_format(cls, v: Optional[OrderType]) -> Optional[OrderType]:
+        """Layer 1: Basic format validation for order_type"""
+        # Pydantic already validates against enum
+        return v
+
+    @field_validator('limit')
+    @classmethod
+    def validate_limit_format(cls, v: int) -> int:
+        """Layer 1: Basic format validation for limit"""
+        return validate_limit(v)
+
+    @field_validator('offset')
+    @classmethod
+    def validate_offset_format(cls, v: int) -> int:
+        """Layer 1: Basic format validation for offset"""
+        return validate_offset(v)
+
 
 class GetOrderRequest(BaseModel):
     """
@@ -241,6 +268,25 @@ class OrderListRequest(BaseModel):
             return validate_asset_id(v)
         return v
 
+    @field_validator('status')
+    @classmethod
+    def validate_status_format(cls, v: Optional[OrderStatus]) -> Optional[OrderStatus]:
+        """Layer 1: Basic format validation for status"""
+        # Pydantic already validates against enum
+        return v
+
+    @field_validator('limit')
+    @classmethod
+    def validate_limit_format(cls, v: int) -> int:
+        """Layer 1: Basic format validation for limit"""
+        return validate_limit(v)
+
+    @field_validator('offset')
+    @classmethod
+    def validate_offset_format(cls, v: int) -> int:
+        """Layer 1: Basic format validation for offset"""
+        return validate_offset(v)
+
 
 class OrderHistoryRequest(BaseModel):
     """
@@ -282,6 +328,18 @@ class OrderHistoryRequest(BaseModel):
     def validate_asset_id_format(cls, v: str) -> str:
         """Layer 1: Basic format validation for asset_id"""
         return validate_asset_id(v)
+
+    @field_validator('limit')
+    @classmethod
+    def validate_limit_format(cls, v: int) -> int:
+        """Layer 1: Basic format validation for limit"""
+        return validate_limit(v)
+
+    @field_validator('offset')
+    @classmethod
+    def validate_offset_format(cls, v: int) -> int:
+        """Layer 1: Basic format validation for offset"""
+        return validate_offset(v)
 
 
 # ============================================================================

@@ -20,12 +20,23 @@ from api_models.asset import (
 from api_models.shared.common import ErrorResponse
 
 # Import dependencies
-from controllers.dependencies import get_current_user, get_asset_balance_dao_dependency
+from controllers.dependencies import (
+    get_current_user, get_asset_balance_dao_dependency,
+    get_user_dao_dependency
+)
 from common.dao.asset import AssetBalanceDAO
+from common.dao.user import UserDAO
+
+# Import business validators
+from validation.business_validators import validate_user_permissions
 
 # Import exceptions
-from common.exceptions import DatabaseOperationException, EntityNotFoundException
-from src.exceptions import InternalServerException, AssetNotFoundException
+from common.exceptions import (
+    DatabaseOperationException,
+    EntityNotFoundException,
+    InternalServerException,
+    AssetNotFoundException
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["asset-balances"])
@@ -56,7 +67,8 @@ router = APIRouter(tags=["asset-balances"])
 async def get_user_asset_balances(
     request: Request,
     current_user: dict = Depends(get_current_user),
-    asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency)
+    asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency),
+    user_dao: UserDAO = Depends(get_user_dao_dependency)
 ) -> GetAssetBalancesResponse:
     """
     Get all asset balances for the authenticated user
@@ -72,6 +84,13 @@ async def get_user_asset_balances(
     )
 
     try:
+        # Business validation (Layer 2)
+        validate_user_permissions(
+            username=current_user["username"],
+            action="view_asset_balances",
+            user_dao=user_dao
+        )
+
         # Get all asset balances for user
         asset_balances = asset_balance_dao.get_all_asset_balances(current_user["username"])
 
@@ -134,7 +153,8 @@ async def get_user_asset_balance(
     asset_id: str,
     request: Request,
     current_user: dict = Depends(get_current_user),
-    asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency)
+    asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency),
+    user_dao: UserDAO = Depends(get_user_dao_dependency)
 ) -> GetAssetBalanceResponse:
     """
     Get specific asset balance for the authenticated user
@@ -151,6 +171,13 @@ async def get_user_asset_balance(
     )
 
     try:
+        # Business validation (Layer 2)
+        validate_user_permissions(
+            username=current_user["username"],
+            action="view_asset_balance",
+            user_dao=user_dao
+        )
+
         # Get specific asset balance for user
         asset_balance = asset_balance_dao.get_asset_balance(current_user["username"], asset_id)
 

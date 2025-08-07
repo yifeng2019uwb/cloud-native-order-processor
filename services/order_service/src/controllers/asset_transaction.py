@@ -20,12 +20,25 @@ from api_models.asset import (
 from api_models.shared.common import ErrorResponse
 
 # Import dependencies
-from controllers.dependencies import get_current_user, get_asset_transaction_dao_dependency
+from controllers.dependencies import (
+    get_current_user, get_asset_transaction_dao_dependency,
+    get_asset_dao_dependency, get_user_dao_dependency
+)
 from common.dao.asset import AssetTransactionDAO
+from common.dao.inventory import AssetDAO
+from common.dao.user import UserDAO
+
+# Import business validators
+from validation.business_validators import validate_order_history_business_rules
 
 # Import exceptions
-from common.exceptions import DatabaseOperationException, EntityNotFoundException
-from src.exceptions import InternalServerException, AssetNotFoundException, UserValidationException
+from common.exceptions import (
+    DatabaseOperationException,
+    EntityNotFoundException,
+    InternalServerException,
+    AssetNotFoundException,
+    UserValidationException
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["asset-transactions"])
@@ -63,7 +76,9 @@ async def get_asset_transactions(
     offset: int = 0,
     request: Request = None,
     current_user: dict = Depends(get_current_user),
-    asset_transaction_dao: AssetTransactionDAO = Depends(get_asset_transaction_dao_dependency)
+    asset_transaction_dao: AssetTransactionDAO = Depends(get_asset_transaction_dao_dependency),
+    asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
+    user_dao: UserDAO = Depends(get_user_dao_dependency)
 ) -> GetAssetTransactionsResponse:
     """
     Get asset transaction history for the authenticated user
@@ -82,6 +97,14 @@ async def get_asset_transactions(
     )
 
     try:
+        # Business validation (Layer 2)
+        validate_order_history_business_rules(
+            asset_id=asset_id,
+            username=current_user["username"],
+            asset_dao=asset_dao,
+            user_dao=user_dao
+        )
+
         # Get asset transactions for user
         asset_transactions = asset_transaction_dao.get_user_asset_transactions(
             current_user["username"],
@@ -174,7 +197,9 @@ async def get_user_asset_transactions(
     offset: int = 0,
     request: Request = None,
     current_user: dict = Depends(get_current_user),
-    asset_transaction_dao: AssetTransactionDAO = Depends(get_asset_transaction_dao_dependency)
+    asset_transaction_dao: AssetTransactionDAO = Depends(get_asset_transaction_dao_dependency),
+    asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
+    user_dao: UserDAO = Depends(get_user_dao_dependency)
 ) -> GetAssetTransactionsResponse:
     """
     Get specific user's asset transaction history (users can only view their own transactions)
@@ -194,6 +219,14 @@ async def get_user_asset_transactions(
     )
 
     try:
+        # Business validation (Layer 2)
+        validate_order_history_business_rules(
+            asset_id=asset_id,
+            username=username,  # Use the requested username for validation
+            asset_dao=asset_dao,
+            user_dao=user_dao
+        )
+
         # Validate user access (users can only view their own transactions)
         if current_user["username"] != username:
             logger.warning(f"Unauthorized transaction access attempt: {current_user['username']} tried to access {username}'s transactions")

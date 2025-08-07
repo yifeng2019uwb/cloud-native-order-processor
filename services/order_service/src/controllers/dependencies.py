@@ -21,6 +21,7 @@ from common.dao.user import UserDAO, BalanceDAO
 from common.dao.inventory import AssetDAO
 from common.dao.asset import AssetBalanceDAO, AssetTransactionDAO
 from common.utils.transaction_manager import TransactionManager
+from decimal import Decimal
 
 # Import JWT utilities
 from common.security import TokenManager
@@ -87,11 +88,7 @@ async def get_current_user(
     """
     Get current user from JWT token
 
-    This is a simplified version - in production, you'd want to:
-    - Validate token signature
-    - Check token expiration
-    - Verify user exists in database
-    - Return proper user entity
+    This uses the common package's TokenManager for verification
     """
     if not credentials:
         raise HTTPException(
@@ -100,17 +97,16 @@ async def get_current_user(
         )
 
     try:
-        # Verify and decode JWT token
-        token_data = token_manager.verify_access_token(credentials.credentials)
+        # Verify and decode JWT token - returns username as string
+        username = token_manager.verify_access_token(credentials.credentials)
 
-        # Extract user information from token
+        # Create user info with username as primary identifier
         user_info = {
-            "user_id": token_data.get("sub"),  # Subject (user ID)
-            "username": token_data.get("username"),
-            "role": token_data.get("role", "customer")
+            "username": username,
+            "role": "customer"  # Default role for now
         }
 
-        logger.info(f"User authenticated: {user_info['username']}")
+        logger.info(f"User authenticated: {username}")
         return user_info
 
     except Exception as e:
@@ -119,3 +115,18 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials"
         )
+
+
+def get_current_market_price(asset_id: str, asset_dao: AssetDAO) -> Decimal:
+    """
+    Get current market price for an asset using AssetDAO
+    
+    Args:
+        asset_id: Asset ID (e.g., 'BTC', 'ETH', 'XRP')
+        asset_dao: Asset DAO instance
+        
+    Returns:
+        Current market price as Decimal
+    """
+    asset = asset_dao.get_asset_by_id(asset_id)
+    return Decimal(str(asset.price_usd))
