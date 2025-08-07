@@ -14,10 +14,13 @@ from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 # Import common package dependencies
-from common.database import get_order_dao
+from common.database import get_order_dao, get_balance_dao, get_asset_dao, get_user_dao
+from common.database.dynamodb_connection import dynamodb_manager
 from common.dao.order.order_dao import OrderDAO
-
-# Order service removed - business logic now in controllers
+from common.dao.user import UserDAO, BalanceDAO
+from common.dao.inventory import AssetDAO
+from common.dao.asset import AssetBalanceDAO, AssetTransactionDAO
+from common.utils.transaction_manager import TransactionManager
 
 # Import JWT utilities
 from common.security import TokenManager
@@ -36,7 +39,46 @@ def get_order_dao_dependency() -> OrderDAO:
     return get_order_dao()
 
 
-# Order service removed - business logic now in controllers
+def get_user_dao_dependency() -> UserDAO:
+    """Get UserDAO instance for user operations"""
+    return get_user_dao()
+
+
+def get_balance_dao_dependency() -> BalanceDAO:
+    """Get BalanceDAO instance for USD balance operations"""
+    return get_balance_dao()
+
+
+def get_asset_dao_dependency() -> AssetDAO:
+    """Get AssetDAO instance for asset validation"""
+    return get_asset_dao()
+
+
+def get_asset_balance_dao_dependency() -> AssetBalanceDAO:
+    """Get AssetBalanceDAO instance for asset balance operations"""
+    return AssetBalanceDAO(dynamodb_manager.get_connection())
+
+
+def get_asset_transaction_dao_dependency() -> AssetTransactionDAO:
+    """Get AssetTransactionDAO instance for asset transaction operations"""
+    return AssetTransactionDAO(dynamodb_manager.get_connection())
+
+
+def get_transaction_manager() -> TransactionManager:
+    """
+    Get TransactionManager instance with all required DAOs for atomic operations
+
+    Returns:
+        TransactionManager: Configured with all required DAOs for order and balance operations
+    """
+    return TransactionManager(
+        user_dao=get_user_dao_dependency(),
+        balance_dao=get_balance_dao_dependency(),
+        order_dao=get_order_dao_dependency(),
+        asset_dao=get_asset_dao_dependency(),
+        asset_balance_dao=get_asset_balance_dao_dependency(),
+        asset_transaction_dao=get_asset_transaction_dao_dependency()
+    )
 
 
 async def get_current_user(
@@ -77,13 +119,3 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials"
         )
-
-
-def get_transaction_manager():
-    """
-    Get transaction manager for order operations
-
-    TODO: Implement transaction manager for atomic operations
-    For now, return None to indicate no transaction management
-    """
-    return None

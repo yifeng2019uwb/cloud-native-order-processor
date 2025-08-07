@@ -130,15 +130,24 @@ try:
     from controllers.create_order import router as create_order_router
     from controllers.get_order import router as get_order_router
     from controllers.list_orders import router as list_orders_router
+    from controllers.portfolio import router as portfolio_router
+    from controllers.asset_balance import router as asset_balance_router
+    from controllers.asset_transaction import router as asset_transaction_router
 
     # Include all order controllers
     app.include_router(create_order_router, prefix="/orders", tags=["orders"])
     app.include_router(get_order_router, prefix="/orders", tags=["orders"])
     app.include_router(list_orders_router, prefix="/orders", tags=["orders"])
 
+    # Include portfolio and asset management controllers
+    app.include_router(portfolio_router, tags=["portfolio"])
+    app.include_router(asset_balance_router, tags=["asset-balances"])
+    app.include_router(asset_transaction_router, tags=["asset-transactions"])
+
     logger.info("✅ Order controllers loaded successfully")
+    logger.info("✅ Portfolio and asset management controllers loaded successfully")
 except ImportError as e:
-    logger.warning(f"⚠️ Order controllers not available: {e}")
+    logger.warning(f"⚠️ Controllers not available: {e}")
 
 # Root endpoint
 @app.get("/")
@@ -198,6 +207,11 @@ async def startup_event():
     logger.info("  POST /orders - Create new order")
     logger.info("  GET  /orders/{order_id} - Get order by ID")
     logger.info("  GET  /orders - List user orders")
+    logger.info("  GET  /portfolio/{username} - Get user portfolio")
+    logger.info("  GET  /assets/balances - Get all asset balances")
+    logger.info("  GET  /assets/{asset_id}/balance - Get specific asset balance")
+    logger.info("  GET  /assets/{asset_id}/transactions - Get asset transaction history")
+    logger.info("  GET  /assets/transactions/{username}/{asset_id} - Get user's asset transactions")
     logger.info("  GET  /docs - API documentation")
 
     logger.info("✅ Order Service startup complete!")
