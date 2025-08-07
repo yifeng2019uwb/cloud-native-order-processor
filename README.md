@@ -74,6 +74,8 @@ A comprehensive, production-ready cloud-native microservice platform demonstrati
 
 ## 🚀 Quick Start
 
+> **📖 For detailed setup instructions, see [QUICK_START.md](./QUICK_START.md)**
+
 ### **Prerequisites**
 - Docker and Docker Compose
 - Kubernetes (Kind for local development)
