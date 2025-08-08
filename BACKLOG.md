@@ -158,6 +158,55 @@ Improve error handling and user feedback across the frontend application.
 - ✅ **FRONTEND-002**: Debug API Integration Issues
 - ✅ **FRONTEND-003**: Fix Authentication State Management
 
+#### **FRONTEND-DESIGN: Complete Frontend Design Document** ✅
+- **Component**: Frontend (React)
+- **Type**: Epic
+- **Priority**: CRITICAL
+- **Status**: ✅ Completed
+
+**Description:**
+Create comprehensive frontend design document with complete page architecture, user experience flows, and technical implementation plan.
+
+**Completed Items:**
+- ✅ **7-Page Architecture**: Landing, Auth, Dashboard, Trading, Portfolio, Account, Profile
+- ✅ **User Experience Flows**: Complete user journey from registration to trading
+- ✅ **Order Safety Features**: Double confirmation, account impact preview, processing feedback
+- ✅ **Security Analysis**: Current security model and frontend security improvements
+- ✅ **Technical Architecture**: React + TypeScript + Tailwind CSS + Vite stack
+- ✅ **API Integration Plan**: All routes through API Gateway with `/api/v1/` prefix
+- ✅ **Responsive Design**: Mobile-first with accessibility compliance
+- ✅ **Error Handling**: Comprehensive error states and recovery mechanisms
+- ✅ **Implementation Phases**: 3-phase rollout plan with success criteria
+
+**Documentation Created:**
+- ✅ **`docs/frontend-design.md`**: 1200+ line comprehensive design document
+- ✅ **Critical Backend Issues**: Identified missing API Gateway routes
+- ✅ **Security Implementation Plan**: 3-phase security improvement strategy
+- ✅ **Component Specifications**: Detailed component requirements and architecture
+
+#### **BACKEND-FIXES: Fix Missing API Gateway Routes** 🚨
+- **Component**: API Gateway (Go)
+- **Type**: Bug
+- **Priority**: CRITICAL
+- **Status**: 📋 To Do
+
+**Description:**
+Fix missing API Gateway routes that are blocking frontend development.
+
+**Acceptance Criteria:**
+- [ ] Add Order Service routes (`/api/v1/orders/*`)
+- [ ] Add Balance routes (`/api/v1/balance/*`)
+- [ ] Add Portfolio routes (`/api/v1/portfolio/*`)
+- [ ] Add Asset routes (`/api/v1/assets/*`)
+- [ ] Add Profile update route (`PUT /api/v1/auth/profile`)
+- [ ] Test all routes through API Gateway
+- [ ] Update frontend API calls to use gateway paths
+
+**Dependencies:**
+- ✅ **FRONTEND-DESIGN**: Complete Frontend Design Document (COMPLETED)
+
+**Impact**: Frontend development cannot begin until this is fixed
+
 ## **🔧 Infrastructure & DevOps**
 
 #### **INFRA-002: Local Development Pipeline**
@@ -914,21 +963,21 @@ Created comprehensive portfolio management endpoints with real-time market value
 - ✅ Update Order entity with GSI support
 - ✅ Enhance TransactionManager for asset operations
 
-#### **Week 2-3: Fix Frontend Issues** 🔄 **NEXT PRIORITY**
-**Duration**: 3-5 days
-**Focus**: Debug and improve frontend functionality
+#### **Week 2-3: Frontend Design & Implementation** 🔄 **CURRENT PRIORITY**
+**Duration**: 1-2 weeks
+**Focus**: Design and implement comprehensive frontend
 
 **Sprint Backlog:**
-1. **FRONTEND-002**: Debug API Integration Issues
-2. **FRONTEND-003**: Fix Authentication State Management
-3. **FRONTEND-004**: Add Order Management UI
-4. **FRONTEND-005**: Improve Error Handling
+1. **FRONTEND-DESIGN**: Complete frontend design document ✅ **COMPLETED**
+2. **BACKEND-FIXES**: Fix missing API Gateway routes (CRITICAL BLOCKER)
+3. **FRONTEND-IMPLEMENTATION**: Implement core pages (Landing, Auth, Dashboard, Trading)
+4. **FRONTEND-SECURITY**: Implement Phase 1 security improvements
 
 **Acceptance Criteria:**
-- [ ] Debug API integration issues
-- [ ] Fix authentication state management
-- [ ] Add order management UI
-- [ ] Improve error handling
+- ✅ Complete frontend design with 7-page architecture
+- [ ] Fix missing API Gateway routes (order, balance, portfolio, assets)
+- [ ] Implement core frontend pages with real data
+- [ ] Add comprehensive security features
 
 ### **Phase 2: Local Infrastructure & Monitoring**
 **Duration**: 2 weeks
