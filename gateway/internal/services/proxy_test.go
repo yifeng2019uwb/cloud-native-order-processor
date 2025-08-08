@@ -18,6 +18,7 @@ func TestNewProxyService(t *testing.T) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -34,6 +35,7 @@ func TestProxyRequest(t *testing.T) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -69,6 +71,7 @@ func TestProxyToUserService(t *testing.T) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -93,6 +96,7 @@ func TestProxyToInventoryService(t *testing.T) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -110,12 +114,50 @@ func TestProxyToInventoryService(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
+// TestProxyToOrderService tests order service proxying
+func TestProxyToOrderService(t *testing.T) {
+	cfg := &config.Config{
+		Services: config.ServicesConfig{
+			UserService:      "http://user-service:8000",
+			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
+		},
+	}
+
+	service := NewProxyService(cfg)
+	ctx := context.Background()
+
+	headers := map[string]string{
+		"Content-Type":  "application/json",
+		"Authorization": "Bearer token123",
+	}
+
+	// Test order creation
+	resp, err := service.ProxyToOrderService(ctx, "/api/v1/orders", "POST", headers, map[string]interface{}{
+		"asset_id":   "BTC",
+		"quantity":   "0.01",
+		"order_type": "market_buy",
+	})
+
+	// Expected to fail without real backend service
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+
+	// Test order listing
+	resp, err = service.ProxyToOrderService(ctx, "/api/v1/orders", "GET", headers, nil)
+
+	// Expected to fail without real backend service
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+}
+
 // TestGetRouteConfig tests route configuration retrieval
 func TestGetRouteConfig(t *testing.T) {
 	cfg := &config.Config{
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -140,6 +182,7 @@ func TestGetTargetService(t *testing.T) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -153,6 +196,22 @@ func TestGetTargetService(t *testing.T) {
 	targetService = service.GetTargetService(constants.APIV1InventoryAssets)
 	assert.Equal(t, constants.InventoryService, targetService)
 
+	// Test order service routing
+	targetService = service.GetTargetService(constants.APIV1Orders)
+	assert.Equal(t, constants.OrderService, targetService)
+
+	// Test portfolio service routing (handled by order service)
+	targetService = service.GetTargetService(constants.APIV1PortfolioByUser)
+	assert.Equal(t, constants.OrderService, targetService)
+
+	// Test balance service routing (handled by user service)
+	targetService = service.GetTargetService(constants.APIV1BalanceGet)
+	assert.Equal(t, constants.UserService, targetService)
+
+	// Test asset service routing (handled by order service)
+	targetService = service.GetTargetService(constants.APIV1AssetBalances)
+	assert.Equal(t, constants.OrderService, targetService)
+
 	// Test unknown path
 	targetService = service.GetTargetService("/unknown")
 	assert.Equal(t, "", targetService)
@@ -164,6 +223,7 @@ func TestStripAPIPrefix(t *testing.T) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -188,21 +248,25 @@ func TestProxyServiceWithDifferentConfigs(t *testing.T) {
 		name                string
 		userServiceURL      string
 		inventoryServiceURL string
+		orderServiceURL     string
 	}{
 		{
 			name:                "Default URLs",
 			userServiceURL:      "http://user-service:8000",
 			inventoryServiceURL: "http://inventory-service:8001",
+			orderServiceURL:     "http://order-service:8002",
 		},
 		{
 			name:                "Custom URLs",
 			userServiceURL:      "http://custom-user:9000",
 			inventoryServiceURL: "http://custom-inventory:9001",
+			orderServiceURL:     "http://custom-order:9002",
 		},
 		{
 			name:                "HTTPS URLs",
 			userServiceURL:      "https://user-service.example.com",
 			inventoryServiceURL: "https://inventory-service.example.com",
+			orderServiceURL:     "https://order-service.example.com",
 		},
 	}
 
@@ -212,6 +276,7 @@ func TestProxyServiceWithDifferentConfigs(t *testing.T) {
 				Services: config.ServicesConfig{
 					UserService:      tc.userServiceURL,
 					InventoryService: tc.inventoryServiceURL,
+					OrderService:     tc.orderServiceURL,
 				},
 			}
 
@@ -219,6 +284,7 @@ func TestProxyServiceWithDifferentConfigs(t *testing.T) {
 
 			assert.Equal(t, tc.userServiceURL, service.config.Services.UserService)
 			assert.Equal(t, tc.inventoryServiceURL, service.config.Services.InventoryService)
+			assert.Equal(t, tc.orderServiceURL, service.config.Services.OrderService)
 		})
 	}
 }
@@ -229,6 +295,7 @@ func TestProxyRequestWithHeaders(t *testing.T) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -269,6 +336,7 @@ func TestProxyRequestWithBody(t *testing.T) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -311,6 +379,7 @@ func TestProxyRequestWithUserContext(t *testing.T) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -349,6 +418,7 @@ func TestProxyRequestWithQueryParams(t *testing.T) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -389,6 +459,7 @@ func TestBuildTargetURLWithQueryParams(t *testing.T) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 
@@ -435,6 +506,7 @@ func BenchmarkProxyRequest(b *testing.B) {
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
 		},
 	}
 

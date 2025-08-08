@@ -35,6 +35,7 @@ type RedisConfig struct {
 type ServicesConfig struct {
 	UserService      string
 	InventoryService string
+	OrderService     string
 }
 
 // JWTConfig holds JWT configuration
@@ -71,6 +72,7 @@ func Load() (*Config, error) {
 		Services: ServicesConfig{
 			UserService:      getEnv(constants.EnvUserServiceURL, constants.DefaultUserServiceURL),
 			InventoryService: getEnv(constants.EnvInventoryServiceURL, constants.DefaultInventoryServiceURL),
+			OrderService:     getEnv(constants.EnvOrderServiceURL, constants.DefaultOrderServiceURL),
 		},
 		JWT: JWTConfig{
 			SecretKey: getEnv(constants.EnvJWTSecretKey, constants.DefaultJWTSecretKey),

@@ -70,6 +70,8 @@ func (p *ProxyService) buildTargetURL(proxyReq *models.ProxyRequest) (string, er
 		baseURL = p.config.Services.UserService
 	case constants.InventoryService:
 		baseURL = p.config.Services.InventoryService
+	case constants.OrderService:
+		baseURL = p.config.Services.OrderService
 	default:
 		return "", fmt.Errorf("unknown target service: %s", proxyReq.TargetService)
 	}
@@ -175,6 +177,39 @@ func (p *ProxyService) ProxyToInventoryService(ctx context.Context, path string,
 	return p.ProxyRequest(ctx, proxyReq)
 }
 
+// ProxyToOrderService forwards requests to order service
+func (p *ProxyService) ProxyToOrderService(ctx context.Context, path string, method string, headers map[string]string, body interface{}) (*http.Response, error) {
+	var targetPath string
+
+	// Handle different path prefixes for order service
+	switch {
+	case strings.HasPrefix(path, constants.APIV1OrderPath):
+		targetPath = p.stripAPIPrefix(path, constants.APIV1OrderPath)
+	case strings.HasPrefix(path, constants.APIV1PortfolioPath):
+		targetPath = p.stripAPIPrefix(path, constants.APIV1PortfolioPath)
+	case strings.HasPrefix(path, constants.APIV1AssetPath):
+		targetPath = p.stripAPIPrefix(path, constants.APIV1AssetPath)
+	default:
+		targetPath = path
+	}
+
+	proxyReq := &models.ProxyRequest{
+		Method:        method,
+		Path:          path,
+		Headers:       headers,
+		Body:          body,
+		TargetService: constants.OrderService,
+		TargetPath:    targetPath,
+		Context: &models.RequestContext{
+			RequestID:   generateRequestID(),
+			Timestamp:   time.Now(),
+			ServiceName: constants.OrderService,
+		},
+	}
+
+	return p.ProxyRequest(ctx, proxyReq)
+}
+
 // stripAPIPrefix removes the API prefix from the path
 // e.g., "/api/v1/auth/login" -> "/login"
 func (p *ProxyService) stripAPIPrefix(path, prefix string) string {
@@ -210,6 +245,14 @@ func (p *ProxyService) GetTargetService(path string) string {
 		return constants.UserService
 	case strings.HasPrefix(path, constants.APIV1InventoryPath):
 		return constants.InventoryService
+	case strings.HasPrefix(path, constants.APIV1OrderPath):
+		return constants.OrderService
+	case strings.HasPrefix(path, constants.APIV1PortfolioPath):
+		return constants.OrderService // Portfolio is handled by order service
+	case strings.HasPrefix(path, constants.APIV1BalancePath):
+		return constants.UserService // Balance is handled by user service
+	case strings.HasPrefix(path, constants.APIV1AssetPath):
+		return constants.OrderService // Asset balances handled by order service
 	default:
 		return ""
 	}

@@ -6,6 +6,7 @@ import "time"
 const (
 	UserService      = "user_service"
 	InventoryService = "inventory_service"
+	OrderService     = "order_service"
 	GatewayService   = "gateway"
 )
 
@@ -58,6 +59,7 @@ const (
 	EnvRedisSSL            = "REDIS_SSL"
 	EnvUserServiceURL      = "USER_SERVICE_URL"
 	EnvInventoryServiceURL = "INVENTORY_SERVICE_URL"
+	EnvOrderServiceURL     = "ORDER_SERVICE_URL"
 	EnvJWTSecretKey        = "JWT_SECRET_KEY"
 	EnvJWTAlgorithm        = "JWT_ALGORITHM"
 )
@@ -66,6 +68,7 @@ const (
 const (
 	DefaultUserServiceURL      = "http://user-service:8000"
 	DefaultInventoryServiceURL = "http://inventory-service:8001"
+	DefaultOrderServiceURL     = "http://order-service:8002"
 )
 
 // Time constants
@@ -110,6 +113,31 @@ const (
 	APIV1InventoryPath    = "/api/v1/inventory"
 	APIV1InventoryAssets  = "/api/v1/inventory/assets"
 	APIV1InventoryAssetID = "/api/v1/inventory/assets/:id"
+
+	// Order service paths
+	APIV1OrderPath = "/api/v1/orders"
+	APIV1Orders    = "/api/v1/orders" // Handles both POST (create) and GET (list)
+	APIV1OrderByID = "/api/v1/orders/:id"
+
+	// Portfolio service paths
+	APIV1PortfolioPath   = "/api/v1/portfolio"
+	APIV1PortfolioByUser = "/api/v1/portfolio/:username"
+
+	// Balance service paths
+	APIV1BalancePath         = "/api/v1/balance"
+	APIV1BalanceGet          = "/api/v1/balance"
+	APIV1BalanceDeposit      = "/api/v1/balance/deposit"
+	APIV1BalanceWithdraw     = "/api/v1/balance/withdraw"
+	APIV1BalanceTransactions = "/api/v1/balance/transactions"
+
+	// Asset balance service paths
+	APIV1AssetPath             = "/api/v1/assets"
+	APIV1AssetBalances         = "/api/v1/assets/balances"
+	APIV1AssetBalanceByID      = "/api/v1/assets/:asset_id/balance"
+	APIV1AssetTransactionsByID = "/api/v1/assets/:asset_id/transactions"
+
+	// Profile update path
+	APIV1AuthProfileUpdate = "/api/v1/auth/profile"
 )
 
 // Phase 1: User roles and permissions
@@ -270,6 +298,71 @@ var (
 			Path:         APIV1InventoryAssetID,
 			RequiresAuth: false,      // Public asset details
 			AllowedRoles: []string{}, // Empty means public access (no role required)
+		},
+
+		// Order service routes (all require auth)
+		APIV1Orders: {
+			Path:         APIV1Orders,
+			RequiresAuth: true,
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+		APIV1OrderByID: {
+			Path:         APIV1OrderByID,
+			RequiresAuth: true,
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+
+		// Portfolio service routes (all require auth)
+		APIV1PortfolioByUser: {
+			Path:         APIV1PortfolioByUser,
+			RequiresAuth: true,
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+
+		// Balance service routes (all require auth)
+		APIV1BalanceGet: {
+			Path:         APIV1BalanceGet,
+			RequiresAuth: true,
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+		APIV1BalanceDeposit: {
+			Path:         APIV1BalanceDeposit,
+			RequiresAuth: true,
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+		APIV1BalanceWithdraw: {
+			Path:         APIV1BalanceWithdraw,
+			RequiresAuth: true,
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+		APIV1BalanceTransactions: {
+			Path:         APIV1BalanceTransactions,
+			RequiresAuth: true,
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+
+		// Asset balance service routes (all require auth)
+		APIV1AssetBalances: {
+			Path:         APIV1AssetBalances,
+			RequiresAuth: true,
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+		APIV1AssetBalanceByID: {
+			Path:         APIV1AssetBalanceByID,
+			RequiresAuth: true,
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+		APIV1AssetTransactionsByID: {
+			Path:         APIV1AssetTransactionsByID,
+			RequiresAuth: true,
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+		},
+
+		// Profile update route (requires auth)
+		APIV1AuthProfileUpdate: {
+			Path:         APIV1AuthProfileUpdate,
+			RequiresAuth: true,
+			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
 		},
 	}
 )

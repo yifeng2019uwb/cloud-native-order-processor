@@ -51,7 +51,7 @@ type ProxyRequest struct {
 	QueryParams map[string]string `json:"query_params,omitempty"`
 
 	// Simple routing information
-	TargetService string `json:"target_service"` // "user_service" or "inventory_service"
+	TargetService string `json:"target_service"` // "user_service", "inventory_service", or "order_service"
 	TargetPath    string `json:"target_path"`    // "/login" (stripped version)
 
 	// Request context

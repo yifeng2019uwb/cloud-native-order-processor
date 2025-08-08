@@ -74,6 +74,7 @@ func (s *Server) setupRoutes() {
 			protectedAuth := auth.Group("")
 			{
 				protectedAuth.GET("/me", s.handleProxyRequest)
+				protectedAuth.PUT("/profile", s.handleProxyRequest)
 				protectedAuth.POST("/logout", s.handleProxyRequest)
 			}
 		}
@@ -84,6 +85,37 @@ func (s *Server) setupRoutes() {
 			// Public inventory routes (no auth required)
 			inventory.GET("/assets", s.handleProxyRequest)
 			inventory.GET("/assets/:id", s.handleProxyRequest)
+		}
+
+		// Order service routes (all require auth)
+		orders := api.Group("/orders")
+		{
+			orders.POST("", s.handleProxyRequest)           // Create order
+			orders.GET("/:id", s.handleProxyRequest)        // Get order details
+			orders.GET("", s.handleProxyRequest)            // List user orders
+		}
+
+		// Portfolio service routes (require auth)
+		portfolio := api.Group("/portfolio")
+		{
+			portfolio.GET("/:username", s.handleProxyRequest) // Get user portfolio
+		}
+
+		// Balance service routes (all require auth)
+		balance := api.Group("/balance")
+		{
+			balance.GET("", s.handleProxyRequest)           // Get balance
+			balance.POST("/deposit", s.handleProxyRequest)  // Deposit funds
+			balance.POST("/withdraw", s.handleProxyRequest) // Withdraw funds
+			balance.GET("/transactions", s.handleProxyRequest) // Transaction history
+		}
+
+		// Asset balance service routes (all require auth)
+		assets := api.Group("/assets")
+		{
+			assets.GET("/balances", s.handleProxyRequest)                    // Get all asset balances
+			assets.GET("/:asset_id/balance", s.handleProxyRequest)           // Get specific asset balance
+			assets.GET("/:asset_id/transactions", s.handleProxyRequest)      // Get asset transactions
 		}
 	}
 }
