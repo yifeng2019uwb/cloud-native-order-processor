@@ -8,13 +8,9 @@ export interface Balance {
 
 export interface BalanceTransaction {
   transaction_id: string;
-  username: string;
-  transaction_type: 'deposit' | 'withdrawal' | 'order_debit' | 'order_credit';
-  amount: number;
-  balance_before: number;
-  balance_after: number;
-  description?: string;
-  reference_id?: string; // Order ID for order-related transactions
+  transaction_type: 'deposit' | 'withdraw' | 'order_debit' | 'order_credit';
+  amount: string; // Backend returns amount as string
+  status: 'completed' | 'pending' | 'failed';
   created_at: string;
 }
 
@@ -31,7 +27,7 @@ export interface WithdrawRequest {
 export interface BalanceTransactionListRequest {
   limit?: number;
   offset?: number;
-  transaction_type?: 'deposit' | 'withdrawal' | 'order_debit' | 'order_credit';
+  transaction_type?: 'deposit' | 'withdraw' | 'order_debit' | 'order_credit';
 }
 
 export interface BalanceResponse {
@@ -40,12 +36,8 @@ export interface BalanceResponse {
 }
 
 export interface BalanceTransactionResponse {
-  success: boolean;
   transactions: BalanceTransaction[];
   total_count: number;
-  limit: number;
-  offset: number;
-  timestamp: string;
 }
 
 export interface BalanceApiError {

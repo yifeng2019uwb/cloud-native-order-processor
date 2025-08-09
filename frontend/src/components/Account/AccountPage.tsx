@@ -29,7 +29,7 @@ const AccountPage: React.FC = () => {
       setIsLoading(true);
       const [balanceRes, transactionsRes] = await Promise.all([
         balanceApiService.getBalance().catch(() => null),
-        balanceApiService.getTransactions().catch(() => ({ success: false, transactions: [] }))
+        balanceApiService.getTransactions().catch(() => ({ transactions: [], total_count: 0 }))
       ]);
 
       if (balanceRes) {
@@ -43,7 +43,7 @@ const AccountPage: React.FC = () => {
         setBalance(balanceData);
       }
 
-      if (transactionsRes.success) {
+      if (transactionsRes && transactionsRes.transactions) {
         setTransactions(transactionsRes.transactions);
       }
     } catch (err) {
@@ -333,8 +333,7 @@ const AccountPage: React.FC = () => {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance After</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -349,7 +348,7 @@ const AccountPage: React.FC = () => {
                               <td className="px-6 py-4 whitespace-nowrap text-sm">
                                 <span className={`px-2 py-1 text-xs rounded-full font-medium ${
                                   transaction.transaction_type === 'deposit' ? 'bg-green-100 text-green-800' :
-                                  transaction.transaction_type === 'withdrawal' ? 'bg-red-100 text-red-800' :
+                                  transaction.transaction_type === 'withdraw' ? 'bg-red-100 text-red-800' :
                                   transaction.transaction_type === 'order_debit' ? 'bg-orange-100 text-orange-800' :
                                   'bg-blue-100 text-blue-800'
                                 }`}>
@@ -360,19 +359,17 @@ const AccountPage: React.FC = () => {
                                 transaction.transaction_type === 'deposit' || transaction.transaction_type === 'order_credit'
                                   ? 'text-green-600' : 'text-red-600'
                               }`}>
-                                {transaction.transaction_type === 'deposit' || transaction.transaction_type === 'order_credit' ? '+' : '-'}
-                                ${Math.abs(transaction.amount).toFixed(2)}
+                                {transaction.transaction_type === 'deposit' || transaction.transaction_type === 'order_credit' ? '+' : ''}
+                                ${Math.abs(parseFloat(transaction.amount)).toFixed(2)}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                ${transaction.balance_after.toFixed(2)}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-500">
-                                {transaction.description || 'No description'}
-                                {transaction.reference_id && (
-                                  <div className="text-xs text-gray-400">
-                                    Ref: {transaction.reference_id}
-                                  </div>
-                                )}
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                                  transaction.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {transaction.status}
+                                </span>
                               </td>
                             </tr>
                           ))}
