@@ -1,17 +1,18 @@
 // Asset Balance related types
 export interface AssetBalance {
-  username: string;
   asset_id: string;
+  quantity: string; // Backend returns as string
+  created_at: string;
+  updated_at: string;
+  // Optional computed fields (may be added by frontend)
+  username?: string;
   asset_name?: string;
-  quantity: number;
   average_cost?: number;
   total_cost?: number;
   current_price?: number;
   current_value?: number;
   unrealized_pnl?: number;
   unrealized_pnl_percentage?: number;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface AssetTransaction {
@@ -42,10 +43,8 @@ export interface AssetTransactionListRequest {
 
 export interface AssetBalanceListResponse {
   success: boolean;
-  asset_balances: AssetBalance[];
-  total_count: number;
-  limit: number;
-  offset: number;
+  message: string;
+  data: AssetBalance[];
   timestamp: string;
 }
 

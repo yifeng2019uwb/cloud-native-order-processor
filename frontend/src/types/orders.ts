@@ -1,16 +1,17 @@
 // Order related types
 export interface Order {
   order_id: string;
-  username: string;
   asset_id: string;
-  quantity: number;
-  price: number;
+  quantity: string; // Backend returns as string
+  price: string; // Backend returns as string
   order_type: 'market_buy' | 'market_sell' | 'limit_buy' | 'limit_sell';
-  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  created_at: string;
+  // Optional fields that may be added by frontend or other services
+  username?: string;
+  status?: 'pending' | 'completed' | 'failed' | 'cancelled';
   total_cost?: number; // For buy orders
   total_received?: number; // For sell orders
-  created_at: string;
-  updated_at: string;
+  updated_at?: string;
   completed_at?: string;
 }
 
@@ -31,10 +32,16 @@ export interface OrderListRequest {
 
 export interface OrderListResponse {
   success: boolean;
-  orders: Order[];
-  total_count: number;
-  limit: number;
-  offset: number;
+  message: string;
+  data: Order[];
+  has_more: boolean;
+  timestamp: string;
+}
+
+export interface OrderCreateResponse {
+  success: boolean;
+  message: string;
+  data: Order;
   timestamp: string;
 }
 
@@ -52,4 +59,4 @@ export interface OrderApiError {
   validation_errors?: Record<string, string[]>;
 }
 
-export type OrderApiResponse = OrderDetailResponse | OrderListResponse | OrderApiError;
+export type OrderApiResponse = OrderCreateResponse | OrderDetailResponse | OrderListResponse | OrderApiError;

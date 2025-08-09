@@ -37,6 +37,7 @@ export type {
     CreateOrderRequest,
     OrderListRequest,
     OrderListResponse,
+    OrderCreateResponse,
     OrderDetailResponse,
     OrderApiError,
     OrderApiResponse
@@ -77,3 +78,11 @@ export type {
     AssetBalanceApiError,
     AssetBalanceApiResponse
   } from './assetBalance';
+
+  // Asset Transaction History types
+  export type {
+    AssetTransactionHistory,
+    AssetTransactionHistoryResponse,
+    AssetTransactionHistoryError,
+    AssetTransactionHistoryApiResponse
+  } from './assetTransaction';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { orderApiService } from '@/services/orderApi';
 import { balanceApiService } from '@/services/balanceApi';
@@ -9,6 +9,7 @@ import type { Asset, Order, CreateOrderRequest, Balance, AssetBalance } from '@/
 
 const TradingPage: React.FC = () => {
   const { user, logout } = useAuth();
+  const [searchParams] = useSearchParams();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [balance, setBalance] = useState<Balance | null>(null);
   const [assetBalances, setAssetBalances] = useState<AssetBalance[]>([]);
@@ -32,14 +33,34 @@ const TradingPage: React.FC = () => {
     loadData();
   }, []);
 
+  // Handle URL parameters for asset and action
+  useEffect(() => {
+    const assetParam = searchParams.get('asset');
+    const actionParam = searchParams.get('action');
+
+    if (assetParam && assets.length > 0) {
+      const foundAsset = assets.find(asset => asset.asset_id === assetParam);
+      if (foundAsset) {
+        setSelectedAsset(foundAsset);
+      }
+    }
+
+    if (actionParam === 'buy' || actionParam === 'sell') {
+      setOrderForm(prev => ({
+        ...prev,
+        orderType: actionParam === 'buy' ? 'market_buy' : 'market_sell'
+      }));
+    }
+  }, [assets, searchParams]);
+
   const loadData = async () => {
     try {
       setIsLoading(true);
             const [assetsRes, balanceRes, assetBalancesRes, ordersRes] = await Promise.all([
         inventoryApiService.listAssets(),
         balanceApiService.getBalance().catch(() => null),
-        assetBalanceApiService.listAssetBalances().catch(() => ({ success: false, asset_balances: [] })),
-        orderApiService.listOrders({ limit: 10 }).catch(() => ({ success: false, orders: [] }))
+        assetBalanceApiService.listAssetBalances().catch(() => ({ success: false, message: '', data: [], timestamp: '' })),
+        orderApiService.listOrders({ limit: 10 }).catch(() => ({ success: false, message: '', data: [], has_more: false, timestamp: '' }))
       ]);
 
       if (assetsRes.assets) {
@@ -61,11 +82,11 @@ const TradingPage: React.FC = () => {
       }
 
       if (assetBalancesRes.success) {
-        setAssetBalances(assetBalancesRes.asset_balances);
+        setAssetBalances(assetBalancesRes.data);
       }
 
       if (ordersRes.success) {
-        setOrders(ordersRes.orders);
+        setOrders(ordersRes.data);
       }
     } catch (err) {
       setError('Failed to load trading data');
@@ -95,7 +116,7 @@ const TradingPage: React.FC = () => {
       };
     } else {
       const assetBalance = assetBalances.find(ab => ab.asset_id === selectedAsset.asset_id);
-      const availableQuantity = assetBalance?.quantity || 0;
+      const availableQuantity = parseFloat(assetBalance?.quantity || '0');
       const remainingQuantity = availableQuantity - quantity;
       return {
         asset: selectedAsset,
@@ -155,7 +176,7 @@ const TradingPage: React.FC = () => {
         // Reload data
         await loadData();
 
-        alert(`Order ${result.order.order_id} created successfully!`);
+        alert(`Order ${result.data.order_id} created successfully!`);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create order');
@@ -211,7 +232,7 @@ const TradingPage: React.FC = () => {
             <div className="text-right">
               <p className="text-sm text-gray-600">Asset Holdings</p>
               <p className="text-lg font-medium">
-                {assetBalances.length} assets owned
+                {assetBalances?.length || 0} assets owned
               </p>
             </div>
           </div>
@@ -397,7 +418,7 @@ const TradingPage: React.FC = () => {
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
                     📋 Recent Orders
                   </h3>
-                  {orders.length > 0 ? (
+                  {orders && orders.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
@@ -409,7 +430,7 @@ const TradingPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {orders.slice(0, 5).map(order => (
+                          {(orders || []).slice(0, 5).map(order => (
                             <tr key={order.order_id}>
                               <td className="px-3 py-2 text-sm text-gray-900">{order.asset_id}</td>
                               <td className="px-3 py-2 text-sm">
@@ -419,8 +440,8 @@ const TradingPage: React.FC = () => {
                               </td>
                               <td className="px-3 py-2 text-sm text-gray-900">{order.quantity}</td>
                               <td className="px-3 py-2 text-sm">
-                                <span className={`px-2 py-1 text-xs rounded-full ${order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'failed' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                  {order.status}
+                                <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                  {order.status || 'completed'}
                                 </span>
                               </td>
                             </tr>

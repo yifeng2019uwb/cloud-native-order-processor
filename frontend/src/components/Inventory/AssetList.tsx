@@ -24,6 +24,9 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
     limit: undefined
   });
 
+  const [sortField, setSortField] = useState<'name' | 'price_usd' | 'category'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
   const handleFilterChange = async (newFilters: AssetListRequest) => {
     setFilters(newFilters);
     await listAssets(newFilters);
@@ -32,6 +35,35 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
   const handleRefresh = async () => {
     await listAssets(filters);
   };
+
+  const handleSort = (field: 'name' | 'price_usd' | 'category') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedAssets = [...assets].sort((a, b) => {
+    let aValue: any = a[sortField];
+    let bValue: any = b[sortField];
+
+    // Handle string values
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      aValue = aValue.toLowerCase();
+      bValue = bValue.toLowerCase();
+    }
+
+    // Handle null/undefined values
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return sortDirection === 'asc' ? -1 : 1;
+    if (bValue == null) return sortDirection === 'asc' ? 1 : -1;
+
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   if (loading && assets.length === 0) {
     return (
@@ -149,13 +181,43 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Asset
+                    <button
+                      onClick={() => handleSort('name')}
+                      className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                    >
+                      <span>Asset</span>
+                      {sortField === 'name' && (
+                        <svg className={`h-3 w-3 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
+                    <button
+                      onClick={() => handleSort('category')}
+                      className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                    >
+                      <span>Category</span>
+                      {sortField === 'category' && (
+                        <svg className={`h-3 w-3 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price (USD)
+                    <button
+                      onClick={() => handleSort('price_usd')}
+                      className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                    >
+                      <span>Price (USD)</span>
+                      {sortField === 'price_usd' && (
+                        <svg className={`h-3 w-3 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -168,7 +230,7 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {assets.map((asset) => (
+                {sortedAssets.map((asset) => (
                   <tr
                     key={asset.asset_id}
                     className="hover:bg-gray-50 cursor-pointer transition-colors"

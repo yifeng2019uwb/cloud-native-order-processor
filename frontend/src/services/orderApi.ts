@@ -3,6 +3,7 @@ import type {
   CreateOrderRequest,
   OrderListRequest,
   OrderListResponse,
+  OrderCreateResponse,
   OrderDetailResponse,
   OrderApiError
 } from '@/types';
@@ -76,8 +77,8 @@ class OrderApiService {
   }
 
   // Order API methods
-  async createOrder(orderData: CreateOrderRequest): Promise<OrderDetailResponse> {
-    const response = await this.api.post<OrderDetailResponse>('', orderData);
+  async createOrder(orderData: CreateOrderRequest): Promise<OrderCreateResponse> {
+    const response = await this.api.post<OrderCreateResponse>('', orderData);
     return response.data;
   }
 
