@@ -53,13 +53,19 @@ export const BACKEND_VALIDATION_RULES = {
 export interface AuthResponse {
   success: boolean;
   message: string;
-  access_token: string;
-  token_type: string;
-  expires_in: number;
+  timestamp: string;
+  data?: {
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+  };
+  // For backward compatibility and registration responses
+  access_token?: string;
+  token_type?: string;
+  expires_in?: number;
   user?: User; // Optional for registration response
   username?: string; // For registration response
   is_new_user?: boolean; // For registration response
-  timestamp: string;
 }
 
 export interface AuthError {

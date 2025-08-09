@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import type { RegisterRequest } from '@/types';
-
-interface RegisterProps {
-  onSwitchToLogin?: () => void;
-}
+import { BACKEND_VALIDATION_RULES } from '@/types';
 
 interface RegisterFormData extends RegisterRequest {
   confirmPassword: string;
 }
 
-const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
-  const navigate = useNavigate();
+const Register: React.FC = () => {
   const { register, isLoading, error, clearError } = useAuth();
   const [formData, setFormData] = useState<RegisterFormData>({
     username: '',
@@ -33,12 +29,11 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
     // Username validation (matching backend)
     if (!formData.username) {
       errors.username = 'Username is required';
-    } else if (formData.username.length < 6 || formData.username.length > 30) {
-      errors.username = 'Username must be 3-30 characters';
-    } else if (!/^[a-zA-Z0-9][a-zA-Z0-9_]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$/.test(formData.username)) {
-      errors.username = 'Username can only contain letters, numbers, and underscores. Cannot start/end with underscore.';
-    } else if (formData.username.includes('__')) {
-      errors.username = 'Username cannot contain consecutive underscores';
+    } else if (formData.username.length < BACKEND_VALIDATION_RULES.username.minLength ||
+               formData.username.length > BACKEND_VALIDATION_RULES.username.maxLength) {
+      errors.username = `Username must be ${BACKEND_VALIDATION_RULES.username.minLength}-${BACKEND_VALIDATION_RULES.username.maxLength} characters`;
+    } else if (!BACKEND_VALIDATION_RULES.username.pattern.test(formData.username)) {
+      errors.username = BACKEND_VALIDATION_RULES.username.message;
     }
 
     // Email validation
@@ -53,8 +48,8 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
       errors.first_name = 'First name is required';
     } else if (formData.first_name.length > 50) {
       errors.first_name = 'First name must be 50 characters or less';
-    } else if (!/^[a-zA-Z]+$/.test(formData.first_name)) {
-      errors.first_name = 'First name can only contain letters';
+    } else if (!BACKEND_VALIDATION_RULES.firstName.pattern.test(formData.first_name)) {
+      errors.first_name = BACKEND_VALIDATION_RULES.firstName.message;
     }
 
     // Last name validation (matching backend)
@@ -62,15 +57,18 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
       errors.last_name = 'Last name is required';
     } else if (formData.last_name.length > 50) {
       errors.last_name = 'Last name must be 50 characters or less';
-    } else if (!/^[a-zA-Z]+$/.test(formData.last_name)) {
-      errors.last_name = 'Last name can only contain letters';
+    } else if (!BACKEND_VALIDATION_RULES.lastName.pattern.test(formData.last_name)) {
+      errors.last_name = BACKEND_VALIDATION_RULES.lastName.message;
     }
 
-    // Password validation (matching backend: 8-128 characters)
+    // Password validation (matching backend)
     if (!formData.password) {
       errors.password = 'Password is required';
-    } else if (formData.password.length < 12 || formData.password.length > 20) {
-      errors.password = 'Password must be 12-20 characters';
+    } else if (formData.password.length < BACKEND_VALIDATION_RULES.password.minLength ||
+               formData.password.length > BACKEND_VALIDATION_RULES.password.maxLength) {
+      errors.password = `Password must be ${BACKEND_VALIDATION_RULES.password.minLength}-${BACKEND_VALIDATION_RULES.password.maxLength} characters`;
+    } else if (!BACKEND_VALIDATION_RULES.password.pattern.test(formData.password)) {
+      errors.password = BACKEND_VALIDATION_RULES.password.message;
     }
 
     // Phone validation (optional, but if provided must match backend rules)
@@ -176,13 +174,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
     }
   };
 
-  const handleSwitchToLogin = () => {
-    if (onSwitchToLogin) {
-      onSwitchToLogin();
-    } else {
-      navigate('/login');
-    }
-  };
+  // handleSwitchToLogin function removed - using Link component instead
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -453,13 +445,12 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
-              <button
-                type="button"
-                onClick={handleSwitchToLogin}
+              <Link
+                to="/login"
                 className="font-medium text-indigo-600 hover:text-indigo-500"
               >
                 Sign in here
-              </button>
+              </Link>
             </p>
           </div>
         </div>

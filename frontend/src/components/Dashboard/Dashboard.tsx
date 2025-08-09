@@ -166,31 +166,40 @@ const Dashboard: React.FC = () => {
               </h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Link
-                  to="/inventory"
+                  to="/trading"
+                  className="border border-gray-200 rounded-lg p-4 text-center hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                >
+                  <div className="text-2xl text-indigo-600 mb-2">📈</div>
+                  <h4 className="text-sm font-medium text-gray-900">Trade</h4>
+                  <p className="text-xs text-gray-500 mt-1">Create buy/sell orders</p>
+                </Link>
+
+                <Link
+                  to="/portfolio"
                   className="border border-gray-200 rounded-lg p-4 text-center hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
                 >
                   <div className="text-2xl text-indigo-600 mb-2">📊</div>
-                  <h4 className="text-sm font-medium text-gray-900">Inventory</h4>
-                  <p className="text-xs text-gray-500 mt-1">Browse available assets</p>
+                  <h4 className="text-sm font-medium text-gray-900">Portfolio</h4>
+                  <p className="text-xs text-gray-500 mt-1">View asset balances</p>
                 </Link>
 
-                <div className="border border-gray-200 rounded-lg p-4 text-center">
-                  <div className="text-2xl text-gray-400 mb-2">📦</div>
-                  <h4 className="text-sm font-medium text-gray-900">Orders</h4>
-                  <p className="text-xs text-gray-500 mt-1">Manage your orders</p>
-                </div>
+                <Link
+                  to="/account"
+                  className="border border-gray-200 rounded-lg p-4 text-center hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                >
+                  <div className="text-2xl text-indigo-600 mb-2">💰</div>
+                  <h4 className="text-sm font-medium text-gray-900">Account</h4>
+                  <p className="text-xs text-gray-500 mt-1">Manage balance</p>
+                </Link>
 
-                <div className="border border-gray-200 rounded-lg p-4 text-center">
-                  <div className="text-2xl text-gray-400 mb-2">👤</div>
+                <Link
+                  to="/profile"
+                  className="border border-gray-200 rounded-lg p-4 text-center hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                >
+                  <div className="text-2xl text-indigo-600 mb-2">👤</div>
                   <h4 className="text-sm font-medium text-gray-900">Profile</h4>
-                  <p className="text-xs text-gray-500 mt-1">Update your information</p>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg p-4 text-center">
-                  <div className="text-2xl text-gray-400 mb-2">⚙️</div>
-                  <h4 className="text-sm font-medium text-gray-900">Settings</h4>
-                  <p className="text-xs text-gray-500 mt-1">Account preferences</p>
-                </div>
+                  <p className="text-xs text-gray-500 mt-1">Update information</p>
+                </Link>
               </div>
             </div>
           </div>

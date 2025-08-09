@@ -5,6 +5,11 @@ import Login from '@/components/Auth/Login';
 import Register from '@/components/Auth/Register';
 import Dashboard from '@/components/Dashboard/Dashboard';
 import InventoryPage from '@/components/Inventory/InventoryPage';
+import LandingPage from '@/components/Landing/LandingPage';
+import TradingPage from '@/components/Trading/TradingPage';
+import PortfolioPage from '@/components/Portfolio/PortfolioPage';
+import AccountPage from '@/components/Account/AccountPage';
+import ProfilePage from '@/components/Profile/ProfilePage';
 
 // Protected Route Wrapper
 interface ProtectedRouteProps {
@@ -40,7 +45,10 @@ interface PublicRouteProps {
 const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
+  console.log('📍 PublicRoute render:', { isAuthenticated, isLoading });
+
   if (isLoading) {
+    console.log('⏳ PublicRoute: Loading...');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -52,9 +60,11 @@ const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   }
 
   if (isAuthenticated) {
+    console.log('🚀 PublicRoute: Redirecting to dashboard');
     return <Navigate to="/dashboard" replace />;
   }
 
+  console.log('👋 PublicRoute: Showing public content');
   return <>{children}</>;
 };
 
@@ -90,9 +100,9 @@ const AuthNav: React.FC = () => {
       </div>
 
       {currentView === 'login' ? (
-        <Login onSwitchToRegister={() => setCurrentView('register')} />
+        <Login />
       ) : (
-        <Register onSwitchToLogin={() => setCurrentView('login')} />
+        <Register />
       )}
     </div>
   );
@@ -127,6 +137,8 @@ const AppRoutes: React.FC = () => {
           </PublicRoute>
         }
       />
+      {/* Public Routes */}
+      <Route path="/" element={<LandingPage />} />
       <Route
         path="/inventory"
         element={<InventoryPage />}
@@ -141,10 +153,41 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/trading"
+        element={
+          <ProtectedRoute>
+            <TradingPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/portfolio"
+        element={
+          <ProtectedRoute>
+            <PortfolioPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/account"
+        element={
+          <ProtectedRoute>
+            <AccountPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Default Redirects */}
-      <Route path="/" element={<Navigate to="/inventory" replace />} />
-      <Route path="*" element={<Navigate to="/inventory" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

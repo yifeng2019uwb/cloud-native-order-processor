@@ -7,6 +7,9 @@ export type {
     AuthError
   } from './auth';
 
+  // Auth validation rules
+  export { BACKEND_VALIDATION_RULES } from './auth';
+
   // API types
   export type {
     ApiResponse,
@@ -27,3 +30,50 @@ export type {
     InventoryApiSuccess,
     InventoryApiResponse
   } from './inventory';
+
+  // Order types
+  export type {
+    Order,
+    CreateOrderRequest,
+    OrderListRequest,
+    OrderListResponse,
+    OrderDetailResponse,
+    OrderApiError,
+    OrderApiResponse
+  } from './orders';
+
+  // Portfolio types
+  export type {
+    Portfolio,
+    PortfolioItem,
+    PortfolioRequest,
+    PortfolioResponse,
+    PortfolioApiError,
+    PortfolioApiResponse
+  } from './portfolio';
+
+  // Balance types
+  export type {
+    Balance,
+    BalanceTransaction,
+    DepositRequest,
+    WithdrawRequest,
+    BalanceTransactionListRequest,
+    BalanceResponse,
+    BalanceTransactionResponse,
+    BalanceApiError,
+    BalanceApiResponse
+  } from './balance';
+
+  // Asset Balance types
+  export type {
+    AssetBalance,
+    AssetTransaction,
+    AssetBalanceListRequest,
+    AssetTransactionListRequest,
+    AssetBalanceListResponse,
+    AssetBalanceDetailResponse,
+    AssetTransactionListResponse,
+    AssetBalanceApiError,
+    AssetBalanceApiResponse
+  } from './assetBalance';

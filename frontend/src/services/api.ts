@@ -96,11 +96,10 @@ class ApiService {
   // Auth API methods
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     const response = await this.api.post<AuthResponse>('/login', credentials);
+    console.log('🌐 API Service - Raw response:', response.data);
 
-    if (response.data.access_token) {
-      this.setToken(response.data.access_token);
-    }
-
+    // The response.data already contains the backend response structure
+    // No need to set token here - the auth hook will handle it
     return response.data;
   }
 
