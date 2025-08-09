@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { Link, useNavigate } from 'react-router-dom';
+import { apiService } from '@/services/api';
 import type { RegisterRequest } from '@/types';
 import { BACKEND_VALIDATION_RULES } from '@/types';
 
@@ -9,7 +9,12 @@ interface RegisterFormData extends RegisterRequest {
 }
 
 const Register: React.FC = () => {
-  const { register, isLoading, error, clearError } = useAuth();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const clearError = () => setError(null);
+
   const [formData, setFormData] = useState<RegisterFormData>({
     username: '',
     email: '',
@@ -22,6 +27,7 @@ const Register: React.FC = () => {
     marketing_emails_consent: false
   });
   const [formErrors, setFormErrors] = useState<Partial<RegisterFormData>>({});
+
 
   const validateForm = (): boolean => {
     const errors: Partial<RegisterFormData> = {};
@@ -118,7 +124,7 @@ const Register: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+      const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
     clearError();
 
@@ -126,20 +132,22 @@ const Register: React.FC = () => {
       return;
     }
 
+    setIsLoading(true);
+
     try {
       const { confirmPassword, ...registerData } = formData;
 
-      // Clean up optional fields - only send if they have values
+      // Sanitize and prepare data for backend
       const cleanedData: RegisterRequest = {
-        username: registerData.username,
-        email: registerData.email,
+        username: registerData.username.trim(),
+        email: registerData.email.trim().toLowerCase(),
         password: registerData.password,
-        first_name: registerData.first_name,
-        last_name: registerData.last_name,
+        first_name: registerData.first_name.trim(),
+        last_name: registerData.last_name.trim(),
         marketing_emails_consent: registerData.marketing_emails_consent
       };
 
-      // Only include optional fields if they have values
+      // Add optional fields only if provided
       if (registerData.phone && registerData.phone.trim()) {
         cleanedData.phone = registerData.phone.trim();
       }
@@ -148,8 +156,18 @@ const Register: React.FC = () => {
         cleanedData.date_of_birth = registerData.date_of_birth;
       }
 
-      await register(cleanedData);
+      await apiService.register(cleanedData);
+
+      // Success - redirect to login page
+      navigate('/login', {
+        state: {
+          registrationSuccess: true,
+          username: cleanedData.username
+        }
+      });
     } catch (error: any) {
+      setIsLoading(false);
+
       // Handle validation errors from backend
       if (error?.validation_errors) {
         const backendErrors: Partial<RegisterFormData> = {};
@@ -157,8 +175,9 @@ const Register: React.FC = () => {
           (backendErrors as any)[err.field as keyof RegisterFormData] = err.message;
         });
         setFormErrors(backendErrors);
+      } else {
+        setError(error?.message || 'Registration failed. Please try again.');
       }
-      // Other errors are handled by the useAuth hook
     }
   };
 
@@ -176,7 +195,7 @@ const Register: React.FC = () => {
 
   // handleSwitchToLogin function removed - using Link component instead
 
-  return (
+    return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
@@ -189,6 +208,7 @@ const Register: React.FC = () => {
         </div>
 
         <div className="mt-8 space-y-6">
+
           {/* Global Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">

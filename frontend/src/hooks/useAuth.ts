@@ -135,46 +135,34 @@ const useAuthState = () => {
   const register = useCallback(async (userData: RegisterRequest) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-    try {
+        try {
+      console.log('🚀 Starting registration with data:', userData);
       const response: AuthResponse = await apiService.register(userData);
 
-      if (response.success === true && response.access_token) {
-        // For registration, we need to fetch the user profile since response doesn't include user data
-        let user: User | null = null;
+      console.log('🔍 Registration response type:', typeof response);
+      console.log('🔍 Registration response keys:', Object.keys(response || {}));
+      console.log('🔍 Registration response:', JSON.stringify(response, null, 2));
+      console.log('🔍 Response.success value:', response?.success);
+      console.log('🔍 Response.success type:', typeof response?.success);
 
-        if (response.user) {
-          // If user data is included in response (login case)
-          user = response.user;
-        } else if (response.username) {
-          // Create user object from registration data
-          user = {
-            username: response.username!,
-            email: userData.email,
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            phone: userData.phone || undefined,
-            date_of_birth: userData.date_of_birth || undefined,
-            marketing_emails_consent: userData.marketing_emails_consent || false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-        }
+      if (response && response.success === true) {
+        // Registration successful! Backend doesn't provide token/user data for registration
+        console.log('✅ Registration successful:', response.message);
 
-        if (user) {
-          authUtils.saveAuthData(response.access_token, user);
+        // Just update loading state - user needs to login separately after registration
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: null
+        }));
 
-          setState({
-            user,
-            token: response.access_token,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null
-          });
-        } else {
-          throw new Error('Failed to get user data after registration');
-        }
+        // Registration complete - no auto-login
+        console.log('✅ Registration flow completed successfully');
+        return;
       } else {
-        throw new Error('Invalid registration response');
+        console.log('❌ Registration failed - response.success is not true');
+        console.log('❌ Response object:', response);
+        throw new Error(`Registration failed: ${response?.message || 'Unknown error'}`);
       }
     } catch (error: unknown) {
       console.log('Registration error:', error);

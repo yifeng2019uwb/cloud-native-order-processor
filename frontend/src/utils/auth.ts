@@ -98,10 +98,8 @@ export const authUtils = {
   },
 
   saveAuthData: (token: string, user: User): void => {
-    console.log('🗄️ Saving auth data to storage...', { token: token.substring(0, 20) + '...', user });
     tokenStorage.set(token);
     userStorage.set(user);
-    console.log('✅ Auth data saved to storage');
   },
 
   hasValidToken: (): boolean => {
