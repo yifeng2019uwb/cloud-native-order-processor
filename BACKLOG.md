@@ -823,6 +823,334 @@ Add comprehensive security testing for backend services and business logic.
 - ✅ **All backend services completed**
 - ✅ **TEST-003**: Enhanced Business Logic Unit Tests
 
+## **🆕 NEW FEATURES & ENHANCEMENTS**
+
+#### **INVENTORY-001: Enhanced Inventory API with Rich Asset Metadata**
+- **Component**: Inventory Service (Backend)
+- **Type**: Story
+- **Priority**: High
+- **Status**: 📋 To Do
+
+**Description:**
+Enhance inventory service APIs to return rich asset metadata for professional frontend display.
+
+**Acceptance Criteria:**
+- [ ] **Asset Metadata Enhancement**
+  - [ ] Add asset icon/logo URLs to asset entities
+  - [ ] Add market cap data to asset responses
+  - [ ] Add 24h volume data to asset responses
+  - [ ] Add price change percentage (24h) to asset responses
+  - [ ] Add asset descriptions and additional metadata
+  - [ ] Add total supply and circulating supply data
+- [ ] **API Response Updates**
+  - [ ] Update `GET /assets` (list) endpoint to include new fields
+  - [ ] Update `GET /assets/{id}` (detail) endpoint to include new fields
+  - [ ] Ensure backward compatibility with existing API consumers
+  - [ ] Add proper validation for new fields
+- [ ] **Data Storage Enhancement**
+  - [ ] Update asset entities to support new metadata fields
+  - [ ] Add database migration for existing assets
+  - [ ] Implement asset metadata seeding with realistic data
+  - [ ] Add proper indexing for new searchable fields
+
+**Dependencies:**
+- ✅ **All existing inventory service functionality**
+
+#### **MARKET-001: Real-time Market Price Simulation**
+- **Component**: Inventory Service (Background Process)
+- **Type**: Story
+- **Priority**: Medium
+- **Status**: 📋 To Do
+
+**Description:**
+Implement background price updater service to simulate real-time crypto market price changes.
+
+**Acceptance Criteria:**
+- [ ] **Price Update Scheduler**
+  - [ ] Implement scheduled job within existing inventory_service
+  - [ ] Update asset prices every 5 minutes automatically
+  - [ ] Create realistic price fluctuation algorithm (±2-8% random with trending)
+  - [ ] Store price history for trend analysis
+- [ ] **Price Fluctuation Algorithm**
+  - [ ] Implement random price changes within realistic bounds
+  - [ ] Add trending behavior (bull/bear market simulation)
+  - [ ] Ensure price changes feel realistic for crypto market
+  - [ ] Prevent extreme price swings that would break user experience
+- [ ] **Integration & Performance**
+  - [ ] Update existing price APIs to return latest simulated prices
+  - [ ] Ensure price updates don't impact API response times
+  - [ ] Add monitoring for price update job performance
+  - [ ] Log price changes for debugging and analysis
+
+**Dependencies:**
+- ✅ **INVENTORY-001**: Enhanced Inventory API with Rich Asset Metadata
+
+#### **PORTFOLIO-001: Backend Portfolio Value Calculation API**
+- **Component**: Order Service (Backend)
+- **Type**: Story
+- **Priority**: High
+- **Status**: 📋 To Do
+
+**Description:**
+Create backend API for accurate portfolio total value calculation using real-time market prices.
+
+**Acceptance Criteria:**
+- [ ] **Portfolio Summary API**
+  - [ ] Create `GET /api/v1/users/portfolio/summary` endpoint
+  - [ ] Calculate total portfolio value: `cash_balance + SUM(asset_quantity * current_price)`
+  - [ ] Return cash balance, total asset value, and combined portfolio value
+  - [ ] Include currency information and last updated timestamp
+- [ ] **Real-time Market Price Integration**
+  - [ ] Integrate with inventory service for current market prices
+  - [ ] Handle price lookup errors gracefully
+  - [ ] Cache prices for performance (5-minute TTL)
+  - [ ] Support multiple currencies (USD primary)
+- [ ] **Portfolio Calculation Logic**
+  - [ ] Accurate calculation: `SUM(holding_quantity * current_market_price)`
+  - [ ] Handle zero-balance assets appropriately
+  - [ ] Include proper decimal precision for financial calculations
+  - [ ] Add calculation timestamp for frontend caching
+
+**Dependencies:**
+- ✅ **Existing portfolio management system**
+- ✅ **MARKET-001**: Real-time Market Price Simulation
+
+#### **API-002: Auth Endpoint Rename (Low Priority)**
+- **Component**: User Service, Gateway (Backend)
+- **Type**: Story
+- **Priority**: Low
+- **Status**: 📋 To Do
+
+**Description:**
+Rename authentication profile endpoint from `/auth/me` to `/auth/profile` for better clarity.
+
+**Acceptance Criteria:**
+- [ ] **Backend Changes**
+  - [ ] Update user_service endpoint from `PUT/GET /me` to `PUT/GET /profile`
+  - [ ] Update API documentation and OpenAPI specs
+  - [ ] Maintain backward compatibility during transition
+  - [ ] Add proper routing and validation
+- [ ] **Gateway Updates**
+  - [ ] Update gateway route mapping from `/api/v1/auth/me` to `/api/v1/auth/profile`
+  - [ ] Update route configuration constants
+  - [ ] Test gateway routing with new endpoint
+  - [ ] Ensure security policies apply correctly
+- [ ] **Frontend Integration**
+  - [ ] Update frontend API service to use new endpoint
+  - [ ] Update all profile-related API calls
+  - [ ] Test end-to-end profile functionality
+  - [ ] Update any hardcoded endpoint references
+
+**Dependencies:**
+- ✅ **All existing authentication functionality**
+
+#### **GATEWAY-002: Fix Dynamic Route Matching (CRITICAL)**
+- **Component**: API Gateway (Backend)
+- **Type**: Bug
+- **Priority**: CRITICAL
+- **Status**: 📋 To Do
+
+**Description:**
+Fix gateway dynamic route matching issue preventing access to parameterized endpoints like `/assets/{asset_id}/transactions`.
+
+**Acceptance Criteria:**
+- [ ] **Route Matching Investigation**
+  - [ ] Debug why `/api/v1/assets/:asset_id/transactions` returns 404
+  - [ ] Analyze gateway route resolution for parameterized paths
+  - [ ] Compare working routes vs failing parameterized routes
+  - [ ] Document root cause of dynamic route matching failure
+- [ ] **Gateway Route Resolution Fix**
+  - [ ] Fix parameterized route matching in gateway routing logic
+  - [ ] Ensure proper path parameter extraction and forwarding
+  - [ ] Test all existing parameterized routes (assets, orders, users)
+  - [ ] Verify route security and authentication still work
+- [ ] **Testing & Validation**
+  - [ ] Test asset transaction history endpoint end-to-end
+  - [ ] Verify all parameterized routes work correctly
+  - [ ] Add automated tests for dynamic route scenarios
+  - [ ] Test with various parameter values and edge cases
+
+**Dependencies:**
+- ✅ **Existing gateway infrastructure**
+
+#### **ORDER-003: Fix Asset Transaction API Parameter Mismatch**
+- **Component**: Order Service (Backend)
+- **Type**: Bug
+- **Priority**: Medium
+- **Status**: 📋 To Do
+
+**Description:**
+Fix parameter mismatch in asset transaction history endpoint where controller passes unsupported `offset` parameter.
+
+**Acceptance Criteria:**
+- [ ] **Root Cause Analysis**
+  - [ ] AssetTransactionDAO.get_user_asset_transactions() method only accepts username, asset_id, and limit
+  - [ ] Controller in asset_transaction.py passes unsupported offset parameter causing Exception
+  - [ ] Backend returns 500 Internal Server Error instead of data
+- [ ] **Fix Implementation Options**
+  - [ ] Option A: Remove offset parameter from controller calls (simpler)
+  - [ ] Option B: Add pagination support to AssetTransactionDAO using DynamoDB last_key
+  - [ ] Option C: Implement offset emulation in DAO layer
+- [ ] **Testing & Validation**
+  - [ ] Test asset transaction history endpoint returns data successfully
+  - [ ] Verify frontend asset transaction history feature works end-to-end
+  - [ ] Test with different users and assets
+  - [ ] Ensure no performance impact from pagination changes
+
+**Technical Details:**
+- Error occurs in `/assets/{asset_id}/transactions` endpoint
+- Method signature: `get_user_asset_transactions(username, asset_id, limit, offset)` ❌
+- Expected signature: `get_user_asset_transactions(username, asset_id, limit)` ✅
+- Controller file: `services/order_service/src/controllers/asset_transaction.py`
+- DAO file: `services/common/src/dao/asset/asset_transaction_dao.py`
+
+**Dependencies:**
+- ✅ **Gateway dynamic routing fix** (already completed)
+- ✅ **Frontend asset transaction history UI** (already implemented)
+
+## **🧪 Testing & Quality Assurance (Lower Priority)**
+
+#### **FRONTEND-TEST-001: Frontend Unit Testing Suite**
+- **Component**: Frontend (React)
+- **Type**: Story
+- **Priority**: Low
+- **Status**: 📋 To Do
+
+**Description:**
+Implement comprehensive unit testing for frontend React components and utilities.
+
+**Acceptance Criteria:**
+- [ ] **Component Testing**
+  - [ ] Test all React components with React Testing Library
+  - [ ] Test component rendering and user interactions
+  - [ ] Test component state management and props
+  - [ ] Test error handling and loading states
+  - [ ] Test form validation and submission
+- [ ] **Hook Testing**
+  - [ ] Test custom hooks (useAuth, useInventory, etc.)
+  - [ ] Test API service hooks and data fetching
+  - [ ] Test state management hooks
+  - [ ] Test error handling in hooks
+- [ ] **Utility Testing**
+  - [ ] Test utility functions and helpers
+  - [ ] Test data transformation functions
+  - [ ] Test validation functions
+  - [ ] Test date/time formatting utilities
+- [ ] **API Integration Testing**
+  - [ ] Mock API service calls
+  - [ ] Test API error handling
+  - [ ] Test authentication flows
+  - [ ] Test data loading and caching
+- [ ] **Test Coverage Goals**
+  - [ ] Achieve 80%+ code coverage for components
+  - [ ] Test all user interaction flows
+  - [ ] Test error scenarios and edge cases
+  - [ ] Test responsive design breakpoints
+
+**Dependencies:**
+- ✅ **All frontend components implemented**
+- ✅ **Frontend architecture stable**
+
+#### **GATEWAY-TEST-001: Gateway Unit Testing Suite**
+- **Component**: API Gateway (Go)
+- **Type**: Story
+- **Priority**: Low
+- **Status**: 📋 To Do
+
+**Description:**
+Implement comprehensive unit testing for API Gateway components and routing logic.
+
+**Acceptance Criteria:**
+- [ ] **Route Testing**
+  - [ ] Test dynamic route pattern matching
+  - [ ] Test route configuration validation
+  - [ ] Test route parameter extraction
+  - [ ] Test route security and authentication
+- [ ] **Proxy Service Testing**
+  - [ ] Test request forwarding to backend services
+  - [ ] Test header manipulation and forwarding
+  - [ ] Test query parameter handling
+  - [ ] Test request body processing
+- [ ] **Authentication Testing**
+  - [ ] Test JWT token validation
+  - [ ] Test role-based access control
+  - [ ] Test authentication middleware
+  - [ ] Test token refresh mechanisms
+- [ ] **Error Handling Testing**
+  - [ ] Test 404 route not found scenarios
+  - [ ] Test 401 unauthorized scenarios
+  - [ ] Test 403 forbidden scenarios
+  - [ ] Test 500 backend service errors
+- [ ] **Performance Testing**
+  - [ ] Test request routing performance
+  - [ ] Test concurrent request handling
+  - [ ] Test memory usage patterns
+  - [ ] Test timeout handling
+
+**Dependencies:**
+- ✅ **Gateway routing implementation complete**
+- ✅ **Authentication system stable**
+
+#### **FRONTEND-TEST-002: Frontend Integration Testing**
+- **Component**: Frontend (React)
+- **Type**: Story
+- **Priority**: Low
+- **Status**: 📋 To Do
+
+**Description:**
+Implement integration testing for frontend with backend services.
+
+**Acceptance Criteria:**
+- [ ] **End-to-End Testing**
+  - [ ] Test complete user registration flow
+  - [ ] Test complete login and authentication flow
+  - [ ] Test trading workflow (deposit → buy → sell → portfolio)
+  - [ ] Test profile management and updates
+- [ ] **API Integration Testing**
+  - [ ] Test real API calls with mock data
+  - [ ] Test error handling with real backend responses
+  - [ ] Test authentication token management
+  - [ ] Test data synchronization between components
+- [ ] **Cross-Browser Testing**
+  - [ ] Test on Chrome, Firefox, Safari, Edge
+  - [ ] Test responsive design on different screen sizes
+  - [ ] Test accessibility compliance
+  - [ ] Test performance on different devices
+
+**Dependencies:**
+- ✅ **FRONTEND-TEST-001**: Frontend Unit Testing Suite
+- ✅ **All backend services stable**
+
+#### **GATEWAY-TEST-002: Gateway Integration Testing**
+- **Component**: API Gateway (Go)
+- **Type**: Story
+- **Priority**: Low
+- **Status**: 📋 To Do
+
+**Description:**
+Implement integration testing for gateway with all backend services.
+
+**Acceptance Criteria:**
+- [ ] **Service Integration Testing**
+  - [ ] Test gateway → user service communication
+  - [ ] Test gateway → order service communication
+  - [ ] Test gateway → inventory service communication
+  - [ ] Test gateway → balance service communication
+- [ ] **Authentication Flow Testing**
+  - [ ] Test complete authentication flow through gateway
+  - [ ] Test token validation across all services
+  - [ ] Test role-based routing to different services
+  - [ ] Test session management and persistence
+- [ ] **Error Propagation Testing**
+  - [ ] Test error handling from backend services
+  - [ ] Test timeout scenarios
+  - [ ] Test service unavailability handling
+  - [ ] Test circuit breaker patterns (future)
+
+**Dependencies:**
+- ✅ **GATEWAY-TEST-001**: Gateway Unit Testing Suite
+- ✅ **All backend services stable**
+
 ---
 
 ### **✅ COMPLETED**
@@ -1035,16 +1363,16 @@ Created comprehensive portfolio management endpoints with real-time market value
 ## 📊 **Backlog Metrics**
 
 ### **Current Status:**
-- **Total Stories**: 33
-- **Completed**: 8 ✅ (+1 BACKEND-FIXES)
-- **In Progress**: 1 🔄
-- **To Do**: 24 📋
+- **Total Stories**: 37
+- **Completed**: 9 ✅ (+1 BACKEND-FIXES, +1 GATEWAY-DYNAMIC-ROUTES)
+- **In Progress**: 0 🔄
+- **To Do**: 28 📋
 
 ### **Priority Distribution:**
 - **CRITICAL Priority**: 4 stories (Phase 1 - 4 completed, 0 remaining) ✅ **ALL CRITICAL ITEMS COMPLETE**
 - **High Priority**: 8 stories
 - **Medium Priority**: 12 stories
-- **Low Priority**: 9 stories (including new unit testing tasks)
+- **Low Priority**: 13 stories (including new testing tasks)
 
 ### **Component Distribution:**
 - **Frontend (CRITICAL)**: 4 stories (2 remaining) ✅ **BLOCKER RESOLVED**
@@ -1054,7 +1382,7 @@ Created comprehensive portfolio management endpoints with real-time market value
 - **Monitoring & Observability**: 4 stories
 - **Security & Compliance**: 4 stories
 - **Performance & Scaling**: 3 stories
-- **Testing & Quality Assurance**: 6 stories (3 new low priority)
+- **Testing & Quality Assurance**: 10 stories (4 new low priority frontend/gateway tests)
 
 ### **Estimated Effort:**
 - **Completed**: 10-12 days

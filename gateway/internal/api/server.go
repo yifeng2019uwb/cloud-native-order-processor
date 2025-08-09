@@ -313,15 +313,58 @@ func (s *Server) getUserContext(c *gin.Context) *models.UserContext {
 
 // getBasePath extracts the base path for dynamic routes
 func (s *Server) getBasePath(path string) string {
-	// Handle dynamic routes like /assets/:id -> /assets
-	parts := strings.Split(path, "/")
-	if len(parts) > 0 {
-		// Remove the last part if it looks like an ID
-		lastPart := parts[len(parts)-1]
-		if len(lastPart) > 0 && !strings.Contains(lastPart, "/") {
-			return strings.Join(parts[:len(parts)-1], "/")
+	// Handle specific dynamic route patterns
+	// /api/v1/assets/{asset_id}/transactions -> /api/v1/assets/:asset_id/transactions
+	// /api/v1/assets/{asset_id}/balance -> /api/v1/assets/:asset_id/balance
+	// /api/v1/orders/{id} -> /api/v1/orders/:id
+	// /api/v1/portfolio/{username} -> /api/v1/portfolio/:username
+	// /api/v1/inventory/assets/{id} -> /api/v1/inventory/assets/:id
+
+	fmt.Printf("🔍 getBasePath: Input path: %s\n", path)
+
+	// Check for known dynamic route patterns
+	switch {
+	case strings.HasPrefix(path, "/api/v1/assets/") && strings.HasSuffix(path, "/transactions"):
+		// /api/v1/assets/AAVE/transactions -> /api/v1/assets/:asset_id/transactions
+		result := "/api/v1/assets/:asset_id/transactions"
+		fmt.Printf("🔍 getBasePath: Asset transactions pattern -> %s\n", result)
+		return result
+
+	case strings.HasPrefix(path, "/api/v1/assets/") && strings.HasSuffix(path, "/balance"):
+		// /api/v1/assets/AAVE/balance -> /api/v1/assets/:asset_id/balance
+		result := "/api/v1/assets/:asset_id/balance"
+		fmt.Printf("🔍 getBasePath: Asset balance pattern -> %s\n", result)
+		return result
+
+	case strings.HasPrefix(path, "/api/v1/orders/"):
+		// /api/v1/orders/123 -> /api/v1/orders/:id
+		parts := strings.Split(path, "/")
+		if len(parts) == 5 { // /api/v1/orders/{id}
+			result := "/api/v1/orders/:id"
+			fmt.Printf("🔍 getBasePath: Order by ID pattern -> %s\n", result)
+			return result
+		}
+
+	case strings.HasPrefix(path, "/api/v1/portfolio/"):
+		// /api/v1/portfolio/username -> /api/v1/portfolio/:username
+		parts := strings.Split(path, "/")
+		if len(parts) == 5 { // /api/v1/portfolio/{username}
+			result := "/api/v1/portfolio/:username"
+			fmt.Printf("🔍 getBasePath: Portfolio by user pattern -> %s\n", result)
+			return result
+		}
+
+	case strings.HasPrefix(path, "/api/v1/inventory/assets/"):
+		// /api/v1/inventory/assets/123 -> /api/v1/inventory/assets/:id
+		parts := strings.Split(path, "/")
+		if len(parts) == 6 { // /api/v1/inventory/assets/{id}
+			result := "/api/v1/inventory/assets/:id"
+			fmt.Printf("🔍 getBasePath: Inventory asset by ID pattern -> %s\n", result)
+			return result
 		}
 	}
+
+	fmt.Printf("🔍 getBasePath: No pattern matched, returning original path: %s\n", path)
 	return path
 }
 

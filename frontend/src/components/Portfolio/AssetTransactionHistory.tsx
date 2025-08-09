@@ -35,7 +35,7 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
         setError('Failed to load transaction history');
       }
     } catch (err) {
-      setError('Failed to load transaction history');
+      setError('Asset transaction history is temporarily unavailable. Backend API needs to be fixed.');
       console.error('Error loading asset transactions:', err);
     } finally {
       setLoading(false);

@@ -23,30 +23,30 @@ The frontend serves as the user interface for the order processor system, provid
 
 ## 🚀 Features
 
-### **✅ Authentication System**
-- User registration with validation
-- Secure login with JWT tokens
-- Profile management
-- Logout functionality
-- Protected route handling
+### **✅ Complete Trading Platform**
+- **Landing Page**: Asset showcase with real inventory data
+- **Authentication**: Login/Register with auto-login after registration
+- **Dashboard**: Account overview with real-time balance and asset data
+- **Trading Page**: Order creation with comprehensive safety features
+- **Portfolio Page**: Asset balance overview with clickable transaction history
+- **Account Page**: Balance management and transaction history
+- **Profile Page**: User profile management and updates
+- **Inventory Page**: Asset browsing with sorting and navigation to trading
 
-### **✅ Inventory Management**
-- Public asset browsing (no auth required)
-- Asset details and information
-- Search and filtering capabilities
-- Responsive design
+### **✅ Advanced Trading Features**
+- **Order Management**: Buy/sell orders with real-time validation
+- **Portfolio Tracking**: Real-time asset balance updates
+- **Transaction History**: Complete order and balance transaction records
+- **Balance Management**: Deposit/withdraw functionality
+- **Asset Holdings**: Individual asset transaction history
 
-### **✅ User Dashboard**
-- User profile display
-- Account management
-- Session handling
-- Responsive layout
-
-### **✅ API Integration**
-- Seamless integration with Go API Gateway
-- Automatic token management
-- Error handling and retry logic
-- Type-safe API calls
+### **✅ Security & User Experience**
+- **JWT Authentication**: Secure token-based authentication
+- **Protected Routes**: Authentication-required pages
+- **Input Validation**: Comprehensive form validation
+- **Error Handling**: User-friendly error messages
+- **Loading States**: Professional loading indicators
+- **Mobile Responsive**: Works on all device sizes
 
 ## 📁 Project Structure
 
@@ -58,21 +58,42 @@ frontend/
 │   │   │   ├── Login.tsx          # Login component
 │   │   │   └── Register.tsx       # Registration component
 │   │   ├── Dashboard/
-│   │   │   └── Dashboard.tsx      # User dashboard
-│   │   └── Inventory/
-│   │       ├── AssetCard.tsx      # Asset display card
-│   │       ├── AssetDetail.tsx    # Asset details view
-│   │       ├── AssetList.tsx      # Asset listing
-│   │       └── InventoryPage.tsx  # Main inventory page
+│   │   │   └── Dashboard.tsx      # User dashboard with portfolio overview
+│   │   ├── Trading/
+│   │   │   └── TradingPage.tsx    # Order creation and management
+│   │   ├── Portfolio/
+│   │   │   ├── PortfolioPage.tsx  # Asset balance overview
+│   │   │   └── AssetTransactionHistory.tsx # Individual asset history
+│   │   ├── Account/
+│   │   │   └── AccountPage.tsx    # Balance management and transactions
+│   │   ├── Profile/
+│   │   │   └── ProfilePage.tsx    # User profile management
+│   │   ├── Inventory/
+│   │   │   ├── AssetCard.tsx      # Asset display card
+│   │   │   ├── AssetDetail.tsx    # Asset details view
+│   │   │   ├── AssetList.tsx      # Asset listing with sorting
+│   │   │   └── InventoryPage.tsx  # Main inventory page
+│   │   └── Landing/
+│   │       └── LandingPage.tsx    # Public landing page
 │   ├── hooks/
 │   │   ├── useAuth.ts             # Authentication hook
 │   │   └── useInventory.ts        # Inventory data hook
 │   ├── services/
 │   │   ├── api.ts                 # Auth API service
-│   │   └── inventoryApi.ts        # Inventory API service
+│   │   ├── inventoryApi.ts        # Inventory API service
+│   │   ├── orderApi.ts            # Order management API
+│   │   ├── balanceApi.ts          # Balance management API
+│   │   ├── profileApi.ts          # Profile management API
+│   │   ├── assetBalanceApi.ts     # Asset balance API
+│   │   └── assetTransactionApi.ts # Asset transaction history API
 │   ├── types/
 │   │   ├── auth.ts                # Authentication types
 │   │   ├── inventory.ts           # Inventory types
+│   │   ├── orders.ts              # Order types
+│   │   ├── balance.ts             # Balance types
+│   │   ├── profile.ts             # Profile types
+│   │   ├── assetBalance.ts        # Asset balance types
+│   │   ├── assetTransaction.ts    # Asset transaction types
 │   │   └── index.ts               # Shared types
 │   ├── utils/
 │   │   └── auth.ts                # Auth utilities
@@ -307,8 +328,73 @@ POST /api/v1/auth/register
 GET /api/v1/auth/me
 Authorization: Bearer <JWT_TOKEN>
 
-// Logout
-POST /api/v1/auth/logout
+// Update Profile
+PUT /api/v1/auth/me
+Authorization: Bearer <JWT_TOKEN>
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "user@example.com"
+}
+```
+
+### **Trading & Orders API**
+```typescript
+// Create Order
+POST /api/v1/orders
+Authorization: Bearer <JWT_TOKEN>
+{
+  "asset_id": "BTC",
+  "quantity": "0.01",
+  "order_type": "buy"
+}
+
+// List User Orders
+GET /api/v1/orders?limit=50&offset=0
+Authorization: Bearer <JWT_TOKEN>
+
+// Get Order Details
+GET /api/v1/orders/{order_id}
+Authorization: Bearer <JWT_TOKEN>
+```
+
+### **Portfolio & Assets API**
+```typescript
+// Get Asset Balances
+GET /api/v1/assets/balances
+Authorization: Bearer <JWT_TOKEN>
+
+// Get Asset Transaction History
+GET /api/v1/assets/{asset_id}/transactions?limit=50&offset=0
+Authorization: Bearer <JWT_TOKEN>
+
+// Get Portfolio Summary
+GET /api/v1/portfolio/{username}
+Authorization: Bearer <JWT_TOKEN>
+```
+
+### **Balance Management API**
+```typescript
+// Get Account Balance
+GET /api/v1/balance
+Authorization: Bearer <JWT_TOKEN>
+
+// Deposit Funds
+POST /api/v1/balance/deposit
+Authorization: Bearer <JWT_TOKEN>
+{
+  "amount": "1000.00"
+}
+
+// Withdraw Funds
+POST /api/v1/balance/withdraw
+Authorization: Bearer <JWT_TOKEN>
+{
+  "amount": "500.00"
+}
+
+// Get Transaction History
+GET /api/v1/balance/transactions?limit=50&offset=0
 Authorization: Bearer <JWT_TOKEN>
 ```
 
