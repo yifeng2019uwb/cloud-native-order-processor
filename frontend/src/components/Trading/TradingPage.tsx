@@ -1,13 +1,171 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { orderApiService } from '@/services/orderApi';
+import { balanceApiService } from '@/services/balanceApi';
+import { inventoryApiService } from '@/services/inventoryApi';
+import { assetBalanceApiService } from '@/services/assetBalanceApi';
+import type { Asset, Order, CreateOrderRequest, Balance, AssetBalance } from '@/types';
 
 const TradingPage: React.FC = () => {
   const { user, logout } = useAuth();
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [balance, setBalance] = useState<Balance | null>(null);
+  const [assetBalances, setAssetBalances] = useState<AssetBalance[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [orderForm, setOrderForm] = useState({
+    quantity: '',
+    orderType: 'market_buy' as 'market_buy' | 'market_sell'
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [orderPreview, setOrderPreview] = useState<any>(null);
 
   const handleLogout = () => {
     logout();
   };
+
+  // Load initial data
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+            const [assetsRes, balanceRes, assetBalancesRes, ordersRes] = await Promise.all([
+        inventoryApiService.listAssets(),
+        balanceApiService.getBalance().catch(() => null),
+        assetBalanceApiService.listAssetBalances().catch(() => ({ success: false, asset_balances: [] })),
+        orderApiService.listOrders({ limit: 10 }).catch(() => ({ success: false, orders: [] }))
+      ]);
+
+      if (assetsRes.assets) {
+        setAssets(assetsRes.assets);
+        if (assetsRes.assets.length > 0) {
+          setSelectedAsset(assetsRes.assets[0]);
+        }
+      }
+
+      if (balanceRes) {
+        // Convert the BalanceResponse to Balance format
+        const balanceData = {
+          username: '', // Not provided by API
+          balance: parseFloat(balanceRes.current_balance),
+          currency: 'USD',
+          last_updated: balanceRes.updated_at
+        };
+        setBalance(balanceData);
+      }
+
+      if (assetBalancesRes.success) {
+        setAssetBalances(assetBalancesRes.asset_balances);
+      }
+
+      if (ordersRes.success) {
+        setOrders(ordersRes.orders);
+      }
+    } catch (err) {
+      setError('Failed to load trading data');
+      console.error('Trading data load error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const calculateOrderPreview = () => {
+    if (!selectedAsset || !orderForm.quantity) return null;
+
+    const quantity = parseFloat(orderForm.quantity);
+    const price = selectedAsset.price_usd || 0;
+    const total = quantity * price;
+
+    if (orderForm.orderType === 'market_buy') {
+      const remainingBalance = (balance?.balance || 0) - total;
+      return {
+        asset: selectedAsset,
+        quantity,
+        price,
+        total,
+        orderType: 'Buy',
+        balanceAfter: remainingBalance,
+        balanceCheck: remainingBalance >= 0
+      };
+    } else {
+      const assetBalance = assetBalances.find(ab => ab.asset_id === selectedAsset.asset_id);
+      const availableQuantity = assetBalance?.quantity || 0;
+      const remainingQuantity = availableQuantity - quantity;
+      return {
+        asset: selectedAsset,
+        quantity,
+        price,
+        total,
+        orderType: 'Sell',
+        quantityAfter: remainingQuantity,
+        quantityCheck: remainingQuantity >= 0
+      };
+    }
+  };
+
+  const handleOrderSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAsset || !orderForm.quantity) return;
+
+    const preview = calculateOrderPreview();
+    if (!preview) return;
+
+    // Check validation
+    if (orderForm.orderType === 'market_buy' && !preview.balanceCheck) {
+      setError('Insufficient balance for this order');
+      return;
+    }
+
+    if (orderForm.orderType === 'market_sell' && !preview.quantityCheck) {
+      setError('Insufficient asset balance for this order');
+      return;
+    }
+
+    setOrderPreview(preview);
+    setShowConfirmation(true);
+    setError(null);
+  };
+
+  const confirmOrder = async () => {
+    if (!selectedAsset || !orderForm.quantity) return;
+
+    try {
+      setIsLoading(true);
+      const orderData: CreateOrderRequest = {
+        asset_id: selectedAsset.asset_id,
+        quantity: parseFloat(orderForm.quantity),
+        price: selectedAsset.price_usd || 0,
+        order_type: orderForm.orderType
+      };
+
+      const result = await orderApiService.createOrder(orderData);
+
+      if (result.success) {
+        // Reset form
+        setOrderForm({ quantity: '', orderType: 'market_buy' });
+        setShowConfirmation(false);
+        setOrderPreview(null);
+
+        // Reload data
+        await loadData();
+
+        alert(`Order ${result.order.order_id} created successfully!`);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to create order');
+      console.error('Order creation error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const preview = calculateOrderPreview();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -21,7 +179,7 @@ const TradingPage: React.FC = () => {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">
-                Welcome, {user?.first_name}!
+                Welcome, {user?.username}!
               </span>
               <Link
                 to="/dashboard"
@@ -40,29 +198,309 @@ const TradingPage: React.FC = () => {
         </div>
       </header>
 
+      {/* Balance Display */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">💰 Account Balance</h3>
+              <p className="text-2xl font-bold text-green-600">
+                ${balance?.balance?.toFixed(2) || '0.00'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Asset Holdings</p>
+              <p className="text-lg font-medium">
+                {assetBalances.length} assets owned
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Order Form */}
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">
-                Trading Interface (Coming Soon)
+                  📝 Create Order
               </h2>
-              <p className="text-gray-600">
-                This page will contain the order creation interface with real-time market data.
-              </p>
-              <div className="mt-6">
+
+                {error && (
+                  <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                    {error}
+                  </div>
+                )}
+
+                <form onSubmit={handleOrderSubmit} className="space-y-4">
+                  {/* Asset Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Asset
+                    </label>
+                    <select
+                      value={selectedAsset?.asset_id || ''}
+                      onChange={(e) => {
+                        const asset = assets.find(a => a.asset_id === e.target.value);
+                        setSelectedAsset(asset || null);
+                      }}
+                      className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                      required
+                    >
+                      <option value="">Select an asset</option>
+                      {assets.map(asset => (
+                        <option key={asset.asset_id} value={asset.asset_id}>
+                          {asset.name} ({asset.asset_id}) - ${asset.price_usd?.toFixed(2)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Order Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Order Type
+                    </label>
+                    <div className="flex space-x-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="market_buy"
+                          checked={orderForm.orderType === 'market_buy'}
+                          onChange={(e) => setOrderForm(prev => ({ ...prev, orderType: e.target.value as any }))}
+                          className="mr-2"
+                        />
+                        Buy
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="market_sell"
+                          checked={orderForm.orderType === 'market_sell'}
+                          onChange={(e) => setOrderForm(prev => ({ ...prev, orderType: e.target.value as any }))}
+                          className="mr-2"
+                        />
+                        Sell
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Quantity */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Quantity
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={orderForm.quantity}
+                      onChange={(e) => setOrderForm(prev => ({ ...prev, quantity: e.target.value }))}
+                      className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="Enter quantity"
+                      required
+                    />
+                  </div>
+
+                  {/* Order Preview */}
+                  {preview && selectedAsset && (
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium mb-2">Order Preview</h4>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span>Asset:</span>
+                          <span>{selectedAsset.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Price:</span>
+                          <span>${preview.price.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Quantity:</span>
+                          <span>{preview.quantity}</span>
+                        </div>
+                        <div className="flex justify-between font-medium">
+                          <span>Total:</span>
+                          <span>${preview.total.toFixed(2)}</span>
+                        </div>
+
+                                                {orderForm.orderType === 'market_buy' && preview.balanceAfter !== undefined && (
+                          <div className={`flex justify-between ${preview.balanceCheck ? 'text-green-600' : 'text-red-600'}`}>
+                            <span>Balance After:</span>
+                            <span>${preview.balanceAfter.toFixed(2)}</span>
+                          </div>
+                        )}
+
+                        {orderForm.orderType === 'market_sell' && preview.quantityAfter !== undefined && (
+                          <div className={`flex justify-between ${preview.quantityCheck ? 'text-green-600' : 'text-red-600'}`}>
+                            <span>Quantity After:</span>
+                            <span>{preview.quantityAfter.toFixed(6)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || !selectedAsset || !orderForm.quantity}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-4 py-3 rounded-md font-medium transition-colors"
+                                          >
+                          {isLoading ? 'Processing...' : `${orderForm.orderType === 'market_buy' ? 'Buy' : 'Sell'} ${selectedAsset?.asset_id || 'Asset'}`}
+                        </button>
+                </form>
+              </div>
+            </div>
+
+            {/* Market Data & Order History */}
+            <div className="space-y-6">
+              {/* Market Data */}
+              {selectedAsset && (
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="px-4 py-5 sm:p-6">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                      📊 {selectedAsset.asset_id} - {selectedAsset.name}
+                    </h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Current Price:</span>
+                        <span className="font-medium">${selectedAsset.price_usd?.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Category:</span>
+                        <span>{selectedAsset.category}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Status:</span>
+                        <span className={`px-2 py-1 text-xs rounded-full ${selectedAsset.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          {selectedAsset.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      {selectedAsset.description && (
+                        <div className="flex justify-between">
+                          <span>Description:</span>
+                          <span className="text-sm text-gray-600">{selectedAsset.description}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Orders */}
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    📋 Recent Orders
+                  </h3>
+                  {orders.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Asset</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {orders.slice(0, 5).map(order => (
+                            <tr key={order.order_id}>
+                              <td className="px-3 py-2 text-sm text-gray-900">{order.asset_id}</td>
+                              <td className="px-3 py-2 text-sm">
+                                <span className={`px-2 py-1 text-xs rounded-full ${order.order_type.includes('buy') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                  {order.order_type.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-sm text-gray-900">{order.quantity}</td>
+                              <td className="px-3 py-2 text-sm">
+                                <span className={`px-2 py-1 text-xs rounded-full ${order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'failed' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                  {order.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">No orders yet</p>
+                  )}
+                  <div className="mt-4">
                 <Link
-                  to="/inventory"
+                      to="/portfolio"
                   className="text-indigo-600 hover:text-indigo-500 text-sm font-medium"
                 >
-                  ← Browse Available Assets
+                      View All Orders →
                 </Link>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Order Confirmation Modal */}
+      {showConfirmation && orderPreview && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Order</h3>
+
+              <div className="space-y-2 text-sm text-left mb-6">
+                <div className="flex justify-between">
+                  <span>Asset:</span>
+                  <span className="font-medium">{orderPreview.asset.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Order Type:</span>
+                  <span className="font-medium">{orderPreview.orderType}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Quantity:</span>
+                  <span className="font-medium">{orderPreview.quantity}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Price:</span>
+                  <span className="font-medium">${orderPreview.price.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-medium border-t pt-2">
+                  <span>Total:</span>
+                  <span>${orderPreview.total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ This is a market order and will execute immediately at current market price.
+                </p>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowConfirmation(false)}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmOrder}
+                  disabled={isLoading}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md font-medium transition-colors"
+                >
+                  {isLoading ? 'Processing...' : 'Confirm Order'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -35,9 +35,8 @@ export interface BalanceTransactionListRequest {
 }
 
 export interface BalanceResponse {
-  success: boolean;
-  balance: Balance;
-  timestamp: string;
+  current_balance: string; // Decimal as string from backend
+  updated_at: string;
 }
 
 export interface BalanceTransactionResponse {

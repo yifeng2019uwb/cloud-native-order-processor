@@ -82,13 +82,13 @@ class BalanceApiService {
     return response.data;
   }
 
-  async deposit(depositData: DepositRequest): Promise<BalanceResponse> {
-    const response = await this.api.post<BalanceResponse>('/deposit', depositData);
+  async deposit(depositData: DepositRequest): Promise<{success: boolean, message: string, transaction_id: string, timestamp: string}> {
+    const response = await this.api.post<{success: boolean, message: string, transaction_id: string, timestamp: string}>('/deposit', depositData);
     return response.data;
   }
 
-  async withdraw(withdrawData: WithdrawRequest): Promise<BalanceResponse> {
-    const response = await this.api.post<BalanceResponse>('/withdraw', withdrawData);
+  async withdraw(withdrawData: WithdrawRequest): Promise<{success: boolean, message: string, transaction_id: string, timestamp: string}> {
+    const response = await this.api.post<{success: boolean, message: string, transaction_id: string, timestamp: string}>('/withdraw', withdrawData);
     return response.data;
   }
 

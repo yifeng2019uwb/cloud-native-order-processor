@@ -136,8 +136,7 @@ const (
 	APIV1AssetBalanceByID      = "/api/v1/assets/:asset_id/balance"
 	APIV1AssetTransactionsByID = "/api/v1/assets/:asset_id/transactions"
 
-	// Profile update path
-	APIV1AuthProfileUpdate = "/api/v1/auth/profile"
+
 )
 
 // Phase 1: User roles and permissions
@@ -358,12 +357,7 @@ var (
 			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
 		},
 
-		// Profile update route (requires auth)
-		APIV1AuthProfileUpdate: {
-			Path:         APIV1AuthProfileUpdate,
-			RequiresAuth: true,
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
-		},
+
 	}
 )
 

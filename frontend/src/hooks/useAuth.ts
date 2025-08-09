@@ -88,40 +88,37 @@ const useAuthState = () => {
     initializeAuth();
   }, []);
 
-      const login = useCallback(async (credentials: LoginRequest) => {
+            const login = useCallback(async (credentials: LoginRequest) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
       // Make the API call
-      await apiService.login(credentials);
+      const loginResponse = await apiService.login(credentials);
 
-      // If we get here, login succeeded - just set authentication to true
-      const user: User = {
-        username: credentials.username,
-        email: `${credentials.username}@example.com`,
-        first_name: credentials.username,
-        last_name: 'User',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        marketing_emails_consent: false
-      };
+      // Get the real user profile from the backend
+      const profileResponse = await apiService.getProfile();
 
-      // Force authentication success
-      console.log('🔄 Setting auth state...');
-      setState(prev => {
-        console.log('📊 Previous state:', prev);
-        const newState = {
-          user: user,
-          token: 'dummy-token', // Use dummy token since API is working
-          isAuthenticated: true,
-          isLoading: false,
-          error: null
-        };
-        console.log('📊 New state:', newState);
-        return newState;
+      const token = loginResponse.access_token || loginResponse.data?.access_token;
+      if (!token) {
+        throw new Error('No access token received from login');
+      }
+
+      // Set token in API service for subsequent requests
+      apiService.setAuthToken(token);
+
+      // Store auth data
+      authUtils.saveAuthData(token, profileResponse.user);
+
+      // Set authenticated state with real user data
+      setState({
+        user: profileResponse.user,
+        token: token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null
       });
 
-      console.log('✅ Login forced to success! isAuthenticated should now be true');
+      console.log('✅ Login successful with real profile data!');
     } catch (error: unknown) {
       setState(prev => ({
         ...prev,
@@ -208,17 +205,23 @@ const useAuthState = () => {
     setState(prev => ({ ...prev, error: null }));
   }, []);
 
-  const refreshProfile = useCallback(async () => {
+    const refreshProfile = useCallback(async () => {
     if (!state.isAuthenticated) return;
 
-    // For now, just reload from storage since we don't have a profile endpoint
     try {
-      const { user } = authUtils.getStoredAuthData();
-      if (user) {
-        setState(prev => ({
-          ...prev,
-          user
-        }));
+      // Fetch fresh profile data from the API
+      const profileResponse = await apiService.getProfile();
+
+      // Update state with fresh data
+      setState(prev => ({
+        ...prev,
+        user: profileResponse.user
+      }));
+
+      // Update stored data
+      const { token } = authUtils.getStoredAuthData();
+      if (token) {
+        authUtils.saveAuthData(token, profileResponse.user);
       }
     } catch (error) {
       console.error('Failed to refresh profile:', error);
