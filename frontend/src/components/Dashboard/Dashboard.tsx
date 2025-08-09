@@ -1,12 +1,62 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { balanceApiService } from '@/services/balanceApi';
+import { assetBalanceApiService } from '@/services/assetBalanceApi';
+import type { Balance, AssetBalance } from '@/types';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
+  const [balance, setBalance] = useState<Balance | null>(null);
+  const [assetBalances, setAssetBalances] = useState<AssetBalance[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleLogout = () => {
     logout();
+  };
+
+  useEffect(() => {
+    if (user?.username) {
+      loadDashboardData();
+    }
+  }, [user]);
+
+  const loadDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      const [balanceRes, assetBalancesRes] = await Promise.all([
+        balanceApiService.getBalance().catch(() => null),
+        assetBalanceApiService.listAssetBalances().catch(() => ({ success: false, message: '', data: [], timestamp: '' }))
+      ]);
+
+      if (balanceRes && typeof balanceRes.current_balance === 'string') {
+        setBalance({
+          username: user?.username || '',
+          balance: parseFloat(balanceRes.current_balance),
+          currency: 'USD',
+          last_updated: balanceRes.updated_at
+        });
+      }
+
+      if (assetBalancesRes && assetBalancesRes.data) {
+        setAssetBalances(assetBalancesRes.data);
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const calculateTotalAssetValue = () => {
+    if (!assetBalances || assetBalances.length === 0) return 0;
+
+    // Calculate total based on quantity only (using $1 placeholder per unit)
+    // TODO: This needs real market prices from backend API for accurate calculation
+    return assetBalances.reduce((total, asset) => {
+      const quantity = parseFloat(asset.quantity || '0');
+      return total + quantity; // Using $1 per unit as placeholder
+    }, 0);
   };
 
   if (!user) {
@@ -48,6 +98,104 @@ const Dashboard: React.FC = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {/* Account Summary */}
+          <div className="mb-8">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Account Overview</h2>
+
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-white overflow-hidden shadow rounded-lg animate-pulse">
+                    <div className="p-5">
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                      <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Account Balance */}
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="text-2xl">💰</div>
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">
+                            Account Balance
+                          </dt>
+                          <dd className="text-2xl font-bold text-gray-900">
+                            ${balance?.balance?.toFixed(2) || '0.00'}
+                          </dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 px-5 py-3">
+                    <div className="text-xs text-gray-500">
+                      Last updated: {balance?.last_updated ? new Date(balance.last_updated).toLocaleString() : 'Never'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total Asset Value */}
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="text-2xl">📊</div>
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">
+                            Total Asset Value
+                          </dt>
+                          <dd className="text-2xl font-bold text-gray-900">
+                            ${calculateTotalAssetValue().toFixed(2)}
+                          </dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 px-5 py-3">
+                    <div className="text-xs text-gray-500">
+                      {assetBalances.length} asset{assetBalances.length !== 1 ? 's' : ''} held
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total Portfolio Value */}
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="text-2xl">💎</div>
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">
+                            Total Portfolio
+                          </dt>
+                          <dd className="text-2xl font-bold text-gray-900">
+                            ${((balance?.balance || 0) + calculateTotalAssetValue()).toFixed(2)}
+                          </dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 px-5 py-3">
+                    <div className="text-xs text-gray-500">
+                      Cash + Assets
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Quick Actions */}
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
