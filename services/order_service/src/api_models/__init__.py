@@ -16,7 +16,7 @@ from .order import (
 # Asset models (consolidated into single file)
 from .asset import (
     # Request models
-    GetAssetBalanceRequest, GetAssetBalancesRequest, GetAssetTransactionsRequest, GetPortfolioRequest,
+    GetAssetBalanceRequest, GetAssetBalancesRequest, GetPortfolioRequest,
     # Data models
     AssetBalanceData, AssetTransactionData, PortfolioAssetData,
     # Response models
@@ -45,7 +45,7 @@ __all__ = [
     # Asset models (consolidated)
     "GetAssetBalanceRequest",
     "GetAssetBalancesRequest",
-    "GetAssetTransactionsRequest",
+
     "GetPortfolioRequest",
     "AssetBalanceData",
     "AssetTransactionData",

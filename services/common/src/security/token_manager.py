@@ -36,7 +36,7 @@ class TokenManager:
         # JWT Configuration
         self.jwt_secret = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
         self.jwt_algorithm = "HS256"
-        self.jwt_expiration_hours = 24
+        self.jwt_expiration_hours = 1
 
     def create_access_token(self, username: str, role: str = DEFAULT_USER_ROLE, expires_delta: Optional[timedelta] = None) -> Dict[str, Any]:
         """

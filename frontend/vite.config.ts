@@ -1,30 +1,24 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@/types': path.resolve(__dirname, './src/types'),
-      '@/components': path.resolve(__dirname, './src/components'),
-      '@/services': path.resolve(__dirname, './src/services'),
-      '@/hooks': path.resolve(__dirname, './src/hooks'),
-      '@/utils': path.resolve(__dirname, './src/utils')
+      '@': '/src'
     }
   },
   server: {
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080', // Gateway
+        target: 'http://gateway:8080', // Gateway (Docker service name)
         changeOrigin: true,
         secure: false
       },
       '/health': {
-        target: 'http://localhost:8080', // Gateway health
+        target: 'http://gateway:8080', // Gateway health (Docker service name)
         changeOrigin: true,
         secure: false
       }

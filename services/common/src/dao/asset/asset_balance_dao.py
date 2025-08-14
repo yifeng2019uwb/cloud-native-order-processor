@@ -120,15 +120,12 @@ class AssetBalanceDAO(BaseDAO):
             raise AssetBalanceNotFoundException(f"Asset balance not found for user '{username}' and asset '{asset_id}'")
 
         logger.info(f"Creating AssetBalance object from item: {item}")
-        # Extract asset_id from Sk field (format: ASSET#{asset_id})
-        asset_id = item['Sk'].split('#')[1] if '#' in item['Sk'] else item['Sk']
-        logger.info(f"Extracted asset_id from Sk: {asset_id}")
 
         return AssetBalance(
             Pk=item['Pk'],
             Sk=item['Sk'],
             username=item.get('username', item['Pk']),  # Use Pk as fallback if username missing
-            asset_id=asset_id,
+            asset_id=item['asset_id'],  # Read directly from item field
             quantity=Decimal(item['quantity']),
             created_at=datetime.fromisoformat(item.get('created_at', item['updated_at'])),  # Use updated_at as fallback
             updated_at=datetime.fromisoformat(item['updated_at'])
@@ -138,20 +135,34 @@ class AssetBalanceDAO(BaseDAO):
         """Get all asset balances for a user"""
         key_condition = Key('Pk').eq(username) & Key('Sk').begins_with('ASSET#')
 
+        logger.info(f"Querying asset balances for user: {username}")
+        logger.info(f"Key condition: {key_condition}")
+
         items = self._safe_query(self.table, key_condition)
+
+        logger.info(f"Query returned {len(items)} items")
+        if items:
+            logger.info(f"First item structure: {items[0]}")
 
         balances = []
         for item in items:
-            balance = AssetBalance(
-                Pk=item['Pk'],
-                Sk=item['Sk'],
-                username=item.get('username', item['Pk']),  # Use Pk as fallback if username missing
-                asset_id=item['asset_id'],
-                quantity=Decimal(item['quantity']),
-                created_at=datetime.fromisoformat(item['created_at']),
-                updated_at=datetime.fromisoformat(item['updated_at'])
-            )
-            balances.append(balance)
+            try:
+                balance = AssetBalance(
+                    Pk=item['Pk'],
+                    Sk=item['Sk'],
+                    username=item.get('username', item['Pk']),  # Use Pk as fallback if username missing
+                    asset_id=item['asset_id'],  # Read directly from item field
+                    quantity=Decimal(item['quantity']),
+                    created_at=datetime.fromisoformat(item['created_at']),
+                    updated_at=datetime.fromisoformat(item['updated_at'])
+                )
+                balances.append(balance)
+            except KeyError as e:
+                logger.error(f"Missing field in item: {e}, item: {item}")
+                raise
+            except Exception as e:
+                logger.error(f"Error processing item: {e}, item: {item}")
+                raise
 
         return balances
 

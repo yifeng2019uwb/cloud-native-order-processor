@@ -324,6 +324,12 @@ func (s *Server) getBasePath(path string) string {
 
 	// Check for known dynamic route patterns
 	switch {
+	case strings.HasPrefix(path, "/api/v1/assets/balances"):
+		// /api/v1/assets/balances -> /api/v1/assets/balances (exact match)
+		result := "/api/v1/assets/balances"
+		fmt.Printf("🔍 getBasePath: Asset balances pattern -> %s\n", result)
+		return result
+
 	case strings.HasPrefix(path, "/api/v1/assets/") && strings.HasSuffix(path, "/transactions"):
 		// /api/v1/assets/AAVE/transactions -> /api/v1/assets/:asset_id/transactions
 		result := "/api/v1/assets/:asset_id/transactions"

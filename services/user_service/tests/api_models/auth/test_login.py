@@ -42,7 +42,7 @@ def test_login_success_response_serialization():
     login_data = UserLoginResponse(
         access_token="token123",
         token_type="bearer",
-        expires_in=86400
+        expires_in=3600
     )
 
     resp = LoginSuccessResponse(
@@ -53,7 +53,7 @@ def test_login_success_response_serialization():
     assert data["message"] == "Login successful"
     assert data["data"]["access_token"] == "token123"
     assert data["data"]["token_type"] == "bearer"
-    assert data["data"]["expires_in"] == 86400
+    assert data["data"]["expires_in"] == 3600
 
 # --- LoginErrorResponse serialization ---
 def test_login_error_response_serialization():

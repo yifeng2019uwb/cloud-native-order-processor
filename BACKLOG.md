@@ -948,27 +948,37 @@ Rename authentication profile endpoint from `/auth/me` to `/auth/profile` for be
 - **Component**: API Gateway (Backend)
 - **Type**: Bug
 - **Priority**: CRITICAL
-- **Status**: 📋 To Do
+- **Status**: 🔄 In Progress (Assigned 8/14/2025)
 
 **Description:**
-Fix gateway dynamic route matching issue preventing access to parameterized endpoints like `/assets/{asset_id}/transactions`.
+Fix gateway dynamic route matching issue preventing access to `/api/v1/assets/balances` endpoint (causing 500 errors).
+
+**Root Cause Identified:**
+- August 9th gateway changes broke `/api/v1/assets/balances` routing
+- `getBasePath` function missing pattern for `/api/v1/assets/balances`
+- Gateway strips `/api/v1/assets` prefix incorrectly, sends `/balances` to Order Service
+- Order Service expects `/assets/balances`, gets `/balances` → 500 Error
 
 **Acceptance Criteria:**
-- [ ] **Route Matching Investigation**
-  - [ ] Debug why `/api/v1/assets/:asset_id/transactions` returns 404
-  - [ ] Analyze gateway route resolution for parameterized paths
-  - [ ] Compare working routes vs failing parameterized routes
-  - [ ] Document root cause of dynamic route matching failure
+- [x] **Route Matching Investigation** ✅
+  - [x] Debug why `/api/v1/assets/balances` returns 500 (not 404)
+  - [x] Analyze gateway route resolution for asset balance paths
+  - [x] Compare working routes vs failing asset balance route
+  - [x] Document root cause: missing pattern in `getBasePath` function
 - [ ] **Gateway Route Resolution Fix**
-  - [ ] Fix parameterized route matching in gateway routing logic
-  - [ ] Ensure proper path parameter extraction and forwarding
-  - [ ] Test all existing parameterized routes (assets, orders, users)
+  - [ ] Add missing pattern for `/api/v1/assets/balances` in `getBasePath`
+  - [ ] Ensure proper path forwarding to Order Service
+  - [ ] Test asset balance endpoint end-to-end
   - [ ] Verify route security and authentication still work
 - [ ] **Testing & Validation**
-  - [ ] Test asset transaction history endpoint end-to-end
-  - [ ] Verify all parameterized routes work correctly
-  - [ ] Add automated tests for dynamic route scenarios
-  - [ ] Test with various parameter values and edge cases
+  - [ ] Test asset balance endpoint returns data successfully
+  - [ ] Verify frontend asset balance feature works end-to-end
+  - [ ] Test with different users and assets
+
+**Technical Details:**
+- **File**: `gateway/internal/services/proxy.go` - `getBasePath` function
+- **Missing Pattern**: `case strings.HasPrefix(path, "/api/v1/assets/balances")`
+- **Expected Result**: `/api/v1/assets/balances` → `/assets/balances` (Order Service)
 
 **Dependencies:**
 - ✅ **Existing gateway infrastructure**
@@ -977,32 +987,42 @@ Fix gateway dynamic route matching issue preventing access to parameterized endp
 - **Component**: Order Service (Backend)
 - **Type**: Bug
 - **Priority**: Medium
-- **Status**: 📋 To Do
+- **Status**: 🔄 In Progress (Assigned 8/14/2025)
 
 **Description:**
 Fix parameter mismatch in asset transaction history endpoint where controller passes unsupported `offset` parameter.
 
+**Root Cause Identified:**
+- Controller calls `get_user_asset_transactions(username, asset_id, limit, offset)`
+- DAO method only accepts `get_user_asset_transactions(username, asset_id, limit)`
+- `offset` parameter causes 500 Internal Server Error
+- Frontend expects working pagination but gets server errors
+
 **Acceptance Criteria:**
-- [ ] **Root Cause Analysis**
-  - [ ] AssetTransactionDAO.get_user_asset_transactions() method only accepts username, asset_id, and limit
-  - [ ] Controller in asset_transaction.py passes unsupported offset parameter causing Exception
-  - [ ] Backend returns 500 Internal Server Error instead of data
-- [ ] **Fix Implementation Options**
-  - [ ] Option A: Remove offset parameter from controller calls (simpler)
-  - [ ] Option B: Add pagination support to AssetTransactionDAO using DynamoDB last_key
-  - [ ] Option C: Implement offset emulation in DAO layer
+- [x] **Root Cause Analysis** ✅
+  - [x] AssetTransactionDAO.get_user_asset_transactions() method only accepts username, asset_id, and limit
+  - [x] Controller in asset_transaction.py passes unsupported offset parameter causing Exception
+  - [x] Backend returns 500 Internal Server Error instead of data
+- [ ] **Fix Implementation** (Choose Option A - Keep it Simple)
+  - [ ] Remove offset parameter from controller calls (simpler approach)
+  - [ ] Update API models to remove offset field
+  - [ ] Test asset transaction history endpoint returns data successfully
 - [ ] **Testing & Validation**
   - [ ] Test asset transaction history endpoint returns data successfully
   - [ ] Verify frontend asset transaction history feature works end-to-end
   - [ ] Test with different users and assets
-  - [ ] Ensure no performance impact from pagination changes
 
 **Technical Details:**
-- Error occurs in `/assets/{asset_id}/transactions` endpoint
-- Method signature: `get_user_asset_transactions(username, asset_id, limit, offset)` ❌
-- Expected signature: `get_user_asset_transactions(username, asset_id, limit)` ✅
-- Controller file: `services/order_service/src/controllers/asset_transaction.py`
-- DAO file: `services/common/src/dao/asset/asset_transaction_dao.py`
+- **Error occurs in**: `/assets/{asset_id}/transactions` endpoint
+- **Current signature**: `get_user_asset_transactions(username, asset_id, limit, offset)` ❌
+- **Expected signature**: `get_user_asset_transactions(username, asset_id, limit)` ✅
+- **Controller file**: `services/order_service/src/controllers/asset_transaction.py`
+- **DAO file**: `services/common/src/dao/asset/asset_transaction_dao.py`
+- **API Model**: `services/order_service/src/api_models/asset.py` - GetAssetTransactionsRequest
+
+**Fix Strategy:**
+- **Option A (Recommended)**: Remove offset parameter, keep simple limit-based pagination
+- **Option B (Future)**: Add proper DynamoDB pagination with last_key (over-engineering for now)
 
 **Dependencies:**
 - ✅ **Gateway dynamic routing fix** (already completed)
@@ -1090,6 +1110,98 @@ Implement comprehensive unit testing for API Gateway components and routing logi
 **Dependencies:**
 - ✅ **Gateway routing implementation complete**
 - ✅ **Authentication system stable**
+
+#### **ORDER-004: Remove Redundant Asset Transaction Endpoint**
+- **Component**: Order Service (Backend)
+- **Type**: Bug
+- **Priority**: Low
+- **Status**: 🔄 In Progress (Assigned 8/14/2025)
+
+**Description:**
+Remove unnecessary `/assets/transactions/{username}/{asset_id}` endpoint that duplicates functionality and creates security risks.
+
+**Root Cause Identified:**
+- Redundant endpoint `/assets/transactions/{username}/{asset_id}` exists alongside clean `/assets/{asset_id}/transactions`
+- Both endpoints do the same thing but with different URL patterns
+- Creates confusion and maintenance overhead
+- No admin use case needed for personal project
+
+**Acceptance Criteria:**
+- [ ] **Remove Redundant Endpoint**
+  - [ ] Delete `/assets/transactions/{username}/{asset_id}` route from asset_transaction.py
+  - [ ] Remove from main.py logging
+  - [ ] Clean up any references in tests
+- [ ] **Keep Clean Endpoints**
+  - [ ] Maintain `/assets/{asset_id}/transactions` (clean, secure)
+  - [ ] Maintain `/assets/balances` (list all balances)
+  - [ ] Maintain `/assets/{asset_id}/balance` (specific balance)
+- [ ] **Testing & Validation**
+  - [ ] Verify remaining endpoints still work
+  - [ ] Test frontend functionality unchanged
+  - [ ] Confirm no broken references
+
+**Technical Details:**
+- **File to modify**: `services/order_service/src/controllers/asset_transaction.py`
+- **Route to remove**: `@router.get("/assets/transactions/{username}/{asset_id}")`
+- **Function to delete**: `get_user_asset_transactions(username, asset_id, ...)`
+- **Keep**: `@router.get("/assets/{asset_id}/transactions")` (cleaner design)
+
+**Benefits:**
+- ✅ **Simplified API design** - one clear endpoint per function
+- ✅ **Better security** - no username parameter injection
+- ✅ **Easier maintenance** - less code to maintain
+- ✅ **Consistent patterns** - all asset endpoints follow same structure
+
+**Dependencies:**
+- ✅ **Clean endpoint already working**
+- ✅ **Frontend uses clean endpoint**
+
+#### **SECURITY-001: Update JWT Token Expiry for Better Security**
+- **Component**: Common Package (Security)
+- **Type**: Enhancement
+- **Priority**: Low
+- **Status**: 🔄 In Progress (Assigned 8/14/2025)
+
+**Description:**
+Change JWT token expiry from 24 hours to 60 minutes for improved security in personal project.
+
+**Current Status:**
+- JWT tokens expire after 24 hours (too long for security)
+- Personal project doesn't need long-lived tokens
+- Shorter expiry reduces security risk if tokens are compromised
+
+**Acceptance Criteria:**
+- [ ] **Update JWT Configuration**
+  - [ ] Change `jwt_expiration_hours = 24` to `jwt_expiration_hours = 1`
+  - [ ] Update TokenManager in common package
+  - [ ] Test token creation and expiry
+- [ ] **Update Documentation**
+  - [ ] Update API response examples (expires_in: 3600 seconds)
+  - [ ] Update tests to expect 1 hour expiry
+- [ ] **Testing & Validation**
+  - [ ] Verify tokens expire after 60 minutes
+  - [ ] Test frontend token refresh handling
+  - [ ] Confirm no breaking changes
+
+**Technical Details:**
+- **File**: `services/common/src/security/token_manager.py`
+- **Line**: `self.jwt_expiration_hours = 24` → `self.jwt_expiration_hours = 1`
+- **Result**: `expires_in: 3600` (1 hour in seconds) instead of `expires_in: 86400` (24 hours)
+
+**Future Enhancements (Don't Implement Now):**
+- ❌ **Redis Blocklist** - Over-engineering for personal project
+- ❌ **Token Refresh Endpoint** - Keep it simple with re-login
+- ❌ **Advanced Token Management** - Current approach is sufficient
+
+**Benefits:**
+- ✅ **Better Security** - Shorter token lifetime
+- ✅ **Simple Implementation** - One line change
+- ✅ **No Breaking Changes** - Frontend already handles expiry
+- ✅ **Personal Project Appropriate** - Balance security vs convenience
+
+**Dependencies:**
+- ✅ **TokenManager already implemented**
+- ✅ **Frontend handles token expiry**
 
 #### **FRONTEND-TEST-002: Frontend Integration Testing**
 - **Component**: Frontend (React)

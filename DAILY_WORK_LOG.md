@@ -778,3 +778,100 @@
 *📋 For detailed technical specifications, see: `services/order_service/README.md`*
 *📋 For comprehensive test results, see: `test_cases_2025_08_07.md`*
 *📋 For frontend design specifications, see: `docs/frontend-design.md`*
+
+---
+
+### **8/14/2025 - Backend Critical Issues Investigation & Task Assignment**
+**Focus**: Investigate and fix critical backend issues causing 500 errors in frontend
+
+**🔍 Investigation Results:**
+- [x] **Identified Root Cause of Asset Balance 500 Errors**
+  - Gateway routing broken for `/api/v1/assets/balances` after August 9th changes
+  - `getBasePath` function missing pattern for asset balance endpoint
+  - Gateway sends `/balances` instead of `/assets/balances` to Order Service
+  - Order Service expects `/assets/balances`, gets `/balances` → 500 Error
+
+- [x] **Identified Asset Transaction Parameter Mismatch**
+  - Controller calls `get_user_asset_transactions(username, asset_id, limit, offset)`
+  - DAO method only accepts `get_user_asset_transactions(username, asset_id, limit)`
+  - `offset` parameter causes 500 Internal Server Error
+  - Frontend expects working pagination but gets server errors
+
+- [x] **Identified Redundant Asset Transaction Endpoint**
+  - Unnecessary `/assets/transactions/{username}/{asset_id}` endpoint exists
+  - Duplicates functionality of clean `/assets/{asset_id}/transactions`
+  - Creates security risk and maintenance overhead
+  - No admin use case needed for personal project
+
+- [x] **Identified JWT Security Enhancement Opportunity**
+  - Current JWT expiry: 24 hours (too long for security)
+  - Personal project doesn't need long-lived tokens
+  - Simple change to 60 minutes would improve security
+
+**📋 Tasks Assigned for Today (8/14/2025):**
+
+#### **Task 1: Fix Gateway Dynamic Route Matching (15 minutes)**
+- **Status**: 🔄 Assigned
+- **Priority**: CRITICAL
+- **Description**: Add missing pattern for `/api/v1/assets/balances` in `getBasePath` function
+- **File**: `gateway/internal/services/proxy.go`
+- **Expected Result**: Restore working asset balance API
+
+#### **Task 2: Fix Asset Transaction Controller (15 minutes)**
+- **Status**: 🔄 Assigned
+- **Priority**: CRITICAL
+- **Description**: Remove `offset` parameter causing 500 errors in asset transaction endpoints
+- **File**: `services/order_service/src/controllers/asset_transaction.py`
+- **Expected Result**: Fix 500 errors in asset transaction API
+
+#### **Task 3: Remove Redundant Asset Transaction Endpoint (15 minutes)**
+- **Status**: 🔄 Assigned
+- **Priority**: LOW
+- **Description**: Delete unnecessary `/assets/transactions/{username}/{asset_id}` endpoint
+- **File**: `services/order_service/src/controllers/asset_transaction.py`
+- **Expected Result**: Simplify API, remove security risk, clean maintenance
+
+#### **Task 4: Change JWT Expiry from 24hrs to 60 minutes (5 minutes)**
+- **Status**: 🔄 Assigned
+- **Priority**: LOW
+- **Description**: Improve security with shorter token lifetime
+- **File**: `services/common/src/security/token_manager.py`
+- **Expected Result**: Better security, shorter token lifetime
+
+**🎯 Total Estimated Time: 50 minutes**
+
+**📊 Backlog Updates Made:**
+- ✅ **GATEWAY-002**: Updated with root cause analysis and technical details
+- ✅ **ORDER-003**: Updated with root cause analysis and fix strategy
+- ✅ **ORDER-004**: Added new backlog item for redundant endpoint removal
+- ✅ **SECURITY-001**: Added new backlog item for JWT expiry enhancement
+
+**🔧 Technical Approach:**
+- **Keep it Simple**: Focus on fixing broken functionality, not over-engineering
+- **No Exception Handling Changes**: Current exception system is well designed
+- **No Input Validation Changes**: Business logic already handles validation
+- **No Database Query Rewrites**: Keep current working implementation
+- **No Redis Blocklist**: Future enhancement, not needed now
+
+**📋 Next Steps:**
+1. **Execute Task 1**: Fix gateway routing (highest priority)
+2. **Execute Task 2**: Fix asset transaction controller
+3. **Execute Task 3**: Clean up redundant endpoint
+4. **Execute Task 4**: Enhance JWT security
+5. **Test All Fixes**: Verify frontend functionality restored
+
+**🎉 Key Insights:**
+- ✅ **Codebase is well designed** - issues are simple fixes, not architectural problems
+- ✅ **Input validation already implemented** - just needs import fixes
+- ✅ **Exception handling is excellent** - no changes needed
+- ✅ **Security practices are good** - minor enhancements possible
+- ✅ **Personal project focus** - avoid over-engineering, keep it simple
+
+---
+
+*Last Updated: 8/14/2025*
+*Next Review: After completing assigned tasks*
+*📋 For detailed technical specifications, see: `services/order_service/README.md`*
+*📋 For comprehensive test results, see: `test_cases_2025_08_07.md`*
+*📋 For frontend design specifications, see: `docs/frontend-design.md`*
+*📋 For current backlog status, see: `BACKLOG.md`*

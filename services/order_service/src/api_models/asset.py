@@ -63,45 +63,6 @@ class GetAssetBalancesRequest(BaseModel):
     )
 
 
-class GetAssetTransactionsRequest(BaseModel):
-    """
-    Request model for getting asset transaction history
-    """
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "asset_id": "BTC",
-                "limit": 50,
-                "offset": 0
-            }
-        }
-    )
-
-    asset_id: str = Field(
-        ...,
-        description="Asset identifier (e.g., BTC, ETH)"
-    )
-
-    limit: int = Field(
-        default=50,
-        ge=1,
-        le=100,
-        description="Maximum number of transactions to return"
-    )
-
-    offset: int = Field(
-        default=0,
-        ge=0,
-        description="Number of transactions to skip"
-    )
-
-    @field_validator('asset_id')
-    @classmethod
-    def validate_asset_id_format(cls, v: str) -> str:
-        """Layer 1: Basic format validation for asset_id"""
-        return validate_asset_id(v)
-
-
 class GetPortfolioRequest(BaseModel):
     """
     Request model for getting user portfolio

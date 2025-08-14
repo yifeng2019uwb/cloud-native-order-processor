@@ -228,7 +228,7 @@ async def startup_event():
     logger.info("  GET  /assets/balances - Get all asset balances")
     logger.info("  GET  /assets/{asset_id}/balance - Get specific asset balance")
     logger.info("  GET  /assets/{asset_id}/transactions - Get asset transaction history")
-    logger.info("  GET  /assets/transactions/{username}/{asset_id} - Get user's asset transactions")
+
     logger.info("  GET  /docs - API documentation")
 
     logger.info("✅ Order Service startup complete!")
