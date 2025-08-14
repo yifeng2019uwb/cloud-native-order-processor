@@ -18,7 +18,7 @@ services:
   frontend-dev:
     build:
       context: ../
-      dockerfile: docker/frontend/Dockerfile.dev
+      dockerfile: docker/frontend/Dockerfile
     image: order-processor-frontend:latest
     container_name: order-processor-frontend-dev
     ports:

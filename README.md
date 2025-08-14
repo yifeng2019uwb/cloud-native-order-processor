@@ -101,7 +101,10 @@ A comprehensive, production-ready cloud-native microservice platform demonstrati
 git clone <repository-url>
 cd cloud-native-order-processor
 
-# Start all services locally
+# Option 1: Use the new deployment script (recommended)
+./scripts/deploy-docker.sh -bd all
+
+# Option 2: Traditional docker-compose
 cd docker
 docker-compose up --build -d
 
@@ -138,6 +141,95 @@ make build                       # Build all components
 make test                        # Test all components
 make deploy-k8s                  # Deploy to Kubernetes
 ```
+
+## 🚀 Deployment Scripts
+
+### **deploy-docker.sh** - **NEW!** 🎯
+**Purpose**: Simple, consistent Docker deployment for development environment
+
+**Usage**:
+```bash
+# Build + Deploy all services
+./scripts/deploy-docker.sh -bd all
+
+# Build + Deploy specific service
+./scripts/deploy-docker.sh -bd frontend-dev
+./scripts/deploy-docker.sh -bd user_service
+./scripts/deploy-docker.sh -bd inventory_service
+./scripts/deploy-docker.sh -bd order_service
+./scripts/deploy-docker.sh -bd gateway
+
+# Build only
+./scripts/deploy-docker.sh -b frontend-dev
+
+# Deploy only (uses existing images)
+./scripts/deploy-docker.sh -d frontend-dev
+```
+
+**Features**:
+- ✅ **Simple interface**: `-b` (build), `-d` (deploy), `-bd` (both)
+- ✅ **Service selection**: Individual services or `all`
+- ✅ **Development focused**: Uses `docker-compose.dev.yml`
+- ✅ **Health checks**: Waits for services to be healthy
+- ✅ **Clear logging**: Colored output with progress indicators
+- ✅ **Error handling**: Validates arguments and prerequisites
+
+**Service Names**:
+- `frontend-dev` - React frontend application
+- `user_service` - User authentication and management
+- `inventory_service` - Asset inventory management
+- `order_service` - Order processing and portfolio management
+- `gateway` - API Gateway with authentication and routing
+- `all` - All services
+
+### **Other Deployment Options**
+
+#### **Traditional Docker Compose**
+```bash
+cd docker
+docker-compose -f docker-compose.dev.yml up -d --build
+```
+
+#### **Kubernetes Deployment**
+```bash
+# Production deployment
+./scripts/deploy.sh --type k8s --environment prod
+
+# Development deployment
+./scripts/deploy.sh --type k8s --environment dev
+```
+
+#### **Individual Service Scripts**
+```bash
+# Frontend redeployment (with cache clearing)
+./scripts/redeploy-frontend.sh
+
+# Frontend build and test
+./scripts/build-test-frontend.sh
+```
+
+### **Environment Strategy**
+- **Development**: Docker Compose with `deploy-docker.sh` ✅
+- **Production**: Kubernetes with `deploy.sh` ✅
+- **No overlap**: Clear separation between environments
+
+### **Script Testing & Validation** ✅ **COMPLETED**
+The `deploy-docker.sh` script has been thoroughly tested with all scenarios:
+
+**Test Results**:
+- ✅ **Build Only**: `./scripts/deploy-docker.sh -b frontend-dev` - Success
+- ✅ **Deploy Only**: `./scripts/deploy-docker.sh -d frontend-dev` - Success
+- ✅ **Build + Deploy Single**: `./scripts/deploy-docker.sh -bd gateway` - Success
+- ✅ **Build + Deploy All**: `./scripts/deploy-docker.sh -bd all` - Success
+
+**Features Verified**:
+- ✅ Argument parsing and validation
+- ✅ Service name validation
+- ✅ Docker and docker-compose prerequisites
+- ✅ Health check waiting
+- ✅ Clear progress logging
+- ✅ Error handling and user feedback
+- ✅ Service recreation and updates
 
 ## 🔐 Security Model ✅ **IMPLEMENTED**
 
@@ -636,7 +728,16 @@ make port-forward
 - **Production Readiness**: All core features working in deployed environment
 - **Order Processing Workflow**: Complete trading system validation
 
----
+### **Deployment Script Development** ✅ **COMPLETED**
+- **New Script**: `scripts/deploy-docker.sh` for consistent Docker deployment
+- **Simple Interface**: `-b` (build), `-d` (deploy), `-bd` (both) options
+- **Service Selection**: Individual services or `all` services
+- **Development Focused**: Uses `docker-compose.dev.yml` for local development
+- **Health Checks**: Waits for services to be healthy before proceeding
+- **Clear Logging**: Colored output with progress indicators and status updates
+- **Error Handling**: Comprehensive argument validation and user feedback
+- **Thoroughly Tested**: All scenarios verified working correctly
+- **Environment Strategy**: Clear separation between Docker (dev) and Kubernetes (prod)
 
 ## 📋 **Project Management & Planning**
 
@@ -700,6 +801,7 @@ make port-forward
 - ✅ **Portfolio Management**: Real-time portfolio calculation with market values
 - ✅ **Transaction Management**: Atomic transactions with comprehensive audit trail
 - ✅ **Business Validation**: Comprehensive validation layer for all operations
+- ✅ **Deployment Automation**: Consistent Docker deployment script for development
 
 **Next Milestone**: **Frontend implementation** - All blockers resolved, ready to start! 🚀
 

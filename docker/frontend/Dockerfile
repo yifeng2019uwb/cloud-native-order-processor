@@ -1,5 +1,4 @@
-# Build stage
-FROM node:18-alpine AS build
+FROM node:18-alpine
 
 # Set working directory
 WORKDIR /app
@@ -7,23 +6,14 @@ WORKDIR /app
 # Copy package files
 COPY frontend/package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (including dev dependencies)
+RUN npm install
 
 # Copy source code
 COPY frontend/ ./
 
-# Build the application
-RUN npm run build
+# Expose port
+EXPOSE 3000
 
-# Production stage
-FROM nginx:alpine
-
-# Copy built frontend files from build stage
-COPY --from=build /app/dist/ /usr/share/nginx/html/
-
-# Copy nginx config for API routing
-COPY docker/frontend/nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Start development server
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]

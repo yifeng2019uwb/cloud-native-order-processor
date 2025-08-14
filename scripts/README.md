@@ -166,9 +166,44 @@ Deploy application to infrastructure.
 
 Deploy using Docker Compose for local/development environments.
 
+**Purpose**: Simple, consistent Docker deployment for development environment
+
+**Usage**:
 ```bash
-./scripts/deploy-docker.sh
+# Build + Deploy all services
+./scripts/deploy-docker.sh -bd all
+
+# Build + Deploy specific service
+./scripts/deploy-docker.sh -bd frontend-dev
+./scripts/deploy-docker.sh -bd user_service
+./scripts/deploy-docker.sh -bd inventory_service
+./scripts/deploy-docker.sh -bd order_service
+./scripts/deploy-docker.sh -bd gateway
+
+# Build only
+./scripts/deploy-docker.sh -b frontend-dev
+
+# Deploy only (uses existing images)
+./scripts/deploy-docker.sh -d frontend-dev
 ```
+
+**Features**:
+- ✅ **Simple interface**: `-b` (build), `-d` (deploy), `-bd` (both)
+- ✅ **Service selection**: Individual services or `all`
+- ✅ **Development focused**: Uses `docker-compose.dev.yml`
+- ✅ **Health checks**: Waits for services to be healthy
+- ✅ **Clear logging**: Colored output with progress indicators
+- ✅ **Error handling**: Validates arguments and prerequisites
+
+**Service Names**:
+- `frontend-dev` - React frontend application
+- `user_service` - User authentication and management
+- `inventory_service` - Asset inventory management
+- `order_service` - Order processing and portfolio management
+- `gateway` - API Gateway with authentication and routing
+- `all` - All services
+
+**Testing Status**: ✅ **FULLY TESTED** - All scenarios verified working correctly
 
 ### ecr_build_push.sh
 
