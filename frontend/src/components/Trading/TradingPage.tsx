@@ -11,6 +11,7 @@ const TradingPage: React.FC = () => {
   const { user, logout } = useAuth();
   const [searchParams] = useSearchParams();
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
   const [balance, setBalance] = useState<Balance | null>(null);
   const [assetBalances, setAssetBalances] = useState<AssetBalance[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -64,9 +65,14 @@ const TradingPage: React.FC = () => {
       ]);
 
       if (assetsRes.assets) {
-        setAssets(assetsRes.assets);
-        if (assetsRes.assets.length > 0) {
-          setSelectedAsset(assetsRes.assets[0]);
+                // Sort assets alphabetically by name for easier selection
+        const sortedAssets = [...assetsRes.assets].sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+        );
+        setAssets(sortedAssets);
+        setFilteredAssets(sortedAssets); // Initialize filtered assets with sorted assets
+        if (sortedAssets.length > 0) {
+          setSelectedAsset(sortedAssets[0]);
         }
       }
 
@@ -263,6 +269,31 @@ const TradingPage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Asset
                     </label>
+
+                                        {/* Asset Search */}
+                    <div className="mb-2">
+                      <input
+                        type="text"
+                        placeholder="Search assets by name or symbol..."
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                        onChange={(e) => {
+                          const searchTerm = e.target.value.toLowerCase();
+                          if (searchTerm) {
+                            const filtered = assets.filter(asset =>
+                              asset.name.toLowerCase().includes(searchTerm) ||
+                              asset.asset_id.toLowerCase().includes(searchTerm)
+                            );
+                            setFilteredAssets(filtered);
+                          } else {
+                            setFilteredAssets(assets);
+                          }
+                        }}
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {filteredAssets.length} of {assets.length} assets
+                      </div>
+                    </div>
+
                     <select
                       value={selectedAsset?.asset_id || ''}
                       onChange={(e) => {
@@ -273,7 +304,7 @@ const TradingPage: React.FC = () => {
                       required
                     >
                       <option value="">Select an asset</option>
-                      {assets.map(asset => (
+                      {(filteredAssets || assets).map(asset => (
                         <option key={asset.asset_id} value={asset.asset_id}>
                           {asset.name} ({asset.asset_id}) - ${asset.price_usd?.toFixed(2)}
                         </option>
