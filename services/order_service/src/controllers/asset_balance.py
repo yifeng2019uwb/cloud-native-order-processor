@@ -22,15 +22,15 @@ from api_models.shared.common import ErrorResponse
 # Import dependencies
 from controllers.dependencies import (
     get_current_user, get_asset_balance_dao_dependency,
-    get_user_dao_dependency
+    get_user_dao_dependency, get_asset_dao_dependency
 )
 from common.dao.asset import AssetBalanceDAO
 from common.dao.user import UserDAO
+from common.dao.inventory import AssetDAO
+
 
 # Import business validators
 from validation.business_validators import validate_user_permissions
-
-# Market data functions defined locally in this file
 
 # Import exceptions
 from common.exceptions import (
@@ -44,32 +44,28 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["asset-balances"])
 
 
-def get_dummy_asset_name(asset_id: str) -> str:
-    """Get dummy asset name for development/testing"""
-    asset_names = {
-        "BTC": "Bitcoin", "ETH": "Ethereum", "LTC": "Litecoin", "XRP": "Ripple",
-        "USDC": "USD Coin", "ADA": "Cardano", "DOT": "Polkadot", "LINK": "Chainlink",
-        "SOL": "Solana", "MATIC": "Polygon", "AVAX": "Avalanche", "UNI": "Uniswap"
-    }
-    return asset_names.get(asset_id, asset_id)
-
-
-def get_dummy_market_price(asset_id: str) -> float:
-    """Get dummy market price for development/testing"""
-    dummy_prices = {
-        "BTC": 45000.00, "ETH": 2800.00, "LTC": 85.00, "XRP": 0.55,
-        "USDC": 1.00, "ADA": 0.45, "DOT": 7.50, "LINK": 15.00,
-        "SOL": 95.00, "MATIC": 0.75, "AVAX": 25.00, "UNI": 8.50
-    }
-    return dummy_prices.get(asset_id, 0.0)
-
-
-def get_dummy_market_data(asset_id: str) -> dict:
-    """Get dummy market data (name and price) for development/testing"""
-    return {
-        "asset_name": get_dummy_asset_name(asset_id),
-        "current_price": get_dummy_market_price(asset_id)
-    }
+def get_real_market_data(asset_dao: AssetDAO, asset_id: str) -> dict:
+    """Get real market data (name and price) from database"""
+    try:
+        asset = asset_dao.get_asset_by_id(asset_id)
+        if asset:
+            return {
+                "asset_name": asset.name,
+                "current_price": float(asset.price_usd)
+            }
+        else:
+            # Fallback to asset_id if not found in database
+            return {
+                "asset_name": asset_id,
+                "current_price": 0.0
+            }
+    except Exception as e:
+        logger.warning(f"Failed to fetch market data for {asset_id}: {str(e)}")
+        # Fallback to asset_id if database query fails
+        return {
+            "asset_name": asset_id,
+            "current_price": 0.0
+        }
 
 
 @router.get(
@@ -98,7 +94,8 @@ async def get_user_asset_balances(
     request: Request,
     current_user: dict = Depends(get_current_user),
     asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency),
-    user_dao: UserDAO = Depends(get_user_dao_dependency)
+    user_dao: UserDAO = Depends(get_user_dao_dependency),
+    asset_dao: AssetDAO = Depends(get_asset_dao_dependency)
 ) -> GetAssetBalancesResponse:
     """
     Get all asset balances for the authenticated user
@@ -124,11 +121,11 @@ async def get_user_asset_balances(
         # Get all asset balances for user
         asset_balances = asset_balance_dao.get_all_asset_balances(current_user["username"])
 
-        # Convert to API response format with dummy data
+        # Convert to API response format with real market data
         balance_data_list = []
         for balance in asset_balances:
-            # Get dummy market data
-            market_data = get_dummy_market_data(balance.asset_id)
+            # Get real market data from database
+            market_data = get_real_market_data(asset_dao, balance.asset_id)
             asset_name = market_data["asset_name"]
             current_price = market_data["current_price"]
             total_value = float(balance.quantity) * current_price
@@ -193,7 +190,8 @@ async def get_user_asset_balance(
     request: Request,
     current_user: dict = Depends(get_current_user),
     asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency),
-    user_dao: UserDAO = Depends(get_user_dao_dependency)
+    user_dao: UserDAO = Depends(get_user_dao_dependency),
+    asset_dao: AssetDAO = Depends(get_asset_dao_dependency)
 ) -> GetAssetBalanceResponse:
     """
     Get specific asset balance for the authenticated user
@@ -220,9 +218,9 @@ async def get_user_asset_balance(
         # Get specific asset balance for user
         asset_balance = asset_balance_dao.get_asset_balance(current_user["username"], asset_id)
 
-        # Convert to API response format with dummy data
-        # Get dummy market data
-        market_data = get_dummy_market_data(asset_balance.asset_id)
+        # Convert to API response format with real market data
+        # Get real market data from database
+        market_data = get_real_market_data(asset_dao, asset_balance.asset_id)
         asset_name = market_data["asset_name"]
         current_price = market_data["current_price"]
         total_value = float(asset_balance.quantity) * current_price
