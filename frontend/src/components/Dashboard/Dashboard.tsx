@@ -51,11 +51,15 @@ const Dashboard: React.FC = () => {
   const calculateTotalAssetValue = () => {
     if (!assetBalances || assetBalances.length === 0) return 0;
 
-    // Calculate total based on quantity only (using $1 placeholder per unit)
-    // TODO: This needs real market prices from backend API for accurate calculation
+    // Calculate total using the total_value field from API response
     return assetBalances.reduce((total, asset) => {
-      const quantity = parseFloat(asset.quantity || '0');
-      return total + quantity; // Using $1 per unit as placeholder
+      // Use total_value if available, otherwise fallback to quantity * current_price
+      if (asset.total_value !== undefined) {
+        return total + parseFloat(asset.total_value.toString());
+      } else if (asset.current_price !== undefined && asset.quantity) {
+        return total + (parseFloat(asset.quantity) * parseFloat(asset.current_price.toString()));
+      }
+      return total;
     }, 0);
   };
 

@@ -4,12 +4,14 @@ export interface AssetBalance {
   quantity: string; // Backend returns as string
   created_at: string;
   updated_at: string;
+  // New fields from enhanced API response
+  asset_name: string;
+  current_price: number;
+  total_value: number;
   // Optional computed fields (may be added by frontend)
   username?: string;
-  asset_name?: string;
   average_cost?: number;
   total_cost?: number;
-  current_price?: number;
   current_value?: number;
   unrealized_pnl?: number;
   unrealized_pnl_percentage?: number;

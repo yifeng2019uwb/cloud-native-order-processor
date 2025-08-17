@@ -60,25 +60,23 @@ const PortfolioPage: React.FC = () => {
 
   const calculatePortfolioSummary = () => {
     if (!assetBalances || assetBalances.length === 0) {
-      return { totalValue: 0, totalCost: 0, totalPnL: 0, totalPnLPercentage: 0 };
+      return { totalValue: 0 };
     }
 
-    // For now, calculate basic total based on quantity only
-    // TODO: This needs real market prices from backend API to calculate accurate total value
-    let totalQuantityValue = 0;
+    // Calculate total value using the total_value field from API response
+    let totalAssetValue = 0;
 
     assetBalances.forEach(balance => {
-      const quantity = parseFloat(balance.quantity || '0');
-      // Using placeholder price of $1 per unit for calculation demo
-      // Real implementation should use current market prices from backend
-      totalQuantityValue += quantity * 1;
+      // Use total_value if available, otherwise fallback to quantity * current_price
+      if (balance.total_value !== undefined) {
+        totalAssetValue += parseFloat(balance.total_value.toString());
+      } else if (balance.current_price !== undefined && balance.quantity) {
+        totalAssetValue += parseFloat(balance.quantity) * parseFloat(balance.current_price.toString());
+      }
     });
 
     return {
-      totalValue: totalQuantityValue,
-      totalCost: 0, // Not available without historical cost basis
-      totalPnL: 0,  // Not calculable without cost basis and current prices
-      totalPnLPercentage: 0
+      totalValue: totalAssetValue
     };
   };
 
@@ -120,7 +118,7 @@ const PortfolioPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">📊 Portfolio Overview</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Total Value</p>
               <p className="text-2xl font-bold text-blue-600">
@@ -128,30 +126,14 @@ const PortfolioPage: React.FC = () => {
               </p>
             </div>
             <div className="text-center">
-              <p className="text-sm text-gray-600">Total Cost</p>
+              <p className="text-sm text-gray-600">Assets Owned</p>
               <p className="text-2xl font-bold text-gray-900">
-                ${portfolioSummary.totalCost.toFixed(2)}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-600">Total P&L</p>
-              <p className={`text-2xl font-bold ${portfolioSummary.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ${portfolioSummary.totalPnL.toFixed(2)}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-600">P&L %</p>
-              <p className={`text-2xl font-bold ${portfolioSummary.totalPnLPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {portfolioSummary.totalPnLPercentage.toFixed(2)}%
+                {assetBalances?.length || 0}
               </p>
             </div>
           </div>
 
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">
-              Assets Owned: {assetBalances?.length || 0} | Total Orders: {orders?.length || 0}
-            </p>
-          </div>
+
         </div>
       </div>
 
@@ -193,7 +175,8 @@ const PortfolioPage: React.FC = () => {
                         <tr>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Asset</th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Current Price</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Value</th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Updated</th>
                         </tr>
                       </thead>
@@ -214,10 +197,10 @@ const PortfolioPage: React.FC = () => {
                               {parseFloat(assetBalance.quantity).toFixed(6)}
                             </td>
                             <td className="px-3 py-2 text-sm text-gray-900">
-                              {new Date(assetBalance.created_at).toLocaleDateString()}
-                              <div className="text-xs text-gray-500">
-                                {new Date(assetBalance.created_at).toLocaleTimeString()}
-                              </div>
+                              ${assetBalance.current_price ? parseFloat(assetBalance.current_price.toString()).toFixed(2) : '0.00'}
+                            </td>
+                            <td className="px-3 py-2 text-sm text-gray-900">
+                              ${assetBalance.total_value ? parseFloat(assetBalance.total_value.toString()).toFixed(2) : '0.00'}
                             </td>
                             <td className="px-3 py-2 text-sm text-gray-900">
                               {new Date(assetBalance.updated_at).toLocaleDateString()}

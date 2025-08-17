@@ -87,7 +87,10 @@ class AssetBalanceData(BaseModel):
         json_schema_extra={
             "example": {
                 "asset_id": "BTC",
+                "asset_name": "Bitcoin",
                 "quantity": 1.5,
+                "current_price": 45000.50,
+                "total_value": 67507.50,
                 "created_at": "2025-07-30T14:30:52Z",
                 "updated_at": "2025-07-30T15:45:30Z"
             }
@@ -99,9 +102,24 @@ class AssetBalanceData(BaseModel):
         description="Asset identifier (e.g., BTC, ETH)"
     )
 
+    asset_name: str = Field(
+        ...,
+        description="Asset display name (e.g., Bitcoin, Litecoin)"
+    )
+
     quantity: Decimal = Field(
         ...,
         description="Current balance quantity"
+    )
+
+    current_price: float = Field(
+        ...,
+        description="Current market price in USD"
+    )
+
+    total_value: float = Field(
+        ...,
+        description="Total value of this asset balance (quantity * current_price)"
     )
 
     created_at: datetime = Field(
