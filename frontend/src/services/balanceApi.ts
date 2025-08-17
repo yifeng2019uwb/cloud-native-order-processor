@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import { API_URLS } from '@/constants';
 import type {
   DepositRequest,
   WithdrawRequest,
@@ -13,7 +14,7 @@ class BalanceApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: '/api/v1/balance', // Uses gateway proxy
+      baseURL: API_URLS.BALANCE,
       headers: {
         'Content-Type': 'application/json',
       },

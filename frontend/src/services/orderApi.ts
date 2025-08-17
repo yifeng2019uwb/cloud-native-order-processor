@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import { API_URLS } from '@/constants';
 import type {
   CreateOrderRequest,
   OrderListRequest,
@@ -13,12 +14,17 @@ class OrderApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: '/api/v1/orders', // Uses gateway proxy
+      baseURL: API_URLS.ORDERS,
       headers: {
         'Content-Type': 'application/json',
       },
       timeout: 10000,
     });
+
+    // Debug logging to see what base URL is set
+    console.log('🔍 Orders API Constructor Debug:');
+    console.log('  - API_URLS.ORDERS:', API_URLS.ORDERS);
+    console.log('  - this.api.defaults.baseURL:', this.api.defaults.baseURL);
 
     this.setupInterceptors();
   }
@@ -110,7 +116,17 @@ class OrderApiService {
       queryParams.append('asset_id', params.asset_id);
     }
 
-    const url = queryParams.toString() ? `?${queryParams.toString()}` : '';
+        const queryString = queryParams.toString();
+
+    // Debug logging to see what URL is being constructed
+    console.log('🔍 Orders API Debug:');
+    console.log('  - Base URL:', this.api.defaults.baseURL);
+    console.log('  - Query params:', queryParams.toString());
+
+    // Simple approach - use empty string for path
+    const url = queryString ? `?${queryString}` : '';
+    console.log('  - Path:', url);
+
     const response = await this.api.get<OrderListResponse>(url);
     return response.data;
   }

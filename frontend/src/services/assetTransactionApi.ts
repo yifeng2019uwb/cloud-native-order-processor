@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import { API_URLS } from '@/constants';
 import type { AssetTransactionHistoryResponse } from '@/types';
 
 class AssetTransactionApiService {
@@ -6,7 +7,7 @@ class AssetTransactionApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: '/api/v1/assets', // Uses gateway proxy
+      baseURL: API_URLS.ASSETS,
       headers: {
         'Content-Type': 'application/json',
       },

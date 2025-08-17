@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import { API_URLS } from '@/constants';
 import type { User, ApiErrorResponse } from '@/types';
 
 export interface ProfileUpdateRequest {
@@ -21,7 +22,7 @@ class ProfileApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: '/api/v1/auth',
+      baseURL: API_URLS.AUTH,
       headers: {
         'Content-Type': 'application/json',
       },

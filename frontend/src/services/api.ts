@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import { API_URLS } from '@/constants';
 import type {
   User,
   LoginRequest,
@@ -13,7 +14,7 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: '/api/v1/auth', // Uses gateway in both dev and prod
+      baseURL: API_URLS.AUTH,
       headers: {
         'Content-Type': 'application/json',
       },

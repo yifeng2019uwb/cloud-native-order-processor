@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import { API_URLS } from '@/constants';
 import type {
   AssetListRequest,
   AssetListResponse,
@@ -11,7 +12,7 @@ class InventoryApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: '/api/v1/inventory', // Uses gateway in both dev and prod
+      baseURL: API_URLS.INVENTORY,
       headers: {
         'Content-Type': 'application/json',
       },

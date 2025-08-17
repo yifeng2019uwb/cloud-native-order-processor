@@ -10,20 +10,9 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://gateway:8080', // Gateway (Docker service name)
-        changeOrigin: true,
-        secure: false
-      },
-      '/health': {
-        target: 'http://gateway:8080', // Gateway health (Docker service name)
-        changeOrigin: true,
-        secure: false
-      }
-    }
+    port: 3000
   },
+  // Environment variables are handled by Vite's import.meta.env
   build: {
     outDir: 'dist',
     sourcemap: true

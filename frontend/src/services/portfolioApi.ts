@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import { API_URLS } from '@/constants';
 import type {
   PortfolioResponse,
   PortfolioApiError
@@ -9,7 +10,7 @@ class PortfolioApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: '/api/v1/portfolio', // Uses gateway proxy
+      baseURL: API_URLS.PORTFOLIO,
       headers: {
         'Content-Type': 'application/json',
       },
