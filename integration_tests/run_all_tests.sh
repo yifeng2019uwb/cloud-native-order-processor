@@ -46,7 +46,16 @@ run_inventory_tests() {
 
 run_user_tests() {
     echo "Running user service tests..."
-    python3 user_services/user_tests.py
+    echo "=== Running User Service Auth Tests ==="
+    python3 user_services/auth/registration_tests.py
+    python3 user_services/auth/login_tests.py
+    python3 user_services/auth/profile_tests.py
+    python3 user_services/auth/logout_tests.py
+    echo "=== Running User Service Balance Tests ==="
+    python3 user_services/balance/balance_tests.py
+    python3 user_services/balance/deposit_tests.py
+    python3 user_services/balance/withdraw_tests.py
+    python3 user_services/balance/transaction_history_tests.py
 }
 
 # Default to all tests if no argument provided

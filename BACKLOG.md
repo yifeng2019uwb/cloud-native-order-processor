@@ -26,12 +26,14 @@ Comprehensive task tracking for the entire Cloud Native Order Processor system. 
 - **Infrastructure**: Kubernetes development environment setup
 - **Monitoring**: Advanced observability implementation
 - **Performance**: Optimization and scaling opportunities
+- **Backend Validation**: Fix validation error handling issues
 
 ### 📋 **Next Priority Items**
-1. **FRONTEND-002**: Debug API Integration Issues (Backend ready)
-2. **FRONTEND-003**: Fix Authentication State Management (Backend ready)
-3. **INFRA-001**: Complete Kubernetes Order Service Integration
-4. **Advanced Features**: New functionality development
+1. **BACKEND-001**: Fix Validation Error Handling (500 instead of 400/422)
+2. **FRONTEND-002**: Debug API Integration Issues (Backend ready)
+3. **FRONTEND-003**: Fix Authentication State Management (Backend ready)
+4. **INFRA-001**: Complete Kubernetes Order Service Integration
+5. **Advanced Features**: New functionality development
 
 ### 🧪 **Unit Testing - COMPREHENSIVE IMPLEMENTATION COMPLETED**
 **Extensive unit testing has been implemented across all backend services:**
@@ -65,6 +67,38 @@ Build a production-ready, scalable multi-asset trading platform with microservic
 ## 📋 **Backlog Items by Component**
 
 ### **🔄 IN PROGRESS**
+
+#### **BACKEND-001: Fix Validation Error Handling**
+- **Component**: User Service
+- **Type**: Bug
+- **Priority**: High
+- **Status**: 🔄 In Progress
+
+**Description:**
+Balance API endpoints (deposit/withdraw) return 500 Internal Server Error instead of 400/422 for validation failures. This affects integration tests and client error handling.
+
+**Root Cause:**
+- `UserValidationException` from `validate_amount()` function not properly handled by Pydantic validation
+- JSON serialization errors when validation errors contain `Decimal` objects
+- Complex validation logic in API models causing exception handling conflicts
+
+**Impact:**
+- Integration tests failing with 500 errors instead of expected 400/422
+- Poor client error handling experience
+- Inconsistent error response format
+
+**Acceptance Criteria:**
+- [ ] Balance API endpoints return 400/422 for validation errors
+- [ ] Integration tests pass with proper error status codes
+- [ ] Error responses are properly formatted and serializable
+- [ ] Validation logic is simplified and maintainable
+
+**Technical Details:**
+- File: `services/user_service/src/api_models/balance/balance_models.py`
+- File: `services/user_service/src/main.py` (exception handlers)
+- Issue: `TypeError: Object of type Decimal is not JSON serializable`
+
+---
 
 #### **INFRA-001: Local Kubernetes Development Setup**
 - **Component**: Infrastructure

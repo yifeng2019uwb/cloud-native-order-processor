@@ -8,7 +8,7 @@ import os
 
 # Add config directory to path for imports
 sys.path.append(os.path.dirname(__file__))
-from service_urls import USER_SERVICE_URL, INVENTORY_SERVICE_URL
+from service_urls import USER_SERVICE_URL, INVENTORY_SERVICE_URL, ORDER_SERVICE_URL
 
 # User Service API Enum
 class UserAPI(Enum):
@@ -18,12 +18,23 @@ class UserAPI(Enum):
     PROFILE = '/auth/profile'
     LOGOUT = '/auth/logout'
     HEALTH = '/health'
+    BALANCE = '/balance'
+    BALANCE_DEPOSIT = '/balance/deposit'
+    BALANCE_WITHDRAW = '/balance/withdraw'
+    BALANCE_TRANSACTIONS = '/balance/transactions'
 
 # Inventory Service API Enum
 class InventoryAPI(Enum):
     ROOT = '/'
     ASSETS = '/inventory/assets'
     ASSET_BY_ID = '/inventory/assets/{id}'
+    HEALTH = '/health'
+
+# Order Service API Enum
+class OrderAPI(Enum):
+    ROOT = '/'
+    ORDERS = '/orders'
+    ORDER_BY_ID = '/orders/{id}'
     HEALTH = '/health'
 
 class APIEndpoints:
@@ -41,3 +52,11 @@ class APIEndpoints:
         if kwargs:
             endpoint = endpoint.format(**kwargs)
         return f"{INVENTORY_SERVICE_URL}{endpoint}"
+
+    @classmethod
+    def get_order_endpoint(cls, api: OrderAPI, **kwargs) -> str:
+        """Get complete order service URL by API enum with optional formatting"""
+        endpoint = api.value
+        if kwargs:
+            endpoint = endpoint.format(**kwargs)
+        return f"{ORDER_SERVICE_URL}{endpoint}"

@@ -45,11 +45,17 @@ def get_inventory_service_url() -> str:
     """Get Inventory Service URL with automatic detection"""
     return detect_service_url("inventory", docker_port=8001, k8s_port=30002)
 
+def get_order_service_url() -> str:
+    """Get Order Service URL with automatic detection"""
+    return detect_service_url("order", docker_port=8002, k8s_port=30003)
+
 # Service URLs (detected at import time)
 USER_SERVICE_URL = get_user_service_url()
 INVENTORY_SERVICE_URL = get_inventory_service_url()
+ORDER_SERVICE_URL = get_order_service_url()
 
 # Print detected configuration
 print(f"🔧 Integration Test Configuration:")
 print(f"   User Service: {USER_SERVICE_URL}")
 print(f"   Inventory Service: {INVENTORY_SERVICE_URL}")
+print(f"   Order Service: {ORDER_SERVICE_URL}")
