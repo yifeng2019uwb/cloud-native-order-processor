@@ -1016,3 +1016,50 @@
 *📋 For comprehensive test results, see: `test_cases_2025_08_07.md`*
 *📋 For frontend design specifications, see: `docs/frontend-design.md`*
 *📋 For current backlog status, see: `BACKLOG.md`*
+
+---
+
+### **8/18/2025 - API Endpoint Standardization & Integration Test Suite Fixes**
+**Focus**: Change User Service profile endpoint from `/auth/me` to `/auth/profile` and fix integration test suite
+
+**🎯 NEW PRIORITY TASK: API-003**
+- [ ] **Change User Service Profile Endpoint** 🚨 **PRIORITY 1**
+  - Update profile controller from `/me` to `/profile`
+  - Update main.py route logging and documentation
+  - Update API endpoint constants and references
+  - **Impact**: Breaking change for frontend code using `/auth/me`
+
+**📋 Integration Test Suite Review Results**
+- ✅ **User Service Tests**: Already correctly written, match current API models
+- ✅ **Inventory Service Tests**: Basic asset management tests working
+- ✅ **Missing Coverage**: Order Service, Balance Management, API Gateway
+- ✅ **API Models**: All existing tests match current backend responses
+
+**🔍 What We Discovered**
+- **Integration Tests Are Correct**: No API model mismatches found
+- **Endpoint Change Needed**: `/auth/me` → `/auth/profile` for better clarity
+- **Missing Services**: Order Service, Balance Management need integration tests
+- **API Gateway**: No integration tests for routing and authentication
+
+**📊 Current Integration Test Status**
+- **Smoke Tests**: Health checks for User and Inventory services ✅
+- **User Service Tests**: Registration, login, profile management ✅
+- **Inventory Service Tests**: Asset listing and details ✅
+- **Missing**: Order Service, Balance Management, API Gateway ❌
+
+**🎯 Next Tasks After Endpoint Change**
+1. **Update Integration Tests**: Change `/auth/me` to `/auth/profile` in test suite
+2. **Add Order Service Tests**: Order creation, portfolio management, asset balances
+3. **Add Balance Management Tests**: Deposit, withdraw, transaction history
+4. **Add API Gateway Tests**: Route forwarding, authentication, error handling
+
+**📋 Implementation Plan**
+- **Phase 1**: Change `/auth/me` to `/auth/profile` (1-2 hours)
+- **Phase 2**: Update integration tests to use new endpoint (30 minutes)
+- **Phase 3**: Add missing service coverage (2-3 hours)
+- **Phase 4**: Comprehensive testing and validation (1 hour)
+
+**🎉 Key Insight**
+The existing integration test suite is actually well-designed and matches our current API models. The main work is extending it to cover the new services we've implemented, not fixing broken tests.
+
+---

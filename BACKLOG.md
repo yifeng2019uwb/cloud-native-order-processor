@@ -112,6 +112,44 @@ Set up comprehensive local Kubernetes development environment with proper networ
 
 ## **🚨 CRITICAL - Phase 1 Priority**
 
+#### **API-003: Change User Service Profile Endpoint from /auth/me to /auth/profile** 🚨 **NEW PRIORITY 1**
+- **Component**: User Service (Backend)
+- **Type**: Enhancement
+- **Priority**: CRITICAL
+- **Status**: 📋 To Do
+
+**Description:**
+Change the user profile endpoint from `/auth/me` to `/auth/profile` for better API clarity and consistency.
+
+**Acceptance Criteria:**
+- [ ] **Backend Changes**
+  - [ ] Update profile controller from `@router.get("/me")` to `@router.get("/profile")`
+  - [ ] Update profile controller from `@router.put("/me")` to `@router.put("/profile")`
+  - [ ] Update main.py route logging and documentation
+  - [ ] Update API endpoint constants and references
+- [ ] **Integration Test Updates**
+  - [ ] Update `integration_tests/config/api_endpoints.py` UserAPI.PROFILE from `/auth/me` to `/auth/profile`
+  - [ ] Update `integration_tests/user_services/user_tests.py` to use new endpoint
+  - [ ] Verify all integration tests pass with new endpoint
+- [ ] **API Gateway Updates**
+  - [ ] Update gateway route mapping if needed
+  - [ ] Test gateway routing with new endpoint
+- [ ] **Documentation Updates**
+  - [ ] Update API documentation and OpenAPI specs
+  - [ ] Update frontend design document
+  - [ ] Update any hardcoded endpoint references
+
+**Dependencies:**
+- ✅ **All backend services completed**
+- ✅ **Integration test framework exists**
+
+**Impact:**
+- **Breaking Change**: Will affect any frontend code using `/auth/me`
+- **Integration Tests**: Need to update existing test suite
+- **API Consistency**: Better endpoint naming convention
+
+**Estimated Time**: 1-2 hours
+
 #### **FRONTEND-002: Debug API Integration Issues**
 - **Component**: Frontend (React)
 - **Type**: Bug
