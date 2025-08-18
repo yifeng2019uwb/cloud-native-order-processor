@@ -86,7 +86,7 @@ class ProfileApiService {
   }
 
   async updateProfile(profileData: ProfileUpdateRequest): Promise<ProfileUpdateResponse> {
-    const response = await this.api.put<ProfileUpdateResponse>('/me', profileData);
+    const response = await this.api.put<ProfileUpdateResponse>('/profile', profileData);
     return response.data;
   }
 

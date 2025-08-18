@@ -148,7 +148,7 @@ Market Sell Order:
 ```
 POST /auth/register        - User registration ✅
 POST /auth/login           - User authentication ✅
-GET  /auth/me              - Get user profile ✅
+GET  /auth/profile         - Get user profile ✅
 PUT  /auth/profile         - Update user profile ✅
 POST /auth/logout          - User logout ✅
 GET  /balance              - Get user balance ✅
@@ -434,7 +434,7 @@ cd gateway
 2. User Service → Frontend: JWT Token
    Response: {"access_token": "jwt_token", "token_type": "bearer"}
 
-3. Frontend → Gateway: GET /api/v1/auth/me
+3. Frontend → Gateway: GET /api/v1/auth/profile
    Headers: {"Authorization": "Bearer jwt_token"}
 
 4. Gateway → User Service: Forward request with JWT validation
@@ -557,7 +557,7 @@ kubectl apply -k kubernetes/dev/
 ### **✅ User Service APIs** ✅ **VERIFIED WORKING**
 - **User Registration**: `POST /auth/register` ✅
 - **User Login**: `POST /auth/login` ✅
-- **User Profile**: `GET /auth/me` ✅
+- **User Profile**: `GET /auth/profile` ✅
 - **User Logout**: `POST /auth/logout` ✅
 - **Get Balance**: `GET /balance` ✅
 - **Deposit Funds**: `POST /balance/deposit` ✅
@@ -571,7 +571,7 @@ kubectl apply -k kubernetes/dev/
 - **Health Check**: `GET /health` ✅
 
 ### **✅ Gateway Routing** ✅ **VERIFIED WORKING**
-- **User Service Routing**: `GET /api/v1/auth/me` ✅
+- **User Service Routing**: `GET /api/v1/auth/profile` ✅
 - **Inventory Service Routing**: `GET /api/v1/inventory/assets` ✅
 - **Health Check**: `GET /health` ✅
 

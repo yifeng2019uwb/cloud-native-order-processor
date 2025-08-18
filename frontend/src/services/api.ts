@@ -107,7 +107,7 @@ class ApiService {
 
   async getProfile(): Promise<{ user: User }> {
     // Backend returns user object directly, not wrapped in {user: ...}
-    const response = await this.api.get<User>('/me');
+    const response = await this.api.get<User>('/profile');
     return { user: response.data };
   }
 

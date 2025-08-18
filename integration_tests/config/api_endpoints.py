@@ -15,7 +15,7 @@ class UserAPI(Enum):
     ROOT = '/'
     REGISTER = '/auth/register'
     LOGIN = '/auth/login'
-    PROFILE = '/auth/me'
+    PROFILE = '/auth/profile'
     LOGOUT = '/auth/logout'
     HEALTH = '/health'
 

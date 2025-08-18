@@ -106,7 +106,7 @@ const (
 	APIV1AuthPath     = "/api/v1/auth"
 	APIV1AuthLogin    = "/api/v1/auth/login"
 	APIV1AuthRegister = "/api/v1/auth/register"
-	APIV1AuthProfile  = "/api/v1/auth/me"
+	APIV1AuthProfile  = "/api/v1/auth/profile"
 	APIV1AuthLogout   = "/api/v1/auth/logout"
 
 	// Inventory service paths
@@ -135,8 +135,6 @@ const (
 	APIV1AssetBalances         = "/api/v1/assets/balances"
 	APIV1AssetBalanceByID      = "/api/v1/assets/:asset_id/balance"
 	APIV1AssetTransactionsByID = "/api/v1/assets/:asset_id/transactions"
-
-
 )
 
 // Phase 1: User roles and permissions
@@ -356,8 +354,6 @@ var (
 			RequiresAuth: true,
 			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
 		},
-
-
 	}
 )
 

@@ -112,7 +112,7 @@ gateway/
 - `GET /api/v1/inventory/assets/:id` - Get specific asset (public)
 
 ### Protected Endpoints (Auth Required) ✅ COMPLETED
-- `GET /api/v1/auth/me` - Get user profile
+- `GET /api/v1/auth/profile` - Get user profile
 - `POST /api/v1/auth/logout` - User logout
 
 ### System Endpoints ✅ COMPLETED
@@ -291,7 +291,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 # Use JWT token for protected endpoints
 curl -H "Authorization: Bearer <JWT_TOKEN>" \
-  http://localhost:8080/api/v1/auth/me
+  http://localhost:8080/api/v1/auth/profile
 ```
 
 ## Evolution Strategy ✅ COMPLETED

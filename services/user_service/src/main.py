@@ -298,7 +298,7 @@ async def root():
             "health": "/health",
             "register": "/auth/register",
             "login": "/auth/login",
-            "profile": "/auth/me",
+            "profile": "/auth/profile",
             "logout": "/auth/logout"
         },
         "environment": {
@@ -377,8 +377,8 @@ async def startup_event():
     logger.info("  GET  /health/db - Database health check")
     logger.info("  POST /auth/register - User registration")
     logger.info("  POST /auth/login - User login")
-    logger.info("  GET  /auth/me - User profile")
-    logger.info("  PUT  /auth/me - Update profile")
+    logger.info("  GET  /auth/profile - User profile")
+    logger.info("  PUT  /auth/profile - Update profile")
     logger.info("  POST /auth/logout - User logout")
     logger.info("  GET  /docs - API documentation")
 

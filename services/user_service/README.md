@@ -32,7 +32,7 @@ A microservice responsible for user management, authentication, and account bala
 - `POST /auth/logout` - User logout
 
 ### User Management ✅ COMPLETED
-- `GET /auth/me` - Get user profile
+- `GET /auth/profile` - Get user profile
 - `PUT /auth/profile` - Update user profile
 
 ### Balance Management ✅ COMPLETED

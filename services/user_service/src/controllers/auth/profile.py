@@ -81,7 +81,7 @@ async def get_current_user(
 
 
 @router.get(
-    "/me",
+    "/profile",
     response_model=UserProfileResponse,
     responses={
         200: {
@@ -122,7 +122,7 @@ async def get_profile(
 
 
 @router.put(
-    "/me",
+    "/profile",
     response_model=Union[ProfileUpdateSuccessResponse, ProfileUpdateErrorResponse],
     responses={
         200: {

@@ -67,7 +67,7 @@ class TestRootEndpoint:
         assert endpoints["health"] == "/health"
         assert endpoints["register"] == "/auth/register"
         assert endpoints["login"] == "/auth/login"
-        assert endpoints["profile"] == "/auth/me"
+        assert endpoints["profile"] == "/auth/profile"
         assert endpoints["logout"] == "/auth/logout"
 
         # Check environment info

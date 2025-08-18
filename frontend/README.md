@@ -387,11 +387,11 @@ POST /api/v1/auth/register
 }
 
 // Get Profile
-GET /api/v1/auth/me
+GET /api/v1/auth/profile
 Authorization: Bearer <JWT_TOKEN>
 
 // Update Profile
-PUT /api/v1/auth/me
+PUT /api/v1/auth/profile
 Authorization: Bearer <JWT_TOKEN>
 {
   "first_name": "John",

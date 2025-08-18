@@ -174,7 +174,7 @@ cmd_profile() {
     fi
 
     log_info "Fetching profile..."
-    local response=$(api_request GET "/api/v1/auth/me")
+    local response=$(api_request GET "/api/v1/auth/profile")
 
     if echo "$response" | jq -e '.username' > /dev/null; then
         echo "$response" | jq '.'
