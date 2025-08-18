@@ -11,9 +11,9 @@ from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key
 
 from common.dao.user.balance_dao import BalanceDAO
-from common.entities.user import Balance, BalanceTransaction, TransactionType, TransactionStatus
+from common.entities.user import Balance, BalanceTransaction, TransactionType, TransactionStatus, BalanceCreate
 from common.exceptions import DatabaseOperationException, EntityNotFoundException
-from common.exceptions.shared_exceptions import BalanceNotFoundException
+from common.exceptions.shared_exceptions import BalanceNotFoundException, TransactionNotFoundException
 
 
 class TestBalanceDAO:
@@ -24,6 +24,7 @@ class TestBalanceDAO:
         """Create mock database connection"""
         mock_connection = MagicMock()
         mock_connection.table = MagicMock()
+        mock_connection.users_table = MagicMock()
         return mock_connection
 
     @pytest.fixture
@@ -61,7 +62,13 @@ class TestBalanceDAO:
             entity_type="balance_transaction"
         )
 
-
+    @pytest.fixture
+    def sample_balance_create(self):
+        """Sample BalanceCreate for testing"""
+        return BalanceCreate(
+            username="testuser123",
+            initial_balance=Decimal('100.00')
+        )
 
     def test_get_balance_success(self, balance_dao, sample_balance, mock_db_connection):
         """Test successful balance retrieval"""
@@ -146,6 +153,49 @@ class TestBalanceDAO:
         with pytest.raises(DatabaseOperationException):
             balance_dao.update_balance('testuser123', Decimal('150.00'))
 
+    def test_create_balance_success(self, balance_dao, sample_balance_create, mock_db_connection):
+        """Test successful balance creation"""
+        # Mock successful database operations
+        mock_db_connection.users_table.put_item.return_value = None
+
+        result = balance_dao.create_balance(sample_balance_create)
+
+        # Verify result
+        assert result is not None
+        assert result.Pk == "testuser123"
+        assert result.username == "testuser123"
+        assert result.current_balance == Decimal('100.00')
+        assert result.Sk == "BALANCE"
+        assert result.entity_type == "balance"
+
+        # Verify database was called
+        mock_db_connection.users_table.put_item.assert_called_once()
+        call_args = mock_db_connection.users_table.put_item.call_args[1]['Item']
+        assert call_args['Pk'] == "testuser123"
+        assert call_args['Sk'] == "BALANCE"
+        assert call_args['username'] == "testuser123"
+        assert call_args['current_balance'] == "100.00"
+        assert call_args['entity_type'] == "balance"
+
+    def test_create_balance_database_error(self, balance_dao, sample_balance_create, mock_db_connection):
+        """Test balance creation with database error"""
+        # Mock database error
+        mock_db_connection.users_table.put_item.side_effect = ClientError(
+            {'Error': {'Code': 'InternalServerError', 'Message': 'Database error'}},
+            'PutItem'
+        )
+
+        with pytest.raises(DatabaseOperationException, match="Database operation failed while creating balance"):
+            balance_dao.create_balance(sample_balance_create)
+
+    def test_create_balance_generic_exception(self, balance_dao, sample_balance_create, mock_db_connection):
+        """Test balance creation with generic exception"""
+        # Mock generic exception
+        mock_db_connection.users_table.put_item.side_effect = Exception("Generic error")
+
+        with pytest.raises(DatabaseOperationException, match="Database operation failed while creating balance"):
+            balance_dao.create_balance(sample_balance_create)
+
     def test_create_transaction_success(self, balance_dao, sample_transaction, mock_db_connection):
         """Test successful transaction creation"""
         # Mock successful database operations
@@ -203,6 +253,14 @@ class TestBalanceDAO:
         with pytest.raises(DatabaseOperationException):
             balance_dao.create_transaction(sample_transaction)
 
+    def test_create_transaction_generic_exception(self, balance_dao, sample_transaction, mock_db_connection):
+        """Test transaction creation with generic exception"""
+        # Mock generic exception
+        mock_db_connection.users_table.put_item.side_effect = Exception("Generic error")
+
+        with pytest.raises(DatabaseOperationException, match="Database operation failed while creating transaction"):
+            balance_dao.create_transaction(sample_transaction)
+
     def test_create_transaction_with_balance_update(self, balance_dao, sample_transaction, sample_balance, mock_db_connection):
         """Test transaction creation (balance update is now handled separately)"""
         # Mock successful database operations
@@ -231,6 +289,75 @@ class TestBalanceDAO:
 
         # Verify result
         assert result == sample_transaction
+
+    def test_update_balance_from_transaction_success(self, balance_dao, sample_transaction, sample_balance, mock_db_connection):
+        """Test successful balance update from transaction"""
+        # Mock successful operations
+        mock_db_connection.users_table.get_item.return_value = {
+            'Item': {
+                'Pk': 'testuser123',
+                'Sk': 'BALANCE',
+                'username': 'testuser123',
+                'current_balance': '100.00',
+                'created_at': '2023-01-01T00:00:00',
+                'updated_at': '2023-01-01T00:00:00'
+            }
+        }
+        mock_db_connection.users_table.update_item.return_value = {
+            'Attributes': {
+                'Pk': 'testuser123',
+                'Sk': 'BALANCE',
+                'username': 'testuser123',
+                'current_balance': '150.00',
+                'created_at': '2023-01-01T00:00:00',
+                'updated_at': '2023-01-01T00:00:00'
+            }
+        }
+
+        # Test the private method
+        balance_dao._update_balance_from_transaction(sample_transaction)
+
+        # Verify get_balance was called
+        mock_db_connection.users_table.get_item.assert_called_once()
+        # Verify update_balance was called
+        mock_db_connection.users_table.update_item.assert_called_once()
+
+    def test_update_balance_from_transaction_get_balance_failure(self, balance_dao, sample_transaction, mock_db_connection):
+        """Test balance update from transaction when get_balance fails"""
+        # Mock get_balance failure
+        mock_db_connection.users_table.get_item.side_effect = BalanceNotFoundException("Balance not found")
+
+        with pytest.raises(DatabaseOperationException, match="Database operation failed while updating balance from transaction"):
+            balance_dao._update_balance_from_transaction(sample_transaction)
+
+    def test_update_balance_from_transaction_update_balance_failure(self, balance_dao, sample_transaction, sample_balance, mock_db_connection):
+        """Test balance update from transaction when update_balance fails"""
+        # Mock successful get_balance but failed update_balance
+        mock_db_connection.users_table.get_item.return_value = {
+            'Item': {
+                'Pk': 'testuser123',
+                'Sk': 'BALANCE',
+                'username': 'testuser123',
+                'current_balance': '100.00',
+                'created_at': '2023-01-01T00:00:00',
+                'updated_at': '2023-01-01T00:00:00'
+            }
+        }
+        mock_db_connection.users_table.update_item.side_effect = ClientError(
+            {'Error': {'Code': 'InternalServerError', 'Message': 'Update failed'}},
+            'UpdateItem'
+        )
+
+        with pytest.raises(DatabaseOperationException, match="Database operation failed while updating balance from transaction"):
+            balance_dao._update_balance_from_transaction(sample_transaction)
+
+    def test_update_balance_from_transaction_generic_exception(self, balance_dao, sample_transaction, mock_db_connection):
+        """Test balance update from transaction with generic exception"""
+        # Mock generic exception
+        mock_db_connection.users_table.get_item.side_effect = Exception("Generic error")
+
+        with pytest.raises(DatabaseOperationException, match="Database operation failed while updating balance from transaction"):
+            balance_dao._update_balance_from_transaction(sample_transaction)
 
     def test_get_transaction_success(self, balance_dao, sample_transaction, mock_db_connection):
         """Test successful transaction retrieval"""
@@ -262,6 +389,14 @@ class TestBalanceDAO:
         with pytest.raises(DatabaseOperationException):
             balance_dao.get_transaction('testuser123', UUID('12345678-1234-5678-9abc-123456789abc'))
 
+    def test_get_transaction_generic_exception(self, balance_dao, mock_db_connection):
+        """Test transaction retrieval with generic exception"""
+        # Mock get_user_transactions to raise generic exception
+        balance_dao.get_user_transactions = Mock(side_effect=Exception("Generic error"))
+
+        with pytest.raises(DatabaseOperationException, match="Database operation failed while retrieving transaction"):
+            balance_dao.get_transaction('testuser123', UUID('12345678-1234-5678-9abc-123456789abc'))
+
     def test_get_user_transactions_success(self, balance_dao, sample_transaction, mock_db_connection):
         """Test successful user transactions retrieval"""
         # Mock database response
@@ -291,6 +426,40 @@ class TestBalanceDAO:
         # Verify database was called
         mock_db_connection.users_table.query.assert_called_once()
 
+    def test_get_user_transactions_with_pagination(self, balance_dao, sample_transaction, mock_db_connection):
+        """Test user transactions retrieval with pagination"""
+        # Mock database response with pagination
+        mock_items = [{
+            'Pk': 'TRANS#testuser123',
+            'Sk': '2023-01-01T00:00:00',
+            'username': 'testuser123',
+            'transaction_id': str(sample_transaction.transaction_id),
+            'transaction_type': 'deposit',
+            'amount': '50.00',
+            'description': 'Test deposit',
+            'status': 'completed',
+            'reference_id': 'ref123',
+            'created_at': sample_transaction.created_at.isoformat(),
+            'entity_type': 'balance_transaction'
+        }]
+        mock_last_key = {'Pk': 'TRANS#testuser123', 'Sk': '2023-01-01T00:00:00'}
+        mock_db_connection.users_table.query.return_value = {
+            'Items': mock_items,
+            'LastEvaluatedKey': mock_last_key
+        }
+
+        transactions, last_key = balance_dao.get_user_transactions('testuser123', limit=10, start_key=mock_last_key)
+
+        # Verify result
+        assert len(transactions) == 1
+        assert last_key == mock_last_key
+
+        # Verify database was called with pagination parameters
+        mock_db_connection.users_table.query.assert_called_once()
+        call_args = mock_db_connection.users_table.query.call_args[1]
+        assert call_args['Limit'] == 10
+        assert call_args['ExclusiveStartKey'] == mock_last_key
+
     def test_get_user_transactions_no_more_results(self, balance_dao, mock_db_connection):
         """Test user transactions retrieval with no results"""
         # Mock empty response
@@ -301,3 +470,50 @@ class TestBalanceDAO:
         # Verify result
         assert len(transactions) == 0
         assert last_key is None
+
+    def test_get_user_transactions_database_error(self, balance_dao, mock_db_connection):
+        """Test user transactions retrieval with database error"""
+        # Mock database error
+        mock_db_connection.users_table.query.side_effect = ClientError(
+            {'Error': {'Code': 'InternalServerError', 'Message': 'Database error'}},
+            'Query'
+        )
+
+        with pytest.raises(DatabaseOperationException, match="Database operation failed while retrieving transactions"):
+            balance_dao.get_user_transactions('testuser123')
+
+    def test_get_user_transactions_generic_exception(self, balance_dao, mock_db_connection):
+        """Test user transactions retrieval with generic exception"""
+        # Mock generic exception
+        mock_db_connection.users_table.query.side_effect = Exception("Generic error")
+
+        with pytest.raises(DatabaseOperationException, match="Database operation failed while retrieving transactions"):
+            balance_dao.get_user_transactions('testuser123')
+
+    def test_get_user_transactions_with_custom_limit(self, balance_dao, sample_transaction, mock_db_connection):
+        """Test user transactions retrieval with custom limit"""
+        # Mock database response
+        mock_items = [{
+            'Pk': 'TRANS#testuser123',
+            'Sk': '2023-01-01T00:00:00',
+            'username': 'testuser123',
+            'transaction_id': str(sample_transaction.transaction_id),
+            'transaction_type': 'deposit',
+            'amount': '50.00',
+            'description': 'Test deposit',
+            'status': 'completed',
+            'reference_id': 'ref123',
+            'created_at': sample_transaction.created_at.isoformat(),
+            'entity_type': 'balance_transaction'
+        }]
+        mock_db_connection.users_table.query.return_value = {'Items': mock_items}
+
+        transactions, last_key = balance_dao.get_user_transactions('testuser123', limit=25)
+
+        # Verify result
+        assert len(transactions) == 1
+
+        # Verify database was called with custom limit
+        mock_db_connection.users_table.query.assert_called_once()
+        call_args = mock_db_connection.users_table.query.call_args[1]
+        assert call_args['Limit'] == 25
