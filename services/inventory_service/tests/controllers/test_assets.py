@@ -389,3 +389,145 @@ class TestAssetsControllerExceptionHandling:
             error = exc_info.value
             assert isinstance(error, AssetValidationException)
             assert "Invalid asset ID" in str(error)
+
+
+@pytest.mark.asyncio
+async def test_list_assets_metrics_recording():
+    """Test list_assets with metrics recording (lines 40-41)"""
+    with patch('controllers.assets.AssetDAO') as mock_dao_class, \
+         patch('controllers.assets.METRICS_AVAILABLE', True), \
+         patch('controllers.assets.record_asset_retrieval') as mock_record_retrieval, \
+         patch('controllers.assets.update_asset_counts') as mock_update_counts:
+
+        # Setup mock AssetDAO
+        mock_dao = MagicMock()
+        mock_dao_class.return_value = mock_dao
+
+        # Mock asset data
+        mock_asset1 = MagicMock()
+        mock_asset1.asset_id = "BTC"
+        mock_asset1.name = "Bitcoin"
+        mock_asset1.description = "Bitcoin cryptocurrency"
+        mock_asset1.category = "Cryptocurrency"
+        mock_asset1.price_usd = 45000.0
+        mock_asset1.is_active = True
+
+        mock_asset2 = MagicMock()
+        mock_asset2.asset_id = "ETH"
+        mock_asset2.name = "Ethereum"
+        mock_asset2.description = "Ethereum cryptocurrency"
+        mock_asset2.category = "Cryptocurrency"
+        mock_asset2.price_usd = 3000.0
+        mock_asset2.is_active = True
+
+        # Setup mock to return different results based on active_only parameter
+        def mock_get_all_assets(active_only=True):
+            if active_only:
+                return [mock_asset1, mock_asset2]
+            else:
+                return [mock_asset1, mock_asset2]
+
+        mock_dao.get_all_assets.side_effect = mock_get_all_assets
+
+        # Test the function
+        result = await list_assets(active_only=True, limit=2, asset_dao=mock_dao)
+
+        # Verify metrics were recorded
+        mock_record_retrieval.assert_called_once_with(category="all", active_only=True)
+        mock_update_counts.assert_called_once_with(total=2, active=2)
+
+        # Verify result structure
+        assert result is not None
+        assert hasattr(result, 'assets')
+        assert len(result.assets) == 2
+
+
+@pytest.mark.asyncio
+async def test_get_asset_by_id_validation_error_handling():
+    """Test get_asset_by_id with AssetValidationException handling (lines 172-176)"""
+    with patch('controllers.assets.AssetDAO') as mock_dao_class, \
+         patch('controllers.assets.validate_asset_exists') as mock_validate, \
+         patch('controllers.assets.METRICS_AVAILABLE', True), \
+         patch('controllers.assets.record_asset_detail_view') as mock_record_view:
+
+        # Setup mock AssetDAO
+        mock_dao = MagicMock()
+        mock_dao_class.return_value = mock_dao
+
+        # Mock asset data with all required attributes
+        mock_asset = MagicMock()
+        mock_asset.asset_id = "BTC"
+        mock_asset.name = "Bitcoin"
+        mock_asset.description = "Bitcoin cryptocurrency"
+        mock_asset.category = "Cryptocurrency"
+        mock_asset.price_usd = 45000.0
+        mock_asset.is_active = True
+        mock_asset.amount = 1000.0  # Add amount attribute
+        mock_asset.market_cap = 850000000000
+        mock_asset.volume_24h = 25000000000
+        mock_asset.created_at = "2024-01-01T00:00:00Z"
+        mock_asset.updated_at = "2024-01-01T00:00:00Z"
+
+        # Setup mocks
+        mock_dao.get_asset_by_id.return_value = mock_asset
+        mock_validate.return_value = None  # No validation error
+
+        # Test successful case first
+        result = await get_asset_by_id("BTC", asset_dao=mock_dao)
+
+        # Verify validation was called
+        mock_validate.assert_called_once_with("BTC", mock_dao)
+
+        # Verify metrics were recorded
+        mock_record_view.assert_called_once_with(asset_id="BTC")
+
+        # Now test with AssetValidationException
+        mock_validate.side_effect = AssetValidationException("Asset ID cannot be empty")
+
+        with pytest.raises(AssetValidationException) as exc_info:
+            await get_asset_by_id("INVALID", asset_dao=mock_dao)
+
+        # Verify the exception message is properly formatted
+        # The actual format is: "Invalid asset ID: AssetValidationException: Asset ID cannot be empty"
+        assert "Invalid asset ID:" in str(exc_info.value)
+        assert "Asset ID cannot be empty" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_get_asset_by_id_metrics_recording():
+    """Test get_asset_by_id with metrics recording when METRICS_AVAILABLE is True"""
+    with patch('controllers.assets.AssetDAO') as mock_dao_class, \
+         patch('controllers.assets.validate_asset_exists') as mock_validate, \
+         patch('controllers.assets.METRICS_AVAILABLE', True), \
+         patch('controllers.assets.record_asset_detail_view') as mock_record_view:
+
+        # Setup mock AssetDAO
+        mock_dao = MagicMock()
+        mock_dao_class.return_value = mock_dao
+
+        # Mock asset data with all required attributes
+        mock_asset = MagicMock()
+        mock_asset.asset_id = "ETH"
+        mock_asset.name = "Ethereum"
+        mock_asset.description = "Ethereum cryptocurrency"
+        mock_asset.category = "Cryptocurrency"
+        mock_asset.price_usd = 3000.0
+        mock_asset.is_active = True
+        mock_asset.amount = 5000.0  # Add amount attribute
+        mock_asset.market_cap = 350000000000
+        mock_asset.volume_24h = 15000000000
+        mock_asset.created_at = "2024-01-01T00:00:00Z"
+        mock_asset.updated_at = "2024-01-01T00:00:00Z"
+
+        # Setup mocks
+        mock_dao.get_asset_by_id.return_value = mock_asset
+        mock_validate.return_value = None  # No validation error
+
+        # Test the function
+        result = await get_asset_by_id("ETH", asset_dao=mock_dao)
+
+        # Verify metrics were recorded
+        mock_record_view.assert_called_once_with(asset_id="ETH")
+
+        # Verify result structure
+        assert result is not None
