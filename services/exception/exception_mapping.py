@@ -233,6 +233,8 @@ def configure_service_exceptions():
 
         # Register resource exceptions (shared)
         exception_mapper.register_exception_mapping(EntityNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
+        # UserNotFoundException is special - it can be either 404 (resource not found) or 401 (authentication failed)
+        # The context determines which one to use. For now, we'll use 404 as default, but services can override this.
         exception_mapper.register_exception_mapping(UserNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
         exception_mapper.register_exception_mapping(OrderNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
         exception_mapper.register_exception_mapping(AssetNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)

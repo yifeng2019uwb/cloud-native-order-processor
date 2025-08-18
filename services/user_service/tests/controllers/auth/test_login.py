@@ -66,6 +66,7 @@ async def test_login_database_error():
     mock_user_dao.authenticate_user = MagicMock(side_effect=Exception("db error"))
     login_data = UserLoginRequest(username="john_doe", password="Password123!")
 
-    with pytest.raises(HTTPException) as exc_info:
+    # Database errors should bubble up as exceptions
+    with pytest.raises(Exception) as exc_info:
         await login_user(login_data, user_dao=mock_user_dao)
-    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert "db error" in str(exc_info.value)

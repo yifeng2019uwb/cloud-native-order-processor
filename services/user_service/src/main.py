@@ -151,17 +151,20 @@ async def logging_middleware(request: Request, call_next):
 
         raise  # Re-raise the exception
 
-# Import common package exceptions
-from common.exceptions import (
-    DatabaseConnectionException,
-    DatabaseOperationException,
-    ConfigurationException,
-    EntityValidationException,
-    EntityAlreadyExistsException,
+# Import common exceptions
+from common.exceptions.shared_exceptions import (
     EntityNotFoundException,
     UserValidationException,
-    InvalidCredentialsException
+    InvalidCredentialsException,
+    UserNotFoundException
 )
+
+# Import common exceptions for internal handling
+from common.exceptions import DatabaseOperationException
+
+# Import error models for RFC 7807 responses
+from exception.error_models import create_problem_details
+from exception.error_codes import ErrorCode
 
 # Import user service exceptions
 from user_exceptions import (
@@ -183,9 +186,14 @@ async def validation_exception_handler(request, exc):
 async def user_validation_exception_handler(request, exc):
     """Handle user validation exceptions"""
     logger.warning(f"User validation error: {exc}")
+    problem_details = create_problem_details(
+        ErrorCode.VALIDATION_ERROR,
+        "Validation error",
+        str(request.url)
+    )
     return JSONResponse(
-        status_code=422,
-        content={"detail": str(exc)}
+        status_code=problem_details.status,
+        content=problem_details.model_dump(exclude={'timestamp'})
     )
 
 @app.exception_handler(UserAlreadyExistsException)
@@ -201,10 +209,44 @@ async def user_already_exists_exception_handler(request, exc):
 async def invalid_credentials_exception_handler(request, exc):
     """Handle invalid credentials exceptions"""
     logger.warning(f"Invalid credentials: {exc}")
-    return JSONResponse(
-        status_code=401,
-        content={"detail": str(exc)}
+    problem_details = create_problem_details(
+        ErrorCode.AUTHENTICATION_FAILED,
+        "Invalid credentials",
+        str(request.url)
     )
+    return JSONResponse(
+        status_code=problem_details.status,
+        content=problem_details.model_dump(exclude={'timestamp'})
+    )
+
+@app.exception_handler(UserNotFoundException)
+async def user_not_found_exception_handler(request, exc):
+    """Handle user not found exceptions"""
+    logger.warning(f"User not found: {exc}")
+
+    # For login scenarios, treat UserNotFoundException as authentication failure (401)
+    # For other scenarios, it would be resource not found (404)
+    # We can determine this from the request path
+    if "/auth/login" in str(request.url):
+        problem_details = create_problem_details(
+            ErrorCode.AUTHENTICATION_FAILED,
+            "Invalid credentials",
+            str(request.url)
+        )
+        return JSONResponse(
+            status_code=problem_details.status,
+            content=problem_details.model_dump(exclude={'timestamp'})
+        )
+    else:
+        problem_details = create_problem_details(
+            ErrorCode.RESOURCE_NOT_FOUND,
+            "User not found",
+            str(request.url)
+        )
+        return JSONResponse(
+            status_code=problem_details.status,
+            content=problem_details.model_dump(exclude={'timestamp'})
+        )
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):

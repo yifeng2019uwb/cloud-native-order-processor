@@ -27,7 +27,7 @@ from common.database import get_user_dao
 from common.security import TokenManager, AuditLogger
 
 # Import exceptions
-from common.exceptions.shared_exceptions import InvalidCredentialsException
+from common.exceptions.shared_exceptions import InvalidCredentialsException, UserNotFoundException
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["authentication"])
@@ -105,10 +105,8 @@ async def login_user(
         )
 
     except InvalidCredentialsException:
+        # Let the exception bubble up to be handled by RFC 7807 handlers
         raise
-    except Exception as e:
-        logger.error(f"Login failed for {login_data.username}: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Login failed"
-        )
+    except UserNotFoundException:
+        # Let the exception bubble up to be handled by RFC 7807 handlers
+        raise

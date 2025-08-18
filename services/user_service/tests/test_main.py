@@ -12,8 +12,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-# Add src to path for imports
+# Add src and parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from main import app, IS_LAMBDA, logging_middleware, root, test_logging, startup_event, shutdown_event
 
