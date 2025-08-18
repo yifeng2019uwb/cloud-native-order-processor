@@ -200,9 +200,14 @@ class TestIAMAssumption:
         assert result['attributes']['ApproximateNumberOfMessages'] == '5'
         assert result['attributes']['ApproximateNumberOfMessagesNotVisible'] == '2'
 
+    @patch('boto3.client')
     @patch.dict(os.environ, {}, clear=True)
-    def test_sqs_access_no_queue_configured(self):
+    def test_sqs_access_no_queue_configured(self, mock_boto3_client):
         """Test SQS access when no queue is configured."""
+        # Mock boto3.client to prevent region error
+        mock_sqs = MagicMock()
+        mock_boto3_client.return_value = mock_sqs
+
         result = test_sqs_access()
 
         assert result['success'] is False
