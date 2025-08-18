@@ -14,6 +14,8 @@ images:
   newTag: latest
 - name: order-processor-inventory_service
   newTag: latest
+- name: order-processor-order_service
+  newTag: latest
 - name: order-processor-frontend
   newTag: latest
 - name: order-processor-gateway

@@ -29,6 +29,9 @@ images:
 - name: docker-inventory_service
   newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-inventory-service
   newTag: latest
+- name: docker-order_service
+  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-order-service
+  newTag: latest
 - name: docker-frontend-dev
   newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-frontend
   newTag: latest
