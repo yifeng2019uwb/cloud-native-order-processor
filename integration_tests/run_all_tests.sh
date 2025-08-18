@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Simple script to run test cases with options
-# Usage: ./run_all_tests.sh [all|smoke|inventory|user]
+# Usage: ./run_all_tests.sh [all|smoke|inventory|user|order]
 
 # Install prerequisites
 install_prerequisites() {
@@ -22,16 +22,18 @@ install_prerequisites() {
 }
 
 show_usage() {
-    echo "Usage: $0 [all|smoke|inventory|user]"
+    echo "Usage: $0 [all|smoke|inventory|user|order]"
     echo "  all       - Run all tests (default)"
     echo "  smoke     - Run only smoke tests"
     echo "  inventory - Run only inventory service tests"
     echo "  user      - Run only user service tests"
+    echo "  order     - Run only order service tests"
     echo ""
     echo "Examples:"
     echo "  $0          # Run all tests"
     echo "  $0 smoke    # Run only smoke tests"
     echo "  $0 inventory # Run only inventory tests"
+    echo "  $0 order    # Run only order service tests"
 }
 
 run_smoke_tests() {
@@ -58,6 +60,22 @@ run_user_tests() {
     python3 user_services/balance/transaction_history_tests.py
 }
 
+run_order_tests() {
+    echo "Running order service tests..."
+    echo "=== Running Order Service Health Tests ==="
+    python3 order_service/health/health_tests.py
+    echo "=== Running Order Service Orders Tests ==="
+    python3 order_service/orders/list_order_tests.py
+    python3 order_service/orders/create_order_tests.py
+    python3 order_service/orders/get_order_tests.py
+    echo "=== Running Order Service Portfolio Tests ==="
+    python3 order_service/portfolio_tests.py
+    echo "=== Running Order Service Asset Balance Tests ==="
+    python3 order_service/asset_balance_tests.py
+    echo "=== Running Order Service Asset Transaction Tests ==="
+    python3 order_service/asset_transaction_tests.py
+}
+
 # Default to all tests if no argument provided
 if [ $# -eq 0 ]; then
     ARG="all"
@@ -74,6 +92,7 @@ case $ARG in
         run_smoke_tests
         run_inventory_tests
         run_user_tests
+        run_order_tests
         echo "=== All tests completed ==="
         ;;
     "smoke")
@@ -90,6 +109,11 @@ case $ARG in
         echo "=== Running User Tests ==="
         run_user_tests
         echo "=== User tests completed ==="
+        ;;
+    "order")
+        echo "=== Running Order Tests ==="
+        run_order_tests
+        echo "=== Order tests completed ==="
         ;;
     *)
         echo "Error: Invalid argument '$ARG'"

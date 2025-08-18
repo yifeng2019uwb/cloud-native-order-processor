@@ -35,6 +35,11 @@ class OrderAPI(Enum):
     ROOT = '/'
     ORDERS = '/orders'
     ORDER_BY_ID = '/orders/{id}'
+    CREATE_ORDER = '/orders'
+    PORTFOLIO = '/portfolio/{username}'
+    ASSET_BALANCES = '/assets/balances'
+    ASSET_BALANCE_BY_ID = '/assets/{asset_id}/balance'
+    ASSET_TRANSACTIONS = '/assets/{asset_id}/transactions'
     HEALTH = '/health'
 
 class APIEndpoints:
