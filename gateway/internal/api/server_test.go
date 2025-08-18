@@ -169,7 +169,7 @@ func TestRouteSetup(t *testing.T) {
 		path   string
 		status int
 	}{
-		{"GET", constants.APIV1Path + constants.AuthProfilePath, http.StatusNotFound},
+		{"GET", constants.APIV1Path + constants.AuthProfilePath, http.StatusForbidden},
 		{"POST", constants.APIV1Path + constants.AuthLogoutPath, http.StatusForbidden},
 		{"GET", constants.APIV1Path + constants.InventoryAssetsPath, http.StatusServiceUnavailable},
 		{"GET", constants.APIV1Path + constants.InventoryAssetByIDPath, http.StatusServiceUnavailable},
