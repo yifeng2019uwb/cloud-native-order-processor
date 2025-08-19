@@ -81,17 +81,17 @@ SERVICE_UNAVAILABLE = "service_unavailable"        # External service failures
 from exception import map_service_exception
 
 # In your service controller
-async def get_user(user_id: str):
+async def get_user(username: str):
     try:
-        user = await user_service.get_user(user_id)
+        user = await user_service.get_user(username)
         if not user:
-            raise UserNotFoundException(f"User '{user_id}' not found")
+            raise UserNotFoundException(f"User '{username}' not found")
         return user
     except UserNotFoundException as exc:
         # Map internal exception to external standardized response
         problem_details = map_service_exception(
             exc=exc,
-            instance="/api/v1/users/{user_id}",
+            instance="/api/v1/users/{username}",
             trace_id=request.headers.get("X-Trace-ID")
         )
         return JSONResponse(
@@ -137,12 +137,12 @@ app = FastAPI()
 # Register exception handlers for automatic error handling
 register_exception_handlers(app)
 
-@app.get("/users/{user_id}")
-async def get_user(user_id: str):
+@app.get("/users/{username}")
+async def get_user(username: str):
     # Exceptions are automatically mapped to RFC 7807 Problem Details
-    if not user_exists(user_id):
-        raise UserNotFoundException(f"User '{user_id}' not found")
-    return {"user_id": user_id}
+    if not user_exists(username):
+        raise UserNotFoundException(f"User '{username}' not found")
+    return {"username": username}
 ```
 
 ### **4. Manual Error Handling**
@@ -250,8 +250,8 @@ register_exception_handlers(app)
 ### **4. Use in Your Services**
 ```python
 # Raise shared exceptions for business logic
-if not user_exists(user_id):
-    raise UserNotFoundException(f"User '{user_id}' not found")
+    if not user_exists(username):
+        raise UserNotFoundException(f"User '{username}' not found")
 
 # Handle common exceptions internally
 try:

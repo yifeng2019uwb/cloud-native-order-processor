@@ -72,36 +72,11 @@ Comprehensive task tracking for the entire Cloud Native Order Processor system. 
 
 ## ✅ **COMPLETED TASKS**
 
-#### **BACKEND-004: Fix Remaining Username/User_ID Naming Inconsistencies**
+#### **BACKEND-004: Fix Remaining Username/User_ID Naming Inconsistencies** ✅ **COMPLETED**
 - **Component**: All Backend Services
-- **Type**: Bug
-- **Priority**: Medium
+- **Type**: Refactoring & Standardization
 - **Status**: ✅ **COMPLETED**
-
-**Description:**
-Successfully standardized all username/user_id naming inconsistencies across the common package. All DAO methods, utility functions, and test files now use `username` consistently.
-
-**Accomplishments:**
-- ✅ **DAO Methods** - All `user_id` parameters changed to `username`
-- ✅ **Utility Functions** - `OrderIdGenerator` and `LockManager` updated
-- ✅ **Database Operations** - Consistent `username` usage in keys and queries
-- ✅ **Logging** - All log messages use `username` parameter names
-- ✅ **Test Files** - All test data and assertions updated for consistency
-
-**Files Updated:**
-- `services/common/src/dao/user/balance_dao.py` - All method parameters standardized
-- `services/common/src/dao/order/order_dao.py` - Error logging fixed
-- `services/common/src/entities/order/utils.py` - OrderIdGenerator methods updated
-- `services/common/src/utils/lock_manager.py` - All LockManager methods updated
-- `services/common/tests/utils/test_lock_manager.py` - All test methods updated
-- `services/common/tests/entities/order/test_utils.py` - All test methods updated
-- `services/common/tests/examples/test_iam_assumption.py` - Test assertions updated
-
-**Impact:**
-- **100% consistency** in user identification across the system
-- **Clearer code** - developers know to use `username` everywhere
-- **Better maintainability** - no more confusion about field names
-- **API consistency** - all endpoints use the same parameter naming
+- **Summary**: Successfully standardized all `user_id` references to `username` across all backend services. All services now have 100% consistent naming convention.
 
 ---
 
@@ -230,7 +205,7 @@ Implement comprehensive request tracing with unique request IDs and standardized
 
 - [ ] **Standardized Logging Format**
   - Consistent JSON log format across all services
-  - Include: timestamp, level, service_name, request_id, user_id, message, context
+  - Include: timestamp, level, service_name, request_id, username, message, context
   - Structured logging with proper field names and types
   - Configurable log levels (DEBUG, INFO, WARN, ERROR)
 

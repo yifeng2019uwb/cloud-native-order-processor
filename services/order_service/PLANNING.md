@@ -69,7 +69,7 @@ GSI: UserOrdersIndex (PK: username, SK: ASSET_ID)
 **Fields:**
 - `Pk`: order_id (generated)
 - `Sk`: ORDER
-- `username`: username (changed from user_id for consistency)
+- `username`: username (primary identifier)
 - `asset_id`: asset identifier
 - `order_type`: BUY/SELL
 - `quantity`: order quantity
@@ -230,7 +230,7 @@ def calculate_portfolio_value(username: str) -> dict:
 4. Update Order entity and DAO with GSI support
    - Change SK from `created_at` to `ORDER`
    - Update GSI to `UserOrdersIndex (PK: username, SK: ASSET_ID)`
-   - Change `user_id` to `username` for consistency
+   - Use `username` as primary identifier
 5. Enhance TransactionManager with multi-asset support
 6. Update unit tests
 
@@ -261,7 +261,7 @@ def calculate_portfolio_value(username: str) -> dict:
 ### **✅ Breaking Changes:**
 - Change Order SK from `created_at` to `ORDER`
 - Update GSI structure to `UserOrdersIndex`
-- Change `user_id` to `username` for consistency
+- Use `username` as primary identifier
 
 ### **✅ Validation Strategy:**
 - Service level: Business logic validation

@@ -69,11 +69,11 @@ app = FastAPI()
 # Register exception handlers
 register_exception_handlers(app)
 
-@app.get("/users/{user_id}")
-async def get_user(user_id: str):
-    if not user_exists(user_id):
-        raise UserNotFoundException(f"User '{user_id}' not found")
-    return {"user_id": user_id}
+@app.get("/users/{username}")
+async def get_user(username: str):
+    if not user_exists(username):
+        raise UserNotFoundException(f"User '{username}' not found")
+    return {"username": username}
 ```
 
 ### Manual Exception Mapping
@@ -83,14 +83,14 @@ from exception import map_service_exception
 
 # Map internal exceptions to standardized responses
 try:
-    user = await user_service.get_user(user_id)
+    user = await user_service.get_user(username)
     if not user:
-        raise UserNotFoundException(f"User '{user_id}' not found")
+        raise UserNotFoundException(f"User '{username}' not found")
     return user
 except UserNotFoundException as exc:
     problem_details = map_service_exception(
         exc=exc,
-        instance=f"/api/v1/users/{user_id}",
+        instance=f"/api/v1/users/{username}",
         trace_id=request.headers.get("X-Trace-ID")
     )
     return JSONResponse(
@@ -200,8 +200,8 @@ register_exception_handlers(app)
 ### 4. Use in Your Services
 ```python
 # Raise shared exceptions for business logic
-if not user_exists(user_id):
-    raise UserNotFoundException(f"User '{user_id}' not found")
+    if not user_exists(username):
+        raise UserNotFoundException(f"User '{username}' not found")
 
 # Handle common exceptions internally
 try:
