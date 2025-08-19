@@ -51,28 +51,28 @@
 ### **Current Security Implementation**
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Security      │    │   Security      │    │   Security      │
-│   Layers        │    │   Components    │    │   Patterns      │
-│                 │    │                 │    │                 │
-│ ┌─────────────┐ │    │ ┌─────────────┐ │    │ ┌─────────────┐ │
-│ │API Gateway  │ │    │ │JWT + bcrypt│ │    │ │Defense in   │ │
-│ │Security     │ │    │ │Centralized │ │    │ │Depth        │ │
-│ │Rate Limiting│ │    │ │Auth Mgmt   │ │    │ │Zero Trust   │ │
-│ └─────────────┘ │    │ └─────────────┘ │    │ │Audit Logging│ │
-│                 │    │                 │    │ └─────────────┘ │
-│ ┌─────────────┐ │    │ ┌─────────────┐ │    │                 │
-│ │Service      │ │    │ │RBAC +      │ │    │                 │
-│ │Security     │ │    │ │Input       │ │    │                 │
-│ │Validation   │ │    │ │Validation  │ │    │                 │
-│ └─────────────┘ │    │ └─────────────┘ │    │                 │
-│                 │    │                 │    │                 │
-│ ┌─────────────┐ │    │ ┌─────────────┐ │    │                 │
-│ │Data        │ │    │ │Audit       │ │    │                 │
-│ │Security    │ │    │ │Logging +   │ │    │                 │
-│ │Encryption  │ │    │ │Compliance  │ │    │                 │
-│ └─────────────┘ │    │ └─────────────┘ │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│   Security      │  │   Security      │  │   Security      │
+│   Layers        │  │   Components    │  │   Patterns      │
+│                 │  │                 │  │                 │
+│ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────────┐ │
+│ │API Gateway  │ │  │ │JWT + bcrypt │ │  │ │Defense in   │ │
+│ │Security     │ │  │ │Centralized  │ │  │ │Depth        │ │
+│ │Rate Limiting│ │  │ │Auth Mgmt    │ │  │ │Zero Trust   │ │
+│ └─────────────┘ │  │ └─────────────┘ │  │ └─────────────┘ │
+│                 │  │                 │  │                 │
+│ ┌─────────────┐ │  │ ┌─────────────┐ │  │                 │
+│ │Service      │ │  │ │RBAC +       │ │  │                 │
+│ │Security     │ │  │ │Input        │ │  │                 │
+│ │Validation   │ │  │ │Validation   │ │  │                 │
+│ └─────────────┘ │  │ └─────────────┘ │  │                 │
+│                 │  │                 │  │                 │
+│ ┌─────────────┐ │  │ ┌─────────────┐ │  │                 │
+│ │Data         │ │  │ │Audit        │ │  │                 │
+│ │Security     │ │  │ │Logging +    │ │  │                 │
+│ │Encryption   │ │  │ │Compliance   │ │  │                 │
+│ └─────────────┘ │  │ └─────────────┘ │  │                 │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
 ### **Security Components Implemented**
