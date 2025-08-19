@@ -8,6 +8,8 @@ metadata:
 resources:
 - deployment.yaml
 - service.yaml
+- aws-secrets.yaml
+- aws-config.yaml
 
 images:
 - name: order-processor-user_service

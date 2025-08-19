@@ -105,16 +105,28 @@ deploy() {
     kubectl apply -k .
 
     echo "✅ Deployment completed"
-    echo "🔗 To access frontend on localhost:3000, run: $0 port-forward"
+    echo "🔗 Frontend accessible at: http://localhost:30004"
+    echo "🔗 Starting automatic port forwarding to localhost:3000..."
+
+    # Start port forwarding in background
+    kubectl port-forward -n order-processor service/frontend 3000:80 &
+    PF_PID=$!
+    echo "🔗 Port forwarding started (PID: $PF_PID)"
+    echo "🔗 Frontend now accessible at: http://localhost:3000"
+    echo "🔗 To stop port forwarding, run: kill $PF_PID"
 }
 
 stop() {
     echo "🛑 Stopping services..."
 
+    # Stop any running port forwarding
+    pkill -f "kubectl port-forward.*frontend" 2>/dev/null || true
+
     cd "${K8S_ROOT}/${ENVIRONMENT}"
     kubectl delete -k . --ignore-not-found=true
 
     echo "✅ Services stopped"
+    echo "✅ Port forwarding stopped"
 }
 
 status() {

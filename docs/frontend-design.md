@@ -1306,3 +1306,72 @@ With the core frontend implementation complete, the next focus areas are:
 *Version: 3.0 - IMPLEMENTATION COMPLETE*
 *Status: ✅ **FRONTEND FULLY IMPLEMENTED** - All 7 pages working with real backend data*
 *Next Phase: Frontend enhancements and advanced features*
+
+## 🔌 **Port Configuration Design**
+
+### **Port Architecture Decision: Different Ports for Container vs Service**
+
+**Decision**: Use different ports at different layers for better production readiness and Kubernetes best practices.
+
+**Port Configuration:**
+```
+Frontend Container: Port 3000 (development standard)
+Kubernetes Service: Port 80 (production standard)
+External Access: localhost:3000 via port forwarding
+```
+
+### **Why This Design?**
+
+#### **✅ Benefits:**
+1. **Production Standards**: Kubernetes services use standard ports (80, 443)
+2. **Service Abstraction**: Service layer abstracts container port details
+3. **Load Balancer Compatibility**: Standard ports work better with cloud infrastructure
+4. **Kubernetes Best Practices**: Follows Kubernetes design patterns
+5. **Development Workflow**: Frontend container runs on familiar port 3000
+6. **Port Flexibility**: Can change container port without affecting service configuration
+
+#### **❌ Alternative (Same Port) Issues:**
+1. **Port Conflicts**: Port 3000 might conflict with other local services
+2. **Production Mismatch**: Production environments expect services on standard ports
+3. **Load Balancer Issues**: Some load balancers expect services on port 80/443
+4. **Kubernetes Convention**: Services typically use standard ports
+
+### **Implementation Details:**
+
+#### **Container Level:**
+- **Port**: 3000 (matches `npm run dev` development server)
+- **Health Checks**: Liveness and readiness probes check port 3000
+- **Environment**: Development-friendly port number
+
+#### **Service Level:**
+- **Port**: 80 (Kubernetes service standard)
+- **Target Port**: 3000 (forwards to container port 3000)
+- **NodePort**: 30004 (external access for development)
+
+#### **External Access:**
+- **Development**: `localhost:3000` via `kubectl port-forward`
+- **Direct Access**: `localhost:30004` via NodePort (fallback)
+- **Production**: Standard port 80 through load balancer
+
+### **Port Forwarding Setup:**
+```bash
+# Access frontend on localhost:3000
+kubectl port-forward -n order-processor service/frontend 3000:80
+
+# Or use our management script
+./kubernetes/scripts/k8s-manage.sh port-forward
+```
+
+### **Configuration Files:**
+- **Deployment**: `containerPort: 3000`, health checks on port 3000
+- **Service**: `port: 80`, `targetPort: 3000`
+- **Health Probes**: All check port 3000 (container port)
+
+### **Future Considerations:**
+- **Production**: Service will use port 80 with load balancer
+- **Development**: Continue using port forwarding for localhost:3000
+- **Consistency**: All services follow this pattern (container: app port, service: 80)
+
+---
+
+## 🎨 **Frontend Design Philosophy**

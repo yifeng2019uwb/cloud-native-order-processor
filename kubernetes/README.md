@@ -38,7 +38,62 @@ kubernetes/
 └── README.md               # This file
 ```
 
-## Quick Start
+## 🔌 **Port Configuration Design**
+
+### **Port Architecture Decision: Different Ports for Container vs Service**
+
+**Decision**: Use different ports at different layers for better production readiness and Kubernetes best practices.
+
+**Port Configuration:**
+```
+Frontend Container: Port 3000 (development standard)
+Kubernetes Service: Port 80 (production standard)
+External Access: localhost:3000 via port forwarding
+```
+
+### **Why This Design?**
+
+#### **✅ Benefits:**
+1. **Production Standards**: Kubernetes services use standard ports (80, 443)
+2. **Service Abstraction**: Service layer abstracts container port details
+3. **Load Balancer Compatibility**: Standard ports work better with cloud infrastructure
+4. **Kubernetes Best Practices**: Follows Kubernetes design patterns
+5. **Development Workflow**: Frontend container runs on familiar port 3000
+6. **Port Flexibility**: Can change container port without affecting service configuration
+
+#### **❌ Alternative (Same Port) Issues:**
+1. **Port Conflicts**: Port 3000 might conflict with other local services
+2. **Production Mismatch**: Production environments expect services on standard ports
+3. **Load Balancer Issues**: Some load balancers expect services on port 80/443
+4. **Kubernetes Convention**: Services typically use standard ports
+
+### **Current Port Configuration:**
+
+| Service | Container Port | Service Port | Target Port | NodePort | External Access |
+|---------|----------------|--------------|-------------|----------|-----------------|
+| Frontend | 3000 | 80 | 3000 | 30004 | localhost:3000 (port-forward) |
+| Gateway | 8000 | 8000 | 8000 | 30000 | localhost:30000 |
+| User Service | 8000 | 8000 | 8000 | 30001 | localhost:30001 |
+| Inventory Service | 8001 | 8001 | 8001 | 30002 | localhost:30002 |
+| Order Service | 8002 | 8002 | 8002 | 30003 | localhost:30003 |
+
+### **Port Forwarding for Frontend:**
+```bash
+# Access frontend on localhost:3000
+kubectl port-forward -n order-processor service/frontend 3000:80
+
+# Or use our management script
+./kubernetes/scripts/k8s-manage.sh port-forward
+```
+
+### **Configuration Files:**
+- **Deployment**: `containerPort: 3000`, health checks on port 3000
+- **Service**: `port: 80`, `targetPort: 3000`
+- **Health Probes**: All check port 3000 (container port)
+
+---
+
+## 🚀 **Quick Start**
 
 ### Local Development (Kind) ✅ **WORKING**
 
@@ -154,96 +209,4 @@ AWS_ROLE_ARN=<your-role-arn>
    ```
 
 2. **Secrets not configured**:
-   ```bash
-   # Check secrets
-   kubectl get secrets -n order-processor
-   kubectl describe secret aws-credentials -n order-processor
    ```
-
-3. **Services not accessible**:
-   ```bash
-   # Check service status
-   kubectl get svc -n order-processor
-   kubectl describe svc user-service -n order-processor
-   ```
-
-4. **AWS credential issues** ✅ **RESOLVED**:
-   ```bash
-   # Fresh credentials are automatically deployed
-   # Check service logs for any issues
-   kubectl logs deployment/user-service -n order-processor
-   kubectl logs deployment/inventory-service -n order-processor
-   ```
-
-### Useful Commands
-
-```bash
-# Check deployment status
-kubectl get all -n order-processor
-
-# View logs
-kubectl logs <pod-name> -n order-processor
-
-# Describe resources
-kubectl describe pod <pod-name> -n order-processor
-kubectl describe svc <service-name> -n order-processor
-
-# Port forward (if needed)
-kubectl port-forward svc/user-service 8000:8000 -n order-processor
-kubectl port-forward svc/inventory-service 8001:8001 -n order-processor
-```
-
-## Development Workflow
-
-1. **Local Development**:
-   - Use Docker for rapid development
-   - Use Kind for Kubernetes testing
-   - Test integration with local deployment
-
-2. **Production Deployment**:
-   - Build and test locally first
-   - Deploy to production when ready
-   - Monitor deployment status
-
-## Security Notes
-
-- dev/ and secrets/ directories are excluded from version control (.gitignore) to prevent accidental exposure of sensitive or local-only configuration.
-- Production uses non-root containers
-- Secrets are stored in Kubernetes secrets
-- SSL/TLS enabled in production
-- Network policies can be added for additional security
-
-## Cost Optimization
-
-- Local development is free (Kind)
-- Production uses appropriate resource limits
-- Consider spot instances for cost savings
-- Monitor usage with CloudWatch
-
-## Current Status ✅ **WORKING**
-
-### **✅ All Services Deployed Successfully**
-- **Frontend**: React application with Nginx ✅
-- **Gateway**: Go API Gateway with authentication ✅
-- **User Service**: FastAPI authentication service ✅
-- **Inventory Service**: FastAPI inventory service ✅
-- **Redis**: In-memory cache and session store ✅
-
-### **✅ AWS Integration Working**
-- **Fresh AWS Credentials**: Deployed and working ✅
-- **DynamoDB Access**: All services can access database ✅
-- **No Expired Token Errors**: Credentials are current ✅
-
-### **✅ Port Configuration Correct**
-- **External Access**: Frontend and Gateway accessible via NodePorts ✅
-- **Internal Communication**: Services communicate via ClusterIP ✅
-- **Port Forwarding**: Available for direct service access ✅
-
-### **✅ Deployment Process Stable**
-- **Automated Deployment**: Single command deployment ✅
-- **Image Building**: Docker images built and loaded ✅
-- **Service Discovery**: All services can find each other ✅
-
----
-
-**The Kubernetes deployment is now working perfectly with fresh AWS credentials and proper service configuration!** 🚀
