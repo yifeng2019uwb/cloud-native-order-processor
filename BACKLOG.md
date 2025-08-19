@@ -70,9 +70,84 @@ Comprehensive task tracking for the entire Cloud Native Order Processor system. 
 
 ---
 
+## ✅ **COMPLETED TASKS**
+
+#### **BACKEND-004: Fix Remaining Username/User_ID Naming Inconsistencies**
+- **Component**: All Backend Services
+- **Type**: Bug
+- **Priority**: Medium
+- **Status**: ✅ **COMPLETED**
+
+**Description:**
+Successfully standardized all username/user_id naming inconsistencies across the common package. All DAO methods, utility functions, and test files now use `username` consistently.
+
+**Accomplishments:**
+- ✅ **DAO Methods** - All `user_id` parameters changed to `username`
+- ✅ **Utility Functions** - `OrderIdGenerator` and `LockManager` updated
+- ✅ **Database Operations** - Consistent `username` usage in keys and queries
+- ✅ **Logging** - All log messages use `username` parameter names
+- ✅ **Test Files** - All test data and assertions updated for consistency
+
+**Files Updated:**
+- `services/common/src/dao/user/balance_dao.py` - All method parameters standardized
+- `services/common/src/dao/order/order_dao.py` - Error logging fixed
+- `services/common/src/entities/order/utils.py` - OrderIdGenerator methods updated
+- `services/common/src/utils/lock_manager.py` - All LockManager methods updated
+- `services/common/tests/utils/test_lock_manager.py` - All test methods updated
+- `services/common/tests/entities/order/test_utils.py` - All test methods updated
+- `services/common/tests/examples/test_iam_assumption.py` - Test assertions updated
+
+**Impact:**
+- **100% consistency** in user identification across the system
+- **Clearer code** - developers know to use `username` everywhere
+- **Better maintainability** - no more confusion about field names
+- **API consistency** - all endpoints use the same parameter naming
+
+---
+
 ## 📋 **CURRENT PRIORITIES (Active Tasks Only)**
 
+### **🔥 HIGHEST PRIORITY**
+
+#### **DESIGN-001: Comprehensive System Design Review**
+- **Component**: All System Components
+- **Type**: Review & Validation
+- **Priority**: 🔥 **HIGHEST PRIORITY**
+- **Status**: 📋 Pending
+
+**Description:**
+Conduct comprehensive review of all system design decisions, architecture, and implementation plans before proceeding with monitoring system implementation.
+
+**Why This is Critical:**
+- **Foundation for Implementation**: All other work depends on validated design
+- **Risk Mitigation**: Catch design issues before implementation
+- **Alignment Check**: Ensure design matches current requirements
+- **Quality Assurance**: Validate architectural decisions
+
+**Review Areas:**
+- [ ] **Monitoring System Design** - Validate Prometheus + Grafana + Loki approach
+- [ ] **Request Tracing Architecture** - Review request ID propagation strategy
+- [ ] **Service Integration Design** - Check how monitoring integrates with existing services
+- [ ] **Infrastructure Design** - Validate K8s deployment and resource allocation
+- [ ] **Security Design** - Review authentication, authorization, and data protection
+- [ ] **Performance Design** - Check scalability and performance considerations
+- [ ] **Error Handling Design** - Validate error handling and recovery strategies
+
+**Expected Outcomes:**
+- [ ] Design validation report with any issues identified
+- [ ] Updated implementation plan based on review findings
+- [ ] Risk assessment and mitigation strategies
+- [ ] Go/no-go decision for monitoring system implementation
+
+**Dependencies:**
+- **Existing monitoring package review** - Understand current setup
+- **Current system architecture review** - Validate against existing implementation
+- **Team alignment** - Ensure all stakeholders agree on design approach
+
+---
+
 **🔥 HIGHEST PRIORITY:**
+- **DESIGN-001**: Comprehensive System Design Review (Critical for implementation)
 - **MONITOR-001**: Comprehensive Monitoring System (Design completed, ready for implementation)
 
 **📋 HIGH PRIORITY:**
@@ -184,36 +259,7 @@ Implement comprehensive request tracing with unique request IDs and standardized
 - **MONITOR-001**: Comprehensive Monitoring System (Design completed, ready for implementation)
 - **Existing monitoring package**: Review and integrate with current setup
 
-#### **BACKEND-004: Fix Remaining Username/User_ID Naming Inconsistencies**
-- **Component**: All Backend Services
-- **Type**: Bug
-- **Priority**: Medium
-- **Status**: 📋 Pending
 
-**Description:**
-There are still a few places in the codebase where username and user_id naming is inconsistent, causing confusion and potential bugs in the system.
-
-**Root Cause:**
-- Mixed usage of `username` vs `user_id` in different parts of the system
-- Some endpoints and methods still use the old naming convention
-- Inconsistent parameter naming across controllers and DAOs
-
-**Impact:**
-- Confusion in API usage and development
-- Potential bugs from mismatched parameter names
-- Inconsistent codebase that's harder to maintain
-
-**Acceptance Criteria:**
-- [ ] All endpoints consistently use `username` instead of `user_id`
-- [ ] All DAO methods use consistent parameter naming
-- [ ] All controller methods use consistent parameter naming
-- [ ] No mixed usage of `username`/`user_id` in the same context
-- [ ] All API documentation reflects consistent naming
-
-**Technical Details:**
-- File: Various controller and DAO files across services
-- Issue: Mixed usage of `username` vs `user_id` parameters
-- Priority: Medium (affects code consistency and maintainability)
 
 
 

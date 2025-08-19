@@ -384,11 +384,11 @@ The system uses a hybrid async/sync pattern for transaction atomicity:
 - **DAO Calls**: Synchronous (no `await` needed)
 - **Example**:
   ```python
-  async def deposit_funds(self, user_id: str, amount: Decimal):
-      async with UserLock(user_id, "deposit", timeout):
+  async def deposit_funds(self, username: str, amount: Decimal):
+      async with UserLock(username, "deposit", timeout):
           # Sync DAO calls (no await)
           transaction = self.balance_dao.create_transaction(...)
-          balance = self.balance_dao.get_balance(user_id)
+          balance = self.balance_dao.get_balance(username)
   ```
 
 #### **Lock Manager (Hybrid)**

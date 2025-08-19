@@ -17,14 +17,14 @@ from common.exceptions import (
 from user_exceptions import UserAlreadyExistsException
 
 
-def validate_username_uniqueness(username: str, user_dao: Any, exclude_user_id: Optional[str] = None) -> bool:
+def validate_username_uniqueness(username: str, user_dao: Any, exclude_username: Optional[str] = None) -> bool:
     """
     Validate that username is unique in the system
 
     Args:
         username: Username to check
         user_dao: User DAO instance
-        exclude_user_id: User ID to exclude from check (for updates)
+        exclude_username: Username to exclude from check (for updates)
 
     Returns:
         True if username is unique
@@ -58,14 +58,14 @@ def validate_username_uniqueness(username: str, user_dao: Any, exclude_user_id: 
         raise
 
 
-def validate_email_uniqueness(email: str, user_dao: Any, exclude_user_id: Optional[str] = None) -> bool:
+def validate_email_uniqueness(email: str, user_dao: Any, exclude_username: Optional[str] = None) -> bool:
     """
     Validate that email is unique in the system
 
     Args:
         email: Email to check
         user_dao: User DAO instance
-        exclude_user_id: User ID to exclude from check (for updates)
+        exclude_username: Username to exclude from check (for updates)
 
     Returns:
         True if email is unique
@@ -99,12 +99,12 @@ def validate_email_uniqueness(email: str, user_dao: Any, exclude_user_id: Option
         raise
 
 
-def validate_user_exists(user_id: str, user_dao: Any) -> bool:
+def validate_user_exists(username: str, user_dao: Any) -> bool:
     """
     Validate that user exists in the system
 
     Args:
-        user_id: User ID to check (username in new entity structure)
+        username: Username to check
         user_dao: User DAO instance
 
     Returns:
@@ -113,11 +113,11 @@ def validate_user_exists(user_id: str, user_dao: Any) -> bool:
     Raises:
         UserNotFoundException: If user doesn't exist
     """
-    # Query database for user existence (use username as user_id)
-    user = user_dao.get_user_by_username(user_id)
+    # Query database for user existence
+    user = user_dao.get_user_by_username(username)
 
     if not user:
-        raise UserNotFoundException(f"User with ID '{user_id}' not found")
+        raise UserNotFoundException(f"User with username '{username}' not found")
 
     return True
 
@@ -172,12 +172,12 @@ def validate_role_permissions(user_role: str, required_role: str) -> bool:
     pass
 
 
-async def validate_sufficient_balance(user_id: str, amount: float, balance_dao: Any) -> bool:
+async def validate_sufficient_balance(username: str, amount: float, balance_dao: Any) -> bool:
     """
     Validate that user has sufficient balance for withdrawal
 
     Args:
-        user_id: User ID to check
+        username: Username to check
         amount: Amount to withdraw
         balance_dao: Balance DAO instance
 
@@ -188,7 +188,7 @@ async def validate_sufficient_balance(user_id: str, amount: float, balance_dao: 
         UserValidationException: If insufficient balance
     """
     # Get current balance
-    balance = balance_dao.get_balance_by_user_id(user_id)
+    balance = balance_dao.get_balance(username)
 
     if not balance:
         raise UserValidationException("User balance not found")

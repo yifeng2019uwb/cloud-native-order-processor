@@ -19,7 +19,6 @@ async def test_register_success():
     mock_user_dao.get_user_by_email = MagicMock(return_value=None)
     mock_user = MagicMock()
     mock_user.username = "newuser"
-    mock_user.user_id = uuid4()  # Set a proper UUID
     mock_user_dao.create_user = MagicMock(return_value=mock_user)
 
     # Mock balance_dao

@@ -104,18 +104,18 @@ class SessionManager:
         self.cache = RedisCache("sessions")
         self.session_ttl = 3600  # 1 hour default
 
-    def create_session(self, user_id: str, session_data: Dict[str, Any]) -> str:
+    def create_session(self, username: str, session_data: Dict[str, Any]) -> str:
         """Create user session"""
         try:
-            session_id = f"session:{user_id}:{datetime.now().timestamp()}"
+            session_id = f"session:{username}:{datetime.now().timestamp()}"
             session_data["created_at"] = datetime.now().isoformat()
-            session_data["user_id"] = user_id
+            session_data["username"] = username
 
             if self.cache.set(session_id, session_data, self.session_ttl):
                 return session_id
             return None
         except Exception as e:
-            logger.error(f"Failed to create session for user {user_id}: {e}")
+            logger.error(f"Failed to create session for user {username}: {e}")
             return None
 
     def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:

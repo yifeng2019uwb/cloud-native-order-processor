@@ -31,17 +31,17 @@ class BalanceDAO(BaseDAO):
 
 
 
-    def get_balance(self, user_id: str) -> Balance:
+    def get_balance(self, username: str) -> Balance:
         """Get balance for a user."""
         key = {
-            "Pk": user_id,
+            "Pk": username,
             "Sk": "BALANCE"
         }
 
         item = self._safe_get_item(self.table, key)
 
         if not item:
-            raise BalanceNotFoundException(f"Balance for user '{user_id}' not found")
+            raise BalanceNotFoundException(f"Balance for user '{username}' not found")
 
         return Balance(
             Pk=item["Pk"],
@@ -53,15 +53,15 @@ class BalanceDAO(BaseDAO):
             entity_type=item.get("entity_type", "balance")
         )
 
-    def update_balance(self, user_id: str, current_balance: Decimal) -> Balance:
+    def update_balance(self, username: str, current_balance: Decimal) -> Balance:
         """Update balance for a user."""
         try:
-            logger.info(f"Updating balance: user={user_id}, new_balance={current_balance}")
+            logger.info(f"Updating balance: user={username}, new_balance={current_balance}")
             updated_at = datetime.utcnow()
 
             response = self.table.update_item(
                 Key={
-                    "Pk": user_id,
+                    "Pk": username,
                     "Sk": "BALANCE"
                 },
                 UpdateExpression="SET current_balance = :balance, updated_at = :updated_at",
@@ -71,7 +71,7 @@ class BalanceDAO(BaseDAO):
                 },
                 ReturnValues="ALL_NEW"
             )
-            logger.info(f"Balance updated successfully: user={user_id}, new_balance={current_balance}")
+            logger.info(f"Balance updated successfully: user={username}, new_balance={current_balance}")
 
             item = response["Attributes"]
             return Balance(
@@ -85,8 +85,8 @@ class BalanceDAO(BaseDAO):
             )
 
         except Exception as e:
-            logger.error(f"Failed to update balance for user '{user_id}': {e}")
-            raise DatabaseOperationException(f"Database operation failed while updating balance for user '{user_id}': {str(e)}")
+            logger.error(f"Failed to update balance for user '{username}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while updating balance for user '{username}': {str(e)}")
 
     def create_balance(self, balance_create: BalanceCreate) -> Balance:
         """Create a new balance record for a user."""
@@ -177,30 +177,30 @@ class BalanceDAO(BaseDAO):
         except Exception as e:
             raise DatabaseOperationException(f"Database operation failed while updating balance from transaction for user '{transaction.username}': {str(e)}")
 
-    def get_transaction(self, user_id: str, transaction_id: UUID) -> BalanceTransaction:
+    def get_transaction(self, username: str, transaction_id: UUID) -> BalanceTransaction:
         """Get a specific transaction for a user."""
         try:
             # Note: This method needs GSI2 for efficient lookup by transaction_id
             # For now, we'll need to query by user and filter
-            transactions, _ = self.get_user_transactions(user_id, limit=1000)
+            transactions, _ = self.get_user_transactions(username, limit=1000)
 
             for transaction in transactions:
                 if transaction.transaction_id == transaction_id:
                     return transaction
 
-            logger.warning(f"Transaction '{transaction_id}' not found for user '{user_id}'")
-            raise TransactionNotFoundException(f"Transaction '{transaction_id}' not found for user '{user_id}'")
+            logger.warning(f"Transaction '{transaction_id}' not found for user '{username}'")
+            raise TransactionNotFoundException(f"Transaction '{transaction_id}' not found for user '{username}'")
 
         except Exception as e:
-            logger.error(f"Failed to get transaction '{transaction_id}' for user '{user_id}': {e}")
-            raise DatabaseOperationException(f"Database operation failed while retrieving transaction '{transaction_id}' for user '{user_id}': {str(e)}")
+            logger.error(f"Failed to get transaction '{transaction_id}' for user '{username}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving transaction '{transaction_id}' for user '{username}': {str(e)}")
 
-    def get_user_transactions(self, user_id: str, limit: int = 50,
+    def get_user_transactions(self, username: str, limit: int = 50,
                             start_key: Optional[dict] = None) -> tuple[List[BalanceTransaction], Optional[dict]]:
         """Get all transactions for a user with pagination."""
         try:
             query_params = {
-                "KeyConditionExpression": Key("Pk").eq(f"TRANS#{user_id}"),
+                "KeyConditionExpression": Key("Pk").eq(f"TRANS#{username}"),
                 "Limit": limit
             }
 
@@ -230,5 +230,5 @@ class BalanceDAO(BaseDAO):
             return transactions, last_evaluated_key
 
         except Exception as e:
-            logger.error(f"Failed to get transactions for user '{user_id}': {e}")
-            raise DatabaseOperationException(f"Database operation failed while retrieving transactions for user '{user_id}': {str(e)}")
+            logger.error(f"Failed to get transactions for user '{username}': {e}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving transactions for user '{username}': {str(e)}")

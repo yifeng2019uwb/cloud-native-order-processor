@@ -29,7 +29,7 @@ def test_aws_credentials() -> Dict[str, Any]:
             "success": True,
             "account_id": identity['Account'],
             "arn": identity['Arn'],
-            "user_id": identity['UserId']
+            "username": identity['UserId']
         }
     except NoCredentialsError:
         logger.error("No AWS credentials found")

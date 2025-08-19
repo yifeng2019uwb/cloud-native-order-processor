@@ -239,8 +239,8 @@ class OrderDAO(BaseDAO):
             return filtered_orders[:limit]
 
         except Exception as e:
-            logger.error(f"Failed to get orders for user '{user_id}' with status '{status.value}': {str(e)}")
-            raise DatabaseOperationException(f"Database operation failed while retrieving orders for user '{user_id}' with status '{status.value}': {str(e)}")
+            logger.error(f"Failed to get orders for user '{username}' with status '{status.value}': {str(e)}")
+            raise DatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}' with status '{status.value}': {str(e)}")
 
     def update_order_status(self, order_id: str, new_status: OrderStatus, reason: str = None) -> Order:
         """

@@ -21,8 +21,8 @@ class UserLock:
     Provides automatic lock acquisition and release.
     """
 
-    def __init__(self, user_id: str, operation: str, timeout_seconds: int = 15):
-        self.user_id = user_id
+    def __init__(self, username: str, operation: str, timeout_seconds: int = 15):
+        self.username = username
         self.operation = operation
         self.timeout_seconds = timeout_seconds
         self.lock_id: Optional[str] = None
@@ -32,12 +32,12 @@ class UserLock:
         """Acquire lock when entering context"""
         try:
             self.lock_id = acquire_lock(
-                self.user_id,
+                self.username,
                 self.operation,
                 self.timeout_seconds
             )
             self.acquired = True
-            logger.info(f"Lock acquired: user={self.user_id}, operation={self.operation}, lock_id={self.lock_id}")
+            logger.info(f"Lock acquired: user={self.username}, operation={self.operation}, lock_id={self.lock_id}")
             return self
         except LockAcquisitionException as e:
             raise e
@@ -45,17 +45,17 @@ class UserLock:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Release lock when exiting context"""
         if self.acquired and self.lock_id:
-            release_lock(self.user_id, self.lock_id)
-            logger.info(f"Lock released: user={self.user_id}, operation={self.operation}, lock_id={self.lock_id}")
+            release_lock(self.username, self.lock_id)
+            logger.info(f"Lock released: user={self.username}, operation={self.operation}, lock_id={self.lock_id}")
             self.acquired = False
 
 
-def acquire_lock(user_id: str, operation: str, timeout_seconds: int = 15) -> Optional[str]:
+def acquire_lock(username: str, operation: str, timeout_seconds: int = 15) -> Optional[str]:
     """
     Acquire a lock for a user operation.
 
     Args:
-        user_id: User ID to lock
+        username: Username to lock
         operation: Operation type (deposit, withdraw, buy_order, sell_order)
         timeout_seconds: Lock timeout in seconds
 
@@ -73,7 +73,7 @@ def acquire_lock(user_id: str, operation: str, timeout_seconds: int = 15) -> Opt
         # Only succeeds if no lock exists or existing lock is expired
         dynamodb_manager.get_connection().users_table.put_item(
             Item={
-                "Pk": f"USER#{user_id}",
+                "Pk": f"USER#{username}",
                 "Sk": "LOCK",
                 "lock_id": lock_id,
                 "expires_at": expires_at.isoformat(),
@@ -89,24 +89,24 @@ def acquire_lock(user_id: str, operation: str, timeout_seconds: int = 15) -> Opt
             }
         )
 
-        logger.debug(f"Lock acquired successfully: user={user_id}, operation={operation}, lock_id={lock_id}")
+        logger.debug(f"Lock acquired successfully: user={username}, operation={operation}, lock_id={lock_id}")
         return lock_id
 
     except Exception as e:
         if "ConditionalCheckFailedException" in str(e):
-            logger.debug(f"Lock acquisition failed - lock exists: user={user_id}, operation={operation}")
-            raise LockAcquisitionException(f"Lock acquisition failed for user {user_id}, operation {operation}")
+            logger.debug(f"Lock acquisition failed - lock exists: user={username}, operation={operation}")
+            raise LockAcquisitionException(f"Lock acquisition failed for user {username}, operation {operation}")
         else:
-            logger.error(f"Lock acquisition error: user={user_id}, operation={operation}, error={str(e)}")
+            logger.error(f"Lock acquisition error: user={username}, operation={operation}, error={str(e)}")
             raise DatabaseOperationException(f"Failed to acquire lock: {str(e)}")
 
 
-def release_lock(user_id: str, lock_id: str) -> bool:
+def release_lock(username: str, lock_id: str) -> bool:
     """
     Release a lock for a user.
 
     Args:
-        user_id: User ID
+        username: Username
         lock_id: Lock ID to release
 
     Returns:
@@ -119,7 +119,7 @@ def release_lock(user_id: str, lock_id: str) -> bool:
         # Delete lock if it matches our lock_id
         dynamodb_manager.get_connection().users_table.delete_item(
             Key={
-                "Pk": f"USER#{user_id}",
+                "Pk": f"USER#{username}",
                 "Sk": "LOCK"
             },
             ConditionExpression="lock_id = :lock_id",
@@ -128,15 +128,15 @@ def release_lock(user_id: str, lock_id: str) -> bool:
             }
         )
 
-        logger.debug(f"Lock released successfully: user={user_id}, lock_id={lock_id}")
+        logger.debug(f"Lock released successfully: user={username}, lock_id={lock_id}")
         return True
 
     except Exception as e:
         if "ConditionalCheckFailedException" in str(e):
-            logger.debug(f"Lock release failed - lock was already released or changed: user={user_id}, lock_id={lock_id}")
+            logger.debug(f"Lock release failed - lock was already released or changed: user={username}, lock_id={lock_id}")
             return False
         else:
-            logger.error(f"Lock release error: user={user_id}, lock_id={lock_id}, error={str(e)}")
+            logger.error(f"Lock release error: user={username}, lock_id={lock_id}, error={str(e)}")
             raise DatabaseOperationException(f"Failed to release lock: {str(e)}")
 
 

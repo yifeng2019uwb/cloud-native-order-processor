@@ -28,13 +28,13 @@ class TestOrderIdGenerator:
         assert OrderIdGenerator.SEPARATOR in order_id
         assert len(order_id) > 10
 
-    def test_generate_order_id_with_user_id(self):
-        """Test generating order ID with user ID."""
-        user_id = "user123"
-        order_id = OrderIdGenerator.generate_order_id(user_id)
+    def test_generate_order_id_with_username(self):
+        """Test generating order ID with username."""
+        username = "user123"
+        order_id = OrderIdGenerator.generate_order_id(username)
 
-        # Should contain user ID
-        assert user_id in order_id
+        # Should contain username
+        assert username in order_id
         assert order_id.startswith('ord')
 
     def test_generate_simple_order_id(self):
@@ -65,17 +65,17 @@ class TestOrderIdGenerator:
 
         assert parsed['prefix'] == 'ord'
         assert parsed['unique_id'] == 'user123'
-        # user_id is only present if there are 4+ parts
-        assert 'user_id' not in parsed  # This format has 3 parts, so no user_id
+        # username is only present if there are 4+ parts
+        assert 'username' not in parsed  # This format has 3 parts, so no username
 
-    def test_parse_order_id_with_user_id(self):
-        """Test parsing order ID with user ID."""
+    def test_parse_order_id_with_username(self):
+        """Test parsing order ID with username."""
         order_id = "ord_20231201123456789_abc123def_user123"
         parsed = OrderIdGenerator.parse_order_id(order_id)
 
         assert parsed['prefix'] == 'ord'
         assert parsed['unique_id'] == 'user123'
-        assert parsed['user_id'] == 'user123'  # This format has 4+ parts, so user_id is present
+        assert parsed['username'] == 'user123'  # This format has 4+ parts, so username is present
 
     def test_is_valid_order_id(self):
         """Test validating order ID."""
@@ -205,7 +205,7 @@ class TestOrderStatusManager:
     def test_validate_transition_user_cancellation_allowed(self):
         """Test user cancellation when allowed."""
         is_valid, error = OrderStatusManager.validate_transition(
-            OrderStatus.PENDING, OrderStatus.CANCELLED, user_id="user123"
+            OrderStatus.PENDING, OrderStatus.CANCELLED, username="user123"
         )
         assert is_valid is True
         assert error is None
@@ -213,7 +213,7 @@ class TestOrderStatusManager:
     def test_validate_transition_user_cancellation_not_allowed(self):
         """Test user cancellation when not allowed."""
         is_valid, error = OrderStatusManager.validate_transition(
-            OrderStatus.PROCESSING, OrderStatus.CANCELLED, user_id="user123"
+            OrderStatus.PROCESSING, OrderStatus.CANCELLED, username="user123"
         )
         assert is_valid is False
         # The actual error message is different - it's caught by the first validation check
@@ -230,7 +230,7 @@ class TestOrderStatusManager:
     def test_validate_transition_user_failed_status(self):
         """Test user trying to set failed status."""
         is_valid, error = OrderStatusManager.validate_transition(
-            OrderStatus.PROCESSING, OrderStatus.FAILED, user_id="user123"
+            OrderStatus.PROCESSING, OrderStatus.FAILED, username="user123"
         )
         assert is_valid is False
         assert "Only system can mark orders as failed" in error
@@ -246,7 +246,7 @@ class TestOrderStatusManager:
     def test_validate_transition_user_expired_status(self):
         """Test user trying to set expired status."""
         is_valid, error = OrderStatusManager.validate_transition(
-            OrderStatus.QUEUED, OrderStatus.EXPIRED, user_id="user123"
+            OrderStatus.QUEUED, OrderStatus.EXPIRED, username="user123"
         )
         assert is_valid is False
         assert "Only system can mark orders as expired" in error

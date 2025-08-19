@@ -89,7 +89,7 @@ class OrderStatusManager:
         cls,
         from_status: OrderStatus,
         to_status: OrderStatus,
-        user_id: Optional[str] = None,
+        username: Optional[str] = None,
         is_system: bool = False
     ) -> Tuple[bool, Optional[str]]:
         """
@@ -298,7 +298,7 @@ class OrderIdGenerator:
     SEPARATOR = "_"
 
     @classmethod
-    def generate_order_id(cls, user_id: Optional[str] = None) -> str:
+    def generate_order_id(cls, username: Optional[str] = None) -> str:
         """
         Generate a unique order ID.
 
@@ -306,7 +306,7 @@ class OrderIdGenerator:
         Example: ord_20250730_143052_a1b2c3d4e5f6
 
         Args:
-            user_id: Optional user ID for additional uniqueness
+            username: Optional username for additional uniqueness
 
         Returns:
             Unique order ID string
@@ -321,9 +321,9 @@ class OrderIdGenerator:
         # Build order ID
         order_id = f"{cls.ORDER_PREFIX}{cls.SEPARATOR}{timestamp}{cls.SEPARATOR}{unique_id}"
 
-        # Add user ID if provided (for additional uniqueness)
-        if user_id:
-            order_id = f"{order_id}{cls.SEPARATOR}{user_id[:8]}"
+        # Add username if provided (for additional uniqueness)
+        if username:
+            order_id = f"{order_id}{cls.SEPARATOR}{username[:8]}"
 
         return order_id
 
@@ -342,7 +342,7 @@ class OrderIdGenerator:
         return f"{cls.ORDER_PREFIX}{cls.SEPARATOR}{unique_id}"
 
     @classmethod
-    def generate_timestamped_order_id(cls, user_id: Optional[str] = None) -> str:
+    def generate_timestamped_order_id(cls, username: Optional[str] = None) -> str:
         """
         Generate order ID with timestamp for better traceability.
 
@@ -350,7 +350,7 @@ class OrderIdGenerator:
         Example: ord_1732891852_a1b2c3d4e5f6
 
         Args:
-            user_id: Optional user ID for additional uniqueness
+            username: Optional username for additional uniqueness
 
         Returns:
             Timestamped unique order ID string
@@ -364,9 +364,9 @@ class OrderIdGenerator:
         # Build order ID
         order_id = f"{cls.ORDER_PREFIX}{cls.SEPARATOR}{timestamp}{cls.SEPARATOR}{unique_id}"
 
-        # Add user ID if provided
-        if user_id:
-            order_id = f"{order_id}{cls.SEPARATOR}{user_id[:8]}"
+        # Add username if provided
+        if username:
+            order_id = f"{order_id}{cls.SEPARATOR}{username[:8]}"
 
         return order_id
 
@@ -408,9 +408,9 @@ class OrderIdGenerator:
             except (ValueError, IndexError):
                 pass
 
-        # Check for user ID
+        # Check for username
         if len(parts) >= 4:
-            result["user_id"] = parts[3]
+            result["username"] = parts[3]
 
         return result
 

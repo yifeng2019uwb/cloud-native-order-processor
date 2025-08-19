@@ -83,8 +83,7 @@ class TestCreateOrder:
     def mock_current_user(self):
         """Mock current user data"""
         return {
-            "username": "testuser",
-            "user_id": "user123"
+            "username": "testuser"
         }
 
     @pytest.fixture

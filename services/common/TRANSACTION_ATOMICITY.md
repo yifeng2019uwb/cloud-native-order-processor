@@ -41,8 +41,8 @@ This document describes the Transaction Atomicity implementation for the cloud-n
 - Simple error handling
 
 **Lock Operations**:
-- `acquire_lock(user_id, operation, timeout)` - Acquire lock with conditional write
-- `release_lock(user_id, lock_id)` - Release lock safely
+- `acquire_lock(username, operation, timeout)` - Acquire lock with conditional write
+- `release_lock(username, lock_id)` - Release lock safely
 - `UserLock` context manager - Automatic lock management
 
 ### 2. Transaction Manager (`common/src/utils/transaction_manager.py`)
@@ -290,8 +290,8 @@ Benefits:
 
 ### Simple Logging
 ```python
-logger.info(f"Lock acquired for user {user_id}, operation {operation}")
-logger.warning(f"Lock timeout for user {user_id}")
+logger.info(f"Lock acquired for user {username}, operation {operation}")
+logger.warning(f"Lock timeout for user {username}")
 logger.error(f"Transaction failed: {error}")
 ```
 

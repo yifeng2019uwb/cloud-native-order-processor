@@ -590,7 +590,7 @@ class TestBusinessValidators:
             validate_username_uniqueness("existinguser", mock_dao)
 
     # Removed test_validate_username_uniqueness_exclude_current as we simplified the logic
-    # to just raise UserAlreadyExistsException if user exists, without exclude_user_id handling
+    # to just raise UserAlreadyExistsException if user exists, without exclude_username handling
 
     def test_validate_email_uniqueness_unique(self):
         """Test email uniqueness when email is unique"""
@@ -626,7 +626,7 @@ class TestBusinessValidators:
         mock_dao = Mock()
         mock_dao.get_user_by_username.return_value = None
 
-        with pytest.raises(UserNotFoundException, match="User with ID 'nonexistent' not found"):
+        with pytest.raises(UserNotFoundException, match="User with username 'nonexistent' not found"):
             validate_user_exists("nonexistent", mock_dao)
 
     def test_validate_age_requirements_valid(self):
@@ -705,11 +705,11 @@ class TestBusinessValidators:
         mock_balance_dao = Mock()
         mock_balance = Mock()
         mock_balance.current_balance = 1000.0
-        mock_balance_dao.get_balance_by_user_id.return_value = mock_balance
+        mock_balance_dao.get_balance.return_value = mock_balance
 
         result = await validate_sufficient_balance("user123", 500.0, mock_balance_dao)
         assert result is True
-        mock_balance_dao.get_balance_by_user_id.assert_called_once_with("user123")
+        mock_balance_dao.get_balance.assert_called_once_with("user123")
 
     @pytest.mark.asyncio
     async def test_validate_sufficient_balance_insufficient_funds(self):
@@ -717,7 +717,7 @@ class TestBusinessValidators:
         mock_balance_dao = Mock()
         mock_balance = Mock()
         mock_balance.current_balance = 100.0
-        mock_balance_dao.get_balance_by_user_id.return_value = mock_balance
+        mock_balance_dao.get_balance.return_value = mock_balance
 
         with pytest.raises(UserValidationException, match="Insufficient balance. Current balance: \\$100\\.0, Required: \\$500\\.0"):
             await validate_sufficient_balance("user123", 500.0, mock_balance_dao)
@@ -726,7 +726,7 @@ class TestBusinessValidators:
     async def test_validate_sufficient_balance_no_balance_found(self):
         """Test sufficient balance validation when user balance is not found"""
         mock_balance_dao = Mock()
-        mock_balance_dao.get_balance_by_user_id.return_value = None
+        mock_balance_dao.get_balance.return_value = None
 
         with pytest.raises(UserValidationException, match="User balance not found"):
             await validate_sufficient_balance("user123", 100.0, mock_balance_dao)
@@ -737,7 +737,7 @@ class TestBusinessValidators:
         mock_balance_dao = Mock()
         mock_balance = Mock()
         mock_balance.current_balance = 100.0
-        mock_balance_dao.get_balance_by_user_id.return_value = mock_balance
+        mock_balance_dao.get_balance.return_value = mock_balance
 
         result = await validate_sufficient_balance("user123", 100.0, mock_balance_dao)
         assert result is True
@@ -747,8 +747,8 @@ class TestBusinessValidators:
         """Test sufficient balance validation with zero amount"""
         mock_balance_dao = Mock()
         mock_balance = Mock()
-        mock_balance.current_balance = 100.0
-        mock_balance_dao.get_balance_by_user_id.return_value = mock_balance
+        mock_balance.current_balance = 100.0  # Set a positive balance
+        mock_balance_dao.get_balance.return_value = mock_balance
 
         result = await validate_sufficient_balance("user123", 0.0, mock_balance_dao)
         assert result is True

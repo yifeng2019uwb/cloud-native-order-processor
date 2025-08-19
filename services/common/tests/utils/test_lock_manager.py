@@ -19,7 +19,7 @@ class TestUserLock:
     @pytest.mark.asyncio
     async def test_user_lock_success(self):
         """Test successful lock acquisition and release"""
-        user_id = "test-user-123"
+        username = "test-user-123"
         operation = "deposit"
         timeout = 10
 
@@ -28,16 +28,16 @@ class TestUserLock:
                 mock_acquire.return_value = "lock-123"
                 mock_release.return_value = True
 
-                async with UserLock(user_id, operation, timeout):
+                async with UserLock(username, operation, timeout):
                     pass
 
-                mock_acquire.assert_called_once_with(user_id, operation, timeout)
-                mock_release.assert_called_once_with(user_id, "lock-123")
+                mock_acquire.assert_called_once_with(username, operation, timeout)
+                mock_release.assert_called_once_with(username, "lock-123")
 
     @pytest.mark.asyncio
     async def test_user_lock_acquisition_failed(self):
         """Test lock acquisition failure"""
-        user_id = "test-user-123"
+        username = "test-user-123"
         operation = "deposit"
         timeout = 10
 
@@ -45,13 +45,13 @@ class TestUserLock:
             mock_acquire.side_effect = LockAcquisitionException("Lock failed")
 
             with pytest.raises(LockAcquisitionException):
-                async with UserLock(user_id, operation, timeout):
+                async with UserLock(username, operation, timeout):
                     pass
 
     @pytest.mark.asyncio
     async def test_user_lock_release_on_exception(self):
         """Test lock release when exception occurs in context"""
-        user_id = "test-user-123"
+        username = "test-user-123"
         operation = "deposit"
         timeout = 10
 
@@ -61,15 +61,15 @@ class TestUserLock:
                 mock_release.return_value = True
 
                 with pytest.raises(ValueError):
-                    async with UserLock(user_id, operation, timeout):
+                    async with UserLock(username, operation, timeout):
                         raise ValueError("Test exception")
 
-                mock_release.assert_called_once_with(user_id, "lock-123")
+                mock_release.assert_called_once_with(username, "lock-123")
 
     @pytest.mark.asyncio
     async def test_user_lock_no_release_if_not_acquired(self):
         """Test that lock is not released if acquisition failed"""
-        user_id = "test-user-123"
+        username = "test-user-123"
         operation = "deposit"
         timeout = 10
 
@@ -78,7 +78,7 @@ class TestUserLock:
                 mock_acquire.side_effect = LockAcquisitionException("Lock failed")
 
                 with pytest.raises(LockAcquisitionException):
-                    async with UserLock(user_id, operation, timeout):
+                    async with UserLock(username, operation, timeout):
                         pass
 
                 mock_release.assert_not_called()
@@ -89,7 +89,7 @@ class TestAcquireLock:
 
     def test_acquire_lock_success(self):
         """Test successful lock acquisition"""
-        user_id = "test-user-123"
+        username = "test-user-123"
         operation = "deposit"
         timeout = 10
 
@@ -97,7 +97,7 @@ class TestAcquireLock:
             mock_table = MagicMock()
             mock_db_manager.get_connection.return_value.users_table = mock_table
 
-            lock_id = acquire_lock(user_id, operation, timeout)
+            lock_id = acquire_lock(username, operation, timeout)
 
             assert lock_id is not None
             assert isinstance(lock_id, str)
@@ -109,7 +109,7 @@ class TestAcquireLock:
 
             # Check the item structure
             item = call_args[1]['Item']
-            assert item['Pk'] == f"USER#{user_id}"
+            assert item['Pk'] == f"USER#{username}"
             assert item['Sk'] == "LOCK"
             assert item['operation'] == operation
             assert 'lock_id' in item
@@ -117,7 +117,7 @@ class TestAcquireLock:
 
     def test_acquire_lock_conditional_check_failed(self):
         """Test lock acquisition when lock already exists"""
-        user_id = "test-user-123"
+        username = "test-user-123"
         operation = "deposit"
         timeout = 10
 
@@ -136,11 +136,11 @@ class TestAcquireLock:
             mock_table.put_item.side_effect = ClientError(error_response, 'PutItem')
 
             with pytest.raises(LockAcquisitionException, match="Lock acquisition failed"):
-                acquire_lock(user_id, operation, timeout)
+                acquire_lock(username, operation, timeout)
 
     def test_acquire_lock_database_error(self):
         """Test lock acquisition when database error occurs"""
-        user_id = "test-user-123"
+        username = "test-user-123"
         operation = "deposit"
         timeout = 10
 
@@ -152,7 +152,7 @@ class TestAcquireLock:
             mock_table.put_item.side_effect = Exception("Database connection failed")
 
             with pytest.raises(DatabaseOperationException, match="Failed to acquire lock"):
-                acquire_lock(user_id, operation, timeout)
+                acquire_lock(username, operation, timeout)
 
 
 class TestReleaseLock:
@@ -160,14 +160,14 @@ class TestReleaseLock:
 
     def test_release_lock_success(self):
         """Test successful lock release"""
-        user_id = "test-user-123"
+        username = "test-user-123"
         lock_id = "lock-123"
 
         with patch('common.utils.lock_manager.dynamodb_manager') as mock_db_manager:
             mock_table = MagicMock()
             mock_db_manager.get_connection.return_value.users_table = mock_table
 
-            result = release_lock(user_id, lock_id)
+            result = release_lock(username, lock_id)
 
             assert result is True
 
@@ -177,12 +177,12 @@ class TestReleaseLock:
 
             # Check the key structure
             key = call_args[1]['Key']
-            assert key['Pk'] == f"USER#{user_id}"
+            assert key['Pk'] == f"USER#{username}"
             assert key['Sk'] == "LOCK"
 
     def test_release_lock_conditional_check_failed(self):
         """Test lock release when lock was already released"""
-        user_id = "test-user-123"
+        username = "test-user-123"
         lock_id = "lock-123"
 
         with patch('common.utils.lock_manager.dynamodb_manager') as mock_db_manager:
@@ -199,13 +199,13 @@ class TestReleaseLock:
             }
             mock_table.delete_item.side_effect = ClientError(error_response, 'DeleteItem')
 
-            result = release_lock(user_id, lock_id)
+            result = release_lock(username, lock_id)
 
             assert result is False
 
     def test_release_lock_database_error(self):
         """Test lock release when database error occurs"""
-        user_id = "test-user-123"
+        username = "test-user-123"
         lock_id = "lock-123"
 
         with patch('common.utils.lock_manager.dynamodb_manager') as mock_db_manager:
@@ -216,4 +216,4 @@ class TestReleaseLock:
             mock_table.delete_item.side_effect = Exception("Database connection failed")
 
             with pytest.raises(DatabaseOperationException, match="Failed to release lock"):
-                release_lock(user_id, lock_id)
+                release_lock(username, lock_id)

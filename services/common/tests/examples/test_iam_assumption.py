@@ -38,7 +38,7 @@ class TestIAMAssumption:
         assert result['success'] is True
         assert result['account_id'] == '123456789012'
         assert result['arn'] == 'arn:aws:iam::123456789012:role/test-role'
-        assert result['user_id'] == 'AIDACKCEVSQ6C2EXAMPLE'
+        assert result['username'] == 'AIDACKCEVSQ6C2EXAMPLE'
 
     @patch('boto3.client')
     def test_aws_credentials_no_credentials(self, mock_boto3_client):

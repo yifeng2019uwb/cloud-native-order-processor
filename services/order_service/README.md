@@ -234,7 +234,7 @@ POST /orders
 ```python
 class Order(BaseModel):
     order_id: str
-    user_id: str
+    username: str
     asset_id: str
     order_type: OrderType
     status: OrderStatus
@@ -247,7 +247,7 @@ class Order(BaseModel):
 ### **Asset Balance Entity** ✅
 ```python
 class AssetBalance(BaseModel):
-    user_id: str
+    username: str
     asset_id: str
     quantity: Decimal
     created_at: datetime
@@ -258,7 +258,7 @@ class AssetBalance(BaseModel):
 ```python
 class AssetTransaction(BaseModel):
     transaction_id: str
-    user_id: str
+    username: str
     asset_id: str
     transaction_type: AssetTransactionType
     quantity: Decimal
