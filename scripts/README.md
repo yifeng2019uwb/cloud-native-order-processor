@@ -2,6 +2,20 @@
 
 This directory contains comprehensive scripts for building, testing, deploying, and managing the Cloud Native Order Processor system.
 
+## 📑 Table of Contents
+
+- [📋 Quick Start](#-quick-start)
+- [📦 Package-Level Scripts](#-package-level-scripts)
+- [🚀 Service Management](#-service-management)
+- [🧪 Testing & Validation](#-testing--validation)
+- [🏗️ Build & Deploy](#️-build--deploy)
+- [🧹 Cleanup & Maintenance](#-cleanup--maintenance)
+- [🔧 Infrastructure & Configuration](#-infrastructure--configuration)
+- [📚 Shared Utilities](#-shared-utilities)
+- [📖 Documentation](#-documentation)
+- [💰 Cost Management](#-cost-management)
+- [🔧 Prerequisites](#-prerequisites)
+
 ## 📋 Quick Start
 
 ```bash
@@ -14,6 +28,26 @@ This directory contains comprehensive scripts for building, testing, deploying, 
 # Quick build and deploy
 ./scripts/deploy.sh --type k8s --environment dev
 ```
+
+## 📦 Package-Level Scripts
+
+Each package has its own professional build and development scripts:
+
+```bash
+# Frontend Development
+./frontend/build.sh --test-only          # Test frontend
+./frontend/build.sh --build-only         # Build frontend
+
+# Gateway Development
+./gateway/build.sh --test-only           # Test gateway
+./gateway/dev.sh run --port 9090        # Run gateway on custom port
+
+# Python Services
+./services/build.sh user_service         # Build user service
+./services/build.sh --test-only common  # Test common package
+```
+
+**See [Component Build Scripts](#component-build-scripts--comprehensive) section for complete details.**
 
 ## 🚀 Service Management
 
@@ -115,26 +149,143 @@ Universal deployment script for services, infrastructure, and Kubernetes.
 - **infra**: Deploys AWS infrastructure with Terraform
 - **service**: Deploys specific service (user/inventory)
 
-### Component Build Scripts ✅ **NEW**
+### Component Build Scripts ✅ **COMPREHENSIVE**
 
-Each component now has its own dedicated build script:
+Each component has its own dedicated build script with professional-grade features:
 
+#### **Frontend Package (`frontend/build.sh`)**
 ```bash
-# Frontend
-./frontend/build.sh              # Build and test
-./frontend/build.sh --test-only  # Test only
-./frontend/build.sh --build-only # Build only
+# Build and test frontend (default)
+./frontend/build.sh
 
-# Gateway
-./gateway/build.sh               # Build and test
-./gateway/build.sh --test-only   # Test only
-./gateway/build.sh --build-only  # Build only
+# Build only, skip tests
+./frontend/build.sh --build-only
 
-# Services
-./services/build.sh              # Build and test all services
-./services/build.sh --test-only  # Test only
-./services/build.sh --build-only # Build only
+# Run tests only, skip building
+./frontend/build.sh --test-only
+
+# Verbose output
+./frontend/build.sh --verbose
 ```
+
+**Features:**
+- ✅ **Node.js version validation** (requires 18+)
+- ✅ **Dependency installation** with npm
+- ✅ **Build optimization** with Vite
+- ✅ **Testing** with comprehensive test suite
+- ✅ **Error handling** with colored output
+- ✅ **Prerequisites checking** for Node.js and npm
+
+#### **Gateway Package (`gateway/build.sh`)**
+```bash
+# Build and test gateway (default)
+./gateway/build.sh
+
+# Build only, skip tests
+./gateway/build.sh --build-only
+
+# Run tests only, skip building
+./gateway/build.sh --test-only
+
+# Verbose output
+./gateway/build.sh --verbose
+```
+
+**Features:**
+- ✅ **Go version validation** (requires 1.24+)
+- ✅ **Cross-platform builds** (Linux, macOS, Windows)
+- ✅ **Dependency management** with go mod
+- ✅ **Testing** with coverage reporting
+- ✅ **Binary optimization** for production
+- ✅ **Clean build artifacts** management
+
+#### **Gateway Development (`gateway/dev.sh`)**
+```bash
+# Install dependencies
+./gateway/dev.sh install
+
+# Build binary
+./gateway/dev.sh build
+
+# Run development server
+./gateway/dev.sh run
+
+# Run tests with coverage
+./gateway/dev.sh test
+
+# Stop running gateway
+./gateway/dev.sh stop
+
+# Custom port
+./gateway/dev.sh --port 9090 run
+```
+
+**Features:**
+- ✅ **Development workflow** management
+- ✅ **Hot reload** capabilities
+- ✅ **Port configuration** (default: 8080)
+- ✅ **Redis integration** setup
+- ✅ **Environment variable** support
+- ✅ **Process management** with PID tracking
+
+#### **Services Package (`services/build.sh`)**
+```bash
+# Build and test all services (default)
+./services/build.sh
+
+# Build and test specific service
+./services/build.sh user_service
+./services/build.sh inventory_service
+./services/build.sh order_service
+./services/build.sh common
+./services/build.sh exception
+
+# Build only, skip tests
+./services/build.sh --build-only user_service
+
+# Run tests only, skip building
+./services/build.sh --test-only inventory_service
+
+# Verbose output
+./services/build.sh --verbose order_service
+```
+
+**Features:**
+- ✅ **Python version validation** (requires 3.11+)
+- ✅ **Virtual environment** management
+- ✅ **Dependency installation** with pip
+- ✅ **Testing** with pytest and coverage
+- ✅ **Service-specific builds** or all services
+- ✅ **Build artifact** management
+- ✅ **Error handling** and validation
+
+#### **Individual Service Scripts**
+Each service can also be built independently:
+```bash
+# User Service
+cd services/user_service && python -m pip install -e .
+cd services/user_service && python -m pytest
+
+# Inventory Service
+cd services/inventory_service && python -m pip install -e .
+cd services/inventory_service && python -m pytest
+
+# Order Service
+cd services/order_service && python -m pip install -e .
+cd services/order_service && python -m pytest
+```
+
+#### **Common Script Features**
+All package-level scripts share consistent interfaces:
+- ✅ **Help/Usage**: `-h, --help` with detailed examples
+- ✅ **Color-coded output**: Green (success), Red (error), Yellow (warning), Blue (info)
+- ✅ **Verbose mode**: `-v, --verbose` for detailed logging
+- ✅ **Build/Test separation**: `--build-only`, `--test-only` options
+- ✅ **Prerequisites checking**: Validate required tools before execution
+- ✅ **Error handling**: `set -e` with clear error messages
+- ✅ **Cross-platform**: Works on Linux, macOS, and Windows
+
+**💡 Pro Tip**: All scripts follow the same pattern - use `-h` or `--help` to see usage for any script!
 
 ### quick_build.sh
 
@@ -558,6 +709,47 @@ All service logs are stored in the `logs/` directory:
 - **Frontend**: 3000 (or next available port)
 - **User Service**: 8000
 - **Inventory Service**: 8001
+
+## 📋 Complete Scripts Reference
+
+### **Root-Level Scripts** (in `scripts/` directory)
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `deploy-docker.sh` | Docker Compose deployment | `./scripts/deploy-docker.sh -bd all` |
+| `deploy.sh` | Universal deployment (K8s/infra) | `./scripts/deploy.sh --type k8s --environment dev` |
+| `test-local.sh` | Local CI/CD pipeline | `./scripts/test-local.sh --environment dev --all` |
+| `smoke-test.sh` | Health checks | `./scripts/smoke-test.sh` |
+| `cli-client.sh` | API testing client | `./scripts/cli-client.sh` |
+| `destroy.sh` | Infrastructure cleanup | `./scripts/destroy.sh --environment dev --force` |
+| `validate-environment.sh` | Environment validation | `./scripts/validate-environment.sh` |
+
+### **Package-Level Scripts** (in each package directory)
+| Package | Script | Purpose | Usage |
+|---------|--------|---------|-------|
+| **Frontend** | `build.sh` | Build & test | `./frontend/build.sh --test-only` |
+| **Gateway** | `build.sh` | Build & test | `./gateway/build.sh --build-only` |
+| **Gateway** | `dev.sh` | Development workflow | `./gateway/dev.sh run --port 9090` |
+| **Services** | `build.sh` | All Python services | `./services/build.sh user_service` |
+| **User Service** | `setup.py` | Individual build | `cd services/user_service && python -m pip install -e .` |
+| **Inventory Service** | `setup.py` | Individual build | `cd services/inventory_service && python -m pytest` |
+| **Order Service** | `setup.py` | Individual build | `cd services/order_service && python -m pytest` |
+
+### **Quick Reference Commands**
+```bash
+# 🚀 Start everything
+./scripts/deploy-docker.sh -bd all
+
+# 🧪 Test everything
+./scripts/test-local.sh --environment dev --all
+
+# 🏗️ Build specific component
+./frontend/build.sh --test-only
+./gateway/build.sh --build-only
+./services/build.sh user_service
+
+# 🧹 Clean up everything
+./scripts/destroy.sh --environment dev --force
+```
 
 ### Prerequisites
 
