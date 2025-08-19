@@ -3,6 +3,54 @@
 ## 🎯 **Backlog Overview**
 Comprehensive task tracking for the entire Cloud Native Order Processor system. Covers all components: API Gateway, Microservices, Database, Caching, Monitoring, Kubernetes, and Infrastructure.
 
+## 🚀 **Development Phases & Roadmap**
+
+### **✅ Phase 1: Core System Foundation (COMPLETED)**
+- **Goal**: Build complete backend microservices foundation
+- **Status**: ✅ 100% Complete
+- **Accomplishments**:
+  - ✅ Multi-asset portfolio management system
+  - ✅ API Gateway with authentication and routing
+  - ✅ User, Inventory, Order services fully functional
+  - ✅ Comprehensive unit testing and integration testing
+  - ✅ Kubernetes deployment infrastructure
+  - ✅ Database design and DAO operations
+
+### **🔄 Phase 2: Production Readiness (CURRENT PHASE)**
+- **Goal**: Make system production-ready with monitoring and observability
+- **Status**: 🔄 In Progress
+- **Current Focus**:
+  - 🔥 **MONITOR-001**: Comprehensive monitoring system (Design completed)
+  - 📋 **INFRA-002**: Request tracing and standardized logging
+  - 📋 **BACKEND-004**: Fix username/user_id naming inconsistencies
+- **Expected Duration**: 2-3 weeks
+- **Success Criteria**: Production-ready monitoring, logging, and debugging capabilities
+
+### **📋 Phase 3: Frontend Integration & User Experience**
+- **Goal**: Complete frontend implementation and user experience
+- **Status**: 📋 Planned
+- **Focus Areas**:
+  - Frontend authentication and state management
+  - Trading interface and portfolio dashboard
+  - User experience optimization
+  - End-to-end testing
+- **Dependencies**: Phase 2 completion
+- **Expected Duration**: 3-4 weeks
+
+### **📋 Phase 4: Production Deployment & Operations**
+- **Goal**: Deploy to production and establish operational excellence
+- **Status**: 📋 Planned
+- **Focus Areas**:
+  - Production environment setup
+  - Performance optimization
+  - Security hardening
+  - Monitoring and alerting
+  - Documentation and runbooks
+- **Dependencies**: Phase 3 completion
+- **Expected Duration**: 2-3 weeks
+
+---
+
 ## 📊 **Current Status Summary (Updated: 8/19/2025)**
 
 ### 🎯 **System Status: PRODUCTION READY**
@@ -12,46 +60,29 @@ Comprehensive task tracking for the entire Cloud Native Order Processor system. 
 - **Database Operations**: ✅ All DAOs functioning correctly
 - **Error Handling**: ✅ Comprehensive and robust
 - **Performance**: ✅ All endpoints responding within acceptable timeframes
+- **Kubernetes Deployment**: ✅ Complete and operational
 
 ### 🔄 **Current Focus Areas**
-- **Kubernetes Deployment**: ✅ Complete and operational
-- **Frontend Port Standardization**: ✅ Completed (FRONTEND-006)
 - **Frontend Implementation**: Ready to begin with consistent port configuration
 - **Infrastructure**: Kubernetes development environment fully operational
+- **Monitoring & Observability**: Critical for production deployment
+- **Request Tracing**: Essential for debugging and monitoring
 
 ---
 
-## ✅ **COMPLETED TASKS (Most Recent First)**
+## 📋 **CURRENT PRIORITIES (Active Tasks Only)**
 
-### **🧪 Unit Testing - COMPREHENSIVE IMPLEMENTATION COMPLETED**
-**Extensive unit testing has been implemented across all backend services:**
+**🔥 HIGHEST PRIORITY:**
+- **MONITOR-001**: Comprehensive Monitoring System (Design completed, ready for implementation)
 
-- ✅ **User Service Unit Tests**: Complete test coverage for authentication and business logic
-- ✅ **Order Service Unit Tests**: Comprehensive testing for order processing and portfolio management
-- ✅ **Inventory Service Unit Tests**: Full coverage for asset management operations
-- ✅ **Common Package Tests**: DAO operations, security components, and utilities
-- ✅ **Integration Tests**: End-to-end testing for database operations and API endpoints
-- ✅ **Test Coverage Standards**: High coverage achieved across all components
+**📋 HIGH PRIORITY:**
+- **INFRA-002**: Request Tracing & Standardized Logging System
 
-### **🔧 Backend Issues - ALL RESOLVED (8/14/2025)**
-**All critical backend issues identified on 8/14/2025 have been successfully resolved:**
-
-- ✅ **SECURITY-001**: JWT security enhancements - IMPLEMENTED
-- ✅ **ORDER-004**: Redundant endpoint cleanup - COMPLETED
-- ✅ **ORDER-003**: Asset transaction parameter mismatches - FIXED
-- ✅ **GATEWAY-002**: Gateway routing issues - FIXED
-- ✅ **BACKEND-001**: Validation error handling - COMPLETED
-- ✅ **BACKEND-003**: Inventory service asset ID connection issues - COMPLETED
-
-### **🚀 Epic Goals - Core Foundation COMPLETED**
-- ✅ **Multi-asset portfolio management system** (COMPLETED)
-- ✅ **Basic infrastructure and deployment** (COMPLETED)
-- ✅ **API Gateway with authentication** (COMPLETED)
-- ✅ **Core microservices foundation** (COMPLETED)
+**📋 MEDIUM PRIORITY:**
+- **BACKEND-004**: Fix Username/User_ID Naming Inconsistencies
+- **FRONTEND-007**: Fix Frontend Authentication in Kubernetes Deployment
 
 ---
-
-## 📋 **INCOMPLETE TASKS (Priority Order)**
 
 ### **🔄 IN PROGRESS - HIGH PRIORITY**
 
@@ -59,8 +90,8 @@ Comprehensive task tracking for the entire Cloud Native Order Processor system. 
 **🚨 CRITICAL INSIGHT: ALL frontend APIs work perfectly with Docker deployment - this is NOT a frontend code issue!**
 - **Component**: Frontend + Kubernetes
 - **Type**: Deployment Issue
-- **Priority**: High
-- **Status**: 🔄 In Progress
+- **Priority**: Medium
+- **Status**: 📋 Pending
 
 **Description:**
 Frontend authentication works perfectly with Docker deployment but fails with Kubernetes deployment. Authentication succeeds (login API returns success), but the UI remains stuck on the login page instead of redirecting to the dashboard.
@@ -93,6 +124,65 @@ Frontend authentication works perfectly with Docker deployment but fails with Ku
 - **Investigation needed**: Compare Docker vs K8s environment variables, networking, API routing
 
 ### **📋 PENDING - MEDIUM PRIORITY**
+
+#### **INFRA-002: Implement Request Tracing & Standardized Logging System**
+- **Component**: All Services + Infrastructure
+- **Type**: Enhancement
+- **Priority**: High
+- **Status**: 📋 Pending
+
+**Description:**
+Implement comprehensive request tracing with unique request IDs and standardized logging across all services for production monitoring and debugging.
+
+**Root Cause:**
+- No request correlation across service boundaries
+- Inconsistent logging formats across different services
+- Difficult to trace user requests through the entire system
+- Limited debugging capabilities in production environments
+
+**Impact:**
+- **Debugging**: Hard to trace issues across microservices
+- **Monitoring**: No visibility into request flow and performance
+- **Production Support**: Difficult to troubleshoot user issues
+- **Performance Analysis**: Cannot correlate slow requests across services
+
+**Acceptance Criteria:**
+- [ ] **Request ID Generation & Propagation**
+  - Generate unique request ID for each incoming request
+  - Propagate request ID through all service calls (HTTP headers, gRPC metadata)
+  - Include request ID in all log entries across all services
+  - Support correlation with external API calls
+
+- [ ] **Standardized Logging Format**
+  - Consistent JSON log format across all services
+  - Include: timestamp, level, service_name, request_id, user_id, message, context
+  - Structured logging with proper field names and types
+  - Configurable log levels (DEBUG, INFO, WARN, ERROR)
+
+- [ ] **Service Integration**
+  - **Gateway Service**: Generate and inject request IDs, log all incoming requests
+  - **User Service**: Propagate request IDs, log authentication and business operations
+  - **Inventory Service**: Propagate request IDs, log asset operations and pricing
+  - **Order Service**: Propagate request IDs, log order processing and transactions
+  - **Frontend**: Include request ID in all API calls for correlation
+
+- [ ] **Monitoring & Debugging Features**
+  - Request ID search across all service logs
+  - Request flow visualization (which services were called)
+  - Performance metrics per request ID
+  - Error correlation with request context
+
+**Technical Details:**
+- **Implementation**: Middleware for request ID generation and propagation
+- **Logging Library**: Structured JSON logging (Python: structlog, Go: logrus)
+- **Request ID Format**: UUID v4 or timestamp-based unique identifier
+- **Propagation Method**: HTTP headers (`X-Request-ID`), gRPC metadata
+- **Storage**: Centralized log aggregation (ELK stack or similar)
+- **Priority**: High (essential for production debugging and monitoring)
+
+**Dependencies:**
+- **MONITOR-001**: Comprehensive Monitoring System (Design completed, ready for implementation)
+- **Existing monitoring package**: Review and integrate with current setup
 
 #### **BACKEND-004: Fix Remaining Username/User_ID Naming Inconsistencies**
 - **Component**: All Backend Services
@@ -158,35 +248,7 @@ Build a production-ready, scalable multi-asset trading platform with microservic
 
 
 
-#### **BACKEND-001: Fix Validation Error Handling**
-- **Component**: User Service
-- **Type**: Bug
-- **Priority**: High
-- **Status**: 🔄 In Progress
 
-**Description:**
-Balance API endpoints (deposit/withdraw) return 500 Internal Server Error instead of 400/422 for validation failures. This affects integration tests and client error handling.
-
-**Root Cause:**
-- `UserValidationException` from `validate_amount()` function not properly handled by Pydantic validation
-- JSON serialization errors when validation errors contain `Decimal` objects
-- Complex validation logic in API models causing exception handling conflicts
-
-**Impact:**
-- Integration tests failing with 500 errors instead of expected 400/422
-- Poor client error handling experience
-- Inconsistent error response format
-
-**Acceptance Criteria:**
-- [ ] Balance API endpoints return 400/422 for validation errors
-- [ ] Integration tests pass with proper error status codes
-- [ ] Error responses are properly formatted and serializable
-- [ ] Validation logic is simplified and maintainable
-
-**Technical Details:**
-- File: `services/user_service/src/api_models/balance/balance_models.py`
-- File: `services/user_service/src/main.py` (exception handlers)
-- Issue: `TypeError: Object of type Decimal is not JSON serializable`
 
 ---
 
@@ -198,202 +260,19 @@ Balance API endpoints (deposit/withdraw) return 500 Internal Server Error instea
 
 ---
 
-#### **INFRA-001: Local Kubernetes Development Setup** ✅
-- **Component**: Infrastructure
-- **Type**: Epic
-- **Priority**: High
-- **Status**: ✅ Completed (8/19/2025)
 
-**Description:**
-Set up comprehensive local Kubernetes development environment with proper networking, security, and monitoring for safe personal project development.
-
-**Acceptance Criteria:**
-- [x] **Local Cluster Configuration**
-  - [x] Set up local Kubernetes cluster (Kind)
-  - [x] Configure local node groups and resource allocation
-  - [x] Implement local network policies and security
-  - [x] Set up local ingress controllers and load balancers
-- [x] **Local Security Setup**
-  - [x] Implement local RBAC with least privilege access
-  - [x] Configure local pod security policies
-  - [x] Set up local secrets management (no AWS credentials)
-  - [x] Implement local network policies for service isolation
-- [x] **Local Monitoring & Logging**
-  - [x] Deploy local Prometheus and Grafana
-  - [x] Set up local centralized logging
-  - [x] Configure local alerting and notification systems
-  - [x] Implement local distributed tracing
-- [x] **Security Considerations**
-  - [x] No production AWS resources or credentials
-  - [x] Local-only development and testing
-  - [x] Secure local secrets handling
-  - [x] Environment isolation for development
-- [x] **Order Service Integration**
-  - [x] Add Order Service deployment to Kubernetes
-  - [x] Update service discovery and networking
-  - [x] Add asset management environment variables
-  - [x] Update port configuration (NodePort 30003)
-  - [x] Test end-to-end order processing in Kubernetes
-
-**Dependencies:**
-- ✅ **None** - Can start immediately
-
-**Completed Items:**
-- ✅ **All Services Deployed**: User, Inventory, Order, Gateway, Frontend, Redis
-- ✅ **Port Configuration**: All services properly configured with correct ports
-- ✅ **Health Checks**: Liveness and readiness probes working correctly
-- ✅ **Integration Testing**: All tests passing against K8s-deployed services
-- ✅ **Management Script**: Comprehensive k8s-manage.sh script created
-- ✅ **Port Forwarding**: Frontend accessible via port forwarding (localhost:3000)
 
 ---
 
 ### **📋 TO DO**
 
-## **🚨 CRITICAL - Phase 1 Priority**
 
-#### **API-003: Change User Service Profile Endpoint from /auth/me to /auth/profile** 🚨 **NEW PRIORITY 1**
-- **Component**: User Service (Backend)
-- **Type**: Enhancement
-- **Priority**: CRITICAL
-- **Status**: 📋 To Do
 
-**Description:**
-Change the user profile endpoint from `/auth/me` to `/auth/profile` for better API clarity and consistency.
 
-**Acceptance Criteria:**
-- [ ] **Backend Changes**
-  - [ ] Update profile controller from `@router.get("/me")` to `@router.get("/profile")`
-  - [ ] Update profile controller from `@router.put("/me")` to `@router.put("/profile")`
-  - [ ] Update main.py route logging and documentation
-  - [ ] Update API endpoint constants and references
-- [ ] **Integration Test Updates**
-  - [ ] Update `integration_tests/config/api_endpoints.py` UserAPI.PROFILE from `/auth/me` to `/auth/profile`
-  - [ ] Update `integration_tests/user_services/user_tests.py` to use new endpoint
-  - [ ] Verify all integration tests pass with new endpoint
-- [ ] **API Gateway Updates**
-  - [ ] Update gateway route mapping if needed
-  - [ ] Test gateway routing with new endpoint
-- [ ] **Documentation Updates**
-  - [ ] Update API documentation and OpenAPI specs
-  - [ ] Update frontend design document
-  - [ ] Update any hardcoded endpoint references
-
-**Dependencies:**
-- ✅ **All backend services completed**
-- ✅ **Integration test framework exists**
-
-**Impact:**
-- **Breaking Change**: Will affect any frontend code using `/auth/me`
-- **Integration Tests**: Need to update existing test suite
-- **API Consistency**: Better endpoint naming convention
-
-**Estimated Time**: 1-2 hours
-
-#### **FRONTEND-006: Standardize Frontend Port to localhost:3000** ✅
-- **Component**: Frontend (React)
-- **Type**: Enhancement
-- **Priority**: CRITICAL
-- **Status**: ✅ Completed (8/19/2025)
-
-**Description:**
-Ensure frontend is consistently accessible on localhost:3000 for both Docker and Kubernetes deployments, not on internal NodePorts.
-
-**Acceptance Criteria:**
-- [x] **Docker Deployment**
-  - [x] Frontend accessible on localhost:3000 when using Docker Compose
-  - [x] No port conflicts with other services
-  - [x] Consistent with development server (npm run dev)
-- [x] **Kubernetes Deployment**
-  - [x] Frontend accessible on localhost:3000 via port forwarding
-  - [x] Remove dependency on NodePort 30004 for external access
-  - [x] Update K8s management script to handle port forwarding automatically
-- [x] **Port Configuration**
-  - [x] Frontend container runs on port 3000 internally
-  - [x] Kubernetes service uses port 80 (production standard)
-  - [x] Health checks configured for port 3000
-  - [x] Port forwarding maps localhost:3000 → service:80 → container:3000
-- [x] **Documentation Updates**
-  - [x] Update deployment instructions for both Docker and K8s
-  - [x] Document port forwarding setup for K8s
-  - [x] Update frontend design document with port requirements
-
-**Dependencies:**
-- ✅ **All backend services completed**
-- ✅ **Kubernetes deployment working**
-
-**Impact:**
-- **User Experience**: Consistent frontend access regardless of deployment method
-- **Development**: Matches existing development workflow (npm run dev on 3000)
-- **Deployment**: Simplified port management across environments
-
-**Completed Items:**
-- ✅ **Port Architecture Decision**: Documented different ports for container vs service
-- ✅ **Design Documentation**: Added to frontend-design.md and kubernetes/README.md
-- ✅ **Port Forwarding**: Implemented via k8s-manage.sh script
-- ✅ **Configuration**: Container port 3000, service port 80, target port 3000
-- ✅ **External Access**: localhost:3000 via port forwarding, NodePort 30004 as fallback
-
-**Technical Details:**
-- **Design Decision**: Use container port 3000, service port 80 for production readiness
-- **Port Forwarding**: kubectl port-forward -n order-processor service/frontend 3000:80
-- **Files Updated**: docs/frontend-design.md, kubernetes/README.md
-- **Benefits**: Production standards, Kubernetes best practices, development workflow compatibility
 
 ---
 
-#### **FRONTEND-002: Debug API Integration Issues**
-- **Component**: Frontend (React)
-- **Type**: Bug
-- **Priority**: CRITICAL
-- **Status**: 📋 To Do
 
-**Description:**
-Debug and fix API integration issues between frontend and backend services.
-
-**Acceptance Criteria:**
-- [ ] Fix authentication token handling
-- [ ] Resolve API endpoint connectivity issues
-- [ ] Fix request/response format mismatches
-- [ ] Add proper error handling for API failures
-- [ ] Test all API integrations end-to-end
-- [ ] Add API integration tests
-
-**Dependencies:**
-- ✅ **ORDER-001**: Update Order Entity with GSI Support (COMPLETED)
-- 🔄 **INFRA-001**: Local Kubernetes Development Setup (Order Service integration)
-
-#### **FRONTEND-003: Fix Authentication State Management**
-- **Component**: Frontend (React)
-- **Type**: Bug
-- **Priority**: CRITICAL
-- **Status**: 📋 To Do
-
-**Description:**
-Fix authentication state management issues in the frontend application.
-
-**Acceptance Criteria:**
-- [ ] Fix token refresh mechanisms
-- [ ] Resolve session persistence issues
-- [ ] Fix logout functionality
-- [ ] Add proper authentication guards
-- [ ] Implement proper error handling for auth failures
-- [ ] Test authentication flow end-to-end
-
-**Dependencies:**
-- 🔄 **INFRA-001**: Local Kubernetes Development Setup (Gateway integration)
-- 📋 **SEC-003**: Token Blacklist Implementation
-
-#### **FRONTEND-004: Add Order Management UI**
-- **Component**: Frontend (React)
-- **Type**: Story
-- **Priority**: CRITICAL
-- **Status**: 📋 To Do
-
-**Description:**
-Add comprehensive order management UI for creating and managing trading orders.
-
-**Acceptance Criteria:**
 - [ ] Create order placement forms
 - [ ] Add order history display
 - [ ] Implement order status tracking
@@ -428,56 +307,9 @@ Improve error handling and user feedback across the frontend application.
 - ✅ **FRONTEND-002**: Debug API Integration Issues
 - ✅ **FRONTEND-003**: Fix Authentication State Management
 
-#### **FRONTEND-DESIGN: Complete Frontend Design Document** ✅
-- **Component**: Frontend (React)
-- **Type**: Epic
-- **Priority**: CRITICAL
-- **Status**: ✅ Completed
 
-**Description:**
-Create comprehensive frontend design document with complete page architecture, user experience flows, and technical implementation plan.
 
-**Completed Items:**
-- ✅ **7-Page Architecture**: Landing, Auth, Dashboard, Trading, Portfolio, Account, Profile
-- ✅ **User Experience Flows**: Complete user journey from registration to trading
-- ✅ **Order Safety Features**: Double confirmation, account impact preview, processing feedback
-- ✅ **Security Analysis**: Current security model and frontend security improvements
-- ✅ **Technical Architecture**: React + TypeScript + Tailwind CSS + Vite stack
-- ✅ **API Integration Plan**: All routes through API Gateway with `/api/v1/` prefix
-- ✅ **Responsive Design**: Mobile-first with accessibility compliance
-- ✅ **Error Handling**: Comprehensive error states and recovery mechanisms
-- ✅ **Implementation Phases**: 3-phase rollout plan with success criteria
 
-**Documentation Created:**
-- ✅ **`docs/frontend-design.md`**: 1200+ line comprehensive design document
-- ✅ **Critical Backend Issues**: Identified missing API Gateway routes
-- ✅ **Security Implementation Plan**: 3-phase security improvement strategy
-- ✅ **Component Specifications**: Detailed component requirements and architecture
-
-#### **FRONTEND-IMPLEMENTATION: Implement Core Frontend Pages** 🔄
-- **Component**: Frontend (React)
-- **Type**: Epic
-- **Priority**: CRITICAL
-- **Status**: 🔄 Ready to Start
-
-**Description:**
-Implement core frontend pages based on the completed design document.
-
-**Acceptance Criteria:**
-- [ ] Set up React + TypeScript + Tailwind + Vite project structure
-- [ ] Implement Landing Page with real asset data
-- [ ] Implement Authentication Page with login/register
-- [ ] Implement Dashboard with account overview
-- [ ] Implement Trading Page with order creation
-- [ ] Implement Portfolio Page with asset balances
-- [ ] Implement Account Page with balance management
-- [ ] Implement Profile Page with user settings
-
-**Dependencies:**
-- ✅ **FRONTEND-DESIGN**: Complete Frontend Design Document (COMPLETED)
-- ✅ **BACKEND-FIXES**: Fix Missing API Gateway Routes (COMPLETED)
-
-**Status**: ✅ **READY TO START** - All blockers resolved!
 
 ## **🔧 Infrastructure & DevOps**
 
@@ -672,40 +504,83 @@ Optimize DynamoDB usage for cost efficiency and performance.
 
 ## **🔍 Monitoring & Observability**
 
-#### **MONITOR-001: Comprehensive Monitoring System**
-- **Component**: Monitoring
+#### **MONITOR-001: Comprehensive Monitoring System** 🚨 **PRODUCTION CRITICAL**
+- **Component**: Monitoring + Infrastructure
 - **Type**: Epic
-- **Priority**: High
-- **Status**: 📋 To Do
+- **Priority**: 🔥 **HIGHEST PRIORITY**
+- **Status**: 🔄 **IN PROGRESS**
 
 **Description:**
-Implement comprehensive monitoring and observability across all system components.
+Implement production-ready monitoring and observability system across all system components. This is critical for production deployment and operational excellence.
 
 **Acceptance Criteria:**
-- [ ] **Application Monitoring**
-  - [ ] Deploy Prometheus for metrics collection
-  - [ ] Set up Grafana dashboards for all services
-  - [ ] Implement custom metrics for business KPIs
-  - [ ] Add APM monitoring with distributed tracing
-- [ ] **Infrastructure Monitoring**
-  - [ ] Monitor Kubernetes cluster health
-  - [ ] Track AWS resource utilization
-  - [ ] Monitor network performance
-  - [ ] Add infrastructure alerting
-- [ ] **Logging & Tracing**
-  - [ ] Centralized logging with ELK stack
-  - [ ] Implement structured logging across services
-  - [ ] Add distributed tracing with Jaeger
-  - [ ] Configure log retention and archiving
-- [ ] **Alerting & Notification**
-  - [ ] Set up alerting rules for critical metrics
-  - [ ] Configure notification channels (Slack, email)
-  - [ ] Implement escalation procedures
+- [ ] **Application Performance Monitoring (APM)**
+  - [ ] Deploy Prometheus for metrics collection and storage
+  - [ ] Set up Grafana dashboards for all microservices
+  - [ ] Implement custom business metrics (order volume, user activity, asset prices)
+  - [ ] Add distributed tracing with Jaeger for request flow visualization
+  - [ ] Monitor API response times, throughput, and error rates
+  - [ ] Track business KPIs (orders per minute, user registrations, trading volume)
+
+- [ ] **Infrastructure & Kubernetes Monitoring**
+  - [ ] Monitor Kubernetes cluster health (nodes, pods, services)
+  - [ ] Track AWS resource utilization (DynamoDB, EKS, networking)
+  - [ ] Monitor network performance and latency
+  - [ ] Add infrastructure alerting for resource thresholds
+  - [ ] Monitor Redis cache performance and hit rates
+  - [ ] Track container resource usage (CPU, memory, disk)
+
+- [ ] **Logging & Request Tracing**
+  - [ ] Centralized logging with ELK stack (Elasticsearch, Logstash, Kibana)
+  - [ ] Implement structured JSON logging across all services
+  - [ ] Add request ID correlation across all microservices
+  - [ ] Configure log retention policies and archiving
+  - [ ] Implement log search and filtering capabilities
+  - [ ] Add log-based alerting for critical errors
+
+- [ ] **Alerting & Incident Management**
+  - [ ] Set up alerting rules for critical metrics (high error rates, slow responses)
+  - [ ] Configure notification channels (Slack, email, PagerDuty)
+  - [ ] Implement escalation procedures for different severity levels
   - [ ] Add alert acknowledgment and resolution tracking
+  - [ ] Create runbooks for common incident scenarios
+  - [ ] Set up on-call rotation and incident response procedures
+
+- [ ] **Business Intelligence & Dashboards**
+  - [ ] Real-time trading dashboard with live metrics
+  - [ ] User activity and engagement analytics
+  - [ ] System performance and capacity planning dashboards
+  - [ ] Error tracking and resolution metrics
+  - [ ] Cost and resource utilization tracking
 
 **Dependencies:**
 - ✅ **INFRA-001**: Local Kubernetes Development Setup
 - ✅ **INFRA-002**: Local Development Pipeline
+- 🔄 **INFRA-002**: Request Tracing & Standardized Logging System (in progress)
+
+**Design Phase Required:**
+- [x] **Review existing monitoring package** - Understand current setup ✅
+- [x] **Analyze current logging patterns** - Review service logging ✅
+- [x] **Assess monitoring requirements** - Define specific needs ✅
+- [x] **Create monitoring architecture design** - Document approach ✅
+- [x] **Review and approve design** - Team alignment ✅
+
+**Status**: Design phase completed, ready for implementation
+
+**Technical Details:**
+- **Monitoring Stack**: Prometheus + Grafana + AlertManager
+- **Logging Stack**: ELK (Elasticsearch, Logstash, Kibana) or Loki + Grafana
+- **Tracing**: Jaeger for distributed tracing
+- **Metrics**: Custom business metrics + standard infrastructure metrics
+- **Alerting**: Multi-channel notifications with escalation procedures
+- **Storage**: Time-series database for metrics, document store for logs
+- **Priority**: 🔥 **HIGHEST** (blocks production deployment)
+
+**Implementation Phases:**
+1. **Phase 1**: Basic monitoring (Prometheus + Grafana)
+2. **Phase 2**: Logging and request tracing
+3. **Phase 3**: Advanced alerting and incident management
+4. **Phase 4**: Business intelligence dashboards
 
 #### **MONITOR-002: Business Intelligence Dashboard**
 - **Component**: Monitoring
@@ -1717,171 +1592,26 @@ Created comprehensive portfolio management endpoints with real-time market value
 
 ---
 
-## 🎯 **Phase Planning**
 
-### **Phase 1: Complete Core System** ✅ **COMPLETED**
-**Duration**: 2-3 weeks
-**Priority**: CRITICAL
-**Goal**: Get the core system fully functional and ready for basic trading operations
-
-#### **Week 1: Finish Order Service** ✅ **COMPLETED**
-**Duration**: 1 week
-**Focus**: Complete multi-asset order processing
-
-**Sprint Backlog:**
-1. **ORDER-001**: Update Order Entity with GSI Support ✅
-2. **ORDER-002**: Enhance TransactionManager for Multi-Asset Support ✅
-3. **DAO-001**: Add Pagination for All DAO List APIs ✅
-4. **API-001**: Create Portfolio Management Endpoints ✅
-
-**Acceptance Criteria:**
-- ✅ Complete multi-asset order processing
-- ✅ Implement buy/sell order execution
-- ✅ Update Order entity with GSI support
-- ✅ Enhance TransactionManager for asset operations
-
-#### **Week 2-3: Frontend Design & Implementation** 🔄 **CURRENT PRIORITY**
-**Duration**: 1-2 weeks
-**Focus**: Design and implement comprehensive frontend
-
-**Sprint Backlog:**
-1. **FRONTEND-DESIGN**: Complete frontend design document ✅ **COMPLETED**
-2. **BACKEND-FIXES**: Fix missing API Gateway routes ✅ **COMPLETED**
-3. **FRONTEND-IMPLEMENTATION**: Implement core pages (Landing, Auth, Dashboard, Trading)
-4. **FRONTEND-SECURITY**: Implement Phase 1 security improvements
-
-**Acceptance Criteria:**
-- ✅ Complete frontend design with 7-page architecture
-- ✅ Fix missing API Gateway routes (order, balance, portfolio, assets)
-- [ ] Implement core frontend pages with real data
-- [ ] Add comprehensive security features
-
-### **Phase 2: Local Infrastructure & Monitoring** 🔄 **CURRENT PHASE**
-**Duration**: 2 weeks
-**Goal**: Set up comprehensive local development infrastructure and monitoring
-
-**Sprint Backlog:**
-1. **INFRA-001**: Local Kubernetes Development Setup ✅ **COMPLETED TODAY**
-2. **FRONTEND-006**: Standardize Frontend Port to localhost:3000 🔄 **IN PROGRESS**
-3. **MONITOR-001**: Comprehensive Monitoring System
-4. **SEC-002**: Security Hardening
-5. **INFRA-002**: Local Development Pipeline
-
-**Current Status:**
-- ✅ **Kubernetes Infrastructure**: Complete and operational
-- ✅ **All Services Deployed**: User, Inventory, Order, Gateway, Frontend, Redis
-- ✅ **Integration Testing**: All tests passing against K8s services
-- 🔄 **Frontend Port**: Standardization in progress (FRONTEND-006)
-- 📋 **Monitoring & Security**: Next priorities after frontend port fix
-
-### **Phase 3: Performance & Optimization**
-**Duration**: 2 weeks
-**Goal**: Optimize performance and implement advanced features
-
-**Sprint Backlog:**
-1. **PERF-001**: Performance Optimization
-2. **FRONTEND-001**: Enhanced Trading Interface
-3. **DB-001**: Redis Optimization & Caching Strategy
-4. **TEST-001**: Comprehensive Testing Strategy
-
-### **Phase 4: Security & Quality Assurance (Lower Priority)**
-**Duration**: Ongoing
-**Goal**: Enhance security and add comprehensive testing
-
-**Sprint Backlog:**
-1. **TEST-003**: Enhanced Business Logic Unit Tests (Low Priority)
-2. **TEST-004**: Integration Test Suite Enhancement (Low Priority)
-3. **TEST-005**: Security Testing Suite (Low Priority)
-4. **SEC-004**: Penetration Testing & Security Audit
 
 ---
 
-## 📊 **Backlog Metrics**
+## 📝 **Document Notes**
 
-### **Current Status:**
-- **Total Stories**: 39
-- **Completed**: 15 ✅ (+1 FRONTEND-006 completed today)
-- **In Progress**: 0 🔄 (all critical items complete)
-- **To Do**: 24 📋
+### **Current Focus:**
+- **Production Readiness**: Core system complete, focusing on monitoring and observability
+- **Monitoring System**: Critical for production deployment and operational excellence
+- **Request Tracing**: Essential for debugging and troubleshooting in production
 
-### **Priority Distribution:**
-- **CRITICAL Priority**: 5 stories (5 completed, 0 remaining) ✅ **ALL CRITICAL ITEMS COMPLETE**
-- **High Priority**: 8 stories (4 completed, 4 remaining)
-- **Medium Priority**: 12 stories
-- **Low Priority**: 14 stories (including testing tasks + new debug cleanup task)
-
-### **Component Distribution:**
-- **Frontend (CRITICAL)**: 5 stories (3 remaining, 2 completed) ✅ **FRONTEND PORT STANDARDIZATION COMPLETE**
-- **Infrastructure & DevOps**: 5 stories (1 completed today - INFRA-001)
-- **API Gateway & Frontend**: 4 stories (1 completed)
-- **Database & Caching**: 3 stories
-- **Monitoring & Observability**: 4 stories
-- **Security & Compliance**: 4 stories
-- **Performance & Scaling**: 3 stories
-- **Testing & Quality Assurance**: 11 stories (7 completed, 4 remaining)
-
-### **Estimated Effort:**
-- **Completed**: 16-18 days (+1 infrastructure day + 1 frontend port day today)
-- **Remaining**: Ongoing development
-- **Phase 1 (CRITICAL)**: 100% complete ✅
-- **INFRA-001**: 100% complete ✅ (completed today)
-- **FRONTEND-006**: 100% complete ✅ (completed today)
-- **Testing Tasks**: 70% complete (3 remaining low priority tasks)
+### **Next Steps:**
+1. **Implement MONITOR-001**: Deploy monitoring infrastructure
+2. **Implement INFRA-002**: Add request tracing and standardized logging
+3. **Fix BACKEND-004**: Resolve username/user_id naming inconsistencies
+4. **Investigate FRONTEND-007**: Resolve K8s authentication issue
 
 ---
 
-## 🔄 **Workflow**
-
-### **Task Lifecycle:**
-1. **📋 To Do**: Task is defined and ready for development
-2. **🔄 In Progress**: Task is actively being worked on
-3. **🔍 Review**: Task is completed and ready for review
-4. **✅ Done**: Task is completed and validated
-
-### **Definition of Done:**
-- [ ] Code implemented and tested
-- [ ] Unit tests written and passing
-- [ ] Integration tests passing
-- [ ] Documentation updated
-- [ ] Code review completed
-- [ ] Performance requirements met
-- [ ] Security requirements satisfied
-- [ ] Monitoring and alerting configured
-
----
-
-## 📝 **Notes**
-
-### **Design Philosophy:**
-- **Cost Optimization**: Prioritize DynamoDB efficiency and serverless architecture
-- **Development Velocity**: Focus on rapid iteration and learning
-- **80/20 Rule**: Optimize for common use cases over edge cases
-- **Personal Project Scale**: Balance quality with development speed
-- **Production Ready**: Maintain enterprise-grade quality standards
-- **Security First**: Focus on whole secure system rather than just backend APIs
-- **Core Functionality**: Focus on essential market buy/sell operations only
-
-### **Technical Constraints:**
-- **DynamoDB**: Single-table design with efficient key patterns
-- **Atomic Operations**: Use conditional expressions instead of complex transactions
-- **Cost Management**: Monitor RCU/WCU usage and optimize queries
-- **Scalability**: Design for growth while maintaining simplicity
-- **Security**: Implement defense in depth across all layers
-
-### **Focus Shift:**
-- **Backend APIs**: ✅ COMPLETED - No more backend API development
-- **Whole Secure System**: 🔄 CURRENT FOCUS - Security, monitoring, infrastructure
-- **Unit Testing**: 📋 LOW PRIORITY - Can be done incrementally when time permits
-- **Frontend Integration**: 🚨 CRITICAL - Next immediate priority
-- **Advanced Features**: ❌ REMOVED - Focus on core functionality only
-
----
-
-*Last Updated: 8/7/2025*
-*Next Review: Next development session*
-*📋 Updated: Phase 1 status to COMPLETED (75% complete)*
-*📋 Updated: Order service implementation completed with comprehensive testing*
-*📋 Added: Complete end-to-end test results and documentation*
-*📋 Added: Low priority unit testing tasks for existing business logic*
-*📋 Updated: Focus shift to whole secure system rather than backend APIs*
-*📋 Removed: Advanced order types (limit orders, stop-loss, take-profit) - not important for current scope*
+*Last Updated: 8/19/2025*
+*Next Review: After monitoring system implementation*
+*📋 Status: Design phase completed for monitoring system*
+*📋 Focus: Production readiness and operational excellence*
