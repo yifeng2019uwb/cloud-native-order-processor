@@ -86,7 +86,7 @@
 ### **Start Everything Locally**
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/yifeng2019uwb/cloud-native-order-processor
 cd cloud-native-order-processor
 
 # Option 1: Docker Compose (Simplest)
@@ -124,6 +124,30 @@ curl http://localhost:8002/health  # Order Service
 
 **Current Status**: Local development complete, working on public deployment
 
+## 🐳 Docker Deployment
+
+> **✅ Available** - Ready for local development and testing
+
+**Quick Start with Docker:**
+- **Single Command**: `./scripts/deploy-docker.sh -bd all`
+- **Access Services**: Frontend (3000), Gateway (8080), Services (8000-8002)
+- **Full Stack**: Complete system running in containers
+- **Development Ready**: Hot reload, debugging, testing
+
+**Docker Compose Status**: Production ready with health checks and proper networking
+
+## 🐳 Docker Deployment
+
+> **✅ Available** - Ready for local development and testing
+
+**Quick Start with Docker:**
+- **Single Command**: `./scripts/deploy-docker.sh -bd all`
+- **Access Services**: Frontend (3000), Gateway (8080), Services (8000-8002)
+- **Full Stack**: Complete system running in containers
+- **Development Ready**: Hot reload, debugging, testing
+
+**Docker Compose Status**: Production ready with health checks and proper networking
+
 ## 🔐 Security Implementation
 
 ### **What's Implemented**
@@ -146,8 +170,8 @@ cd services && ./build.sh --test-only
 # Create local cluster
 kind create cluster --name order-processor
 
-# Deploy with proper manifests
-kubectl apply -k kubernetes/dev/
+# Deploy with our defined script
+./scripts/deploy.sh --type k8s --environment dev
 
 # Check deployment
 kubectl get pods -n order-processor
@@ -229,7 +253,10 @@ cd integration_tests
 aws configure
 aws sts get-caller-identity
 
-# Deploy infrastructure (if using Terraform)
+# Deploy infrastructure with our script
+./scripts/deploy.sh --type infra --environment dev
+
+# Or manually with Terraform
 cd terraform
 terraform init
 terraform apply -var="environment=dev"
