@@ -1,27 +1,74 @@
-# Order Processor Gateway
+# 🚪 API Gateway
 
-A Go-based API gateway that acts as a reverse proxy for the order processor microservices with comprehensive authentication, authorization, and security features.
+> High-performance Go-based API gateway with JWT authentication, role-based authorization, and intelligent request routing to backend microservices
 
-## Architecture Overview ✅ COMPLETED & PRODUCTION READY
+## 🚀 Quick Start
 
-**📊 Current Status: ALL ROUTING ISSUES RESOLVED** ✅
+### Prerequisites
+- Go 1.24+
+- Redis (optional, for future rate limiting)
 
-**Last Updated: 8/17/2025**
-- ✅ **Dynamic Route Matching Fixed**: All asset endpoints properly routed
-- ✅ **No 500 Errors**: Gateway correctly forwards all requests to backend services
-- ✅ **Authentication Working**: JWT validation and role-based access functioning
-- ✅ **All Endpoints Accessible**: Asset balances, transactions, orders, portfolio working
-- ✅ **Production Ready**: Gateway is stable and handling all traffic correctly
+### Build & Test
+```bash
+# Build and test
+./build.sh
 
+# Build only
+./build.sh --build-only
+
+# Test only
+./build.sh --test-only
+
+# Run locally
+./dev.sh run
 ```
-Client Request → Gateway → Backend Services
-     ↓              ↓           ↓
-   Frontend    Authentication  User Service
-   Mobile      Rate Limiting   Inventory Service
-   API Client  Authorization   (Future services)
+
+### Docker Deployment
+```bash
+# Build and run
+docker build -f docker/gateway/Dockerfile -t order-processor-gateway:latest .
+docker run -p 8080:8080 order-processor-gateway:latest
 ```
 
-## Project Structure ✅ COMPLETED
+## ✨ Key Features
+
+- **JWT Authentication**: Secure token-based authentication with role extraction
+- **Role-Based Access Control**: Flexible authorization for public, customer, and admin roles
+- **Intelligent Routing**: Automatic request routing to appropriate backend services
+- **Security First**: CORS, input validation, and secure error handling
+- **Production Ready**: Comprehensive testing and deployment configurations
+
+## 🔗 Quick Links
+
+- [Design Documentation](../docs/design-docs/gateway-design.md)
+- [API Endpoints](#api-endpoints)
+- [Security Model](#security-model)
+- [Deployment Guide](#deployment)
+
+## 📊 Status
+
+- **Current Status**: ✅ **PRODUCTION READY** - All core features implemented and tested
+- **Last Updated**: August 20, 2025
+- **Backend Integration**: ✅ All routing issues resolved, all endpoints working
+
+## 🎯 Current Status
+
+### ✅ **All Systems Working Perfectly**
+- **Authentication**: JWT validation and role-based access control
+- **Routing**: All endpoints properly routed to backend services
+- **Security**: CORS, input validation, and secure error handling
+- **Performance**: Fast request processing and response transformation
+- **Testing**: Comprehensive unit and integration test coverage
+
+### 🚀 **Ready for Production**
+- **No Known Issues**: All functionality tested and working
+- **Comprehensive Security**: Authentication, authorization, and input validation
+- **Scalable Architecture**: Stateless design supports horizontal scaling
+- **Monitoring Ready**: Health checks and comprehensive logging
+
+---
+
+## 📁 Project Structure
 
 ```
 gateway/
@@ -31,101 +78,33 @@ gateway/
 │   ├── config/config.go         # Configuration management
 │   ├── middleware/
 │   │   ├── middleware.go        # Basic middleware (CORS, Logger, Recovery)
-│   │   ├── auth.go              # Authentication middleware ✅ COMPLETED
-│   │   └── rate_limit.go        # Rate limiting middleware (TODO)
+│   │   ├── auth.go              # Authentication middleware
+│   │   └── rate_limit.go        # Rate limiting middleware (planned)
 │   └── services/
 │       ├── redis.go             # Redis operations
-│       └── proxy.go             # Proxy service ✅ COMPLETED
+│       └── proxy.go             # Proxy service
 ├── pkg/
 │   ├── constants/constants.go   # Route configurations and roles
 │   ├── models/request.go        # Request/response models
-│   ├── models/response.go       # Response models
-│   └── utils/                   # Utility functions
+│   └── models/response.go       # Response models
 └── test/                        # Integration tests
 ```
 
-## Design Principles ✅ COMPLETED
+## 🛠️ Technology Stack
 
-### 1. **Layered Architecture** ✅ COMPLETED
-- **Presentation Layer**: HTTP handlers and middleware
-- **Business Logic Layer**: Proxy services and caching
-- **Data Layer**: Redis for session/rate limiting
+- **Go 1.24+**: High-performance programming language
+- **Gin Framework**: Fast HTTP web framework with middleware support
+- **JWT**: JSON Web Token authentication
+- **Redis**: Session management and rate limiting (planned)
 
-### 2. **Separation of Concerns** ✅ COMPLETED
-- Configuration management separate from business logic
-- Middleware for cross-cutting concerns
-- Service layer for backend communication
+## 🔐 Security Model
 
-### 3. **Security-First Design** ✅ COMPLETED
-- JWT authentication with role-based access control
-- Public vs protected route handling
-- Proper error handling and logging
-- Graceful degradation when services are unavailable
-
-## Request Flow ✅ COMPLETED
-
-```
-1. Client Request
-   ↓
-2. Gateway (Port 8080)
-   ↓
-3. Middleware Stack:
-   ├── CORS ✅ COMPLETED
-   ├── Logger ✅ COMPLETED
-   ├── Authentication ✅ COMPLETED (JWT validation)
-   ├── Role Authorization ✅ COMPLETED (Role-based access)
-   └── Recovery ✅ COMPLETED
-   ↓
-4. Route Handler
-   ↓
-5. Proxy Service ✅ COMPLETED (Request forwarding)
-   ↓
-6. Backend Service
-   ↓
-7. Response Transformation ✅ COMPLETED
-   ↓
-8. Client Response
-```
-
-## Resolved Issues ✅ COMPLETED
-
-### **GATEWAY-002: Dynamic Route Matching** ✅ **RESOLVED**
-**Issue**: Gateway routing broken for `/api/v1/assets/balances` endpoint causing 500 errors
-**Root Cause**: Missing pattern in `getBasePath` function for asset balance routes
-**Solution**: Added proper route patterns for all asset endpoints
-**Status**: ✅ **FIXED** - All asset endpoints now working correctly
-**Evidence**: Gateway logs show proper routing to Order Service for all asset requests
-
-### **Current Gateway Status** ✅ **PRODUCTION READY**
-- **All Asset Endpoints**: `/api/v1/assets/*` → Order Service ✅
-- **All Order Endpoints**: `/api/v1/orders/*` → Order Service ✅
-- **All Portfolio Endpoints**: `/api/v1/portfolio/*` → Order Service ✅
-- **All Auth Endpoints**: `/api/v1/auth/*` → User Service ✅
-- **All Inventory Endpoints**: `/api/v1/inventory/*` → Inventory Service ✅
-
-## API Endpoints ✅ COMPLETED
-
-### Public Endpoints (No Auth Required) ✅ COMPLETED
-- `POST /api/v1/auth/login` - User login
-- `POST /api/v1/auth/register` - User registration
-- `GET /api/v1/inventory/assets` - List inventory assets (public)
-- `GET /api/v1/inventory/assets/:id` - Get specific asset (public)
-
-### Protected Endpoints (Auth Required) ✅ COMPLETED
-- `GET /api/v1/auth/profile` - Get user profile
-- `POST /api/v1/auth/logout` - User logout
-
-### System Endpoints ✅ COMPLETED
-- `GET /health` - Health check
-
-## Security Model ✅ COMPLETED
-
-### **Role-Based Access Control** ✅ COMPLETED
+### **Role-Based Access Control**
 - **`public`**: Unauthenticated users (no JWT token)
 - **`customer`**: Authenticated users with JWT token
 - **`admin`**: Administrative users (future)
 
-### **Route Configuration** ✅ COMPLETED
+### **Route Configuration**
 ```go
 // Public routes (no auth required)
 APIV1AuthLogin:    {AllowedRoles: []string{"public"}}
@@ -134,21 +113,39 @@ APIV1AuthRegister: {AllowedRoles: []string{"public"}}
 // Protected routes (any authenticated user)
 APIV1AuthMe:       {AllowedRoles: []string{}} // Empty = any role
 APIV1AuthLogout:   {AllowedRoles: []string{}} // Empty = any role
-
-// Public inventory routes
-APIV1InventoryAssets: {AllowedRoles: []string{}} // Empty = any role
 ```
 
-### **Authentication Flow** ✅ COMPLETED
-1. **No Authorization Header**: User gets `public` role
-2. **Invalid JWT Token**: Request rejected with 401 error
-3. **Valid JWT Token**: User gets role from token claims
-4. **Role Check**: Gateway validates user role against route requirements
+## 🔗 API Endpoints
 
-## Configuration ✅ COMPLETED
+### **Public Endpoints (No Auth Required)**
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/register` - User registration
+- `GET /api/v1/inventory/assets` - List inventory assets
+- `GET /api/v1/inventory/assets/:id` - Get specific asset
 
-Environment variables with defaults:
+### **Protected Endpoints (Auth Required)**
+- `GET /api/v1/auth/profile` - Get user profile
+- `POST /api/v1/auth/logout` - User logout
+- `GET /api/v1/orders` - List user orders
+- `POST /api/v1/orders` - Create order
+- `GET /api/v1/portfolio/:username` - Get portfolio
+- `GET /api/v1/assets/balances` - Get asset balances
 
+### **System Endpoints**
+- `GET /health` - Health check
+
+## 🚀 Deployment
+
+### **Kubernetes Deployment**
+```bash
+# Deploy to Kubernetes
+kubectl apply -k kubernetes/dev/
+
+# Port forward for access
+kubectl port-forward svc/gateway 30000:8080 -n order-processor
+```
+
+### **Environment Configuration**
 ```bash
 # Server Configuration
 GATEWAY_PORT=8080
@@ -158,70 +155,14 @@ GATEWAY_HOST=0.0.0.0
 JWT_SECRET_KEY=your-secret-key
 JWT_ALGORITHM=HS256
 
-# Redis Configuration (for future rate limiting)
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
-REDIS_DB=0
-REDIS_SSL=false
-
 # Backend Services
 USER_SERVICE_URL=http://user-service:8000
 INVENTORY_SERVICE_URL=http://inventory-service:8001
+ORDER_SERVICE_URL=http://order-service:8002
 ```
 
-## Implementation Status ✅ COMPLETED
+## 🧪 Testing
 
-### ✅ Completed
-- [x] Basic project structure ✅
-- [x] Configuration management ✅
-- [x] HTTP server setup ✅
-- [x] Basic middleware (CORS, Logger, Recovery) ✅
-- [x] Health check endpoint ✅
-- [x] Route definitions ✅
-- [x] **JWT Authentication middleware** ✅ COMPLETED
-- [x] **Role-based authorization** ✅ COMPLETED
-- [x] **Proxy logic implementation** ✅ COMPLETED
-- [x] **Request/response transformation** ✅ COMPLETED
-- [x] **Public vs protected route handling** ✅ COMPLETED
-- [x] **Error handling improvements** ✅ COMPLETED
-- [x] **Unit tests with coverage** ✅ COMPLETED
-- [x] **Docker configuration** ✅ COMPLETED
-- [x] **Kubernetes deployment** ✅ COMPLETED
-- [x] **Build script** (`gateway/build.sh`) ✅ COMPLETED
-
-### 🔄 In Progress
-- [ ] Rate limiting implementation (Redis-based)
-- [ ] Response caching
-- [ ] Circuit breaker pattern
-
-### 📋 Future Enhancements
-- [ ] **Redis Integration**: Session management and caching
-- [ ] **Advanced Security**: Rate limiting and token blacklisting
-- [ ] **Monitoring Setup**: Prometheus and Grafana integration
-- [ ] **Distributed Tracing**: Request tracing across services
-- [ ] **Load Testing**: Performance and scalability testing
-
-## Development ✅ COMPLETED
-
-### Prerequisites
-- Go 1.24+
-- Redis (optional, for future rate limiting)
-
-### Quick Start ✅ COMPLETED
-```bash
-# Build and test
-./gateway/build.sh
-
-# Run locally
-./gateway/build.sh --build-only
-./gateway/dev.sh run
-
-# Test only
-./gateway/build.sh --test-only
-```
-
-### Testing ✅ COMPLETED
 ```bash
 # Run all tests
 go test ./...
@@ -233,172 +174,25 @@ go test ./... -cover
 go test ./internal/middleware -v
 ```
 
-### Docker Build ✅ COMPLETED
-```bash
-# Build Docker image
-docker build -f docker/gateway/Dockerfile -t order-processor-gateway:latest .
+## 📈 Performance
 
-# Run in Docker
-docker run -p 8080:8080 order-processor-gateway:latest
-```
+- **Fast Request Processing**: Minimal middleware overhead
+- **Efficient Routing**: Intelligent route pattern matching
+- **Connection Pooling**: Backend connection reuse
+- **Horizontal Scaling**: Stateless design supports multiple instances
 
-## Current Working Features ✅ COMPLETED
+## 🔮 Future Enhancements
 
-### **✅ Authentication & Authorization** ✅ COMPLETED
-- JWT token validation ✅
-- Role-based access control ✅
-- Public route handling (no auth required) ✅
-- Protected route enforcement ✅
-- Proper error responses ✅
+### **Phase 2: Performance & Resilience**
+- **Rate Limiting**: Redis-based request throttling
+- **Response Caching**: Intelligent response caching
+- **Circuit Breaker**: Backend service failure handling
 
-### **✅ Request Proxying** ✅ COMPLETED
-- Intelligent routing to backend services ✅
-- Request body preservation ✅
-- Response transformation ✅
-- Error handling and logging ✅
-
-### **✅ Security Features** ✅ COMPLETED
-- CORS handling ✅
-- Input validation ✅
-- Secure error messages ✅
-- Request logging ✅
-
-### **✅ Deployment Ready** ✅ COMPLETED
-- Docker containerization ✅
-- Kubernetes deployment ✅
-- Health checks ✅
-- Environment configuration ✅
-
-## API Examples ✅ COMPLETED
-
-### **Public Access (No Auth)** ✅ COMPLETED
-```bash
-# Browse inventory (public)
-curl http://localhost:8080/api/v1/inventory/assets
-
-# Register user (public)
-curl -X POST http://localhost:8080/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username": "testuser", "email": "test@example.com", "password": "password123", "first_name": "Test", "last_name": "User"}'
-```
-
-### **Protected Access (Auth Required)** ✅ COMPLETED
-```bash
-# Login to get JWT token
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "testuser", "password": "password123"}'
-
-# Use JWT token for protected endpoints
-curl -H "Authorization: Bearer <JWT_TOKEN>" \
-  http://localhost:8080/api/v1/auth/profile
-```
-
-## Evolution Strategy ✅ COMPLETED
-
-### Phase 1: Core Gateway ✅ COMPLETED
-- ✅ JWT authentication
-- ✅ Role-based authorization
-- ✅ Request proxying
-- ✅ Error handling
-
-### Phase 2: Performance & Resilience (Current)
-- Rate limiting with Redis
-- Response caching
-- Circuit breaker pattern
-- Retry logic
-
-### Phase 3: Observability (Future)
-- Metrics collection
-- Distributed tracing
-- Advanced logging
-- Health monitoring
-
-### Phase 4: Advanced Features (Future)
-- API versioning
-- Request/response transformation
-- Advanced caching strategies
-- Load balancing
-
-## Design Decisions ✅ COMPLETED
-
-1. **Gin Framework**: Chosen for performance and middleware support ✅
-2. **JWT Authentication**: Stateless token-based authentication ✅
-3. **Role-Based Access**: Flexible authorization system ✅
-4. **Public Routes**: Support for unauthenticated access ✅
-5. **Graceful Degradation**: Continue working without Redis ✅
-6. **Security First**: Proper error handling and validation ✅
-
-## Testing ✅ COMPLETED
-
-### **Unit Tests** ✅ COMPLETED
-- Authentication middleware testing ✅
-- Authorization logic testing ✅
-- Proxy service testing ✅
-- Configuration testing ✅
-
-### **Integration Tests** ✅ COMPLETED
-- End-to-end request flow testing ✅
-- Backend service integration testing ✅
-- Error scenario testing ✅
-- Performance testing ✅
-
-### **Coverage** ✅ COMPLETED
-- High test coverage maintained ✅
-- Critical path testing ✅
-- Edge case coverage ✅
-- Security testing ✅
-
-## Performance ✅ COMPLETED
-
-### **Request Processing** ✅ COMPLETED
-- Fast request routing ✅
-- Efficient middleware stack ✅
-- Optimized proxy forwarding ✅
-- Response transformation ✅
-
-### **Scalability** ✅ COMPLETED
-- Horizontal scaling support ✅
-- Load balancing ready ✅
-- Resource optimization ✅
-- Connection pooling ✅
-
-## Security ✅ COMPLETED
-
-### **Authentication** ✅ COMPLETED
-- JWT token validation ✅
-- Token expiration checking ✅
-- Secure token handling ✅
-- Role extraction ✅
-
-### **Authorization** ✅ COMPLETED
-- Role-based access control ✅
-- Route protection ✅
-- Permission validation ✅
-- Access logging ✅
-
-### **Input Validation** ✅ COMPLETED
-- Request sanitization ✅
-- Header validation ✅
-- Body size limits ✅
-- Error message security ✅
-
-## Monitoring ✅ COMPLETED
-
-### **Health Checks** ✅ COMPLETED
-- Service health monitoring ✅
-- Backend service status ✅
-- Redis connectivity ✅
-- Performance metrics ✅
-
-### **Logging** ✅ COMPLETED
-- Request/response logging ✅
-- Error logging ✅
-- Security event logging ✅
-- Performance logging ✅
+### **Phase 3: Observability**
+- **Metrics Collection**: Prometheus integration
+- **Distributed Tracing**: Request tracing across services
+- **Advanced Logging**: Structured logging and correlation
 
 ---
 
-**Status**: ✅ **PRODUCTION READY** - All core features implemented and tested with comprehensive authentication, authorization, and proxy functionality.
-
-This gateway provides a robust, secure, and scalable entry point for the order processor microservices with comprehensive authentication and authorization capabilities.
+**🎯 This gateway provides a robust, secure, and scalable entry point for the order processor microservices with comprehensive authentication and authorization capabilities.**

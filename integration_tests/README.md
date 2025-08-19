@@ -168,6 +168,6 @@ bash run_all_tests.sh user 2>&1 | tee test_output.log
 
 ## 📚 Additional Documentation
 
-- **Integration Test Design**: See `INTEGRATION_TEST_DESIGN.md` for detailed architecture
+- **Integration Test Design**: See `../docs/design-docs/integration-test-design.md` for detailed architecture
 - **API Endpoints**: See `config/api_endpoints.py` for endpoint definitions
 - **Service URLs**: See `config/service_urls.py` for URL detection logic
