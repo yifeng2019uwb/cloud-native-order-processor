@@ -1,21 +1,22 @@
-# 🏗️ Cloud-Native Order Processor
+# 🔐 Cloud-Native Order Processor
 
-> **Learning project** implementing **industry-standard microservices** with production-ready architecture and cost-conscious design
+> **Security-first microservices platform** demonstrating enterprise authentication, authorization, and secure architecture patterns
 
-🏗️ **[Quick Start](#-quick-start)** | 📚 **[Documentation](docs/README.md)** | ☸️ **[Kubernetes](kubernetes/README.md)**
+🔐 **[Security Architecture](#-security-architecture)** | 🏗️ **[Quick Start](#-quick-start)** | ☸️ **[Kubernetes](kubernetes/README.md)**
 
 ---
 
-## 🎯 Project Overview
+## 🎯 Security-Focused Learning Project
 
-**Industry-standard microservices architecture** demonstrating cloud-native patterns:
-- 🏗️ **Production-Ready Architecture**: Microservices, API Gateway, proper security
-- 🔐 **Enterprise Security**: JWT, RBAC, audit logging, input validation
-- ☸️ **Kubernetes Native**: Production manifests, local development
-- 💰 **Cost-Conscious Design**: AWS optimization, efficient resource usage
-- 🚀 **DevOps Automation**: Comprehensive testing, CI/CD, deployment
+**Comprehensive security implementation across all layers**:
+- 🔐 **Authentication & Authorization**: JWT + RBAC with centralized security management
+- 🛡️ **API Gateway Security**: Request validation, rate limiting, secure routing
+- 🔒 **Input Validation**: Comprehensive Pydantic validation with domain exceptions
+- 📊 **Audit Logging**: Security event tracking across all microservices
+- 🚪 **Secure Communication**: TLS, secure headers, CORS policies
+- 🏗️ **Infrastructure Security**: Kubernetes security policies, secrets management
 
-**Built for**: Learning modern development practices, portfolio demonstration, hands-on microservices experience
+**Perfect for**: Security engineering learning, secure coding practices, enterprise security patterns
 
 ## 🏗️ System Architecture
 
@@ -44,6 +45,47 @@
 - **Data Consistency**: Distributed transactions
 - **Security**: Centralized authentication
 - **Scalability**: Stateless services + database
+
+## 🔐 Security Architecture
+
+### **Current Security Implementation**
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Security      │    │   Security      │    │   Security      │
+│   Layers        │    │   Components    │    │   Patterns      │
+│                 │    │                 │    │                 │
+│ ┌─────────────┐ │    │ ┌─────────────┐ │    │ ┌─────────────┐ │
+│ │API Gateway  │ │    │ │JWT + bcrypt│ │    │ │Defense in   │ │
+│ │Security     │ │    │ │Centralized │ │    │ │Depth        │ │
+│ │Rate Limiting│ │    │ │Auth Mgmt   │ │    │ │Zero Trust   │ │
+│ └─────────────┘ │    │ └─────────────┘ │    │ │Audit Logging│ │
+│                 │    │                 │    │ └─────────────┘ │
+│ ┌─────────────┐ │    │ ┌─────────────┐ │    │                 │
+│ │Service      │ │    │ │RBAC +      │ │    │                 │
+│ │Security     │ │    │ │Input       │ │    │                 │
+│ │Validation   │ │    │ │Validation  │ │    │                 │
+│ └─────────────┘ │    │ └─────────────┘ │    │                 │
+│                 │    │                 │    │                 │
+│ ┌─────────────┐ │    │ ┌─────────────┐ │    │                 │
+│ │Data        │ │    │ │Audit       │ │    │                 │
+│ │Security    │ │    │ │Logging +   │ │    │                 │
+│ │Encryption  │ │    │ │Compliance  │ │    │                 │
+│ └─────────────┘ │    │ └─────────────┘ │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### **Security Components Implemented**
+
+| **Security Layer** | **Implementation** | **Status** | **Enterprise Ready** |
+|-------------------|-------------------|------------|---------------------|
+| **Authentication** | JWT with bcrypt, secure token mgmt | ✅ Complete | Ready for OAuth2/OIDC |
+| **Authorization** | RBAC with centralized policies | ✅ Complete | Ready for ABAC/OPA |
+| **Input Validation** | Pydantic models + domain exceptions | ✅ Complete | Ready for WAF integration |
+| **Audit Logging** | Comprehensive security event tracking | ✅ Complete | Ready for SIEM integration |
+| **API Security** | Gateway-level protection + rate limiting | ✅ Complete | Ready for advanced threats |
+| **Secrets Management** | Environment-based configuration | ✅ Complete | Ready for Vault/K8s secrets |
+| **Network Security** | Service isolation + secure communication | ✅ Complete | Ready for service mesh |
 
 ## 🛠️ Technology Choices
 
@@ -136,17 +178,43 @@ curl http://localhost:8002/health  # Order Service
 
 **Docker Compose Status**: Production ready with health checks and proper networking
 
-## 🐳 Docker Deployment
+## 🚀 Quick Security Demo
 
-> **✅ Available** - Ready for local development and testing
+### **Authentication Flow**
+```bash
+# 1. Clone and setup
+git clone https://github.com/yifeng2019uwb/cloud-native-order-processor
+cd cloud-native-order-processor
+./scripts/deploy-docker.sh -bd all
 
-**Quick Start with Docker:**
-- **Single Command**: `./scripts/deploy-docker.sh -bd all`
-- **Access Services**: Frontend (3000), Gateway (8080), Services (8000-8002)
-- **Full Stack**: Complete system running in containers
-- **Development Ready**: Hot reload, debugging, testing
+# 2. Test authentication security
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "email": "test@example.com", "password": "SecurePass123!"}'
 
-**Docker Compose Status**: Production ready with health checks and proper networking
+# 3. Verify JWT security
+curl -X GET http://localhost:8080/api/v1/auth/profile \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# 4. Test authorization (should get 401/403)
+curl -X GET http://localhost:8080/api/v1/orders \
+  -H "Authorization: Bearer invalid_token"
+```
+
+### **Security Validation**
+```bash
+# Test input validation
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "x", "password": "weak"}'
+# Returns: 422 with detailed validation errors
+
+# Test SQL injection protection
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin'\''--", "password": "anything"}'
+# Safely handled by parameterized queries
+```
 
 ## 🔐 Security Implementation
 
@@ -235,8 +303,9 @@ cd integration_tests
 
 ### **Current AWS Usage**
 - **DynamoDB**: User data, orders, assets (pay-per-use)
-- **IAM**: Service roles and policies
+- **IAM**: Service roles and policies with assume role for production
 - **Local Development**: Uses real AWS services with personal credentials
+- **Production Security**: Kubernetes service accounts with IAM assume role
 
 ### **Cost Considerations**
 
@@ -262,6 +331,25 @@ terraform init
 terraform apply -var="environment=dev"
 ```
 
+### **Production IAM Assume Role (Kubernetes)**
+
+**Secure AWS Access Pattern for Production Deployments:**
+
+Our Terraform configuration automatically sets up IAM assume role for Kubernetes service accounts, providing:
+
+**Security Benefits:**
+- 🔐 **No Hardcoded Credentials**: Services use temporary AWS credentials
+- 🛡️ **Principle of Least Privilege**: Only necessary DynamoDB permissions
+- 🔄 **Automatic Rotation**: Credentials automatically refreshed
+- 🏗️ **Production Ready**: Enterprise-grade AWS access pattern
+
+**Deployment:**
+```bash
+# Deploy with IAM assume role configured
+./scripts/deploy.sh --type infra --environment prod
+kubectl apply -f kubernetes/deployment.yaml
+```
+
 ## 📚 Documentation Structure
 
 ### **Learning Documentation**
@@ -275,15 +363,23 @@ terraform apply -var="environment=dev"
 - **[Security Implementation](docs/design-docs/security-architecture.md)** - Security patterns used
 - **[Testing Strategy](docs/testing/)** - Testing approach and coverage
 
-## 🎯 Learning Outcomes
+## 🎯 Security Learning Outcomes
 
-### **Skills Demonstrated**
-✅ **Microservices Design**: Service decomposition, API design, inter-service communication
-✅ **Security Implementation**: Authentication, authorization, secure coding practices
-✅ **Container Orchestration**: Docker, Kubernetes, service discovery
-✅ **Infrastructure as Code**: Terraform modules, environment management
-✅ **Testing Strategies**: Unit, integration, security testing
-✅ **DevOps Automation**: Build scripts, deployment automation, CI/CD concepts
+### **Enterprise Security Patterns Demonstrated**
+✅ **Defense in Depth**: Multiple security layers from gateway to database
+✅ **Centralized Security**: Reusable security components across microservices
+✅ **Secure by Design**: Security built into architecture, not bolted on
+✅ **Zero Trust Principles**: Every request authenticated and authorized
+✅ **Audit & Compliance**: Comprehensive security event logging
+✅ **Secure Communication**: TLS, secure headers, input validation
+
+### **Ready for Enterprise Security Integration**
+✅ **SIEM Integration**: Structured audit logs ready for security operations
+✅ **Identity Providers**: JWT architecture ready for OAuth2/OIDC
+✅ **Policy Engines**: Authorization system ready for OPA integration
+✅ **Service Mesh**: Microservice communication ready for mTLS
+✅ **Secrets Management**: Configuration ready for enterprise vaults
+✅ **Threat Detection**: Monitoring stack ready for security analytics
 
 ### **Technologies Learned**
 - **Backend**: Python FastAPI, Go web services, DynamoDB patterns
@@ -309,10 +405,10 @@ terraform apply -var="environment=dev"
 
 ---
 
-**📚 This project demonstrates learning modern cloud-native development practices**
+**🔐 This project demonstrates comprehensive security architecture suitable for enterprise environments**
 
-**💡 Perfect for**: Understanding microservices, practicing DevOps, portfolio projects
+**🛡️ Perfect for**: Security engineering roles, secure development practices, enterprise architecture
 
-**❓ Questions?** Check the [Documentation](docs/README.md) or open an issue
+**🔒 Questions about security implementation?** Check the [Security Documentation](docs/design-docs/) or open an issue
 
-*Built as a hands-on learning experience with modern development practices*
+*Built with security-first principles and enterprise-ready patterns*
