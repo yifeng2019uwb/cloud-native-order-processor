@@ -24,9 +24,6 @@ from common.exceptions import (
     # Resources (404)
     UserNotFoundException,
 
-    # Validation (422)
-    UserValidationException,
-
     # Internal Server (500) - general use by services
     InternalServerException,
 )
@@ -37,6 +34,8 @@ from common.exceptions import (
     DatabaseOperationException,
     ConfigurationException,
     ExternalServiceException,
+    # Business logic exceptions
+    InsufficientBalanceException,
 )
 
 # Import user service specific exceptions
@@ -57,6 +56,7 @@ __all__ = [
     "DatabaseOperationException",
     "ConfigurationException",
     "ExternalServiceException",
+    "InsufficientBalanceException",
 
     # User service specific exceptions
     "UserAlreadyExistsException",

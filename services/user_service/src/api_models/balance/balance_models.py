@@ -10,7 +10,7 @@ Layer 2: Business validation (in service layer)
 from datetime import datetime
 from decimal import Decimal
 from typing import List
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, ValidationError
 
 # Import centralized field validation functions
 from validation.field_validators import (
@@ -18,7 +18,7 @@ from validation.field_validators import (
 )
 
 # Import custom exceptions
-from user_exceptions import UserValidationException
+from common.exceptions.shared_exceptions import UserValidationException
 
 
 class BalanceResponse(BaseModel):
@@ -29,14 +29,13 @@ class BalanceResponse(BaseModel):
 
 class DepositRequest(BaseModel):
     """Request model for depositing funds"""
-    amount: Decimal = Field(..., gt=0, description="Deposit amount")
+    amount: Decimal = Field(..., gt=0, le=1000000, description="Deposit amount (0.01 to 1,000,000)")
 
     @field_validator('amount')
     @classmethod
     def validate_amount_format(cls, v: Decimal) -> Decimal:
         """Layer 1: Basic format validation for amount"""
         return validate_amount(v)
-
 
 class DepositResponse(BaseModel):
     """Response model for deposit operation"""
@@ -48,7 +47,7 @@ class DepositResponse(BaseModel):
 
 class WithdrawRequest(BaseModel):
     """Request model for withdrawing funds"""
-    amount: Decimal = Field(..., gt=0, description="Withdrawal amount")
+    amount: Decimal = Field(..., gt=0, le=1000000, description="Withdrawal amount (0.01 to 1,000,000)")
 
     @field_validator('amount')
     @classmethod

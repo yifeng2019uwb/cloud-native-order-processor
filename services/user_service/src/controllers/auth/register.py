@@ -24,11 +24,13 @@ from common.entities.user import UserCreate, User, Balance, BalanceCreate
 
 # Import dependencies and simplified exceptions
 from common.database import get_user_dao, get_balance_dao
-from user_exceptions import (
+from common.exceptions.shared_exceptions import (
     UserNotFoundException,
-    UserAlreadyExistsException,
     UserValidationException,
     InternalServerException
+)
+from user_exceptions import (
+    UserAlreadyExistsException
 )
 from common.security import TokenManager
 

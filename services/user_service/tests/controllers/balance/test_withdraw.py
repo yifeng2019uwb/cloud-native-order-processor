@@ -18,7 +18,7 @@ from common.exceptions import (
     InsufficientBalanceException,
     UserValidationException as CommonUserValidationException
 )
-from user_exceptions import UserValidationException, InternalServerException
+from common.exceptions.shared_exceptions import UserValidationException, InternalServerException
 
 
 class TestWithdrawFunds:

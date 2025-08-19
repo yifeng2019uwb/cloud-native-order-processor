@@ -18,7 +18,7 @@ from validation.field_validators import (
 )
 
 # Import custom exceptions
-from user_exceptions import UserValidationException
+from common.exceptions.shared_exceptions import UserValidationException
 
 
 class UserRegistrationRequest(BaseModel):

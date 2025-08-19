@@ -30,11 +30,10 @@ Comprehensive task tracking for the entire Cloud Native Order Processor system. 
 
 ### 📋 **Next Priority Items**
 1. **BACKEND-001**: Fix Validation Error Handling (500 instead of 400/422)
-2. **BACKEND-002**: Balance Validation Causes Connection Abort (RemoteDisconnected)
-3. **FRONTEND-002**: Debug API Integration Issues (Backend ready)
-4. **FRONTEND-003**: Fix Authentication State Management (Backend ready)
-5. **INFRA-001**: Complete Kubernetes Order Service Integration
-6. **Advanced Features**: New functionality development
+2. **FRONTEND-002**: Debug API Integration Issues (Backend ready)
+3. **FRONTEND-003**: Fix Authentication State Management (Backend ready)
+4. **INFRA-001**: Complete Kubernetes Order Service Integration
+5. **Advanced Features**: New functionality development
 
 ### 🧪 **Unit Testing - COMPREHENSIVE IMPLEMENTATION COMPLETED**
 **Extensive unit testing has been implemented across all backend services:**
@@ -101,27 +100,7 @@ Balance API endpoints (deposit/withdraw) return 500 Internal Server Error instea
 
 ---
 
-#### **BACKEND-002: Intermittent Connection Abort on Balance Validation Errors**
-- **Component**: User Service
-- **Type**: Bug
-- **Priority**: High
-- **Status**: 🔄 In Progress
 
-**Description:**
-During integration testing of balance API endpoints (deposit/withdraw), some invalid requests (e.g., missing fields, invalid amounts) result in a `Connection aborted` error (`RemoteDisconnected`) instead of a proper HTTP response (e.g., 400/422). This indicates the backend service is crashing or abruptly closing the connection.
-
-**Root Cause:**
-- Unhandled exceptions in the backend service that lead to process termination or connection closure.
-- Could be related to how Pydantic validation errors are propagated or handled at a lower level, or an issue with FastAPI's error handling for certain types of input.
-
-**Impact:**
-- Unreliable API behavior for invalid requests.
-- Difficult to debug and diagnose client-side.
-- Prevents comprehensive integration testing.
-
-**Acceptance Criteria:**
-- [ ] All invalid requests to balance endpoints return a consistent HTTP status code (e.g., 400, 422) and a structured error response.
-- [ ] No `Connection aborted` or `RemoteDisconnected` errors observed during invalid request testing.
 
 #### **BACKEND-003: Inventory Service Connection Issues on Invalid Asset IDs**
 - **Component**: Inventory Service
@@ -148,31 +127,7 @@ During integration testing of inventory service asset endpoints, certain invalid
 
 ---
 
-#### **BACKEND-002: Balance Validation Connection Abort**
-- **Component**: User Service
-- **Type**: Bug
-- **Priority**: High
-- **Status**: 🔄 In Progress
 
-**Description:**
-Certain invalid balance requests (e.g., missing fields) cause the server to close the connection without a response (RemoteDisconnected) instead of returning a 4xx/5xx JSON error.
-
-**Evidence (Integration Tests):**
-- `requests.exceptions.ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))`
-- Occurs in: `deposit_tests.py::test_deposit_missing_fields`, `withdraw_tests.py::test_withdraw_invalid_amount` (intermittent)
-
-**Impact:**
-- Test flakiness and inability to assert proper error contracts
-- Poor client error experience
-
-**Acceptance Criteria:**
-- [ ] Server returns a consistent JSON error (422 or 400) for malformed/invalid balance requests
-- [ ] No connection aborts for application-level validation failures
-- [ ] Integration tests run reliably without RemoteDisconnected
-
-**Notes:**
-- Possibly related to exception bubbling and serialization when bodies are `{}` or invalid types
-- Re-test alongside BACKEND-001
 
 ---
 

@@ -22,7 +22,7 @@ from common.database import get_transaction_manager
 from controllers.auth.dependencies import get_current_user
 
 # Import exceptions
-from user_exceptions import (
+from common.exceptions.shared_exceptions import (
     UserNotFoundException,
     UserValidationException,
     InternalServerException
@@ -35,7 +35,6 @@ from common.exceptions import (
     LockAcquisitionException,
     InsufficientBalanceException
 )
-from common.exceptions.shared_exceptions import UserValidationException as CommonUserValidationException
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["balance"])
@@ -119,7 +118,7 @@ async def withdraw_funds(
     except InsufficientBalanceException as e:
         logger.warning(f"Insufficient balance for withdrawal: user={current_user.username}, error={str(e)}")
         raise UserValidationException(str(e))
-    except CommonUserValidationException as e:
+    except UserValidationException as e:
         logger.warning(f"User validation error for withdrawal: user={current_user.username}, error={str(e)}")
         raise UserValidationException(str(e))
     except DatabaseOperationException as e:

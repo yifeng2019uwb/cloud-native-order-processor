@@ -168,8 +168,7 @@ class UserDepositTests:
             json={'amount': -50.00},
             timeout=self.timeout
         )
-        # Temporary: accept 500 due to BACKEND-001; revert to 400/422 when fixed
-        assert response.status_code in [400, 422, 500], f"Expected 400/422/500, got {response.status_code}"
+        assert response.status_code in [400, 422], f"Expected 400/422, got {response.status_code}"
 
         # Zero amount
         response = self.session.post(
@@ -178,8 +177,7 @@ class UserDepositTests:
             json={'amount': 0},
             timeout=self.timeout
         )
-        # Temporary: accept 500 due to BACKEND-001; revert to 400/422 when fixed
-        assert response.status_code in [400, 422, 500], f"Expected 400/422/500, got {response.status_code}"
+        assert response.status_code in [400, 422], f"Expected 400/422, got {response.status_code}"
 
         # Excessive precision
         response = self.session.post(
@@ -188,8 +186,7 @@ class UserDepositTests:
             json={'amount': 100.123456},
             timeout=self.timeout
         )
-        # Temporary: accept 500 due to BACKEND-001; revert to 400/422 when fixed
-        assert response.status_code in [400, 422, 500], f"Expected 400/422/500, got {response.status_code}"
+        assert response.status_code in [400, 422], f"Expected 400/422, got {response.status_code}"
 
         print("  ✅ Invalid amount cases correctly rejected")
 
@@ -212,8 +209,7 @@ class UserDepositTests:
         )
 
         # Should fail with validation error
-        # Temporary: accept 500 due to BACKEND-001; revert to 400/422 when fixed
-        assert response.status_code in [400, 422, 500], f"Expected 400/422/500, got {response.status_code}"
+        assert response.status_code in [400, 422], f"Expected 400/422, got {response.status_code}"
         print("  ✅ Missing fields correctly rejected")
 
     def run_all_deposit_tests(self):

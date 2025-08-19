@@ -51,8 +51,7 @@ class InventoryServiceTests:
     def test_get_nonexistent_asset(self):
         """Test getting a non-existent asset returns 404"""
         r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, "UNKNOWN_ASSET"), timeout=self.timeout)
-        # TODO: Backend currently returns 500, should be 404. Accept both for now.
-        assert r.status_code in [404, 500], f"Expected 404 or 500, got {r.status_code}"
+        assert r.status_code == 404, f"Expected 404, got {r.status_code}"
         # Should return error details
         error_data = r.json()
         assert "error" in error_data or "detail" in error_data or "message" in error_data
@@ -64,8 +63,7 @@ class InventoryServiceTests:
         for invalid_id in invalid_ids:
             try:
                 r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, invalid_id), timeout=self.timeout)
-                # TODO: Backend currently returns 500 for some invalid IDs, should be 4xx. Accept both for now.
-                assert r.status_code in [400, 404, 422, 500], f"Expected 4xx or 500 for invalid ID '{invalid_id}', got {r.status_code}"
+                assert r.status_code in [400, 404, 422], f"Expected 4xx for invalid ID '{invalid_id}', got {r.status_code}"
             except requests.exceptions.ConnectionError as e:
                 # TODO: Backend has connection issues with some invalid IDs. Log and continue.
                 print(f"    ⚠️  Connection aborted for invalid ID '{invalid_id}': {e}")

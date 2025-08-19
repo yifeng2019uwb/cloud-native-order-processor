@@ -20,7 +20,30 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
+
+# Import common exceptions (shared across services)
+from common.exceptions.shared_exceptions import (
+    EntityNotFoundException,
+    UserValidationException,
+    InvalidCredentialsException,
+    UserNotFoundException,
+    InternalServerException
+)
+
+# Import other common exceptions
+from common.exceptions import (
+    # Database exceptions
+    DatabaseOperationException,
+    # Business logic exceptions
+    InsufficientBalanceException
+)
+
+# Import user service specific exceptions
+from user_exceptions import (
+    UserAlreadyExistsException
+)
 
 # Load environment variables from services/.env
 try:
@@ -151,27 +174,6 @@ async def logging_middleware(request: Request, call_next):
 
         raise  # Re-raise the exception
 
-# Import common exceptions
-from common.exceptions.shared_exceptions import (
-    EntityNotFoundException,
-    UserValidationException,
-    InvalidCredentialsException,
-    UserNotFoundException
-)
-
-# Import common exceptions for internal handling
-from common.exceptions import DatabaseOperationException
-
-# Import error models for RFC 7807 responses
-from exception.error_models import create_problem_details
-from exception.error_codes import ErrorCode
-
-# Import user service exceptions
-from user_exceptions import (
-    UserAlreadyExistsException,
-    InternalServerException
-)
-
 # Exception handlers
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
@@ -179,21 +181,16 @@ async def validation_exception_handler(request, exc):
     logger.warning(f"Validation error: {exc}")
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors()}
+        content={"detail": str(exc)}
     )
 
 @app.exception_handler(UserValidationException)
 async def user_validation_exception_handler(request, exc):
     """Handle user validation exceptions"""
     logger.warning(f"User validation error: {exc}")
-    problem_details = create_problem_details(
-        ErrorCode.VALIDATION_ERROR,
-        "Validation error",
-        str(request.url)
-    )
     return JSONResponse(
-        status_code=problem_details.status,
-        content=problem_details.model_dump(exclude={'timestamp'})
+        status_code=422,
+        content={"detail": str(exc)}
     )
 
 @app.exception_handler(UserAlreadyExistsException)
@@ -209,14 +206,9 @@ async def user_already_exists_exception_handler(request, exc):
 async def invalid_credentials_exception_handler(request, exc):
     """Handle invalid credentials exceptions"""
     logger.warning(f"Invalid credentials: {exc}")
-    problem_details = create_problem_details(
-        ErrorCode.AUTHENTICATION_FAILED,
-        "Invalid credentials",
-        str(request.url)
-    )
     return JSONResponse(
-        status_code=problem_details.status,
-        content=problem_details.model_dump(exclude={'timestamp'})
+        status_code=401, # Changed from 422 to 401 as per RFC 7807
+        content={"detail": str(exc)}
     )
 
 @app.exception_handler(UserNotFoundException)
@@ -228,24 +220,14 @@ async def user_not_found_exception_handler(request, exc):
     # For other scenarios, it would be resource not found (404)
     # We can determine this from the request path
     if "/auth/login" in str(request.url):
-        problem_details = create_problem_details(
-            ErrorCode.AUTHENTICATION_FAILED,
-            "Invalid credentials",
-            str(request.url)
-        )
         return JSONResponse(
-            status_code=problem_details.status,
-            content=problem_details.model_dump(exclude={'timestamp'})
+            status_code=401, # Changed from 422 to 401
+            content={"detail": str(exc)}
         )
     else:
-        problem_details = create_problem_details(
-            ErrorCode.RESOURCE_NOT_FOUND,
-            "User not found",
-            str(request.url)
-        )
         return JSONResponse(
-            status_code=problem_details.status,
-            content=problem_details.model_dump(exclude={'timestamp'})
+            status_code=404, # Changed from 422 to 404
+            content={"detail": str(exc)}
         )
 
 @app.exception_handler(HTTPException)
@@ -266,6 +248,15 @@ async def database_operation_exception_handler(request, exc):
     logger.error(f"Full traceback: {traceback.format_exc()}")
     return JSONResponse(
         status_code=500,
+        content={"detail": str(exc)}
+    )
+
+@app.exception_handler(InsufficientBalanceException)
+async def insufficient_balance_exception_handler(request, exc):
+    """Handle insufficient balance exceptions"""
+    logger.warning(f"Insufficient balance: {exc}")
+    return JSONResponse(
+        status_code=400,
         content={"detail": str(exc)}
     )
 

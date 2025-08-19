@@ -8,7 +8,7 @@ from user_exceptions import UserAlreadyExistsException
 import pydantic
 from datetime import date, timedelta
 from common.exceptions.shared_exceptions import EntityAlreadyExistsException
-from user_exceptions import UserValidationException
+from common.exceptions.shared_exceptions import UserValidationException
 
 @pytest.mark.asyncio
 async def test_register_success():

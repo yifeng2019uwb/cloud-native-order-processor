@@ -176,8 +176,7 @@ class UserWithdrawTests:
             json={'amount': -25.00},
             timeout=self.timeout
         )
-        # Temporary: accept 500 due to BACKEND-001; revert to 400/422 when fixed
-        assert response.status_code in [400, 422, 500], f"Expected 400/422/500, got {response.status_code}"
+        assert response.status_code in [400, 422], f"Expected 400/422, got {response.status_code}"
 
         # Zero amount
         response = self.session.post(
@@ -186,8 +185,7 @@ class UserWithdrawTests:
             json={'amount': 0},
             timeout=self.timeout
         )
-        # Temporary: accept 500 due to BACKEND-001; revert to 400/422 when fixed
-        assert response.status_code in [400, 422, 500], f"Expected 400/422/500, got {response.status_code}"
+        assert response.status_code in [400, 422], f"Expected 400/422, got {response.status_code}"
 
         print("  ✅ Invalid amount cases correctly rejected")
 
@@ -232,8 +230,7 @@ class UserWithdrawTests:
         )
 
         # Should fail with validation error
-        # Temporary: accept 500 due to BACKEND-001; revert to 400/422 when fixed
-        assert response.status_code in [400, 422, 500], f"Expected 400/422/500, got {response.status_code}"
+        assert response.status_code in [400, 422], f"Expected 400/422, got {response.status_code}"
         print("  ✅ Missing fields correctly rejected")
 
     def run_all_withdraw_tests(self):

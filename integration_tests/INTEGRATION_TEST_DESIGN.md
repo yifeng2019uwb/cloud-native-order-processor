@@ -234,7 +234,7 @@ The integration test suite is now **COMPLETE** and provides comprehensive covera
 
 ### **Backend Issues Tracked**
 - **BACKEND-001**: Balance API validation error handling (500 instead of 400/422)
-- **BACKEND-002**: Intermittent connection issues on validation errors
+
 - **BACKEND-003**: Inventory service connection issues on invalid asset IDs
 
 ### **Test Adaptations**
