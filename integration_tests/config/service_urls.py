@@ -39,15 +39,15 @@ def detect_service_url(service_name: str, docker_port: int, k8s_port: int) -> st
 
 def get_user_service_url() -> str:
     """Get User Service URL with automatic detection"""
-    return detect_service_url("user", docker_port=8000, k8s_port=30001)
+    return detect_service_url("user", docker_port=8000, k8s_port=30004)
 
 def get_inventory_service_url() -> str:
     """Get Inventory Service URL with automatic detection"""
-    return detect_service_url("inventory", docker_port=8001, k8s_port=30002)
+    return detect_service_url("inventory", docker_port=8001, k8s_port=30005)
 
 def get_order_service_url() -> str:
     """Get Order Service URL with automatic detection"""
-    return detect_service_url("order", docker_port=8002, k8s_port=30003)
+    return detect_service_url("order", docker_port=8002, k8s_port=30006)
 
 # Service URLs (detected at import time)
 USER_SERVICE_URL = get_user_service_url()

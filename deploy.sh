@@ -64,8 +64,6 @@ Deployment Order (for 'all'):
 EOF
 }
 
-
-
 # Show development URLs with new port configuration
 show_dev_urls() {
     log_info "Development URLs (new port configuration):"
@@ -100,12 +98,6 @@ check_prerequisites() {
 
     log_success "Prerequisites check passed"
 }
-
-
-
-
-
-
 
 # Deploy infrastructure
 deploy_infrastructure() {
@@ -250,6 +242,10 @@ deploy_gateway() {
         log_info "Building gateway Docker image..."
         docker build --no-cache -t order-processor-gateway:latest -f docker/gateway/Dockerfile .
 
+        # Load image into Kind cluster
+        log_info "Loading gateway Docker image into Kind cluster..."
+        kind load docker-image order-processor-gateway:latest --name order-processor
+
         # Deploy to Kubernetes using working pattern
         log_info "Deploying gateway to Kubernetes..."
         kubectl apply -k kubernetes/base/
@@ -291,6 +287,10 @@ deploy_frontend() {
         log_info "Building frontend Docker image..."
         docker build --no-cache -t order-processor-frontend:latest -f docker/frontend/Dockerfile .
 
+        # Load image into Kind cluster
+        log_info "Loading frontend image into Kind cluster..."
+        kind load docker-image order-processor-frontend:latest --name order-processor
+
         # Deploy to Kubernetes using working pattern
         log_info "Deploying frontend to Kubernetes..."
         kubectl apply -k kubernetes/base/
@@ -323,12 +323,53 @@ deploy_frontend() {
 deploy_services() {
     log_info "Deploying all services to $ENVIRONMENT..."
 
+    if [[ "$ENVIRONMENT" == "dev" ]]; then
+        # Dev: Build all Docker images first, then deploy to Kubernetes
+        log_info "Building all service Docker images..."
+        cd "$ROOT_DIR"
 
+        # Build user service
+        log_info "Building user service Docker image..."
+        docker build --no-cache -t order-processor-user_service:latest -f docker/user-service/Dockerfile .
 
-    # Deploy services
-    deploy_service "user"
-    deploy_service "inventory"
-    deploy_service "order"
+        # Build inventory service
+        log_info "Building inventory service Docker image..."
+        docker build --no-cache -t order-processor-inventory_service:latest -f docker/inventory-service/Dockerfile .
+
+        # Build order service
+        log_info "Building order service Docker image..."
+        docker build --no-cache -t order-processor-order_service:latest -f docker/order-service/Dockerfile .
+
+        # Load images into Kind cluster (required for local Kind deployment)
+        log_info "Loading Docker images into Kind cluster..."
+        kind load docker-image order-processor-user_service:latest --name order-processor
+        kind load docker-image order-processor-inventory_service:latest --name order-processor
+        kind load docker-image order-processor-order_service:latest --name order-processor
+
+        # Deploy to Kubernetes
+        log_info "Applying Kubernetes manifests for all services..."
+        kubectl apply -k kubernetes/base/
+        kubectl apply -k kubernetes/dev/
+
+        # Wait for deployments to be ready
+        log_info "Waiting for service deployments to be ready..."
+        kubectl rollout status deployment/user-service -n order-processor --timeout=300s
+        kubectl rollout status deployment/inventory-service -n order-processor --timeout=300s
+        kubectl rollout status deployment/order-service -n order-processor --timeout=300s
+
+        log_success "All services deployed to Kubernetes"
+
+    elif [[ "$ENVIRONMENT" == "prod" ]]; then
+        # Prod: Kubernetes deployment
+        log_info "Deploying services to Kubernetes..."
+        kubectl apply -k kubernetes/base/
+        kubectl apply -k kubernetes/prod/
+
+        # Wait for rollouts
+        kubectl rollout status deployment/user-service -n order-processor --timeout=300s
+        kubectl rollout status deployment/inventory-service -n order-processor --timeout=300s
+        kubectl rollout status deployment/order-service -n order-processor --timeout=300s
+    fi
 
     log_success "All services deployment completed"
 }
@@ -370,13 +411,6 @@ deploy_all() {
         log_info "Service Status:"
         kubectl get services -n order-processor --no-headers 2>/dev/null | while read -r service type cluster_ip external_ip ports age; do
             log_info "  $service: $type $ports"
-        done
-
-        # Show cluster status
-        log_info ""
-        log_info "Cluster Status:"
-        kubectl get nodes --no-headers 2>/dev/null | while read -r node status rest; do
-            log_info "  $node: $status"
         done
     elif [[ "$ENVIRONMENT" == "prod" ]]; then
         log_info "Production deployment completed"
@@ -457,13 +491,40 @@ main() {
             deploy_services
             ;;
         user)
-            deploy_service "user"
+            log_info "Deploying user service to $ENVIRONMENT..."
+            if [[ "$ENVIRONMENT" == "dev" ]]; then
+                cd "$ROOT_DIR"
+                docker build --no-cache -t order-processor-user_service:latest -f docker/user-service/Dockerfile .
+                kind load docker-image order-processor-user_service:latest --name order-processor
+                kubectl apply -k kubernetes/base/
+                kubectl apply -k kubernetes/dev/
+                kubectl rollout status deployment/user-service -n order-processor --timeout=300s
+                log_info "User service accessible at: http://localhost:30004"
+            fi
             ;;
         inventory)
-            deploy_service "inventory"
+            log_info "Deploying inventory service to $ENVIRONMENT..."
+            if [[ "$ENVIRONMENT" == "dev" ]]; then
+                cd "$ROOT_DIR"
+                docker build --no-cache -t order-processor-inventory_service:latest -f docker/inventory-service/Dockerfile .
+                kind load docker-image order-processor-inventory_service:latest --name order-processor
+                kubectl apply -k kubernetes/base/
+                kubectl apply -k kubernetes/dev/
+                kubectl rollout status deployment/inventory-service -n order-processor --timeout=300s
+                log_info "Inventory service accessible at: http://localhost:30005"
+            fi
             ;;
         order)
-            deploy_service "order"
+            log_info "Deploying order service to $ENVIRONMENT..."
+            if [[ "$ENVIRONMENT" == "dev" ]]; then
+                cd "$ROOT_DIR"
+                docker build --no-cache -t order-processor-order_service:latest -f docker/order-service/Dockerfile .
+                kind load docker-image order-processor-order_service:latest --name order-processor
+                kubectl apply -k kubernetes/base/
+                kubectl apply -k kubernetes/dev/
+                kubectl rollout status deployment/order-service -n order-processor --timeout=300s
+                log_info "Order service accessible at: http://localhost:30006"
+            fi
             ;;
         monitoring)
             deploy_monitoring
