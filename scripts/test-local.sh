@@ -313,14 +313,11 @@ run_build_tests() {
         build_args="$build_args --verbose"
     fi
 
-    log_info "Calling: ./scripts/build-test.sh $build_args"
+    log_info "Build and test is now handled by individual component dev.sh scripts"
+    log_info "Use: ./frontend/dev.sh build, ./gateway/dev.sh build, etc."
 
-    if ! ./scripts/build-test.sh $build_args; then
-        log_error "Build and test failed"
-        return 1
-    fi
-
-    log_success "Build and validation tests completed successfully"
+    # Note: scripts/build-test.sh was removed in favor of component dev.sh scripts
+    log_warning "Build functionality moved to component dev.sh scripts"
     return 0
 }
 
@@ -438,14 +435,11 @@ deploy_infrastructure() {
         deploy_args="$deploy_args --dry-run"
     fi
 
-    log_info "Calling: ./scripts/deploy.sh $deploy_args"
+    log_info "Infrastructure deployment is now handled by root deploy.sh"
+    log_info "Use: ./deploy.sh infrastructure [dev|prod] from project root"
 
-    if ! ./scripts/deploy.sh $deploy_args; then
-        log_error "Infrastructure deployment failed"
-        return 1
-    fi
-
-    log_success "Infrastructure deployed successfully"
+    # Note: scripts/deploy.sh was removed in favor of root deploy.sh
+    log_warning "Deploy functionality moved to root deploy.sh script"
     return 0
 }
 
@@ -535,14 +529,11 @@ destroy_infrastructure() {
         destroy_args="$destroy_args --dry-run"
     fi
 
-    log_info "Calling: ./scripts/destroy.sh $destroy_args"
+    log_info "Infrastructure destruction is now handled by root deploy.sh"
+    log_info "Use: ./deploy.sh destroy [dev|prod] from project root"
 
-    if ! ./scripts/destroy.sh $destroy_args; then
-        log_error "Infrastructure destruction failed"
-        return 1
-    fi
-
-    log_success "Infrastructure destroyed successfully"
+    # Note: destroy.sh was removed in favor of root deploy.sh
+    log_warning "Destroy functionality moved to root deploy.sh script"
     return 0
 }
 
