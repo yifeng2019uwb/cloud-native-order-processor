@@ -54,7 +54,7 @@
 
 **Perfect for**: Learning secure development, portfolio demonstration, security engineering practice
 
-## 🛠️ System Overview & Deployment
+## 🛠️ System Overview
 
 | **Component** | **Technology** | **Purpose** | **Status** | **Deployment** |
 |---------------|----------------|-------------|------------|----------------|
@@ -68,13 +68,7 @@
 | **Container** | Docker + K8s | Orchestration | ✅ Production | Local/Cloud |
 | **Monitoring** | Prometheus + Grafana | Observability | 🔄 In Progress | K8s |
 
-### **Deployment Options**
-
-| **Environment** | **Method** | **Use Case** | **Commands** |
-|-----------------|------------|--------------|--------------|
-| **Local Dev** | Docker Compose | Quick start, development | `./scripts/deploy-docker.sh -bd all` |
-| **Local K8s** | Kind cluster | Learning, realistic | `kind create cluster` + `./scripts/deploy.sh --type k8s --environment dev` |
-| **Production** | EKS + AWS | Production deployment | `./scripts/deploy.sh --type k8s --environment prod` |
+**Deployment**: Docker Compose (local dev) | Kind cluster (local K8s) | EKS (production)
 
 ## 🚀 Quick Start
 
@@ -204,53 +198,21 @@ kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
 
 ## 🔧 Development Workflow
 
-### **Component Development**
-```bash
-# Build and test individual components
-./frontend/build.sh          # Frontend: npm ci, build, test
-./gateway/build.sh           # Gateway: go build, test
-./services/build.sh          # Services: venv, pip install, pytest
-
-# Full development cycle
-./scripts/test-local.sh --environment dev --dev-cycle
-```
-
-### **Integration Testing**
-```bash
-# Comprehensive integration tests
-cd integration_tests
-./run_all_tests.sh all      # All services
-./run_all_tests.sh user     # User service only
-./run_all_tests.sh smoke    # Health checks only
-```
+**For detailed development workflow, see:**
+- **[Development Guide](docs/deployment-guide.md)** - Complete development workflow
+- **[Build Process](services/build.md)** - Build automation details
+- **[Testing Strategy](integration_tests/README.md)** - Testing approach and commands
 
 ## 💰 AWS Integration
 
-### **Current AWS Usage**
-- **DynamoDB**: User data, orders, assets (pay-per-use)
-- **IAM**: Service roles and policies with assume role for production
-- **Local Development**: Uses real AWS services with personal credentials
-- **Production Security**: Kubernetes service accounts with IAM assume role
+**AWS services used:**
+- **DynamoDB**: User data, orders, assets
+- **IAM**: Service roles with assume role for production
+- **Infrastructure**: Terraform-managed with IAM role assumption
 
-### **Security Implementation Details**
-
-| **Security Pattern** | **Implementation** | **Technology** | **Status** | **Enterprise Ready** |
-|---------------------|-------------------|----------------|------------|---------------------|
-| **JWT Authentication** | Centralized token service | Python + bcrypt | ✅ Complete | Ready for OAuth2/OIDC |
-| **RBAC Authorization** | Role-based access control | FastAPI + middleware | ✅ Complete | Ready for ABAC/OPA |
-| **Input Validation** | Pydantic models + exceptions | Python + RFC 7807 | ✅ Complete | Ready for WAF integration |
-| **Audit Logging** | Security event tracking | Structured JSON logs | ✅ Complete | Ready for SIEM integration |
-| **IAM Role Assumption** | AWS temporary credentials | Terraform + K8s | ✅ Complete | Ready for production |
-| **API Gateway Security** | Request validation + rate limiting | Go + middleware | ✅ Complete | Ready for advanced threats |
-| **Secrets Management** | Environment-based config | K8s secrets + env vars | ✅ Complete | Ready for Vault integration |
-
-### **AWS & Infrastructure Setup**
-
-**For detailed setup instructions, see:**
-- **[AWS Configuration](docs/deployment-guide.md#aws-setup)** - Credentials and IAM setup
-- **[Terraform Infrastructure](terraform/README.md)** - Infrastructure as code details
-- **[Kubernetes Deployment](kubernetes/README.md)** - Production deployment with IAM assume role
-- **[Security Implementation](docs/design-docs/)** - Detailed security patterns and configuration
+**For detailed setup, see:**
+- **[AWS Configuration](docs/deployment-guide.md)** - Complete setup guide
+- **[Terraform Infrastructure](terraform/README.md)** - Infrastructure details
 
 ## 📚 Documentation Structure
 
@@ -265,7 +227,7 @@ cd integration_tests
 - **[Security Implementation](docs/design-docs/security-architecture.md)** - Security patterns used
 - **[Testing Strategy](docs/testing/)** - Testing approach and coverage
 
-## 🎯 Security Learning Outcomes
+## 🎯 Learning Outcomes
 
 **Security engineering skills demonstrated:**
 - 🔐 **Enterprise Security**: JWT, RBAC, IAM role assumption, defense-in-depth
@@ -273,10 +235,9 @@ cd integration_tests
 - 🛡️ **Infrastructure Security**: Kubernetes policies and AWS security patterns
 - 📊 **Security Monitoring**: Audit logging and compliance tracking
 
-**Technologies learned:**
-- **Backend**: Python FastAPI, Go web services, DynamoDB
-- **Infrastructure**: Kubernetes, Docker, Terraform
-- **Security**: JWT, RBAC, secure configuration management
+**For detailed learning outcomes, see:**
+- **[Security Documentation](docs/design-docs/)** - Complete security patterns
+- **[Architecture Decisions](docs/design-docs/)** - Technology choices and rationale
 
 ## ⚠️ Current Limitations
 
