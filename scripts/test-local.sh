@@ -333,15 +333,9 @@ run_frontend_tests() {
         return 0
     fi
 
-    local build_args=""
+    log_info "Calling: ./frontend/dev.sh build"
 
-    if [[ "$VERBOSE" == "true" ]]; then
-        build_args="$build_args -v"
-    fi
-
-    log_info "Calling: ./frontend/build.sh $build_args"
-
-    if ! ./frontend/build.sh $build_args; then
+    if ! ./frontend/dev.sh build; then
         log_error "Frontend build and test failed"
         return 1
     fi
@@ -359,15 +353,9 @@ run_gateway_tests() {
         return 0
     fi
 
-    local build_args=""
+    log_info "Calling: ./gateway/dev.sh build"
 
-    if [[ "$VERBOSE" == "true" ]]; then
-        build_args="$build_args -v"
-    fi
-
-    log_info "Calling: ./gateway/build.sh $build_args"
-
-    if ! ./gateway/build.sh $build_args; then
+    if ! ./gateway/dev.sh build; then
         log_error "Gateway build and test failed"
         return 1
     fi
@@ -385,16 +373,25 @@ run_services_tests() {
         return 0
     fi
 
-    local build_args=""
 
-    if [[ "$VERBOSE" == "true" ]]; then
-        build_args="$build_args --verbose"
-    fi
 
-    log_info "Calling: cd services && ./build.sh $build_args"
+    log_info "Calling: Individual service dev.sh scripts"
 
-    if ! (cd services && ./build.sh $build_args); then
-        log_error "Backend services build and test failed"
+    # Loop through each service and run dev.sh build
+    local failed_services=()
+    for service_dir in services/*/; do
+        if [[ -d "$service_dir" ]] && [[ -f "${service_dir}dev.sh" ]]; then
+            local service_name=$(basename "$service_dir")
+            log_info "Building service: $service_name"
+
+            if ! (cd "$service_dir" && ./dev.sh build); then
+                failed_services+=("$service_name")
+            fi
+        fi
+    done
+
+    if [[ ${#failed_services[@]} -gt 0 ]]; then
+        log_error "Failed services: ${failed_services[*]}"
         return 1
     fi
 

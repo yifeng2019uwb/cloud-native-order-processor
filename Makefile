@@ -131,62 +131,74 @@ clean:
 build: build-frontend build-gateway build-services
 	$(call log_success,"All components built successfully")
 
-# Build frontend using new build script
+# Build frontend using new dev.sh script
 build-frontend:
 	$(call log_info,"Building frontend...")
-	@./frontend/build.sh -v
+	@./frontend/dev.sh build
 	$(call log_success,"Frontend built")
 
-# Build gateway using new build script
+# Build gateway using new dev.sh script
 build-gateway:
 	$(call log_info,"Building gateway...")
-	@./gateway/build.sh -v
+	@./gateway/dev.sh build
 	$(call log_success,"Gateway built")
 
-# Build backend services using new build script
+# Build backend services using new dev.sh scripts
 build-services:
 	$(call log_info,"Building backend services...")
-	@./services/build.sh -v
+	@for service_dir in services/*/; do \
+		if [ -d "$$service_dir" ] && [ -f "$$service_dir/dev.sh" ]; then \
+			service_name=$$(basename "$$service_dir"); \
+			echo "Building service: $$service_name"; \
+			(cd "$$service_dir" && ./dev.sh build); \
+		fi; \
+	done
 	$(call log_success,"Backend services built")
 
 # Individual service builds (for compatibility)
 build-user-service:
 	$(call log_info,"Building user service...")
-	@cd services && ./build.sh -v
+	@cd services/user_service && ./dev.sh build
 	$(call log_success,"User service built")
 
 build-inventory-service:
 	$(call log_info,"Building inventory service...")
-	@cd services && ./build.sh -v
+	@cd services/inventory_service && ./dev.sh build
 	$(call log_success,"Inventory service built")
 
 # Run all unit tests using new build scripts
 test: test-frontend test-gateway test-services
 	$(call log_success,"All unit tests passed")
 
-# Test frontend using new build script
+# Test frontend using new dev.sh script
 test-frontend:
 	$(call log_info,"Running frontend tests...")
-	@./frontend/build.sh --test-only -v
+	@./frontend/dev.sh test
 
-# Test gateway using new build script
+# Test gateway using new dev.sh script
 test-gateway:
 	$(call log_info,"Running gateway tests...")
-	@./gateway/build.sh --test-only -v
+	@./gateway/dev.sh test
 
-# Test backend services using new build script
+# Test backend services using new dev.sh scripts
 test-services:
 	$(call log_info,"Running backend services tests...")
-	@./services/build.sh --test-only -v
+	@for service_dir in services/*/; do \
+		if [ -d "$$service_dir" ] && [ -f "$$service_dir/dev.sh" ]; then \
+			service_name=$$(basename "$$service_dir"); \
+			echo "Testing service: $$service_name"; \
+			(cd "$$service_dir" && ./dev.sh test); \
+		fi; \
+	done
 
 # Individual service tests (for compatibility)
 test-user-service:
 	$(call log_info,"Running user service tests...")
-	@cd services && ./build.sh --test-only -v
+	@cd services/user_service && ./dev.sh test
 
 test-inventory-service:
 	$(call log_info,"Running inventory service tests...")
-	@cd services && ./build.sh --test-only -v
+	@cd services/inventory_service && ./dev.sh test
 
 # Deploy to Kubernetes
 deploy: deploy-k8s
@@ -300,6 +312,8 @@ cli-test:
 
 # ====================
 # COMPATIBILITY TARGETS (for CI/CD and documentation)
+# These targets maintain backward compatibility with old build.sh scripts
+# New development should use the dev.sh targets above
 # ====================
 
 # Backward compatibility for services Makefile

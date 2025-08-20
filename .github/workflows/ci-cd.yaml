@@ -53,7 +53,7 @@ jobs:
 
     # Main frontend build step for CI/CD
     - name: Build and Test Frontend
-      run: ./frontend/build.sh -v
+      run: ./frontend/dev.sh build
 
     # Setup Go for gateway
     - name: Setup Go
@@ -82,11 +82,19 @@ jobs:
 
     # Build and test gateway
     - name: Build and Test Gateway
-      run: ./gateway/build.sh -v
+      run: ./gateway/dev.sh build
 
     # Build and test backend services
     - name: Build and Test Backend Services
-      run: ./services/build.sh -v
+      run: |
+        # Loop through each service and run dev.sh build
+        for service_dir in services/*/; do
+          if [[ -d "$service_dir" ]] && [[ -f "${service_dir}dev.sh" ]]; then
+            service_name=$(basename "$service_dir")
+            echo "Building service: $service_name"
+            (cd "$service_dir" && ./dev.sh build)
+          fi
+        done
 
     - name: Upload test coverage
       uses: actions/upload-artifact@v4
