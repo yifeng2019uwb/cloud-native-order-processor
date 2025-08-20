@@ -25,6 +25,7 @@ This package contains all design documentation for the Cloud Native Order Proces
 - `frontend-design.md` - Frontend architecture and design patterns
 - `kubernetes-design.md` - Kubernetes deployment architecture and design decisions
 - `monitoring-design.md` - Monitoring and observability system design decisions
+- `logging-standards.md` - Base logging standards and implementation patterns
 - `integration-test-design.md` - Integration testing architecture and design decisions
 - `iam-redis-setup.md` - IAM and Redis setup design decisions
 

@@ -24,6 +24,7 @@ SERVICE_NAME=""
 VERBOSE=false
 DRY_RUN=false
 NO_CACHE=true
+INCLUDE_MONITORING=false
 
 # Usage function
 show_usage() {
@@ -43,6 +44,7 @@ OPTIONS:
     -v, --verbose                      Enable verbose output
     --dry-run                          Show what would happen (terraform plan only)
     --cache                            Build Docker images with cache (k8s only, default: no-cache)
+    --monitoring                       Include monitoring stack deployment
     -h, --help                         Show this help message
 
 EXAMPLES:
@@ -60,6 +62,9 @@ EXAMPLES:
 
     # Deploy everything
     $0 --type all --environment dev
+
+    # Deploy with monitoring
+    $0 --type k8s --environment dev --monitoring
 
 EOF
 }
@@ -111,6 +116,10 @@ parse_arguments() {
                 ;;
             --cache)
                 NO_CACHE=false
+                shift
+                ;;
+            --monitoring)
+                INCLUDE_MONITORING=true
                 shift
                 ;;
             -h|--help)
@@ -326,6 +335,23 @@ deploy_kubernetes() {
     fi
 
     cd "$k8s_dir"
+
+    # Deploy monitoring if requested
+    if [[ "$INCLUDE_MONITORING" == "true" ]]; then
+        log_info "Deploying monitoring stack..."
+        if ! kubectl apply -k base/; then
+            log_error "Failed to deploy monitoring stack"
+            exit 1
+        fi
+
+        log_info "Waiting for monitoring pods to be ready..."
+        kubectl wait --for=condition=ready pod -l component=monitoring -n order-processor --timeout=300s || {
+            log_warning "Some monitoring pods may not be ready yet"
+        }
+
+        log_success "Monitoring stack deployed"
+        log_info "Access Grafana at: http://localhost:30001 (admin/admin123)"
+    fi
 
     # Check if kubectl is installed
     if ! command -v kubectl &> /dev/null; then

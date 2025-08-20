@@ -1,20 +1,19 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-metadata:
-  name: order-processor-base
-  namespace: order-processor
+namespace: order-processor
 
 resources:
   - namespace.yaml
   - service-account.yaml
+  - redis.yaml
   - logging-config.yaml
-  - redis.yaml  # Add Redis
+  - monitoring.yaml  # Add monitoring infrastructure
 
 commonLabels:
-  app: order-processor
-  environment: base
-  version: v1.0.0
+  app.kubernetes.io/name: order-processor
+  app.kubernetes.io/part-of: order-processor
+  app.kubernetes.io/component: base
 
 commonAnnotations:
-  description: "Base configuration for Order Processor application"
+  kustomize.config.k8s.io/needs-hash-suffix: "true"

@@ -93,19 +93,18 @@ cd cloud-native-order-processor
 - **[Kubernetes Setup](kubernetes/README.md)** - Local K8s deployment
 - **[Service Health Checks](docs/deployment-guide.md#verification)** - How to verify everything works
 
-## 🎮 Live Demo
+## 🎮 Local Demo
 
-> **🚧 In Progress** - Working on public deployment
+**Available now:**
+- Frontend: http://localhost:3000 (after running deploy script)
+- Gateway: http://localhost:8080/health
+- Complete system running locally with Docker
 
-**What you'll be able to see:**
-- **Frontend Interface**: Modern React dashboard
-- **API Documentation**: Interactive Swagger/OpenAPI docs
-- **Service Health**: Real-time system status
-- **Performance Metrics**: Response times, throughput
-
-**Demo Link**: Coming soon
-
-**Current Status**: Local development complete, working on public deployment
+**Quick start:**
+```bash
+./scripts/deploy-docker.sh -bd all
+# Then visit http://localhost:3000
+```
 
 ## 🐳 Docker Deployment
 
@@ -176,25 +175,14 @@ kubectl port-forward svc/gateway 8080:8080 -n order-processor
 - **Namespaces**: Environment isolation
 - **Kustomize**: Environment-specific configurations
 
-## 📊 Observability (Work in Progress)
+## 📊 Monitoring
 
-### **Monitoring Stack**
-```bash
-# Deploy monitoring to Kubernetes
-kubectl create namespace monitoring
-helm install monitoring prometheus-community/kube-prometheus-stack -n monitoring
+**Currently implemented:**
+- ✅ Health checks on all services
+- ✅ Structured JSON logging with correlation IDs
+- ✅ Prometheus metrics collection setup
 
-# Access Grafana
-kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
-# Default: admin/prom-operator
-```
-
-### **Current Monitoring**
-- ✅ **Health Checks**: All services expose `/health` endpoints
-- ✅ **Structured Logging**: JSON logs with correlation IDs
-- ✅ **Basic Metrics**: Response times, error rates
-- 🔄 **Dashboards**: Grafana dashboards in development
-- 📋 **Alerting**: AlertManager configuration planned
+**For advanced monitoring setup:** See [Monitoring Design](docs/design-docs/monitoring-design.md) and [Monitoring Guide](monitoring/README.md).
 
 ## 🔧 Development Workflow
 
@@ -242,10 +230,10 @@ kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
 ## ⚠️ Current Limitations
 
 **This is a learning project, so:**
-- 🏠 **Local Focus**: Primarily designed for local development
-- 💰 **Cost Conscious**: Avoids expensive AWS services like EKS
-- 🔄 **Work in Progress**: Some features like advanced monitoring are still being implemented
+- 🏠 **Local Focus**: Primarily designed for local development and learning
+- 💰 **Cost Conscious**: Uses cost-effective AWS services (DynamoDB vs RDS)
 - 📚 **Learning Priority**: Code quality and learning over production optimization
+- 🔐 **Security Focus**: Enterprise security patterns over advanced features
 
 ## 🚀 Getting Started
 
