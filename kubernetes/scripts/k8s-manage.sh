@@ -105,7 +105,7 @@ deploy() {
     kubectl apply -k .
 
     echo "✅ Deployment completed"
-    echo "🔗 Frontend accessible at: http://localhost:30004"
+    echo "🔗 Frontend accessible at: http://localhost:30003"
     echo "🔗 Starting automatic port forwarding to localhost:3000..."
 
     # Start port forwarding in background

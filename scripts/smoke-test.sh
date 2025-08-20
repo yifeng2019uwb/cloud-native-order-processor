@@ -6,9 +6,9 @@
 set -e
 
 # Configuration
-API_BASE_URL="${API_BASE_URL:-http://localhost:30000}"
-FRONTEND_URL="${FRONTEND_URL:-http://localhost:30004}"
-GATEWAY_URL="${GATEWAY_URL:-http://localhost:30000}"
+API_BASE_URL="${API_BASE_URL:-http://localhost:30002}"
+FRONTEND_URL="${FRONTEND_URL:-http://localhost:30003}"
+GATEWAY_URL="${GATEWAY_URL:-http://localhost:30002}"
 USER_SERVICE_URL="${USER_SERVICE_URL:-http://localhost:8000}"
 INVENTORY_SERVICE_URL="${INVENTORY_SERVICE_URL:-http://localhost:8001}"
 ORDER_SERVICE_URL="${ORDER_SERVICE_URL:-http://localhost:8002}"
@@ -95,8 +95,8 @@ setup_port_forwarding() {
     if ! curl -s --max-time 5 "$GATEWAY_URL/health" > /dev/null 2>&1; then
         log_warning "Gateway not accessible. Setting up port forwarding..."
         pkill -f "kubectl port-forward" || true
-        kubectl port-forward svc/gateway 30000:8080 -n order-processor &
-        kubectl port-forward svc/frontend 30004:80 -n order-processor &
+        	kubectl port-forward svc/gateway 30002:8080 -n order-processor &
+	kubectl port-forward svc/frontend 30003:80 -n order-processor &
         kubectl port-forward svc/user-service 8000:8000 -n order-processor &
         kubectl port-forward svc/inventory-service 8001:8001 -n order-processor &
         kubectl port-forward svc/order-service 8002:8002 -n order-processor &

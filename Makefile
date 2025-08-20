@@ -83,16 +83,16 @@ help:
 dev-cycle: clean build test deploy test-integration
 	$(call log_success,"Complete development cycle finished successfully!")
 	$(call log_info,"Services are accessible at:")
-	@echo "  Gateway: http://localhost:30000"
-	@echo "  Frontend: http://localhost:30004"
+	@echo "  Gateway: http://localhost:30002"
+	@echo "  Frontend: http://localhost:30003"
 	@echo "  CLI: ./scripts/cli-client.sh help"
 
 # Quick development cycle (for rapid iteration)
 quick-cycle: build deploy test-smoke
 	$(call log_success,"Quick development cycle finished successfully!")
 	$(call log_info,"Services are accessible at:")
-	@echo "  Gateway: http://localhost:30000"
-	@echo "  Frontend: http://localhost:30004"
+	@echo "  Gateway: http://localhost:30002"
+	@echo "  Frontend: http://localhost:30003"
 	@echo "  CLI: ./scripts/cli-client.sh help"
 
 # Local testing using test-local.sh script (mirrors CI/CD)
@@ -225,16 +225,16 @@ deploy-k8s:
 	@kubectl wait --for=condition=available --timeout=300s deployment/inventory-service -n $(K8S_NAMESPACE)
 	$(call log_info,"Setting up port forwarding...")
 	@pkill -f "kubectl port-forward" || true
-	@kubectl port-forward svc/gateway 30000:8080 -n $(K8S_NAMESPACE) &
-	@kubectl port-forward svc/frontend 30004:80 -n $(K8S_NAMESPACE) &
-	@kubectl port-forward svc/user-service 30001:30001 -n $(K8S_NAMESPACE) &
-	@kubectl port-forward svc/inventory-service 30002:30002 -n $(K8S_NAMESPACE) &
+	@kubectl port-forward svc/gateway 30002:8080 -n $(K8S_NAMESPACE) &
+	@kubectl port-forward svc/frontend 30003:80 -n $(K8S_NAMESPACE) &
+	@kubectl port-forward svc/user-service 30004:8000 -n $(K8S_NAMESPACE) &
+	@kubectl port-forward svc/inventory-service 30005:8001 -n $(K8S_NAMESPACE) &
 	@sleep 5
 	$(call log_success,"Kubernetes deployment completed with port forwarding:")
-	@echo "  Gateway: http://localhost:30000"
-	@echo "  Frontend: http://localhost:30004"
-	@echo "  User Service: http://localhost:30001"
-	@echo "  Inventory Service: http://localhost:30002"
+	@echo "  Gateway: http://localhost:30002"
+	@echo "  Frontend: http://localhost:30003"
+	@echo "  User Service: http://localhost:30004"
+	@echo "  Inventory Service: http://localhost:30005"
 
 # Deploy using Docker Compose
 deploy-docker:
@@ -247,16 +247,16 @@ deploy-docker:
 port-forward:
 	$(call log_info,"Setting up port forwarding...")
 	@pkill -f "kubectl port-forward" || true
-	@kubectl port-forward svc/gateway 30000:8080 -n $(K8S_NAMESPACE) &
-	@kubectl port-forward svc/frontend 30004:80 -n $(K8S_NAMESPACE) &
-	@kubectl port-forward svc/user-service 30001:30001 -n $(K8S_NAMESPACE) &
-	@kubectl port-forward svc/inventory-service 30002:30002 -n $(K8S_NAMESPACE) &
+	@kubectl port-forward svc/gateway 30002:8080 -n $(K8S_NAMESPACE) &
+	@kubectl port-forward svc/frontend 30003:80 -n $(K8S_NAMESPACE) &
+	@kubectl port-forward svc/user-service 30004:8000 -n $(K8S_NAMESPACE) &
+	@kubectl port-forward svc/inventory-service 30005:8001 -n $(K8S_NAMESPACE) &
 	@sleep 3
 	$(call log_success,"Port forwarding set up:")
-	@echo "  Gateway: http://localhost:30000"
-	@echo "  Frontend: http://localhost:30004"
-	@echo "  User Service: http://localhost:30001"
-	@echo "  Inventory Service: http://localhost:30002"
+	@echo "  Gateway: http://localhost:30002"
+	@echo "  Frontend: http://localhost:30003"
+	@echo "  User Service: http://localhost:30004"
+	@echo "  Inventory Service: http://localhost:30005"
 
 # Run integration tests
 test-integration:
@@ -295,9 +295,9 @@ status:
 # Check health of all services
 health:
 	$(call log_info,"Checking service health...")
-	@curl -s http://localhost:30000/health | jq . || echo "Gateway health check failed"
-	@curl -s http://localhost:30001/health | jq . || echo "User service health check failed"
-	@curl -s http://localhost:30002/health | jq . || echo "Inventory service health check failed"
+	@curl -s http://localhost:30002/health | jq . || echo "Gateway health check failed"
+	@curl -s http://localhost:30004/health | jq . || echo "User service health check failed"
+	@curl -s http://localhost:30005/health | jq . || echo "Inventory service health check failed"
 
 # CLI client help
 cli-help:

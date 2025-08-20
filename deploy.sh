@@ -66,6 +66,17 @@ EOF
 
 
 
+# Show development URLs with new port configuration
+show_dev_urls() {
+    log_info "Development URLs (new port configuration):"
+    log_info "  Frontend: http://localhost:30003"
+    log_info "  Gateway:  http://localhost:30002"
+    log_info "  Grafana:  http://localhost:30001 (admin/admin123)"
+    log_info "  User Service: http://localhost:30004"
+    log_info "  Inventory Service: http://localhost:30005"
+    log_info "  Order Service: http://localhost:30006"
+}
+
 # Check prerequisites
 check_prerequisites() {
     log_info "Checking deployment prerequisites..."
@@ -198,13 +209,6 @@ deploy_service() {
         log_info "Deploying $service to local Kubernetes..."
         cd "$ROOT_DIR"
 
-
-
-        # Deploy to local K8s
-        log_info "Deploying $service to local Kubernetes..."
-
-
-
         # Build service Docker image first (like working scripts)
         log_info "Building $service Docker image..."
         docker build --no-cache -t order-processor-${service}_service:latest -f docker/${service}-service/Dockerfile .
@@ -213,16 +217,21 @@ deploy_service() {
         log_info "Applying Kubernetes manifests for $service..."
         kubectl apply -k kubernetes/base/
         kubectl apply -k kubernetes/dev/
+
+        # Wait for deployment to be ready
+        log_info "Waiting for $service deployment to be ready..."
+        kubectl rollout status deployment/${service}-service -n order-processor --timeout=300s
+
         log_success "Service '$service' deployed to Kubernetes"
 
-        elif [[ "$ENVIRONMENT" == "prod" ]]; then
+    elif [[ "$ENVIRONMENT" == "prod" ]]; then
         # Prod: Kubernetes deployment
         log_info "Deploying $service to Kubernetes..."
         kubectl apply -k kubernetes/base/
         kubectl apply -k kubernetes/prod/
 
         # Wait for rollout
-        kubectl rollout status deployment/$service -n default --timeout=300s
+        kubectl rollout status deployment/${service}-service -n order-processor --timeout=300s
     fi
 
     log_success "$service deployment completed"
@@ -232,19 +241,10 @@ deploy_service() {
 deploy_gateway() {
     log_info "Deploying gateway to $ENVIRONMENT..."
 
-
-
     if [[ "$ENVIRONMENT" == "dev" ]]; then
         # Dev: Local Kubernetes deployment (Kind)
         log_info "Deploying gateway to local Kubernetes..."
         cd "$ROOT_DIR"
-
-
-
-        # Deploy to local K8s
-        log_info "Deploying gateway to local Kubernetes..."
-
-
 
         # Build gateway Docker image first (like working scripts)
         log_info "Building gateway Docker image..."
@@ -252,40 +252,40 @@ deploy_gateway() {
 
         # Deploy to Kubernetes using working pattern
         log_info "Deploying gateway to Kubernetes..."
-        # Skip base configs if already deployed, apply only environment configs
+        kubectl apply -k kubernetes/base/
         kubectl apply -k kubernetes/dev/
+
+        # Wait for deployment to be ready
+        log_info "Waiting for gateway deployment to be ready..."
+        kubectl rollout status deployment/gateway -n order-processor --timeout=300s
+
         log_success "Gateway deployed to Kubernetes"
 
-        elif [[ "$ENVIRONMENT" == "prod" ]]; then
+    elif [[ "$ENVIRONMENT" == "prod" ]]; then
         # Prod: Kubernetes deployment
         log_info "Deploying gateway to Kubernetes..."
         kubectl apply -k kubernetes/base/
         kubectl apply -k kubernetes/prod/
 
         # Wait for rollout
-        kubectl rollout status deployment/gateway -n default --timeout=300s
+        kubectl rollout status deployment/gateway -n order-processor --timeout=300s
     fi
 
     log_success "Gateway deployment completed"
+
+    if [[ "$ENVIRONMENT" == "dev" ]]; then
+        log_info "Gateway accessible at: http://localhost:30002"
+    fi
 }
 
 # Deploy frontend
 deploy_frontend() {
     log_info "Deploying frontend to $ENVIRONMENT..."
 
-
-
     if [[ "$ENVIRONMENT" == "dev" ]]; then
         # Dev: Local Kubernetes deployment (Kind)
         log_info "Deploying frontend to local Kubernetes..."
         cd "$ROOT_DIR"
-
-
-
-        # Deploy to local K8s
-        log_info "Deploying frontend to local Kubernetes..."
-
-
 
         # Build frontend Docker image first (like working scripts)
         log_info "Building frontend Docker image..."
@@ -293,21 +293,30 @@ deploy_frontend() {
 
         # Deploy to Kubernetes using working pattern
         log_info "Deploying frontend to Kubernetes..."
-        # Skip base configs if already deployed, apply only environment configs
+        kubectl apply -k kubernetes/base/
         kubectl apply -k kubernetes/dev/
+
+        # Wait for deployment to be ready
+        log_info "Waiting for frontend deployment to be ready..."
+        kubectl rollout status deployment/frontend -n order-processor --timeout=300s
+
         log_success "Frontend deployed to Kubernetes"
 
-        elif [[ "$ENVIRONMENT" == "prod" ]]; then
+    elif [[ "$ENVIRONMENT" == "prod" ]]; then
         # Prod: Kubernetes deployment
         log_info "Deploying frontend to Kubernetes..."
         kubectl apply -k kubernetes/base/
         kubectl apply -k kubernetes/prod/
 
         # Wait for rollout
-        kubectl rollout status deployment/frontend -n default --timeout=300s
+        kubectl rollout status deployment/frontend -n order-processor --timeout=300s
     fi
 
     log_success "Frontend deployment completed"
+
+    if [[ "$ENVIRONMENT" == "dev" ]]; then
+        log_info "Frontend accessible at: http://localhost:30003"
+    fi
 }
 
 # Deploy all services
@@ -347,10 +356,21 @@ deploy_all() {
     log_success "Full deployment to $ENVIRONMENT completed successfully!"
 
     if [[ "$ENVIRONMENT" == "dev" ]]; then
-        log_info "Development URLs:"
-        log_info "  Frontend: http://localhost:3000"
-        log_info "  Gateway:  http://localhost:8080"
-        log_info "  Grafana:  http://localhost:3001 (admin/admin)"
+        show_dev_urls
+
+        # Show cluster status
+        log_info ""
+        log_info "Cluster Status:"
+        kubectl get nodes --no-headers 2>/dev/null | while read -r node status rest; do
+            log_info "  $node: $status"
+        done
+
+        # Show service status
+        log_info ""
+        log_info "Service Status:"
+        kubectl get services -n order-processor --no-headers 2>/dev/null | while read -r service type cluster_ip external_ip ports age; do
+            log_info "  $service: $type $ports"
+        done
 
         # Show cluster status
         log_info ""

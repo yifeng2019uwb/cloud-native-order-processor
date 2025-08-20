@@ -10,7 +10,7 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000
+    port: 80
   },
   // Environment variables are handled by Vite's import.meta.env
   build: {

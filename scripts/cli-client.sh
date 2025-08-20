@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-API_BASE_URL="${API_BASE_URL:-http://localhost:30000}"
+API_BASE_URL="${API_BASE_URL:-http://localhost:30002}"
 TOKEN_FILE="${HOME}/.order-processor-token"
 
 # Colors for output
@@ -42,11 +42,11 @@ setup_port_forwarding() {
     if ! curl -s --max-time 5 "$API_BASE_URL/health" > /dev/null 2>&1; then
         log_warning "Gateway not accessible. Setting up port forwarding..."
         pkill -f "kubectl port-forward" || true
-        kubectl port-forward svc/gateway 30000:8080 -n order-processor &
-        kubectl port-forward svc/frontend 30004:80 -n order-processor &
-        kubectl port-forward svc/user-service 30001:30001 -n order-processor &
-        kubectl port-forward svc/inventory-service 30002:30002 -n order-processor &
-        kubectl port-forward svc/order-service 30003:30003 -n order-processor &
+        	kubectl port-forward svc/gateway 30002:8080 -n order-processor &
+	kubectl port-forward svc/frontend 30003:80 -n order-processor &
+	kubectl port-forward svc/user-service 30004:8000 -n order-processor &
+	kubectl port-forward svc/inventory-service 30005:8001 -n order-processor &
+	kubectl port-forward svc/order-service 30006:8002 -n order-processor &
         sleep 5
         log_success "Port forwarding set up"
     else
@@ -256,7 +256,7 @@ System:
   help                            - Show this help message
 
 Environment Variables:
-  API_BASE_URL                    - API base URL (default: http://localhost:30000)
+  API_BASE_URL                    - API base URL (default: http://localhost:30002)
   TOKEN_FILE                      - Token storage file (default: ~/.order-processor-token)
 
 Examples:
