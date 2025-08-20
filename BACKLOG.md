@@ -124,6 +124,7 @@ Conduct comprehensive review of all system design decisions, architecture, and i
 **🔥 HIGHEST PRIORITY:**
 - **DESIGN-001**: Comprehensive System Design Review (Critical for implementation)
 - **MONITOR-001**: Comprehensive Monitoring System (Design completed, ready for implementation)
+- **SEC-005**: Centralized Authentication Architecture Implementation (New security architecture)
 
 **📋 HIGH PRIORITY:**
 - **INFRA-002**: Request Tracing & Standardized Logging System
@@ -732,13 +733,73 @@ Conduct comprehensive security testing and audit of the entire system.
   - [ ] Session management testing
 - [ ] **Compliance Audit**
   - [ ] Security policy review
-  - [ ] Access control audit
+  - [ ] Access control validation
   - [ ] Data protection assessment
-  - [ ] Incident response testing
+  - [ ] Security documentation review
 
 **Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup
 - ✅ **SEC-002**: Security Hardening
-- ✅ **SEC-003**: Token Blacklist Implementation
+
+#### **SEC-005: Centralized Authentication Architecture Implementation**
+- **Component**: Security & API Gateway
+- **Type**: Epic
+- **Priority**: 🔥 **HIGHEST PRIORITY**
+- **Status**: 📋 To Do
+
+**Description:**
+Implement centralized authentication architecture where Gateway handles all JWT validation and backend services trust Gateway completely. This eliminates JWT secret distribution issues and improves security.
+
+**Acceptance Criteria:**
+- [ ] **Phase 1: Gateway Authentication Enhancement**
+  - [ ] Enhance Gateway JWT validation capabilities
+  - [ ] Implement comprehensive user context extraction
+  - [ ] Add security header injection (X-Source, X-User-ID, X-User-Role)
+  - [ ] Implement source validation for backend services
+  - [ ] Update Gateway configuration to handle all auth scenarios
+- [ ] **Phase 2: Backend Service Updates**
+  - [ ] Remove JWT validation from User Service
+  - [ ] Remove JWT validation from Order Service
+  - [ ] Remove JWT validation from Inventory Service
+  - [ ] Implement source header validation in all services
+  - [ ] Update user context extraction to use Gateway headers
+  - [ ] Test security measures and source validation
+- [ ] **Phase 3: Security Testing & Validation**
+  - [ ] Comprehensive security testing of new architecture
+  - [ ] Performance testing and optimization
+  - [ ] Integration testing with all services
+  - [ ] Security audit and penetration testing
+  - [ ] Validate Gateway as single auth boundary
+- [ ] **Phase 4: Deployment & Monitoring**
+  - [ ] Production deployment of new auth architecture
+  - [ ] Monitoring and alerting setup for auth system
+  - [ ] Performance monitoring and optimization
+  - [ ] Security monitoring and incident response
+
+**Technical Requirements:**
+- [ ] Gateway validates JWT and extracts user context
+- [ ] Gateway forwards requests with security headers
+- [ ] Backend services validate X-Source: gateway header
+- [ ] Backend services extract user info from Gateway headers
+- [ ] No JWT validation in backend services
+- [ ] Single JWT secret managed only in Gateway
+- [ ] Network isolation ensures backend services not directly accessible
+
+**Security Benefits:**
+- [ ] Eliminates JWT secret distribution across services
+- [ ] Centralizes security control and policies
+- [ ] Reduces attack surface (no direct backend access)
+- [ ] Simplifies trust model and security architecture
+- [ ] Improves performance (no double JWT validation)
+
+**Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup
+- ✅ **GATEWAY-001**: Advanced Gateway Features
+- ✅ **SEC-002**: Security Hardening
+
+**Estimated Effort**: 2-3 weeks
+**Risk Level**: Medium (architectural change)
+**Success Criteria**: All services use centralized auth, no JWT validation in backend, improved security posture
 
 ## **📊 Performance & Scaling**
 

@@ -10,6 +10,8 @@ resources:
 - service.yaml
 - aws-secrets.yaml
 - aws-config.yaml
+- jwt-config.yaml
+- jwt-secrets.yaml
 
 images:
 - name: order-processor-user_service
