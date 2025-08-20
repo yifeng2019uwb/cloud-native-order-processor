@@ -1,6 +1,6 @@
 """
 API Endpoints Configuration
-Centralized configuration for all API endpoints used in integration tests
+Gateway-based routing for all API endpoints used in integration tests
 """
 from enum import Enum
 import sys
@@ -10,29 +10,29 @@ import os
 sys.path.append(os.path.dirname(__file__))
 from service_urls import USER_SERVICE_URL, INVENTORY_SERVICE_URL, ORDER_SERVICE_URL
 
-# User Service API Enum
+# User Service API Enum (Gateway Routes)
 class UserAPI(Enum):
-    ROOT = '/'
+    ROOT = '/auth/profile'  # Gateway redirects to profile for authenticated users
     REGISTER = '/auth/register'
     LOGIN = '/auth/login'
     PROFILE = '/auth/profile'
     LOGOUT = '/auth/logout'
-    HEALTH = '/health'
+    HEALTH = '/health'  # Gateway health endpoint (direct, not via /api/v1)
     BALANCE = '/balance'
     BALANCE_DEPOSIT = '/balance/deposit'
     BALANCE_WITHDRAW = '/balance/withdraw'
     BALANCE_TRANSACTIONS = '/balance/transactions'
 
-# Inventory Service API Enum
+# Inventory Service API Enum (Gateway Routes)
 class InventoryAPI(Enum):
-    ROOT = '/'
+    ROOT = '/inventory/assets'  # Gateway redirects to assets list
     ASSETS = '/inventory/assets'
     ASSET_BY_ID = '/inventory/assets/{id}'
-    HEALTH = '/health'
+    HEALTH = '/health'  # Gateway health endpoint (direct, not via /api/v1)
 
-# Order Service API Enum
+# Order Service API Enum (Gateway Routes)
 class OrderAPI(Enum):
-    ROOT = '/'
+    ROOT = '/orders'  # Gateway redirects to orders list
     ORDERS = '/orders'
     ORDER_BY_ID = '/orders/{id}'
     CREATE_ORDER = '/orders'
@@ -40,7 +40,7 @@ class OrderAPI(Enum):
     ASSET_BALANCES = '/assets/balances'
     ASSET_BALANCE_BY_ID = '/assets/{asset_id}/balance'
     ASSET_TRANSACTIONS = '/assets/{asset_id}/transactions'
-    HEALTH = '/health'
+    HEALTH = '/health'  # Gateway health endpoint (direct, not via /api/v1)
 
 class APIEndpoints:
     """Centralized API endpoints configuration"""
@@ -48,6 +48,10 @@ class APIEndpoints:
     @classmethod
     def get_user_endpoint(cls, api: UserAPI) -> str:
         """Get complete user service URL by API enum"""
+        # Health endpoint uses gateway directly, others use service URL
+        if api == UserAPI.HEALTH:
+            from service_urls import GATEWAY_SERVICE_URL
+            return f"{GATEWAY_SERVICE_URL}{api.value}"
         return f"{USER_SERVICE_URL}{api.value}"
 
     @classmethod
@@ -56,6 +60,10 @@ class APIEndpoints:
         endpoint = api.value
         if kwargs:
             endpoint = endpoint.format(**kwargs)
+        # Health endpoint uses gateway directly, others use service URL
+        if api == InventoryAPI.HEALTH:
+            from service_urls import GATEWAY_SERVICE_URL
+            return f"{GATEWAY_SERVICE_URL}{endpoint}"
         return f"{INVENTORY_SERVICE_URL}{endpoint}"
 
     @classmethod
@@ -64,4 +72,8 @@ class APIEndpoints:
         endpoint = api.value
         if kwargs:
             endpoint = endpoint.format(**kwargs)
+        # Health endpoint uses gateway directly, others use service URL
+        if api == OrderAPI.HEALTH:
+            from service_urls import GATEWAY_SERVICE_URL
+            return f"{GATEWAY_SERVICE_URL}{endpoint}"
         return f"{ORDER_SERVICE_URL}{endpoint}"

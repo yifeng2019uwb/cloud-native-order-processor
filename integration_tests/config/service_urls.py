@@ -1,11 +1,12 @@
 """
 Service URLs for Integration Tests
-Automatic detection of Docker vs Kubernetes services with fallback
+Pure Gateway Testing Architecture - All service requests go through Gateway
 """
 import os
 import requests
 from typing import Optional
 
+# Service health check function (kept for potential future use)
 def check_service_health(url: str, timeout: int = 2) -> bool:
     """Check if a service is healthy by calling its health endpoint"""
     try:
@@ -14,48 +15,74 @@ def check_service_health(url: str, timeout: int = 2) -> bool:
     except (requests.RequestException, requests.Timeout, requests.ConnectionError):
         return False
 
-def detect_service_url(service_name: str, docker_port: int, k8s_port: int) -> str:
-    """Detect service URL with fallback from Docker to Kubernetes"""
-    # Try environment variable first
-    env_url = os.getenv(f'{service_name.upper()}_SERVICE_URL')
-    if env_url:
-        return env_url
-
-    # Try Docker port first (default for local development)
-    docker_url = f"http://localhost:{docker_port}"
-    if check_service_health(docker_url):
-        print(f"✅ {service_name} service detected on Docker port {docker_port}")
-        return docker_url
-
-    # Fallback to Kubernetes NodePort
-    k8s_url = f"http://localhost:{k8s_port}"
-    if check_service_health(k8s_url):
-        print(f"✅ {service_name} service detected on Kubernetes NodePort {k8s_port}")
-        return k8s_url
-
-    # Default to Docker port (for error messages)
-    print(f"⚠️  {service_name} service not detected on Docker ({docker_port}) or K8s ({k8s_port})")
-    return docker_url
-
 def get_user_service_url() -> str:
-    """Get User Service URL with automatic detection"""
-    return detect_service_url("user", docker_port=8000, k8s_port=30004)
+    """Get User Service URL through Gateway"""
+    return get_gateway_api_base_url()
 
 def get_inventory_service_url() -> str:
-    """Get Inventory Service URL with automatic detection"""
-    return detect_service_url("inventory", docker_port=8001, k8s_port=30005)
+    """Get Inventory Service URL through Gateway"""
+    return get_gateway_api_base_url()
 
 def get_order_service_url() -> str:
-    """Get Order Service URL with automatic detection"""
-    return detect_service_url("order", docker_port=8002, k8s_port=30006)
+    """Get Order Service URL through Gateway"""
+    return get_gateway_api_base_url()
+
+def get_gateway_service_url() -> str:
+    """Get Gateway Service URL (Kubernetes NodePort)"""
+    return "http://localhost:30002"
+
+def get_frontend_service_url() -> str:
+    """Get Frontend Service URL (Kubernetes NodePort)"""
+    return "http://localhost:30003"
+
+def get_grafana_service_url() -> str:
+    """Get Grafana Service URL (Kubernetes NodePort)"""
+    return "http://localhost:30001"
+
+def get_redis_service_url() -> str:
+    """Get Redis Service URL (Kubernetes ClusterIP)"""
+    return "redis.order-processor.svc.cluster.local:6379"
+
+def get_prometheus_service_url() -> str:
+    """Get Prometheus Service URL (Kubernetes NodePort)"""
+    return "http://localhost:30007"
+
+def get_loki_service_url() -> str:
+    """Get Loki Service URL (Kubernetes ClusterIP)"""
+    return "loki.order-processor.svc.cluster.local:3100"
+
+def get_promtail_service_url() -> str:
+    """Get Promtail Service URL (Kubernetes ClusterIP)"""
+    return "promtail.order-processor.svc.cluster.local:9080"
+
+def get_gateway_api_base_url() -> str:
+    """Get Gateway API Base URL for integration tests (single entry point)"""
+    gateway_url = get_gateway_service_url()
+    return f"{gateway_url}/api/v1"
 
 # Service URLs (detected at import time)
 USER_SERVICE_URL = get_user_service_url()
 INVENTORY_SERVICE_URL = get_inventory_service_url()
 ORDER_SERVICE_URL = get_order_service_url()
+GATEWAY_SERVICE_URL = get_gateway_service_url()
+GATEWAY_API_BASE_URL = get_gateway_api_base_url()
+FRONTEND_SERVICE_URL = get_frontend_service_url()
+GRAFANA_SERVICE_URL = get_grafana_service_url()
+REDIS_SERVICE_URL = get_redis_service_url()
+PROMETHEUS_SERVICE_URL = get_prometheus_service_url()
+LOKI_SERVICE_URL = get_loki_service_url()
+PROMTAIL_SERVICE_URL = get_promtail_service_url()
 
-# Print detected configuration
+# Print configuration
 print(f"🔧 Integration Test Configuration:")
-print(f"   User Service: {USER_SERVICE_URL}")
-print(f"   Inventory Service: {INVENTORY_SERVICE_URL}")
-print(f"   Order Service: {ORDER_SERVICE_URL}")
+print(f"   User Service: {USER_SERVICE_URL} (via Gateway)")
+print(f"   Inventory Service: {INVENTORY_SERVICE_URL} (via Gateway)")
+print(f"   Order Service: {ORDER_SERVICE_URL} (via Gateway)")
+print(f"   Gateway Service: {GATEWAY_SERVICE_URL}")
+print(f"   Gateway API Base: {GATEWAY_API_BASE_URL}")
+print(f"   Frontend Service: {FRONTEND_SERVICE_URL}")
+print(f"   Grafana Service: {GRAFANA_SERVICE_URL}")
+print(f"   Redis Service: {REDIS_SERVICE_URL}")
+print(f"   Prometheus Service: {PROMETHEUS_SERVICE_URL}")
+print(f"   Loki Service: {LOKI_SERVICE_URL}")
+print(f"   Promtail Service: {PROMTAIL_SERVICE_URL}")
