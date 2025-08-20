@@ -7,7 +7,7 @@ set -e  # Exit on any error
 
 # Default configuration
 DEFAULT_PYTHON_VERSION="3.11"
-DEFAULT_TEST_COVERAGE_THRESHOLD=60
+DEFAULT_TEST_COVERAGE_THRESHOLD=80
 
 # Function to show usage
 show_usage() {

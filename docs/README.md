@@ -98,6 +98,7 @@ Frontend (React) → API Gateway (Go) → Backend Services (Python) → Database
 - **Production**: AWS EKS with full monitoring stack
 
 ### **Deployment Resources**
+- **[Port Configuration](./port-configuration.md)**: Port strategy and conflict prevention
 - **[Deployment Guide](./deployment-guide.md)**: Complete deployment instructions
 - **[Infrastructure](../terraform/README.md)**: Terraform and infrastructure setup
 - **[Monitoring](../monitoring/README.md)**: Prometheus stack deployment

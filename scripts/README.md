@@ -1,138 +1,234 @@
-# 🔧 Scripts & Automation
+# Cloud Native Order Processor - Shared Utilities
 
-> Comprehensive automation scripts for building, testing, deploying, and managing the Cloud Native Order Processor system
+This directory contains shared utility scripts that provide consistent functionality across all deployment and development scripts.
 
-## 🚀 Quick Start
-- **Prerequisites**: Docker, Kubernetes (Kind), AWS CLI, Python 3.11+
-- **Start Services**: `./manage-services.sh start all` for local development
-- **Full Pipeline**: `./test-local.sh --environment dev --all` for CI/CD validation
-- **Deploy**: `./deploy.sh --type k8s --environment dev` for Kubernetes deployment
+## 📁 Available Utilities
 
-## ✨ Key Features
-- **Service Management**: Start, stop, and monitor all services locally
-- **CI/CD Pipeline**: Full build, test, deploy, and destroy automation
-- **Multi-Environment**: Support for dev, staging, and production deployments
-- **Testing Automation**: Comprehensive testing and validation scripts
-- **Infrastructure Management**: AWS and Kubernetes deployment automation
+### 1. `logging.sh` - Logging and Output Utilities
+Provides consistent logging functions with color coding, timestamps, and log levels.
 
-## 🔗 Quick Links
-- [Service Management](usage/service-management.md)
-- [Testing & Validation](usage/testing-validation.md)
-- [Build & Deploy](usage/build-deploy.md)
-- [Infrastructure](usage/infrastructure.md)
-- [Component Scripts](usage/component-scripts.md)
+**Features:**
+- Color-coded log levels (INFO, SUCCESS, WARNING, ERROR, DEBUG, STEP)
+- Timestamp formatting
+- Configurable log levels via `LOG_LEVEL` environment variable
+- Section headers with visual separators
+- Progress indicators with progress bars
+- Command logging and result tracking
 
-## 📊 Status
-- **Current Status**: ✅ **PRODUCTION READY** - All scripts tested and working
-- **Last Updated**: August 20, 2025
-
-## 🎯 Current Status
-
-### ✅ **All Scripts Working**
-- **Service Management**: Local service startup and monitoring
-- **CI/CD Pipeline**: Full automation from build to deployment
-- **Testing**: Comprehensive validation and smoke testing
-- **Deployment**: Docker and Kubernetes deployment automation
-- **Infrastructure**: AWS and local environment management
-
-### 🚀 **Ready for Production**
-- **Multi-Environment**: Dev, staging, and production support
-- **Error Handling**: Comprehensive error handling and validation
-- **Logging**: Detailed logging and debugging information
-- **Documentation**: Complete usage guides and examples
-
----
-
-## 📁 Project Structure
-
-```
-scripts/
-├── README.md                    # This file - main overview
-├── usage/                       # Detailed usage documentation
-│   ├── service-management.md    # Service management scripts
-│   ├── testing-validation.md    # Testing and validation
-│   ├── build-deploy.md         # Build and deployment
-│   ├── infrastructure.md       # Infrastructure management
-│   └── component-scripts.md    # Component-level scripts
-├── shared/                      # Shared utilities and functions
-├── deploy.sh                    # Main deployment script
-├── test-local.sh               # CI/CD pipeline mirror
-├── manage-services.sh           # Service management
-└── [other scripts]             # Additional automation scripts
-```
-
-## 🛠️ Core Scripts
-
-### **Main Deployment Script**
+**Usage:**
 ```bash
+source scripts/logging.sh
+
+log_info "Starting deployment..."
+log_success "Component deployed successfully"
+log_warning "Resource usage is high"
+log_error "Deployment failed"
+log_debug "Debug information"
+log_step "Building component..."
+log_section "Deployment Phase 1"
+```
+
+**Environment Variables:**
+- `LOG_LEVEL`: Set log level (0=INFO, 1=WARN, 2=ERROR, 3=DEBUG)
+
+### 2. `docker-utils.sh` - Docker Operations
+Provides Docker-related functions for building, running, and managing containers.
+
+**Features:**
+- Docker daemon and runtime checks
+- Image building with context and Dockerfile support
+- Container lifecycle management (run, stop, remove)
+- Health checks and monitoring
+- Resource cleanup and listing
+- Registry operations (tag, push)
+
+**Usage:**
+```bash
+source scripts/docker-utils.sh
+
+# Check Docker environment
+check_docker_running
+check_docker_daemon
+
+# Build and run containers
+build_docker_image "./frontend" "frontend" "latest"
+run_docker_container "frontend" "frontend-app" "3000:80"
+check_container_health "frontend-app"
+
+# Cleanup
+cleanup_docker_resources "order-processor"
+```
+
+**Environment Variables:**
+- `DOCKER_REGISTRY`: Docker registry URL (default: localhost:5000)
+- `DOCKER_NAMESPACE`: Image namespace (default: order-processor)
+- `DOCKER_BUILD_ARGS`: Additional build arguments
+- `DOCKER_PUSH_RETRIES`: Number of push retries (default: 3)
+- `DOCKER_HEALTH_TIMEOUT`: Health check timeout in seconds (default: 60)
+
+### 3. `k8s-utils.sh` - Kubernetes Operations
+Provides Kubernetes-related functions for deployment and management.
+
+**Features:**
+- Cluster connectivity checks
+- Namespace management
+- Manifest application and deletion
+- Deployment rollout monitoring
+- Pod health checks and scaling
+- Service management and port forwarding
+- Resource monitoring and cleanup
+
+**Usage:**
+```bash
+source scripts/k8s-utils.sh
+
+# Check Kubernetes environment
+check_kubectl
+check_k8s_cluster
+
+# Deploy and manage resources
+create_namespace "my-app"
+apply_k8s_manifests "kubernetes/manifests/" "my-app"
+wait_for_rollout "my-deployment" "my-app"
+check_pod_health "my-pod" "my-app"
+
+# Monitor and scale
+scale_deployment "my-deployment" 3 "my-app"
+get_resource_usage "my-app"
+```
+
+**Environment Variables:**
+- `K8S_NAMESPACE`: Default namespace (default: default)
+- `K8S_CONTEXT`: Kubernetes context to use
+- `K8S_TIMEOUT`: Default timeout in seconds (default: 300)
+- `K8S_ROLLOUT_TIMEOUT`: Rollout timeout in seconds (default: 600)
+- `K8S_HEALTH_CHECK_INTERVAL`: Health check interval in seconds (default: 10)
+
+## 🚀 Integration with deploy.sh
+
+The `deploy.sh` script can be enhanced to use these utilities:
+
+```bash
+# In deploy.sh, add at the top:
+source "${SCRIPT_DIR}/scripts/logging.sh"
+source "${SCRIPT_DIR}/scripts/docker-utils.sh"
+source "${SCRIPT_DIR}/scripts/k8s-utils.sh"
+
+# Then use the utilities:
+log_section "Starting Deployment"
+check_docker_running
+check_k8s_cluster
+
+# Build components
+build_docker_image "./frontend" "frontend" "latest"
+build_docker_image "./gateway" "gateway" "latest"
+
 # Deploy to Kubernetes
-./deploy.sh --type k8s --environment dev
-
-# Deploy to Docker
-./deploy.sh --type docker --environment dev
-
-# Production deployment
-./deploy.sh --type k8s --environment prod
+apply_k8s_manifests "kubernetes/prod/frontend/" "default"
+wait_for_rollout "frontend" "default"
 ```
 
-### **Service Management**
+## 🧪 Testing Utilities
+
+Use the demo script to test all utilities:
+
 ```bash
-# Start all services
-./manage-services.sh start all
-
-# Check status
-./manage-services.sh status
-
-# View logs
-./manage-services.sh logs user-service
+./scripts/demo-utilities.sh
 ```
 
-### **Testing & Validation**
+This script demonstrates:
+- All logging functions
+- Docker environment checks
+- Kubernetes connectivity tests
+- Utility integration examples
+
+## 🔧 Customization
+
+### Adding New Log Levels
 ```bash
-# Full CI/CD pipeline
-./test-local.sh --environment dev --all
+# In logging.sh, add new level constants:
+LOG_LEVEL_VERBOSE=4
 
-# Development cycle
-./test-local.sh --environment dev --dev-cycle
-
-# Component testing
-./test-local.sh --frontend
+# Add corresponding function:
+log_verbose() {
+    if [[ $DEFAULT_LOG_LEVEL -le $LOG_LEVEL_VERBOSE ]]; then
+        local timestamp=$(date +"$TIMESTAMP_FORMAT")
+        printf "${MAGENTA}[VERBOSE]${NC} [%s] %s\n" "$timestamp" "$1"
+    fi
+}
 ```
 
-## 🔧 Prerequisites
-
-### **Required Tools**
-- **Docker**: Container runtime
-- **Kubernetes**: Kind cluster for local development
-- **AWS CLI**: AWS service management
-- **Python 3.11+**: Service development and testing
-- **Node.js 18+**: Frontend development
-
-### **Environment Setup**
+### Adding New Docker Functions
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# In docker-utils.sh, add new function:
+build_multi_stage_image() {
+    local context="$1"
+    local image_name="$2"
+    local dockerfile="${3:-Dockerfile.multi}"
 
-# Setup AWS credentials
-./update-aws-credentials.sh
-
-# Create Kind cluster
-kind create cluster --name order-processor
+    log_step "Building multi-stage Docker image: $image_name"
+    # Implementation here
+}
 ```
 
-## 📚 Usage Documentation
+### Adding New Kubernetes Functions
+```bash
+# In k8s-utils.sh, add new function:
+restart_deployment() {
+    local deployment="$1"
+    local namespace="${2:-$K8S_NAMESPACE}"
 
-### **Service Management**
-- [Service Management Guide](usage/service-management.md) - Start, stop, and monitor services
-- [Component Scripts](usage/component-scripts.md) - Package-level build and test scripts
+    log_step "Restarting deployment: $deployment"
+    kubectl rollout restart deployment/$deployment -n $namespace
+}
+```
 
-### **Testing & Deployment**
-- [Testing & Validation](usage/testing-validation.md) - CI/CD pipeline and testing automation
-- [Build & Deploy](usage/build-deploy.md) - Build and deployment automation
+## 📋 Best Practices
 
-### **Infrastructure**
-- [Infrastructure Management](usage/infrastructure.md) - AWS and Kubernetes management
+1. **Always source utilities at the beginning** of your scripts
+2. **Use consistent log levels** across all scripts
+3. **Handle errors gracefully** using the utility functions
+4. **Set appropriate timeouts** for long-running operations
+5. **Clean up resources** after operations complete
+6. **Use environment variables** for configuration
+7. **Test utilities** before using in production scripts
 
----
+## 🐛 Troubleshooting
 
-**Note**: This is a focused README for quick start and essential information. For detailed usage information, see the individual usage guides in the `usage/` directory.
+### Common Issues
+
+1. **Path not found errors**: Ensure you're sourcing from the correct directory
+2. **Permission denied**: Make sure utility scripts are executable (`chmod +x`)
+3. **Function not found**: Check that utilities are properly sourced
+4. **Environment variables not set**: Verify environment variable configuration
+
+### Debug Mode
+
+Enable debug logging to see detailed information:
+
+```bash
+export LOG_LEVEL=3  # Enable debug mode
+./your-script.sh
+```
+
+### Testing Individual Utilities
+
+Test specific utilities in isolation:
+
+```bash
+# Test logging only
+source scripts/logging.sh
+log_info "Test message"
+
+# Test Docker utilities only
+source scripts/docker-utils.sh
+check_docker_running
+
+# Test Kubernetes utilities only
+source scripts/k8s-utils.sh
+check_kubectl
+```
+
+## 📚 Examples
+
+See the `demo-utilities.sh` script for comprehensive examples of how to use all utilities together in a real deployment workflow.
