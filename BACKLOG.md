@@ -107,111 +107,150 @@ Implement centralized authentication architecture with a dedicated **Auth Servic
 **Risk Level**: Medium (architectural change)
 **Success Criteria**: All services use centralized auth, no JWT validation in backend, improved security posture
 
-#### **MON-001: Comprehensive Gateway & Auth Service Monitoring**
+#### **MON-001: Essential Authentication Monitoring (Simplified Scope)**
 - **Component**: Monitoring & Observability
 - **Type**: Epic
 - **Priority**: 🔥 **HIGH PRIORITY**
 - **Status**: 📋 To Do
 
 **Description:**
-Implement comprehensive monitoring and logging for the new Auth Service architecture, including enhanced Gateway monitoring, authentication flow tracking, and security event monitoring. This provides complete visibility into the authentication layer and ensures operational excellence.
+Implement essential monitoring for the new Auth Service architecture, focusing on authentication-related metrics that are easy to implement and test in a personal project environment. Start with basic metrics and gradually expand.
 
 **Acceptance Criteria:**
-- [ ] **Phase 1: Gateway Monitoring Implementation**
-  - [ ] Implement enhanced Gateway logging middleware with authentication tracking
-  - [ ] Add Prometheus metrics for routing, authentication, and security operations
-  - [ ] Create Gateway-specific metrics: routes_total, request_duration_seconds, jwt_validation_requests_total
-  - [ ] Implement security header injection tracking and validation metrics
-  - [ ] Add circuit breaker state monitoring for all integrated services
-  - [ ] Create Gateway Overview dashboard with real-time routing and performance metrics
-- [ ] **Phase 2: Auth Service Monitoring Implementation**
-  - [ ] Implement comprehensive JWT validation and user context extraction metrics
-  - [ ] Add security metrics: rate limiting, circuit breaker states, suspicious activity
-  - [ ] Create Auth Service metrics: jwt_validation_total, user_context_extraction_total
-  - [ ] Implement performance metrics: auth_request_duration_seconds, requests_per_second
-  - [ ] Add security event tracking: brute force detection, token abuse monitoring
-  - [ ] Create Authentication Performance dashboard for JWT operations
-- [ ] **Phase 3: Integration & Security Monitoring**
-  - [ ] Implement Gateway-Auth Service communication monitoring
-  - [ ] Add authentication flow end-to-end tracking
-  - [ ] Create Security Monitoring dashboard for rate limiting and circuit breakers
-  - [ ] Implement security header validation and source tracking
-  - [ ] Add suspicious activity detection and alerting
-  - [ ] Create Service Routing dashboard for endpoint routing decisions
-- [ ] **Phase 4: Advanced Monitoring Features**
-  - [ ] Implement distributed tracing for authentication flow
-  - [ ] Add ML-based anomaly detection for security events
-  - [ ] Create predictive monitoring for capacity planning
-  - [ ] Implement automated alerting and response mechanisms
-  - [ ] Add comprehensive audit logging and compliance monitoring
-  - [ ] Create operational runbooks for common monitoring scenarios
+- [ ] **Phase 1: Basic Auth Service Metrics (Week 1)**
+  - [ ] Implement simple JWT validation success/failure counters
+  - [ ] Add basic request duration tracking for auth operations
+  - [ ] Create simple health check endpoint for Auth Service
+  - [ ] Add basic error rate tracking for authentication failures
+  - [ ] Test metrics collection with simple Prometheus setup
+- [ ] **Phase 2: Gateway Authentication Tracking (Week 2)**
+  - [ ] Add basic request counting for auth-related routes
+  - [ ] Implement simple authentication flow tracking
+  - [ ] Add basic error tracking for auth failures
+  - [ ] Create simple dashboard showing auth success/failure rates
+  - [ ] Test end-to-end metrics collection
+- [ ] **Phase 3: Essential Security Monitoring (Week 3)**
+  - [ ] Add basic rate limiting hit counters
+  - [ ] Implement simple suspicious activity detection (multiple failed logins)
+  - [ ] Add basic circuit breaker state monitoring
+  - [ ] Create simple security alerts for obvious issues
+  - [ ] Test security monitoring with basic scenarios
+- [ ] **Phase 4: Basic Dashboards & Alerting (Week 4)**
+  - [ ] Create simple Grafana dashboard for auth metrics
+  - [ ] Add basic alerting for authentication failures
+  - [ ] Implement simple log aggregation for auth events
+  - [ ] Test dashboard and alerting functionality
+  - [ ] Document how to use and maintain the monitoring
 
 **Technical Requirements:**
-- [ ] **Gateway Metrics Collection**
-  - [ ] Routes per endpoint and target service tracking
-  - [ ] Authentication flow integration monitoring
-  - [ ] Security header injection success tracking
-  - [ ] Rate limiting and circuit breaker state monitoring
-  - [ ] Request/response performance metrics
-- [ ] **Auth Service Metrics Collection**
-  - [ ] JWT validation success/failure rates with reason codes
-  - [ ] User context extraction accuracy and performance
-  - [ ] Rate limiting hits by type (per-IP, per-user, global)
-  - [ ] Circuit breaker state changes and recovery times
-  - [ ] Suspicious activity detection and classification
-- [ ] **Integration Monitoring**
-  - [ ] Gateway-Auth Service communication health
-  - [ ] Authentication flow end-to-end tracking
-  - [ ] Security header validation across all services
-  - [ ] Circuit breaker coordination between services
-  - [ ] Performance correlation across authentication layer
-- [ ] **Security Monitoring**
-  - [ ] Real-time authentication anomaly detection
-  - [ ] Rate limit violation tracking and alerting
-  - [ ] Circuit breaker trip monitoring and alerting
-  - [ ] Security header bypass attempt detection
-  - [ ] Comprehensive audit trail for all authentication events
+- [ ] **Basic Auth Service Metrics**
+  - [ ] Simple counters for JWT validation success/failure
+  - [ ] Basic request duration tracking (histogram)
+  - [ ] Simple error rate calculation
+  - [ ] Health check endpoint with basic status
+- [ ] **Basic Gateway Metrics**
+  - [ ] Simple request counting for auth routes
+  - [ ] Basic authentication flow tracking
+  - [ ] Simple error tracking for auth failures
+  - [ ] Basic performance metrics
+- [ ] **Basic Security Monitoring**
+  - [ ] Simple rate limiting hit counters
+  - [ ] Basic suspicious activity detection (failed login attempts)
+  - [ ] Simple circuit breaker state monitoring
+  - [ ] Basic security alerts for obvious issues
+- [ ] **Simple Integration**
+  - [ ] Basic Prometheus metrics collection
+  - [ ] Simple Grafana dashboard
+  - [ ] Basic alerting rules
+  - [ ] Simple log aggregation
 
 **Monitoring Benefits:**
-- [ ] **Complete Visibility**: 100% visibility into authentication flow and security events
-- [ ] **Real-time Security**: Immediate detection of authentication anomalies and attacks
-- [ ] **Performance Insights**: Identify bottlenecks in authentication and routing
-- [ ] **Operational Excellence**: Automated alerting and response for security incidents
-- [ ] **Compliance**: Comprehensive audit trail for security and compliance requirements
-- [ ] **Capacity Planning**: Data-driven insights for system scaling and optimization
+- [ ] **Basic Visibility**: Essential visibility into authentication flow and basic security events
+- [ ] **Simple Security**: Basic detection of obvious authentication issues
+- [ ] **Performance Tracking**: Simple performance metrics for auth operations
+- [ ] **Operational Awareness**: Basic alerting for authentication failures
+- [ ] **Learning Value**: Understand monitoring fundamentals for personal project
+- [ ] **Easy Testing**: Simple metrics that are easy to test and validate
 
 **Dashboard Requirements:**
-- [ ] **Gateway Overview**: Real-time routing and performance metrics
-- [ ] **Authentication Flow**: Auth Service integration and JWT handling
-- [ ] **Security Monitoring**: Rate limiting, circuit breakers, security headers
-- [ ] **Service Routing**: Endpoint routing decisions and load distribution
-- [ ] **Authentication Performance**: JWT validation and user context extraction
-- [ ] **Security Events**: Rate limiting, suspicious activity, circuit breakers
-- [ ] **Integration Health**: Gateway communication, service dependencies
-- [ ] **User Analytics**: Authentication patterns and trends
+- [ ] **Auth Service Overview**: Basic JWT validation success/failure rates
+- [ ] **Gateway Auth Tracking**: Simple authentication flow metrics
+- [ ] **Security Basics**: Rate limiting hits and suspicious activity
+- [ ] **Performance Basics**: Request duration and error rates
+- [ ] **Simple Alerts**: Basic alerting for authentication failures
 
 **Implementation Examples:**
-- [ ] **Gateway (Go)**: Enhanced logging middleware with Prometheus metrics
-- [ ] **Auth Service (Python)**: Comprehensive JWT and security monitoring
-- [ ] **Metrics Integration**: Prometheus + Grafana with custom dashboards
-- [ ] **Log Aggregation**: Structured JSON logging with correlation IDs
-- [ ] **Alerting**: AlertManager with security-focused alerting rules
+- [ ] **Gateway (Go)**: Simple Prometheus metrics for auth routes
+- [ ] **Auth Service (Python)**: Basic JWT validation metrics
+- [ ] **Metrics Integration**: Simple Prometheus + Grafana setup
+- [ ] **Basic Logging**: Simple structured logging for auth events
+- [ ] **Simple Alerting**: Basic AlertManager rules for failures
 
 **Dependencies:**
 - ✅ **INFRA-001**: Local Kubernetes Development Setup
-- ✅ **SEC-005**: Centralized Authentication Architecture Implementation
-- ✅ **MON-001**: Monitoring System Design (existing monitoring infrastructure)
+- ✅ **SEC-005**: Centralized Authentication Architecture Implementation (Phase 1-3)
+- ✅ **INFRA-002**: Request Tracing & Standardized Logging System
 
-**Estimated Effort**: 2-3 weeks
-**Risk Level**: Low (monitoring enhancement)
-**Success Criteria**: Complete visibility into authentication layer, real-time security monitoring, operational excellence
+**Estimated Effort**: 3-4 weeks (1 week per phase)
+**Risk Level**: Low (simple monitoring implementation)
+**Success Criteria**: Basic authentication monitoring working, simple dashboards functional, easy to test and maintain
 
 ### **🌐 Frontend & User Experience**
+
+#### **FRONTEND-007: Frontend Authentication Retesting After Auth Service**
+- **Component**: Frontend
+- **Type**: Epic
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 To Do
+
+**Description:**
+Retest and validate frontend authentication flow after the new Auth Service architecture is implemented. This ensures the frontend works correctly with the centralized authentication system and provides a smooth user experience.
+
+**Acceptance Criteria:**
+- [ ] **Authentication Flow Testing**
+  - [ ] User registration flow works with new Auth Service
+  - [ ] User login flow works with new Auth Service
+  - [ ] JWT token handling works correctly
+  - [ ] Authentication state management works properly
+  - [ ] Logout flow clears authentication state correctly
+- [ ] **Protected Route Testing**
+  - [ ] Dashboard access requires valid authentication
+  - [ ] Trading page access requires valid authentication
+  - [ ] Portfolio page access requires valid authentication
+  - [ ] Account page access requires valid authentication
+  - [ ] Unauthenticated users redirected to login
+- [ ] **Error Handling Testing**
+  - [ ] Invalid credentials show proper error messages
+  - [ ] Expired tokens handled gracefully
+  - [ ] Network errors show user-friendly messages
+  - [ ] Authentication failures don't crash the application
+- [ ] **Integration Testing**
+  - [ ] Frontend communicates correctly with Gateway
+  - [ ] Gateway forwards auth requests to Auth Service
+  - [ ] Auth Service responses handled correctly by frontend
+  - [ ] Security headers properly processed
+  - [ ] End-to-end authentication flow works seamlessly
+
+**Technical Requirements:**
+- [ ] Frontend uses new authentication endpoints
+- [ ] JWT tokens properly stored and managed
+- [ ] Authentication state synchronized across components
+- [ ] Error handling for all authentication scenarios
+- [ ] Proper loading states during authentication
+
+**Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup
+- ✅ **SEC-005**: Centralized Authentication Architecture Implementation (Phase 1-3)
+- ✅ **MON-001**: Basic monitoring infrastructure
+
+**Estimated Effort**: 1-2 weeks
+**Risk Level**: Medium
+**Success Criteria**: Complete frontend authentication flow working with new Auth Service architecture
 
 #### **FRONTEND-006: Standardize Frontend Port to localhost:3000**
 - **Component**: Frontend
 - **Type**: Story
-- **Priority**: 🔥 **HIGH PRIORITY**
+- **Priority**: **Medium**
 - **Status**: 📋 To Do
 
 **Description:**
@@ -400,11 +439,12 @@ Enhance integration test suite to cover all services and provide comprehensive t
 - **SEC-005**: Centralized Authentication Architecture Implementation (🔥 HIGHEST PRIORITY)
 - **INFRA-002**: Request Tracing & Standardized Logging System (🔥 HIGH PRIORITY)
 - **MON-001**: Comprehensive Gateway & Auth Service Monitoring (🔥 HIGH PRIORITY)
-- **FRONTEND-006**: Frontend Port Standardization (🔥 HIGH PRIORITY)
+- **FRONTEND-007**: Frontend Authentication Retesting After Auth Service (🔥 HIGH PRIORITY)
 - **TEST-001**: Integration Test Suite Enhancement (**High**)
 
 ### **📋 Next Milestones**
-- **Q4 2025**: Complete Auth Service architecture implementation
+- **Q4 2025**: Complete Auth Service architecture implementation (Phase 1-3)
+- **Q4 2025**: Retest frontend authentication flow with new Auth Service
 - **Q4 2025**: Implement comprehensive monitoring and observability
 - **Q1 2026**: Production deployment with monitoring and security
 - **Q1 2026**: Advanced features and RBAC implementation

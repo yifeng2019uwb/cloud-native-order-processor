@@ -18,55 +18,59 @@
 
 ## 🏗️ System Architecture
 
-**Generic microservices pattern** applicable to any domain:
+**New centralized authentication architecture** with dedicated Auth Service:
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   API Gateway   │    │   Services      │
-│   (React)       │◄──►│   (Go/Gin)      │◄──►│   (FastAPI)     │
-│                 │    │   - Auth        │    │   - User Mgmt   │
-│                 │    │   - Proxy       │    │   - Business    │
-│                 │    │   - Security    │    │   - Data        │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌─────────────────┐
-                       │   Infrastructure│
-                       │   - DynamoDB    │
-                       │   - Redis       │
-                       │   - Kubernetes  │
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   API Gateway   │    │   Auth Service  │    │   Services      │
+│   (React)       │◄──►│   (Go/Gin)      │◄──►│   (Python)     │    │   (FastAPI)     │
+│                 │    │   - Routing     │    │   - JWT Val.    │    │   - User Mgmt   │
+│                 │    │   - Proxy       │    │   - User Ctx    │    │   - Business    │
+│                 │    │   - Security    │    │   - Security    │    │   - Data        │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │                                              │
+                                │                                              │
+                                ▼                                              │
+                       ┌─────────────────┐                                    │
+                       │   Request       │                                    │
+                       │   Forwarding    │────────────────────────────────────┘
+                       │   & Response    │
+                       │   Handling      │
                        └─────────────────┘
 ```
 
 **Key Patterns Demonstrated:**
-- **Service Discovery**: API Gateway routing
-- **Data Consistency**: Distributed transactions
-- **Security**: Centralized authentication
-- **Scalability**: Stateless services + database
+- **Service Discovery**: API Gateway routing with Auth Service integration
+- **Data Consistency**: Distributed transactions with atomic operations
+- **Security**: Centralized authentication via dedicated Auth Service
+- **Scalability**: Stateless services + independent Auth Service scaling
+- **Network Security**: Backend services isolated from external access
 
 ## 🔐 Security Architecture
 
-**Modern security patterns in microservices:**
-- 🔐 **Authentication & Authorization**: JWT + RBAC with centralized security
-- 🏗️ **Infrastructure Security**: Kubernetes + AWS IAM role assumption
-- 🛡️ **API Security**: Gateway-level validation and protection
-- 📊 **Security Monitoring**: Audit logging and compliance tracking
+**New centralized authentication architecture with enhanced security:**
+- 🔐 **Dedicated Auth Service**: JWT validation and user context extraction
+- 🏗️ **Gateway Security**: Pure routing with security header injection
+- 🛡️ **Network Security**: Kubernetes NetworkPolicies and IP whitelisting
+- 📊 **Security Monitoring**: Essential authentication metrics and alerts
+- 🔒 **Service Isolation**: Backend services only accessible via internal network
 
-**Perfect for**: Learning secure development, portfolio demonstration, security engineering practice
+**Perfect for**: Learning enterprise security patterns, portfolio demonstration, security engineering practice
 
 ## 🛠️ System Overview
 
 | **Component** | **Technology** | **Purpose** | **Status** | **Deployment** |
 |---------------|----------------|-------------|------------|----------------|
 | **Frontend** | React 18 + TypeScript | User Interface | ✅ Production | Docker, K8s |
-| **API Gateway** | Go + Gin | Routing & Security | ✅ Production | Docker, K8s |
-| **User Service** | Python + FastAPI | Authentication & RBAC | ✅ Production | Docker, K8s |
+| **API Gateway** | Go + Gin | Routing & Security | 🔄 Updating | Docker, K8s |
+| **Auth Service** | Python + FastAPI | JWT Validation & User Context | 📋 Planned | Docker, K8s |
+| **User Service** | Python + FastAPI | User Management | ✅ Production | Docker, K8s |
 | **Order Service** | Python + FastAPI | Business Logic | ✅ Production | Docker, K8s |
 | **Inventory Service** | Python + FastAPI | Asset Management | ✅ Production | Docker, K8s |
 | **Database** | DynamoDB | Data Storage | ✅ Production | AWS |
 | **Cache** | Redis | Session Management | ✅ Production | Docker, K8s |
 | **Container** | Docker + K8s | Orchestration | ✅ Production | Local/Cloud |
-| **Monitoring** | Prometheus + Grafana | Observability | 🔄 In Progress | K8s |
+| **Monitoring** | Prometheus + Grafana | Essential Auth Metrics | 📋 Planned | K8s |
 
 **Deployment**: Docker Compose (local dev) | Kind cluster (local K8s) | EKS (production)
 
@@ -145,27 +149,40 @@ curl http://localhost:8080/health
 
 ### **Security Testing**
 ```bash
-# Run security-focused tests
-cd services && ./build.sh --test-only
+# Run comprehensive security tests
+./scripts/test-local.sh --environment dev --all
+
+# Quick health checks
+./scripts/smoke-test.sh
+
+# API authentication testing
+./scripts/cli-client.sh login
+./scripts/cli-client.sh test
 ```
 
 ## ☸️ Kubernetes Learning
 
 ### **Local Kubernetes Setup**
 ```bash
-# Create local cluster
-kind create cluster --name order-processor
+# Check prerequisites first
+./scripts/prerequisites-checker.sh
 
-# Deploy with our defined script
-./scripts/deploy.sh --type k8s --environment dev
+# Deploy with root deployment script
+./deploy.sh all dev
 
-# Check deployment
+# Check deployment status
 kubectl get pods -n order-processor
 kubectl get services -n order-processor
 
-# Port forward to access services
-kubectl port-forward svc/frontend 3000:80 -n order-processor
-kubectl port-forward svc/gateway 8080:8080 -n order-processor
+# Access services (automatic port forwarding)
+./scripts/smoke-test.sh
+
+# Manual port forwarding if needed
+kubectl port-forward svc/frontend 30003:80 -n order-processor &
+kubectl port-forward svc/gateway 30002:8080 -n order-processor &
+kubectl port-forward svc/user-service 30004:8000 -n order-processor &
+kubectl port-forward svc/inventory-service 30005:8001 -n order-processor &
+kubectl port-forward svc/order-service 30006:8002 -n order-processor &
 ```
 
 ### **Kubernetes Concepts Demonstrated**
@@ -182,7 +199,13 @@ kubectl port-forward svc/gateway 8080:8080 -n order-processor
 - ✅ Structured JSON logging with correlation IDs
 - ✅ Prometheus metrics collection setup
 
-**For advanced monitoring setup:** See [Monitoring Design](docs/design-docs/monitoring-design.md) and [Monitoring Guide](monitoring/README.md).
+**Planned (Simplified Scope):**
+- 📋 Essential authentication metrics (JWT success/failure, request duration)
+- 📋 Basic security monitoring (rate limiting, failed logins)
+- 📋 Simple dashboards for auth operations
+- 📋 Basic alerting for authentication failures
+
+**For detailed monitoring design:** See [Monitoring Design](docs/design-docs/monitoring-design.md) and [Monitoring Guide](monitoring/README.md).
 
 ## 🔧 Development Workflow
 
@@ -221,11 +244,30 @@ kubectl port-forward svc/gateway 8080:8080 -n order-processor
 - 🔐 **Enterprise Security**: JWT, RBAC, IAM role assumption, defense-in-depth
 - 🏗️ **Microservices Security**: Secure inter-service communication and validation
 - 🛡️ **Infrastructure Security**: Kubernetes policies and AWS security patterns
-- 📊 **Security Monitoring**: Audit logging and compliance tracking
+- 📊 **Security Monitoring**: Essential authentication metrics and alerts
 
 **For detailed learning outcomes, see:**
 - **[Security Documentation](docs/design-docs/)** - Complete security patterns
 - **[Architecture Decisions](docs/design-docs/)** - Technology choices and rationale
+
+## 🚀 Current Development Focus
+
+**🔥 HIGHEST PRIORITY: Centralized Authentication Architecture**
+- **Phase 1**: Create dedicated Auth Service for JWT validation
+- **Phase 2**: Update Gateway to use Auth Service for authentication
+- **Phase 3**: Remove JWT validation from backend services
+- **Phase 4**: Implement network security controls
+
+**📊 HIGH PRIORITY: Essential Authentication Monitoring**
+- **Week 1**: Basic Auth Service metrics (JWT success/failure)
+- **Week 2**: Gateway authentication tracking
+- **Week 3**: Essential security monitoring
+- **Week 4**: Basic dashboards and alerting
+
+**🌐 HIGH PRIORITY: Frontend Authentication Retesting**
+- Retest complete authentication flow after Auth Service implementation
+- Validate protected routes and error handling
+- Ensure seamless user experience
 
 ## ⚠️ Current Limitations
 
@@ -239,9 +281,10 @@ kubectl port-forward svc/gateway 8080:8080 -n order-processor
 
 1. **Quick Demo**: Follow the [Quick Start](#-quick-start) above
 2. **Detailed Setup**: [Local Development Guide](docs/deployment-guide.md)
-3. **Security Implementation**: [Security Documentation](docs/design-docs/)
-4. **Kubernetes Setup**: [Kubernetes Guide](kubernetes/README.md)
-5. **API Testing**: [Integration Tests](integration_tests/README.md)
+3. **New Auth Architecture**: [Centralized Authentication Design](docs/centralized-authentication-architecture.md)
+4. **Security Implementation**: [Security Documentation](docs/design-docs/)
+5. **Kubernetes Setup**: [Kubernetes Guide](kubernetes/README.md)
+6. **API Testing**: [Integration Tests](integration_tests/README.md)
 
 ---
 
