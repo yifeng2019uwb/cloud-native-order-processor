@@ -313,26 +313,39 @@ cli-test:
 # ====================
 # COMPATIBILITY TARGETS (for CI/CD and documentation)
 # These targets maintain backward compatibility with old build.sh scripts
+# Now using dev.sh scripts for full compatibility
 # New development should use the dev.sh targets above
 # ====================
 
 # Backward compatibility for services Makefile
 test-all:
 	@echo "$(BLUE)[INFO]$(NC) Running all service tests (compatibility mode)..."
-	@./services/build.sh --test-only -v
+	@for service_dir in services/*/; do \
+		if [ -d "$$service_dir" ] && [ -f "$$service_dir/dev.sh" ]; then \
+			service_name=$$(basename "$$service_dir"); \
+			echo "Testing service: $$service_name"; \
+			(cd "$$service_dir" && ./dev.sh test); \
+		fi; \
+	done
 
 build-all:
 	@echo "$(BLUE)[INFO]$(NC) Building all services (compatibility mode)..."
-	@./services/build.sh -v
+	@for service_dir in services/*/; do \
+		if [ -d "$$service_dir" ] && [ -f "$$service_dir/dev.sh" ]; then \
+			service_name=$$(basename "$$service_dir"); \
+			echo "Building service: $$service_name"; \
+			(cd "$$service_dir" && ./dev.sh build); \
+		fi; \
+	done
 
 # Backward compatibility for old root Makefile commands
 gateway-build:
 	@echo "$(BLUE)[INFO]$(NC) Building gateway (compatibility mode)..."
-	@./gateway/build.sh -v
+	@./gateway/dev.sh build
 
 gateway-test:
 	@echo "$(BLUE)[INFO]$(NC) Testing gateway (compatibility mode)..."
-	@./gateway/build.sh --test-only -v
+	@./gateway/dev.sh test
 
 gateway-dev:
 	@echo "$(BLUE)[INFO]$(NC) Starting gateway development (compatibility mode)..."
@@ -340,11 +353,11 @@ gateway-dev:
 
 service-build:
 	@echo "$(BLUE)[INFO]$(NC) Building service $(SERVICE) (compatibility mode)..."
-	@cd services && ./build.sh -v
+	@cd services/$(SERVICE) && ./dev.sh build
 
 service-test:
 	@echo "$(BLUE)[INFO]$(NC) Testing service $(SERVICE) (compatibility mode)..."
-	@cd services && ./build.sh --test-only -v
+	@cd services/$(SERVICE) && ./dev.sh test
 
 service-dev:
 	@echo "$(BLUE)[INFO]$(NC) Starting service $(SERVICE) development (compatibility mode)..."
