@@ -488,6 +488,111 @@ spec:
 - Minimal impact on performance
 - Benefits outweigh overhead
 
+## 🚦 Rate Limiting & Circuit Breaker Patterns
+
+### Rate Limiting Strategy
+
+#### Auth Service Rate Limiting
+- **Per-IP Rate Limiting**: Limit authentication attempts per client IP
+- **Per-User Rate Limiting**: Limit login attempts per username
+- **Global Rate Limiting**: Protect against distributed attacks
+- **Burst Handling**: Allow reasonable burst traffic while preventing abuse
+
+#### Rate Limiting Implementation
+```yaml
+# Redis-based rate limiting configuration
+rate_limits:
+  auth_service:
+    per_ip: 100 requests/minute
+    per_user: 5 login attempts/minute
+    global: 1000 requests/minute
+    burst: 200 requests
+  gateway:
+    per_ip: 1000 requests/minute
+    per_user: 100 requests/minute
+    global: 10000 requests/minute
+    burst: 1000 requests
+```
+
+#### Rate Limiting Headers
+- `X-RateLimit-Limit`: Request limit per time window
+- `X-RateLimit-Remaining`: Remaining requests in current window
+- `X-RateLimit-Reset`: Time until rate limit resets
+- `Retry-After`: Suggested retry delay when rate limited
+
+### Circuit Breaker Pattern
+
+#### Auth Service Circuit Breaker
+- **Failure Threshold**: Number of failures before opening circuit
+- **Timeout**: Time to wait before attempting to close circuit
+- **Half-Open State**: Allow limited requests to test recovery
+- **Fallback Strategy**: Handle auth failures gracefully
+
+#### Circuit Breaker States
+```
+CLOSED (Normal) → OPEN (Failing) → HALF-OPEN (Testing) → CLOSED (Recovered)
+     ↓                ↓                ↓
+  Auth Service   Auth Service    Limited Auth    Auth Service
+  Working       Unavailable     Requests        Working Again
+```
+
+#### Circuit Breaker Configuration
+```yaml
+circuit_breaker:
+  auth_service:
+    failure_threshold: 5 failures
+    timeout: 30 seconds
+    half_open_requests: 3
+    fallback_strategy: "reject_with_503"
+  gateway:
+    failure_threshold: 3 failures
+    timeout: 15 seconds
+    half_open_requests: 2
+    fallback_strategy: "cached_auth_result"
+```
+
+### Resilience Patterns
+
+#### Gateway Resilience
+- **Auth Service Failover**: Multiple Auth Service instances
+- **Cached Authentication**: Cache recent auth results for resilience
+- **Degraded Mode**: Allow limited functionality when Auth Service is down
+- **Health Checks**: Monitor Auth Service health and circuit state
+
+#### Backend Service Resilience
+- **Request Queuing**: Queue requests when Gateway is overwhelmed
+- **Timeout Handling**: Implement request timeouts to prevent hanging
+- **Retry Logic**: Retry failed requests with exponential backoff
+- **Graceful Degradation**: Provide limited functionality during outages
+
+#### Monitoring and Alerting
+- **Rate Limit Metrics**: Track rate limit hits and patterns
+- **Circuit Breaker Metrics**: Monitor circuit state changes
+- **Performance Metrics**: Track auth service response times
+- **Alert Thresholds**: Alert on unusual rate limiting or circuit breaker activity
+
+### Implementation Strategy
+
+#### Phase 1: Basic Rate Limiting
+- Implement per-IP rate limiting on Gateway
+- Add rate limiting headers to responses
+- Monitor rate limit effectiveness
+
+#### Phase 2: Advanced Rate Limiting
+- Implement per-user rate limiting on Auth Service
+- Add global rate limiting for DDoS protection
+- Implement burst handling and smoothing
+
+#### Phase 3: Circuit Breaker Implementation
+- Implement circuit breaker pattern for Auth Service
+- Add fallback strategies for auth failures
+- Implement health checks and monitoring
+
+#### Phase 4: Resilience Enhancement
+- Add caching and fallback mechanisms
+- Implement graceful degradation
+- Add comprehensive monitoring and alerting
+
 ## 🚀 Implementation Roadmap
 
 ### Phase 1: Auth Service Creation
@@ -529,23 +634,207 @@ spec:
 - Test RBAC functionality
 
 ### Phase 6: Testing and Validation
-- Comprehensive security testing
+- Comprehensive security testing of new architecture
 - Performance testing and optimization
-- Integration testing
+- Integration testing with all services
 - Security audit and penetration testing
-- **Network Security Testing**: Verify backend services reject external requests
-- **IP Whitelist Testing**: Confirm only internal IPs can access backend services
-- **Common Package Testing**: Verify JWT functionality works across all services
-- **JWT Reuse Testing**: Test token creation in User Service and validation in Auth Service
+- Network security testing to verify backend services reject external requests
+- Common package testing to verify JWT functionality works across all services
+- JWT reuse testing between User Service and Auth Service
 
-### Phase 7: Deployment and Monitoring
-- Production deployment
-- Monitoring and alerting setup
-- Performance monitoring
-- Security monitoring
-- **Network Monitoring**: Monitor for unauthorized access attempts
-- **Security Alerting**: Alert on external IP access attempts
-- **JWT Monitoring**: Monitor JWT creation and validation across services
+### Phase 7: Rate Limiting & Circuit Breaker Implementation
+- **Basic Rate Limiting**: Implement per-IP rate limiting on Gateway
+- **Auth Service Rate Limiting**: Add per-user and global rate limiting
+- **Circuit Breaker Pattern**: Implement circuit breaker for Auth Service
+- **Fallback Strategies**: Add graceful degradation and caching
+- **Monitoring**: Track rate limit hits and circuit breaker state changes
+
+### Phase 8: Resilience Enhancement
+- **Caching Layer**: Implement Redis-based auth result caching
+- **Failover Mechanisms**: Add multiple Auth Service instances
+- **Health Checks**: Comprehensive health monitoring
+- **Performance Optimization**: Optimize auth service response times
+- **Load Testing**: Stress test the complete auth flow
+
+### Phase 9: Deployment and Monitoring
+- Production deployment of new auth architecture
+- Monitoring and alerting setup for auth system
+- Performance monitoring and optimization
+- Security monitoring and incident response
+- Network monitoring for unauthorized access attempts
+- JWT monitoring across all services
+- Rate limiting and circuit breaker monitoring
+
+## 📊 Monitoring & Logging Integration
+
+### Monitoring Architecture
+
+#### Metrics Collection
+- **Prometheus Integration**: Collect metrics from Auth Service, Gateway, and backend services
+- **Custom Metrics**: Authentication success/failure rates, response times, circuit breaker states
+- **Business Metrics**: User login patterns, token validation patterns, rate limit hits
+- **Infrastructure Metrics**: CPU, memory, network usage for auth components
+
+#### Key Metrics to Monitor
+```yaml
+auth_service_metrics:
+  authentication:
+    - login_success_total
+    - login_failure_total
+    - token_validation_success_total
+    - token_validation_failure_total
+    - token_expiration_total
+  performance:
+    - auth_request_duration_seconds
+    - jwt_validation_duration_seconds
+    - user_context_extraction_duration_seconds
+  security:
+    - rate_limit_hits_total
+    - suspicious_activity_total
+    - failed_authentication_attempts_total
+  circuit_breaker:
+    - circuit_breaker_state
+    - circuit_breaker_failures_total
+    - circuit_breaker_recovery_time_seconds
+```
+
+### Logging Strategy
+
+#### Structured Logging
+- **JSON Format**: All logs in structured JSON for easy parsing
+- **Log Levels**: DEBUG, INFO, WARN, ERROR, FATAL
+- **Correlation IDs**: Track requests across all services
+- **User Context**: Include user information in relevant logs
+
+#### Log Categories
+```yaml
+logging_categories:
+  authentication:
+    - user_login_attempts
+    - token_validation
+    - user_context_extraction
+    - authentication_failures
+  security:
+    - rate_limit_violations
+    - suspicious_activities
+    - access_control_decisions
+    - security_events
+  performance:
+    - slow_requests
+    - resource_usage
+    - circuit_breaker_events
+    - timeout_events
+  business:
+    - user_registration
+    - role_changes
+    - permission_updates
+    - audit_events
+```
+
+#### Log Enrichment
+- **Request Context**: Include request ID, source IP, user agent
+- **User Context**: Username, role, permissions (when available)
+- **Performance Data**: Response time, resource usage
+- **Security Context**: Rate limit status, circuit breaker state
+
+### Integration with Existing Infrastructure
+
+#### Prometheus & Grafana
+- **Custom Dashboards**: Authentication metrics, security events, performance
+- **Alerting Rules**: Set thresholds for critical metrics
+- **Historical Analysis**: Track trends and patterns over time
+- **Service Health**: Monitor Auth Service availability and performance
+
+#### ELK Stack (Elasticsearch, Logstash, Kibana)
+- **Centralized Logging**: Collect logs from all auth components
+- **Log Aggregation**: Correlate logs across services
+- **Search & Analysis**: Powerful log search and analysis capabilities
+- **Visualization**: Create dashboards for security and performance monitoring
+
+#### Jaeger Distributed Tracing
+- **Request Tracing**: Track requests through auth flow
+- **Performance Analysis**: Identify bottlenecks in authentication
+- **Error Correlation**: Correlate errors across services
+- **Dependency Mapping**: Understand service dependencies
+
+### Security Monitoring
+
+#### Authentication Anomalies
+- **Failed Login Patterns**: Detect brute force attacks
+- **Token Abuse**: Monitor unusual token validation patterns
+- **Rate Limit Violations**: Track and alert on rate limit hits
+- **Geographic Anomalies**: Detect login attempts from unusual locations
+
+#### Security Alerts
+```yaml
+security_alerts:
+  authentication:
+    - multiple_failed_logins_per_user: "5+ failed logins in 1 minute"
+    - high_failure_rate: ">20% authentication failure rate"
+    - suspicious_ip_activity: "Multiple failed attempts from single IP"
+    - token_abuse: "Excessive token validation requests"
+  rate_limiting:
+    - rate_limit_exceeded: "User/IP hitting rate limits consistently"
+    - ddos_attack: "Global rate limit exceeded"
+    - burst_attack: "Burst rate limit exceeded"
+  circuit_breaker:
+    - circuit_opened: "Circuit breaker opened for Auth Service"
+    - high_failure_rate: "High failure rate triggering circuit breaker"
+```
+
+### Performance Monitoring
+
+#### Response Time Monitoring
+- **P95/P99 Latency**: Track authentication response times
+- **Timeout Monitoring**: Monitor for authentication timeouts
+- **Resource Utilization**: Track CPU, memory, and network usage
+- **Database Performance**: Monitor auth database query performance
+
+#### Capacity Planning
+- **Throughput Monitoring**: Track authentication requests per second
+- **Resource Scaling**: Monitor when scaling is needed
+- **Bottleneck Identification**: Identify performance bottlenecks
+- **Load Testing Results**: Validate system capacity under load
+
+### Operational Monitoring
+
+#### Health Checks
+- **Service Health**: Monitor Auth Service availability
+- **Dependency Health**: Check database, Redis, and other dependencies
+- **Circuit Breaker Status**: Monitor circuit breaker states
+- **Rate Limiter Status**: Check rate limiting functionality
+
+#### Deployment Monitoring
+- **Deployment Success**: Monitor successful deployments
+- **Rollback Triggers**: Automatic rollback on health check failures
+- **Configuration Changes**: Track configuration updates
+- **Version Monitoring**: Monitor service versions across environments
+
+### Implementation Strategy
+
+#### Phase 1: Basic Monitoring
+- Implement Prometheus metrics collection
+- Add structured logging to Auth Service
+- Create basic health check endpoints
+- Set up basic alerting rules
+
+#### Phase 2: Advanced Monitoring
+- Integrate with existing monitoring infrastructure
+- Create custom dashboards for authentication metrics
+- Implement comprehensive security monitoring
+- Add distributed tracing capabilities
+
+#### Phase 3: Operational Excellence
+- Implement automated alerting and response
+- Create runbooks for common issues
+- Add capacity planning and forecasting
+- Implement automated scaling based on metrics
+
+#### Phase 4: Continuous Improvement
+- Analyze monitoring data for optimization opportunities
+- Implement predictive monitoring and alerting
+- Add machine learning for anomaly detection
+- Continuous refinement of monitoring and alerting rules
 
 ## 📝 Conclusion
 
