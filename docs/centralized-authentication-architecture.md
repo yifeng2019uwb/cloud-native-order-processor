@@ -10,7 +10,10 @@
 
 ## 🎯 Executive Summary
 
-This document outlines the design for implementing centralized authentication in the Cloud Native Order Processor system. The architecture introduces a dedicated **Auth Service** that handles all JWT validation and user authentication, while the Gateway focuses on routing and request forwarding. This eliminates the need for individual backend services to validate JWT tokens and provides a foundation for simple, secure authentication.
+This document outlines the design for implementing centralized authentication in the Cloud Native Order Processor system. The architecture introduces a dedicated **Auth Service** that handles JWT validation only, while the Gateway focuses on routing and request forwarding. This eliminates the need for individual backend services to validate JWT tokens and provides a foundation for simple, secure authentication.
+
+**Phase 1 Scope**: Implement `/internal/auth/validate` endpoint for JWT validation only.
+**Future Scope**: Additional internal auth endpoints (introspect, permissions, blacklist) will be added incrementally.
 
 ## 🏗️ System Architecture Overview
 
@@ -43,19 +46,39 @@ This document outlines the design for implementing centralized authentication in
 
 #### Key Architecture Principles:
 - **Gateway**: Single entry point, handles routing and forwarding
-- **Auth Service**: Dedicated authentication and authorization
+- **Auth Service**: Dedicated JWT validation only (Phase 1)
 - **Backend Services**: Business logic only, no JWT validation
 - **Internal Network**: All services communicate via Kubernetes internal network
 - **Security Headers**: Gateway injects security context from Auth Service
 
+### Phase 1 Implementation Scope
+
+**Current Focus**: Implement `/internal/auth/validate` endpoint only
+**Purpose**: JWT validation and user context extraction for Gateway
+**Access**: Internal only (Gateway ↔ Auth Service)
+**No Public APIs**: Auth Service has no external endpoints
+
+**Phase 1 Endpoints:**
+- `POST /internal/auth/validate` - JWT validation endpoint
+- `GET /health` - Health check for K8s probes
+- `GET /metrics` - Prometheus metrics endpoint
+- `GET /` - Service information
+
+**Future Endpoints (Not in Phase 1):**
+- `/internal/auth/introspect` - Token introspection
+- `/internal/auth/permissions` - User permissions
+- `/internal/auth/blacklist/*` - Token blacklist management
+- `/internal/auth/roles/*` - Role-based access control
+
 ### Key Principles
 
-1. **Dedicated Authentication Service**: Auth Service handles all JWT validation and user authentication
+1. **Dedicated JWT Validation Service**: Auth Service handles JWT validation only (Phase 1)
 2. **Gateway as Router**: Gateway focuses on routing and request forwarding, not authentication logic
 3. **Trusted Internal Communication**: Backend services trust Auth Service completely
 4. **No JWT Secret Distribution**: Only Auth Service possesses JWT validation secrets
 5. **Network Isolation**: Backend services are not directly accessible externally
 6. **Simple Authentication**: Architecture designed for basic authentication without complexity
+7. **Incremental Development**: Start with core validation, add features incrementally
 
 ## 🔐 Authentication Flow
 
@@ -71,33 +94,108 @@ This document outlines the design for implementing centralized authentication in
 - Gateway maintains request/response correlation
 - Gateway handles routing decisions based on Auth Service response
 
-### 2. Auth Service Processing
+### 2. Auth Service Processing (Phase 1)
 
 #### JWT Validation
 - **Auth Service** validates JWT token using its configured JWT secret
 - **Auth Service** extracts user information from JWT claims:
-  - Username
-  - Basic permissions
-  - Token expiration
+  - Username (from `sub` claim)
+  - Token expiration time
+  - Token creation time
+  - Basic token metadata
 - If validation fails, Auth Service returns authentication error
 
-#### User Context Extraction
+#### User Context Extraction (Phase 1 Scope)
 - Username from JWT `sub` claim
-- Basic permissions from JWT claims
 - Authentication status (authenticated/unauthenticated)
 - Token metadata (creation time, expiration)
-- Simple authentication without role complexity
+- Token validity status
+- **No permission checking** in Phase 1 (basic validation only)
 
-#### Authentication Response
+#### Authentication Response (Phase 1)
 - **Auth Service** returns authentication result to Gateway
 - Includes user context and authentication status
-- May include authorization decisions for specific endpoints
+- **No authorization decisions** in Phase 1 (validation only)
+- Response format: `{valid: bool, user: string, expires_at: string, metadata: object}`
 
 ### 3. Gateway Processing
 
 #### Authentication Integration
 - Gateway receives authentication result from Auth Service
 - Gateway adds security headers based on Auth Service response
+
+## 🎯 Phase 1 Implementation Details
+
+### Auth Service Endpoints (Phase 1)
+
+#### 1. POST /internal/auth/validate
+**Purpose**: JWT token validation and user context extraction
+**Access**: Internal only (Gateway ↔ Auth Service)
+**Request**:
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "request_id": "req-12345"
+}
+```
+
+**Response (Success)**:
+```json
+{
+  "valid": true,
+  "user": "john_doe",
+  "expires_at": "2025-08-21T10:30:00Z",
+  "created_at": "2025-08-20T10:30:00Z",
+  "metadata": {
+    "algorithm": "HS256",
+    "issuer": "user_service",
+    "audience": "trading_platform"
+  },
+  "request_id": "req-12345"
+}
+```
+
+**Response (Failure)**:
+```json
+{
+  "valid": false,
+  "error": "token_expired",
+  "message": "JWT token has expired",
+  "request_id": "req-12345"
+}
+```
+
+#### 2. Standard Service Endpoints
+- **GET /health** - Health check for Kubernetes probes
+- **GET /metrics** - Prometheus metrics endpoint
+- **GET /** - Service information and status
+
+### Phase 1 Technical Requirements
+
+#### Core Functionality
+- [x] JWT token validation using configured secret
+- [x] User context extraction from JWT claims
+- [x] Token expiration checking
+- [x] Basic error handling and logging
+- [x] Integration with BaseLogger for structured logging
+
+#### Security Requirements
+- [x] Internal-only access (no external endpoints)
+- [x] JWT secret configuration via environment variables
+- [x] Request validation and sanitization
+- [x] Error messages without sensitive information
+
+#### Performance Requirements
+- [x] Fast JWT validation (< 10ms response time)
+- [x] Non-blocking operations
+- [x] Request correlation with unique IDs
+- [x] Structured logging for monitoring
+
+#### Integration Requirements
+- [x] Gateway can call `/internal/auth/validate`
+- [x] Response format compatible with Gateway processing
+- [x] Health checks work with Kubernetes probes
+- [x] Metrics compatible with Prometheus
 - **Gateway forwards request to appropriate backend service**
 
 #### Security Header Injection
