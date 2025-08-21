@@ -44,7 +44,7 @@ Commands:
 Examples:
     $0 build                    # Build auth service
     $0 test                     # Run all tests
-    $0 test test_validate       # Test specific test file
+    $0 test test_validate      # Test specific test file
     $0 test "test_*.py"        # Test files matching pattern
     $0 clean                   # Clean build files
 
@@ -107,7 +107,10 @@ test() {
     # Activate virtual environment
     source .venv-auth_service/bin/activate
 
-    # Run tests
+    # Set up Python path for imports
+    export PYTHONPATH="${PWD}/src:${PYTHONPATH:-}"
+
+    # Run tests (coverage is handled by pytest.ini)
     if [[ -n "$test_target" ]]; then
         log_info "Running tests for: $test_target"
         python -m pytest "tests/$test_target" -v
@@ -116,75 +119,87 @@ test() {
         python -m pytest tests/ -v
     fi
 
-    log_success "Tests completed"
+    # Show coverage summary
+    if [[ -d "htmlcov-auth_service" ]]; then
+        log_info "Coverage report generated: htmlcov-auth_service/index.html"
+    fi
+
+    log_success "Auth service tests completed"
 }
 
 # Clean build artifacts
 clean() {
-    log_info "Cleaning auth service..."
+    log_info "Cleaning auth service build artifacts..."
 
     cd "$SCRIPT_DIR"
 
-    # Remove virtual environment
-    if [[ -d ".venv-auth_service" ]]; then
-        log_info "Removing virtual environment..."
-        rm -rf .venv-auth_service
-    fi
-
-    # Remove build artifacts
-    if [[ -d "build" ]]; then
-        log_info "Removing build directory..."
-        rm -rf build
-    fi
-
+    # Remove build directories
     if [[ -d "dist" ]]; then
-        log_info "Removing dist directory..."
         rm -rf dist
+        log_info "Removed dist directory"
     fi
 
-    if [[ -d "*.egg-info" ]]; then
-        log_info "Removing egg-info directories..."
-        rm -rf *.egg-info
+    if [[ -d "build" ]]; then
+        rm -rf build
+        log_info "Removed build directory"
     fi
 
-    if [[ -d "htmlcov-auth_service" ]]; then
-        log_info "Removing coverage reports..."
-        rm -rf htmlcov-auth_service
+    # Remove virtual environment (optional, uncomment if needed)
+    # if [[ -d ".venv-auth_service" ]]; then
+    #     rm -rf .venv-auth_service
+    #     log_info "Removed virtual environment"
+    # fi
+
+    # Remove cache directories
+    if [[ -d "__pycache__" ]]; then
+        rm -rf __pycache__
+        log_info "Removed __pycache__ directory"
     fi
 
     if [[ -d ".pytest_cache" ]]; then
-        log_info "Removing pytest cache..."
         rm -rf .pytest_cache
+        log_info "Removed .pytest_cache directory"
     fi
 
-    if [[ -d ".coverage" ]]; then
-        log_info "Removing coverage file..."
-        rm -f .coverage
+    # Remove coverage reports
+    if [[ -d "htmlcov-auth_service" ]]; then
+        rm -rf htmlcov-auth_service
+        log_info "Removed coverage reports"
     fi
 
-    log_success "Clean completed"
+    log_success "Auth service cleanup completed"
 }
 
-# Main script logic
+# Main function
 main() {
-    case "${1:-}" in
+    if [[ $# -eq 0 ]]; then
+        show_usage
+        exit 1
+    fi
+
+    local command="$1"
+
+    # Check prerequisites
+    check_prerequisites
+
+    # Execute command
+    case $command in
         build)
-            check_prerequisites
             build
             ;;
         test)
-            check_prerequisites
             test "$2"
             ;;
         clean)
             clean
             ;;
         *)
+            log_error "Unknown command: $command"
             show_usage
             exit 1
             ;;
     esac
 }
 
-# Run main function
+# Script execution
 main "$@"
