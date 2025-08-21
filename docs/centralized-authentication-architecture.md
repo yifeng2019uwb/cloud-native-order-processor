@@ -10,7 +10,7 @@
 
 ## 🎯 Executive Summary
 
-This document outlines the design for implementing centralized authentication in the Cloud Native Order Processor system. The architecture introduces a dedicated **Auth Service** that handles all JWT validation and user authentication, while the Gateway focuses on routing and request forwarding. This eliminates the need for individual backend services to validate JWT tokens and provides a foundation for future RBAC implementation.
+This document outlines the design for implementing centralized authentication in the Cloud Native Order Processor system. The architecture introduces a dedicated **Auth Service** that handles all JWT validation and user authentication, while the Gateway focuses on routing and request forwarding. This eliminates the need for individual backend services to validate JWT tokens and provides a foundation for simple, secure authentication.
 
 ## 🏗️ System Architecture Overview
 
@@ -19,7 +19,7 @@ This document outlines the design for implementing centralized authentication in
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   External      │    │     Gateway     │    │   Auth Service  │    │   Backend       │
-│   Clients       │───▶│   (Routing)     │◄──▶│   (JWT + RBAC)  │    │   Services      │
+│   Clients       │───▶│   (Routing)     │◄──▶│   (JWT Auth)    │    │   Services      │
 │                 │    │                 │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
                                 │                                              │
@@ -55,7 +55,7 @@ This document outlines the design for implementing centralized authentication in
 3. **Trusted Internal Communication**: Backend services trust Auth Service completely
 4. **No JWT Secret Distribution**: Only Auth Service possesses JWT validation secrets
 5. **Network Isolation**: Backend services are not directly accessible externally
-6. **Future RBAC Ready**: Architecture designed to support Role-Based Access Control
+6. **Simple Authentication**: Architecture designed for basic authentication without complexity
 
 ## 🔐 Authentication Flow
 
@@ -77,17 +77,16 @@ This document outlines the design for implementing centralized authentication in
 - **Auth Service** validates JWT token using its configured JWT secret
 - **Auth Service** extracts user information from JWT claims:
   - Username
-  - Role
-  - Permissions
+  - Basic permissions
   - Token expiration
 - If validation fails, Auth Service returns authentication error
 
 #### User Context Extraction
 - Username from JWT `sub` claim
-- Role from JWT `role` claim
+- Basic permissions from JWT claims
 - Authentication status (authenticated/unauthenticated)
 - Token metadata (creation time, expiration)
-- Future: RBAC permissions and access control
+- Simple authentication without role complexity
 
 #### Authentication Response
 - **Auth Service** returns authentication result to Gateway
@@ -106,7 +105,7 @@ Gateway adds the following headers to all forwarded requests:
 - `X-Source: gateway` - Proves request came through Gateway
 - `X-Auth-Service: auth-service` - Proves authentication was handled by Auth Service
 - `X-User-ID: <username>` - Extracted username from Auth Service
-- `X-User-Role: <role>` - Extracted user role from Auth Service
+- `X-User-Permissions: <permissions>` - Basic user permissions from Auth Service
 - `X-Authenticated: true` - Authentication status from Auth Service
 - `X-Request-ID: <uuid>` - Request tracking
 - `X-Auth-Token: <token-id>` - Authentication token reference
@@ -132,7 +131,7 @@ Gateway adds the following headers to all forwarded requests:
 
 #### Business Logic Execution
 - Service executes business logic based on user context
-- Permission checks based on Auth Service-provided user role
+- Basic permission checks based on Auth Service-provided user context
 - Audit logging using Auth Service-provided user information
 
 ## 🛡️ Security Model
@@ -283,17 +282,44 @@ spec:
 - **Token management** (creation, validation, blacklisting)
 - **Authentication status** verification
 
-#### Authorization Responsibilities (Future RBAC)
-- **Role-based access control** policies
-- **Permission mapping** for different roles
-- **Dynamic permission** evaluation
-- **Access control** decisions
+#### Authorization Responsibilities (Simple Authentication)
+- **Basic permission checking** without role complexity
+- **Simple permission system** - all users have same access
+- **Minimal permission set** - only essential business permissions
+- **Access control** decisions based on basic permissions
 
 #### Security Features
 - JWT secret management
 - Token blacklist functionality
 - Rate limiting for auth operations
 - Audit logging for authentication events
+
+### Simplified Authentication Design (No RBAC)
+
+#### Authentication Architecture
+- **Single User Type**: All authenticated users have same permissions
+- **No Role System**: Simple authentication without role complexity
+- **Equal Access**: All users can access all trading features
+- **Minimal Complexity**: Focus on core authentication only
+
+#### Permission System
+```python
+USER_PERMISSIONS = [
+    "create:orders"      # All users can create market and limit orders
+]
+```
+
+#### No Admin Features
+- **Use Existing Monitoring**: Leverage existing Grafana/Prometheus
+- **No New APIs**: No admin endpoints or role management
+- **Focus on Core**: Authentication, logging, monitoring, Redis
+- **Simple Implementation**: Core infrastructure only
+
+#### Implementation Benefits
+- **Simplified Architecture**: No roles to implement and test
+- **Business Focused**: All users can trade equally
+- **Easy Maintenance**: No permission matrix to manage
+- **Core Focus**: Authentication, logging, monitoring, Redis
 
 ### Backend Services
 
@@ -449,6 +475,8 @@ spec:
 - Ready for RBAC implementation
 - Easy to add new authentication methods
 - Flexible permission system
+
+
 
 ## ⚠️ Considerations and Risks
 
@@ -625,13 +653,14 @@ circuit_breaker:
 - **Load Balancer Removal**: Remove external LoadBalancer services for backend
 - **Internal Service Discovery**: Configure internal-only service communication
 
-### Phase 5: RBAC Implementation
-- Add role-based access control to Auth Service
-- **Extend common package**: Add RBAC utilities to common package
-- **RBAC reuse**: Make RBAC functionality available to other services
-- Implement permission mapping and evaluation
-- Update authorization logic
-- Test RBAC functionality
+### Phase 5: Core Infrastructure Implementation
+- Implement simplified authentication (no roles, no RBAC)
+- **Extend common package**: Add basic authentication utilities to common package
+- **Simple permission system**: All users have same permissions (create:orders)
+- Implement basic authentication middleware
+- Update authorization logic for simplified system
+- Test basic authentication functionality
+- **No admin features**: Use existing monitoring infrastructure
 
 ### Phase 6: Testing and Validation
 - Comprehensive security testing of new architecture
@@ -726,14 +755,14 @@ logging_categories:
     - timeout_events
   business:
     - user_registration
-    - role_changes
+    - authentication_events
     - permission_updates
     - audit_events
 ```
 
 #### Log Enrichment
 - **Request Context**: Include request ID, source IP, user agent
-- **User Context**: Username, role, permissions (when available)
+- **User Context**: Username, basic permissions (when available)
 - **Performance Data**: Response time, resource usage
 - **Security Context**: Rate limit status, circuit breaker state
 
@@ -840,7 +869,7 @@ security_alerts:
 
 The centralized authentication architecture with a dedicated Auth Service provides significant security, performance, and operational benefits while following proper microservices principles. By centralizing authentication in a dedicated service, we eliminate JWT secret distribution issues, improve performance, and create a more maintainable and scalable security model.
 
-This design follows industry best practices for microservices authentication and provides a solid foundation for future RBAC implementation and security enhancements.
+This design follows industry best practices for microservices authentication and provides a solid foundation for simple, secure authentication without role complexity.
 
 ---
 
