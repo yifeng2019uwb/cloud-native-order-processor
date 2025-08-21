@@ -202,6 +202,47 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  auth_service:
+    build:
+      context: ../
+      dockerfile: docker/auth-service/Dockerfile
+    container_name: order-processor-auth_service
+    ports:
+      - "30007:8003"
+    environment:
+      # Auth Service configuration
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-development-jwt-secret-key-here}
+      - JWT_ALGORITHM=HS256
+      - SERVICE_NAME=auth_service
+      - SERVICE_PORT=8003
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+      # No Redis dependency for Auth Service (JWT validation only)
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      # Auto-reload for development
+      - ../services:/app/services:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - order-processor-network
+    # Resource limits - Auth Service gets 1.5 CPUs, 1GB RAM (consistent with other services)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
   gateway:
     build:
       context: ../
@@ -221,6 +262,7 @@ services:
       - USER_SERVICE_URL=http://user_service:8000
       - INVENTORY_SERVICE_URL=http://inventory_service:8001
       - ORDER_SERVICE_URL=http://order_service:8002
+      - AUTH_SERVICE_URL=http://auth_service:8003
       # Redis configuration for rate limiting and session management
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -235,6 +277,8 @@ services:
       inventory_service:
         condition: service_healthy
       order_service:
+        condition: service_healthy
+      auth_service:
         condition: service_healthy
       redis:
         condition: service_healthy

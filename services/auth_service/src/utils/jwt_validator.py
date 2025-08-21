@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from jose import jwt, JWTError
 
-from ..exceptions.auth_exceptions import TokenExpiredException, TokenInvalidException
+from exceptions.auth_exceptions import TokenExpiredException, TokenInvalidException
 
 logger = logging.getLogger(__name__)
 

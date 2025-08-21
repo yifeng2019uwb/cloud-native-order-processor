@@ -10,8 +10,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import controllers
-from .controllers.health import router as health_router
-from .controllers.validate import router as validate_router
+from controllers.health import router as health_router
+from controllers.validate import router as validate_router
 
 # Configure logging
 logging.basicConfig(
