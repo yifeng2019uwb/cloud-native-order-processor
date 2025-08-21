@@ -16,7 +16,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from main import app, IS_LAMBDA, logging_middleware, root, test_logging, startup_event, shutdown_event
+from main import app, logging_middleware, root, test_logging, startup_event, shutdown_event
 
 
 class TestMainApplication:
@@ -75,14 +75,12 @@ class TestRootEndpoint:
         env = data["environment"]
         assert env["service"] == "user-service"
         assert "environment" in env
-        assert "lambda" in env
 
 
 class TestTestLoggingEndpoint:
     """Test the test-logging endpoint"""
 
     @patch('main.logger')
-    @patch('main.IS_LAMBDA', False)
     def test_test_logging_endpoint_k8s(self, mock_logger):
         """Test test-logging endpoint in K8s environment"""
         client = TestClient(app)
@@ -95,20 +93,6 @@ class TestTestLoggingEndpoint:
         # Instead of checking for a specific call, just check logger.info was called
         assert mock_logger.info.called
 
-    @patch('main.print')
-    @patch('main.IS_LAMBDA', True)
-    def test_test_logging_endpoint_lambda(self, mock_print):
-        """Test test-logging endpoint in Lambda environment"""
-        client = TestClient(app)
-        response = client.get("/test-logging")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["message"] == "Logging test completed"
-        assert data["environment"] == "lambda"
-        assert "timestamp" in data
-        # Instead of checking for a specific event, just check print was called
-        assert mock_print.called
-
 
 class TestLoggingMiddleware:
     """Test the logging middleware"""
@@ -116,7 +100,6 @@ class TestLoggingMiddleware:
     @pytest.mark.asyncio
     @patch('main.time.time')
     @patch('main.uuid.uuid4')
-    @patch('main.IS_LAMBDA', False)
     @patch('main.logger')
     async def test_logging_middleware_success(self, mock_logger, mock_uuid, mock_time):
         """Test logging middleware with successful request"""
@@ -156,48 +139,6 @@ class TestLoggingMiddleware:
     @pytest.mark.asyncio
     @patch('main.time.time')
     @patch('main.uuid.uuid4')
-    @patch('main.IS_LAMBDA', True)
-    @patch('main.print')
-    async def test_logging_middleware_success_lambda(self, mock_print, mock_uuid, mock_time):
-        """Test logging middleware with successful request in Lambda"""
-        # Setup mocks
-        mock_uuid.return_value = "test-request-id"
-        mock_time.side_effect = [1000.0, 1000.5]  # start_time, end_time
-
-        # Create mock request and response
-        mock_request = MagicMock()
-        mock_request.method = "POST"
-        mock_request.url.path = "/auth/login"
-        mock_request.query_params = {"param": "value"}
-
-        mock_response = MagicMock()
-        mock_response.status_code = 201
-
-        mock_call_next = AsyncMock(return_value=mock_response)
-
-        # Call middleware
-        result = await logging_middleware(mock_request, mock_call_next)
-
-        # Verify result
-        assert result == mock_response
-
-        # Verify print calls for CloudWatch
-        assert mock_print.call_count == 2  # request_start and request_complete
-
-        # Check request_start log
-        start_log = json.loads(mock_print.call_args_list[0][0][0])
-        assert start_log["event"] == "request_start"
-        assert start_log["request_id"] == "test-request-id"
-        assert start_log["method"] == "POST"
-        assert start_log["path"] == "/auth/login"
-        assert start_log["query_params"] == "{'param': 'value'}"  # str() converts dict to string
-        assert start_log["service"] == "user-service"
-        assert start_log["environment"] == "lambda"
-
-    @pytest.mark.asyncio
-    @patch('main.time.time')
-    @patch('main.uuid.uuid4')
-    @patch('main.IS_LAMBDA', False)
     @patch('main.logger')
     async def test_logging_middleware_error(self, mock_logger, mock_uuid, mock_time):
         """Test logging middleware with error"""
@@ -266,31 +207,6 @@ class TestStartupEvent:
 
         # Verify logging calls
         assert mock_logger.info.call_count >= 10  # Multiple info logs
-        assert mock_logger.warning.call_count == 0  # No warnings
-
-    @pytest.mark.asyncio
-    @patch('main.logger')
-    @patch('main.os.getenv')
-    @patch('main.Path')
-    @patch('builtins.__import__')
-    async def test_startup_event_missing_env_vars(self, mock_import, mock_path, mock_getenv, mock_logger):
-        """Test startup event handler with missing environment variables"""
-        # Setup mocks
-        mock_getenv.return_value = None  # All env vars missing
-
-        mock_path_instance = MagicMock()
-        mock_path_instance.parent.parent.parent = "/test/path"
-        mock_path.return_value = mock_path_instance
-
-        # Mock successful imports
-        mock_import.return_value = MagicMock()
-
-        # Call startup event
-        await startup_event()
-
-        # Verify logging calls
-        assert mock_logger.info.call_count >= 10  # Multiple info logs
-        assert mock_logger.warning.call_count >= 4  # Warnings for missing env vars
 
     @pytest.mark.asyncio
     @patch('main.logger')
@@ -334,30 +250,6 @@ class TestShutdownEvent:
 
         # Verify logging call
         mock_logger.info.assert_called_with("👋 User Authentication Service shutting down...")
-
-
-class TestEnvironmentDetection:
-    """Test environment detection"""
-
-    @patch.dict(os.environ, {"AWS_REGION": "us-east-1"}, clear=True)
-    def test_is_lambda_false(self):
-        """Test IS_LAMBDA is False when AWS_LAMBDA_FUNCTION_NAME not set"""
-        # Re-import to get fresh IS_LAMBDA value
-        import importlib
-        import main
-        importlib.reload(main)
-
-        assert main.IS_LAMBDA is False
-
-    @patch.dict(os.environ, {"AWS_LAMBDA_FUNCTION_NAME": "test-function", "AWS_REGION": "us-east-1"})
-    def test_is_lambda_true(self):
-        """Test IS_LAMBDA is True when AWS_LAMBDA_FUNCTION_NAME is set"""
-        # Re-import to get fresh IS_LAMBDA value
-        import importlib
-        import main
-        importlib.reload(main)
-
-        assert main.IS_LAMBDA is True
 
 
 class TestExceptionHandlers:

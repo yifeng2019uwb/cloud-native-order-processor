@@ -11,74 +11,77 @@
 
 ### **🔐 Security & Compliance**
 
-#### **SEC-005: Centralized Authentication Architecture Implementation**
+#### **SEC-005: Independent Auth Service Implementation**
 - **Component**: Security & API Gateway
 - **Type**: Epic
 - **Priority**: 🔥 **HIGHEST PRIORITY**
 - **Status**: 📋 To Do
 
 **Description:**
-Implement centralized authentication architecture with a dedicated **Auth Service** that handles all JWT validation and user authentication, while the Gateway focuses on routing and request forwarding. This eliminates JWT secret distribution issues, improves security, and provides a foundation for future RBAC implementation.
+Implement centralized authentication architecture with a completely **independent Auth Service** that handles all JWT validation and user authentication, while the Gateway focuses on routing and request forwarding. This eliminates JWT secret distribution issues, improves security, and provides a clean separation of authentication concerns.
 
 **Acceptance Criteria:**
-- [ ] **Phase 1: Auth Service Creation**
-  - [ ] Create dedicated Auth Service with JWT validation capabilities
-  - [ ] Update common package to ensure JWT functionality is reusable
-  - [ ] Implement JWT validation and user context extraction using common package
-  - [ ] Set up internal communication with Gateway
-  - [ ] Test authentication flows and JWT reuse strategy
-- [ ] **Phase 2: Gateway Integration**
-  - [ ] Update Gateway to use Auth Service for authentication
+- [ ] **Phase 1: Independent Auth Service Creation**
+  - [ ] Create new Auth Service directory and structure
+  - [ ] Implement new Auth class with independent JWT validation logic
+  - [ ] Create independent JWT configuration and secret management
+  - [ ] Implement JWT validation and user context extraction
+  - [ ] Set up internal communication endpoints
+  - [ ] Test Auth Service standalone functionality
+- [ ] **Phase 2: Gateway Integration Testing**
+  - [ ] Integrate Auth Service with Gateway for authentication
   - [ ] Implement request forwarding to Auth Service
   - [ ] Add security header injection based on Auth Service response
   - [ ] Test Gateway-Auth Service integration
+  - [ ] Validate complete authentication flow end-to-end
   - [ ] Ensure Gateway handles all request forwarding to backend services
-- [ ] **Phase 3: Backend Service Updates**
+- [ ] **Phase 3: Backend Service Cleanup**
   - [ ] Remove JWT validation from User Service
   - [ ] Remove JWT validation from Order Service
   - [ ] Remove JWT validation from Inventory Service
-  - [ ] Maintain common package imports for any remaining JWT operations
+  - [ ] Remove JWT-related dependencies and imports
   - [ ] Implement source header validation (`X-Source: gateway`, `X-Auth-Service: auth-service`)
   - [ ] Update user context extraction to use Gateway headers
   - [ ] Test security measures and source validation
-- [ ] **Phase 4: Network Security Implementation**
+- [ ] **Phase 4: Common Package Cleanup**
+  - [ ] Remove JWT-related code from common package
+  - [ ] Remove JWT token manager and utilities
+  - [ ] Remove JWT models and dependencies
+  - [ ] Keep non-auth utilities (logging, configuration, etc.)
+  - [ ] Test that remaining common package functionality works
+- [ ] **Phase 5: Network Security Implementation**
   - [ ] Implement Kubernetes NetworkPolicy to restrict backend service access
   - [ ] Update services to bind only to internal cluster IPs
   - [ ] Configure IP whitelisting to reject external IP requests
   - [ ] Ensure no external port exposure for backend services
   - [ ] Remove external LoadBalancer services for backend
   - [ ] Configure internal-only service communication
-- [ ] **Phase 5: RBAC Implementation**
-  - [ ] Add role-based access control to Auth Service
-  - [ ] Extend common package with RBAC utilities
-  - [ ] Implement permission mapping and evaluation
-  - [ ] Update authorization logic
-  - [ ] Test RBAC functionality
 - [ ] **Phase 6: Testing and Validation**
   - [ ] Comprehensive security testing of new architecture
   - [ ] Performance testing and optimization
   - [ ] Integration testing with all services
   - [ ] Security audit and penetration testing
   - [ ] Network security testing to verify backend services reject external requests
-  - [ ] Common package testing to verify JWT functionality works across all services
-  - [ ] JWT reuse testing between User Service and Auth Service
+  - [ ] End-to-end authentication flow testing
+  - [ ] Performance impact validation
 - [ ] **Phase 7: Deployment and Monitoring**
   - [ ] Production deployment of new auth architecture
   - [ ] Monitoring and alerting setup for auth system
   - [ ] Performance monitoring and optimization
   - [ ] Security monitoring and incident response
   - [ ] Network monitoring for unauthorized access attempts
-  - [ ] JWT monitoring across all services
+  - [ ] Auth Service monitoring and metrics
 
 **Technical Requirements:**
-- [ ] Auth Service validates JWT and extracts user context
+- [ ] **Independent Auth Service** validates JWT and extracts user context
+- [ ] **No shared code** - Auth Service has its own JWT validation logic
 - [ ] Gateway forwards requests to Auth Service for authentication
 - [ ] Gateway adds security headers based on Auth Service response
 - [ ] Gateway forwards requests to backend services with security headers
 - [ ] Backend services validate both `X-Source: gateway` and `X-Auth-Service: auth-service` headers
 - [ ] Backend services extract user info from Gateway headers
-- [ ] No JWT validation in backend services
-- [ ] JWT functionality remains in common package and is reused by both User Service and Auth Service
+- [ ] **No JWT validation** in backend services
+- [ ] **No JWT logic** in common package after cleanup
 - [ ] Network isolation ensures backend services not directly accessible
 - [ ] Backend services only accept requests from internal cluster IPs
 
@@ -92,11 +95,12 @@ Implement centralized authentication architecture with a dedicated **Auth Servic
 - [ ] Clear separation of concerns between authentication and routing
 
 **Architecture Benefits:**
+- [ ] **Complete independence** - Auth Service has no shared code dependencies
 - [ ] Better service separation (Gateway focuses on routing, Auth Service on authentication)
 - [ ] Improved scalability (Auth Service can be scaled independently)
-- [ ] Future-proof design ready for RBAC implementation
+- [ ] **Clean separation** - authentication logic completely isolated
 - [ ] Easier to add new authentication methods
-- [ ] Flexible permission system
+- [ ] **No shared state** - each service manages its own concerns
 
 **Dependencies:**
 - ✅ **INFRA-001**: Local Kubernetes Development Setup
@@ -106,6 +110,74 @@ Implement centralized authentication architecture with a dedicated **Auth Servic
 **Estimated Effort**: 3-4 weeks
 **Risk Level**: Medium (architectural change)
 **Success Criteria**: All services use centralized auth, no JWT validation in backend, improved security posture
+
+#### **SEC-006: Auth Service Implementation Details**
+- **Component**: Security & API Gateway
+- **Type**: Story
+- **Priority**: 🔥 **HIGHEST PRIORITY**
+- **Status**: 📋 To Do
+
+**Description:**
+Create the independent Auth Service with its own JWT validation logic, completely separate from the existing common package. This service will handle all authentication and provide user context to the Gateway.
+
+**Acceptance Criteria:**
+- [ ] **Service Structure**
+  - [ ] Create `services/auth_service/` directory with proper structure
+  - [ ] Set up FastAPI application with health check endpoint
+  - [ ] Configure Docker containerization
+  - [ ] Set up Kubernetes deployment configuration
+  - [ ] Assign port 8003 for Auth Service
+- [ ] **Independent JWT Implementation**
+  - [ ] Create new Auth class with independent JWT validation logic
+  - [ ] Implement JWT token validation without using common package
+  - [ ] Set up independent JWT configuration and secret management
+  - [ ] Implement user context extraction from JWT tokens
+  - [ ] Add proper error handling for JWT validation failures
+- [ ] **API Endpoints**
+  - [ ] Implement `POST /auth/validate-jwt` endpoint
+  - [ ] Implement `GET /health` endpoint
+  - [ ] Add proper request/response models
+  - [ ] Implement input validation and error responses
+- [ ] **Configuration & Environment**
+  - [ ] Set up environment variables for JWT configuration
+  - [ ] Configure JWT secret, algorithm, and expiration settings
+  - [ ] Set up logging and monitoring configuration
+  - [ ] Configure health check and readiness probes
+- [ ] **Testing & Validation**
+  - [ ] Test JWT validation with valid and invalid tokens
+  - [ ] Test error handling and edge cases
+  - [ ] Validate service health and readiness
+  - [ ] Test Docker container and Kubernetes deployment
+
+**Technical Requirements:**
+- [ ] **Independent Code**: No shared JWT logic with common package
+- [ ] **JWT Validation**: Validate JWT tokens and extract user context
+- [ ] **User Context**: Return username and basic permissions
+- [ ] **Error Handling**: Proper error responses for validation failures
+- [ ] **Health Checks**: Service health and readiness endpoints
+- [ ] **Configuration**: Environment-based JWT configuration
+- [ ] **Logging**: Structured logging for authentication events
+- [ ] **Containerization**: Docker container with proper health checks
+- [ ] **Kubernetes**: Deployment configuration with proper networking
+
+**Implementation Details:**
+- [ ] **Port**: 8003 (next available after existing services)
+- [ ] **Service Name**: `auth-service` in Kubernetes
+- [ ] **JWT Library**: Use `PyJWT` for token validation
+- [ ] **Response Format**: Simple JSON with authentication status
+- [ ] **Error Handling**: HTTP status codes with error details
+- [ ] **Health Checks**: Basic health and readiness probes
+- [ ] **Logging**: Structured JSON logging for observability
+
+**Dependencies:**
+- [ ] Existing microservices architecture
+- [ ] Kubernetes cluster setup
+- [ ] Docker containerization
+- [ ] Gateway service for integration testing
+
+**Estimated Effort**: 1-2 weeks
+**Risk Level**: Low (new service, no existing code changes)
+**Success Criteria**: Auth Service validates JWT tokens independently, provides user context, and integrates with existing infrastructure
 
 #### **MON-001: Essential Authentication Monitoring (Simplified Scope)**
 - **Component**: Monitoring & Observability
@@ -117,25 +189,25 @@ Implement centralized authentication architecture with a dedicated **Auth Servic
 Implement essential monitoring for the new Auth Service architecture, focusing on authentication-related metrics that are easy to implement and test in a personal project environment. Start with basic metrics and gradually expand.
 
 **Acceptance Criteria:**
-- [ ] **Phase 1: Basic Auth Service Metrics (Week 1)**
+- [ ] **Phase 1: Basic Auth Service Metrics**
   - [ ] Implement simple JWT validation success/failure counters
   - [ ] Add basic request duration tracking for auth operations
   - [ ] Create simple health check endpoint for Auth Service
   - [ ] Add basic error rate tracking for authentication failures
   - [ ] Test metrics collection with simple Prometheus setup
-- [ ] **Phase 2: Gateway Authentication Tracking (Week 2)**
+- [ ] **Phase 2: Gateway Authentication Tracking**
   - [ ] Add basic request counting for auth-related routes
   - [ ] Implement simple authentication flow tracking
   - [ ] Add basic error tracking for auth failures
   - [ ] Create simple dashboard showing auth success/failure rates
   - [ ] Test end-to-end metrics collection
-- [ ] **Phase 3: Essential Security Monitoring (Week 3)**
+- [ ] **Phase 3: Essential Security Monitoring**
   - [ ] Add basic rate limiting hit counters
   - [ ] Implement simple suspicious activity detection (multiple failed logins)
   - [ ] Add basic circuit breaker state monitoring
   - [ ] Create simple security alerts for obvious issues
   - [ ] Test security monitoring with basic scenarios
-- [ ] **Phase 4: Basic Dashboards & Alerting (Week 4)**
+- [ ] **Phase 4: Basic Dashboards & Alerting**
   - [ ] Create simple Grafana dashboard for auth metrics
   - [ ] Add basic alerting for authentication failures
   - [ ] Implement simple log aggregation for auth events
@@ -191,7 +263,7 @@ Implement essential monitoring for the new Auth Service architecture, focusing o
 - ✅ **SEC-005**: Centralized Authentication Architecture Implementation (Phase 1-3)
 - ✅ **INFRA-002**: Request Tracing & Standardized Logging System
 
-**Estimated Effort**: 3-4 weeks (1 week per phase)
+**Estimated Effort**: 3-4 weeks
 **Risk Level**: Low (simple monitoring implementation)
 **Success Criteria**: Basic authentication monitoring working, simple dashboards functional, easy to test and maintain
 

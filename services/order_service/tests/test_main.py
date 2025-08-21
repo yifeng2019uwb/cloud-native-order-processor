@@ -86,7 +86,6 @@ class TestMainApplication:
         env = result["environment"]
         assert env["service"] == "order-service"
         assert "environment" in env
-        assert "lambda" in env
 
     @pytest.mark.asyncio
     async def test_logging_middleware(self, mock_request, mock_call_next):

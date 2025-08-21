@@ -6,7 +6,6 @@ pyyaml==6.0.1
 email-validator==2.1.0
 fastapi==0.104.1
 bcrypt==4.0.1
-mangum==0.17.0
 
 # Redis support
 redis==5.0.1

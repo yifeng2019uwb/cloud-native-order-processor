@@ -15,7 +15,6 @@ setup(
         "email-validator==2.1.0",
         "fastapi==0.104.1",
         "bcrypt==4.0.1",
-        "mangum==0.17.0",
     ],
     extras_require={
         "dev": [

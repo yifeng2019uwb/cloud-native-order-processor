@@ -48,9 +48,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Detect if running in Lambda
-IS_LAMBDA = "AWS_LAMBDA_FUNCTION_NAME" in os.environ
-
 # Initialize STS client for AWS role assumption
 try:
     from common.aws.sts_client import STSClient
@@ -80,7 +77,7 @@ app.add_middleware(
 
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
-    """Universal logging middleware that works in Lambda and K8s"""
+    """Logging middleware for K8s deployment"""
     # TODO: Implement logging middleware
     response = await call_next(request)
     return response
@@ -182,8 +179,7 @@ async def root():
         },
         "environment": {
             "service": "order-service",
-            "environment": os.getenv("ENVIRONMENT", "development"),
-            "lambda": IS_LAMBDA
+            "environment": os.getenv("ENVIRONMENT", "development")
         }
     }
 
@@ -193,7 +189,6 @@ async def startup_event():
     """Startup event handler - API service initialization"""
     logger.info("🚀 Order Service starting up...")
     logger.info(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
-    logger.info(f"Lambda Environment: {IS_LAMBDA}")
 
     # Log environment configuration
     logger.info("📊 API Service Configuration:")

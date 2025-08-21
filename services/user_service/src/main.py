@@ -7,7 +7,7 @@ This is the API layer entry point. It handles:
 - Exception handling
 - Service configuration
 - Environment variables loaded from services/.env
-- CloudWatch logging for Lambda deployment
+- Structured logging for K8s deployment
 """
 import sys
 import os
@@ -63,15 +63,12 @@ try:
 except ImportError:
     print("⚠️ python-dotenv not installed. Using system environment variables only.")
 
-# Configure logging for CloudWatch
+# Configure logging for K8s deployment
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-# Detect if running in Lambda
-IS_LAMBDA = "AWS_LAMBDA_FUNCTION_NAME" in os.environ
 
 # Initialize STS client for AWS role assumption
 try:
@@ -102,7 +99,7 @@ app.add_middleware(
 
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
-    """Universal logging middleware that works in Lambda and K8s"""
+    """Logging middleware for K8s deployment"""
 
     # Generate request ID for tracing
     request_id = str(uuid.uuid4())
@@ -117,14 +114,10 @@ async def logging_middleware(request: Request, call_next):
         "query_params": str(request.query_params) if request.query_params else None,
         "timestamp": datetime.utcnow().isoformat(),
         "service": "user-service",
-        "environment": "lambda" if IS_LAMBDA else "k8s"
+        "environment": "k8s"
     }
 
-    # In Lambda, use print() for CloudWatch; in K8s, use logger
-    if IS_LAMBDA:
-        print(json.dumps(log_entry))  # CloudWatch captures print() statements
-    else:
-        logger.info(json.dumps(log_entry))
+    logger.info(json.dumps(log_entry))
 
     try:
         # Process the request
@@ -143,13 +136,10 @@ async def logging_middleware(request: Request, call_next):
             "duration_seconds": round(duration, 3),
             "timestamp": datetime.utcnow().isoformat(),
             "service": "user-service",
-            "environment": "lambda" if IS_LAMBDA else "k8s"
+            "environment": "k8s"
         }
 
-        if IS_LAMBDA:
-            print(json.dumps(completion_entry))
-        else:
-            logger.info(json.dumps(completion_entry))
+        logger.info(json.dumps(completion_entry))
 
         return response
 
@@ -164,13 +154,10 @@ async def logging_middleware(request: Request, call_next):
             "duration_seconds": round(time.time() - start_time, 3),
             "timestamp": datetime.utcnow().isoformat(),
             "service": "user-service",
-            "environment": "lambda" if IS_LAMBDA else "k8s"
+            "environment": "k8s"
         }
 
-        if IS_LAMBDA:
-            print(json.dumps(error_entry))
-        else:
-            logger.error(json.dumps(error_entry))
+        logger.error(json.dumps(error_entry))
 
         raise  # Re-raise the exception
 
@@ -336,28 +323,19 @@ async def root():
         },
         "environment": {
             "service": "user-service",
-            "environment": os.getenv("ENVIRONMENT", "development"),
-            "lambda": IS_LAMBDA
+            "environment": os.getenv("ENVIRONMENT", "development")
         }
     }
 
 # Add a simple endpoint to test logging
 @app.get("/test-logging")
 async def test_logging():
-    """Endpoint to test CloudWatch logging"""
+    """Endpoint to test logging"""
     logger.info("Test logging endpoint called")
-
-    if IS_LAMBDA:
-        print(json.dumps({
-            "event": "test_endpoint",
-            "message": "This is a test log from Lambda",
-            "timestamp": datetime.utcnow().isoformat(),
-            "service": "user-service"
-        }))
 
     return {
         "message": "Logging test completed",
-        "environment": "lambda" if IS_LAMBDA else "k8s",
+        "environment": "k8s",
         "timestamp": datetime.utcnow().isoformat()
     }
 
@@ -367,7 +345,6 @@ async def startup_event():
     """Startup event handler - API service initialization"""
     logger.info("🚀 User Authentication Service starting up...")
     logger.info(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
-    logger.info(f"Lambda Environment: {IS_LAMBDA}")
 
     # Log environment configuration
     logger.info("📊 API Service Configuration:")
