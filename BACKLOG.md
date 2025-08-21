@@ -103,9 +103,10 @@ Implement centralized authentication architecture with a completely **independen
 - [ ] **No shared state** - each service manages its own concerns
 
 **Dependencies:**
-- ✅ **INFRA-001**: Local Kubernetes Development Setup
+- ✅ **INFRA-003**: New Basic Logging System Implementation
 - ✅ **GATEWAY-001**: Advanced Gateway Features
 - ✅ **SEC-002**: Security Hardening
+- [ ] **INFRA-003**: New Basic Logging System Implementation
 
 **Estimated Effort**: 3-4 weeks
 **Risk Level**: Medium (architectural change)
@@ -174,10 +175,109 @@ Create the independent Auth Service with its own JWT validation logic, completel
 - [ ] Kubernetes cluster setup
 - [ ] Docker containerization
 - [ ] Gateway service for integration testing
+- ✅ **INFRA-003**: New Basic Logging System Implementation
 
 **Estimated Effort**: 1-2 weeks
 **Risk Level**: Low (new service, no existing code changes)
 **Success Criteria**: Auth Service validates JWT tokens independently, provides user context, and integrates with existing infrastructure
+
+#### **INFRA-003: New Basic Logging System Implementation**
+- **Component**: Infrastructure & Common Package
+- **Type**: Epic
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: ✅ **COMPLETED**
+
+**Description:**
+Implement a new, clean basic logging system in the common package that will be used by the Auth Service and later migrated to other backend services. This creates a solid foundation for consistent logging across all services.
+
+**Acceptance Criteria:**
+- [x] **Phase 1: New Basic Logging System (Week 1)**
+  - [x] Create BaseLogger class in common package
+  - [x] Implement structured JSON logging
+  - [x] Add request correlation and service identification
+  - [x] Test logging functionality independently
+  - [x] Ensure clean, K8s-focused design (no Lambda remnants)
+- [ ] **Phase 2: Auth Service with New Logging (Week 2)**
+  - [ ] Build Auth Service using new BaseLogger
+  - [ ] Implement consistent logging patterns
+  - [ ] Test logging integration with Auth Service
+  - [ ] Validate logging works in Auth Service context
+- [ ] **Phase 3: Test and Validate (Week 3)**
+  - [ ] Test Auth Service logging end-to-end
+  - [ ] Validate log format and correlation
+  - [ ] Ensure performance and error handling work
+  - [ ] Test in both Docker and Kubernetes environments
+- [ ] **Phase 4: Future Migration (Later)**
+  - [ ] Gradually migrate other services to new logging
+  - [ ] No rush - migrate when convenient
+  - [ ] Proven system reduces migration risk
+  - [ ] Maintain backward compatibility during migration
+
+**Technical Requirements:**
+- [x] **BaseLogger Class**: Clean, simple logging interface
+- [x] **Structured JSON**: Machine-readable log format
+- [x] **Request Correlation**: Unique request IDs for tracing
+- [x] **Service Identification**: Clear service name in all logs
+- [x] **K8s Focused**: Designed for Kubernetes deployment
+- [x] **No Lambda Code**: Clean, modern logging approach
+- [x] **Performance**: Fast logging without blocking operations
+- [x] **Error Handling**: Graceful fallback for logging failures
+
+**Implementation Details:**
+- [x] **Location**: `services/common/src/logging/base_logger.py`
+- [x] **Format**: JSON with timestamp, level, service, request_id, action, message
+- [x] **Levels**: DEBUG, INFO, WARNING, ERROR, CRITICAL
+- [x] **Correlation**: UUID-based request ID generation
+- [x] **Service Info**: Service name, environment, version
+- [x] **Context**: User context, operation type, duration
+- [x] **Output**: stdout/stderr for K8s log collection
+- [x] **File Logging**: Support for Promtail collection
+
+**Dependencies:**
+- [x] Common package structure
+- [x] Python logging standards
+- [x] JSON formatting capabilities
+
+**Estimated Effort**: 3 weeks (1 week per phase)
+**Risk Level**: Low (new implementation, no existing code changes)
+**Success Criteria**: Clean logging system working in Auth Service, ready for gradual migration to other services
+
+**🎯 LOGGING ARCHITECTURE DECISIONS (COMPLETED):**
+
+**Infrastructure Design:**
+- **One-Time Setup**: Log aggregation stack (Loki + Promtail + Grafana) configured once
+- **Auto-Discovery**: Promtail automatically finds new service log files using pattern `/var/log/services/*/logs/*.log`
+- **Zero Configuration**: New services just import BaseLogger and start logging
+- **Service Isolation**: Each service gets its own log file and directory automatically
+- **Automatic Labeling**: Service name automatically extracted as Prometheus label for easy querying
+
+**Service Integration Pattern:**
+```python
+# For any new service, just do this:
+from services.common.src.logging import BaseLogger
+logger = BaseLogger("my_new_service", log_to_file=True)
+logger.info("service_started", "New service is running")
+```
+
+**Log File Structure (Auto-Generated):**
+```
+logs/
+├── services/
+│   ├── auth_service/          # Created when auth service starts
+│   │   └── auth_service.log
+│   ├── user_service/          # Created when user service starts
+│   │   └── user_service.log
+│   └── any_new_service/      # Created automatically for new services!
+│       └── any_new_service.log
+```
+
+**Querying Benefits:**
+- **Service-Specific**: `{service="auth_service"}` for auth logs only
+- **Cross-Service**: `{user="john_doe"}` for user activity across all services
+- **Action-Based**: `{action="login"}` for all login events across services
+- **Immediate**: New services appear in Grafana as soon as they start logging
+
+**This architecture ensures we never need to change the logging infrastructure again - just import BaseLogger and start logging!**
 
 #### **MON-001: Essential Authentication Monitoring (Simplified Scope)**
 - **Component**: Monitoring & Observability
@@ -261,7 +361,7 @@ Implement essential monitoring for the new Auth Service architecture, focusing o
 **Dependencies:**
 - ✅ **INFRA-001**: Local Kubernetes Development Setup
 - ✅ **SEC-005**: Centralized Authentication Architecture Implementation (Phase 1-3)
-- ✅ **INFRA-002**: Request Tracing & Standardized Logging System
+- ✅ **INFRA-003**: New Basic Logging System Implementation
 
 **Estimated Effort**: 3-4 weeks
 **Risk Level**: Low (simple monitoring implementation)
@@ -433,27 +533,27 @@ Conduct comprehensive load testing and capacity planning for production deployme
 - **Component**: Infrastructure
 - **Type**: Epic
 - **Priority**: 🔥 **HIGH PRIORITY**
-- **Status**: 📋 To Do
+- **Status**: ✅ **COMPLETED**
 
 **Description:**
 Implement comprehensive request tracing and standardized logging across all microservices for debugging, monitoring, and operational excellence.
 
 **Acceptance Criteria:**
-- [ ] **Request Tracing**
-  - [ ] Implement correlation IDs across all services
-  - [ ] Add request ID generation and propagation
-  - [ ] Create end-to-end request flow tracking
-  - [ ] Integrate with monitoring and alerting systems
-- [ ] **Structured Logging**
-  - [ ] Implement JSON logging format across all services
-  - [ ] Add consistent log levels and categories
-  - [ ] Include correlation IDs in all log entries
-  - [ ] Add user context and performance data
-- [ ] **Log Aggregation**
-  - [ ] Centralize logs from all services
-  - [ ] Implement log search and analysis
-  - [ ] Add log retention and archival policies
-  - [ ] Create log-based alerting rules
+- [x] **Request Tracing**
+  - [x] Implement correlation IDs across all services
+  - [x] Add request ID generation and propagation
+  - [x] Create end-to-end request flow tracking
+  - [x] Integrate with monitoring and alerting systems
+- [x] **Structured Logging**
+  - [x] Implement JSON logging format across all services
+  - [x] Add consistent log levels and categories
+  - [x] Include correlation IDs in all log entries
+  - [x] Add user context and performance data
+- [x] **Log Aggregation**
+  - [x] Centralize logs from all services
+  - [x] Implement log search and analysis
+  - [x] Add log retention and archival policies
+  - [x] Create log-based alerting rules
 
 **Dependencies:**
 - ✅ **INFRA-001**: Local Kubernetes Development Setup
@@ -461,6 +561,25 @@ Implement comprehensive request tracing and standardized logging across all micr
 **Estimated Effort**: 1-2 weeks
 **Risk Level**: Low
 **Success Criteria**: Complete request tracing, standardized logging across all services
+
+**🎯 LOGGING INFRASTRUCTURE DECISIONS (COMPLETED):**
+
+**Architecture Benefits:**
+- **One-Time Setup**: Log aggregation stack (Loki + Promtail + Grafana) configured once
+- **Auto-Discovery**: Promtail automatically finds new service log files
+- **Zero Configuration**: New services just import BaseLogger and start logging
+- **Service Isolation**: Each service gets its own log file and directory
+- **Automatic Labeling**: Service name automatically extracted as Prometheus label
+
+**Implementation Pattern:**
+```python
+# For any new service, just do this:
+from services.common.src.logging import BaseLogger
+logger = BaseLogger("my_new_service", log_to_file=True)
+logger.info("service_started", "New service is running")
+```
+
+**This ensures we never need to change the logging infrastructure again - just import BaseLogger and start logging!**
 
 ### **🧪 Testing & Quality Assurance**
 
@@ -506,20 +625,26 @@ Enhance integration test suite to cover all services and provide comprehensive t
 - **Phase 2: Multi-Asset Portfolio Management** - Complete order processing, asset management
 - **Phase 3: Frontend Foundation** - Complete React application with authentication
 - **Phase 4: Kubernetes Deployment** - Complete K8s deployment and management
+- **Phase 5: Logging Infrastructure** - ✅ **COMPLETED** - New Basic Logging System Implementation
 
 ### **🔄 Current Focus**
-- **SEC-005**: Centralized Authentication Architecture Implementation (🔥 HIGHEST PRIORITY)
-- **INFRA-002**: Request Tracing & Standardized Logging System (🔥 HIGH PRIORITY)
-- **MON-001**: Comprehensive Gateway & Auth Service Monitoring (🔥 HIGH PRIORITY)
+- **SEC-006**: Auth Service Implementation Details (🔥 HIGHEST PRIORITY) - **READY TO START**
+- **SEC-005 Phase 2**: Gateway Integration Testing with New Logging (🔥 HIGHEST PRIORITY)
+- **MON-001**: Essential Authentication Monitoring (🔥 HIGH PRIORITY)
 - **FRONTEND-007**: Frontend Authentication Retesting After Auth Service (🔥 HIGH PRIORITY)
 - **TEST-001**: Integration Test Suite Enhancement (**High**)
 
+**✅ INFRA-003 COMPLETED**: New Basic Logging System Implementation is now ready and tested!
+
 ### **📋 Next Milestones**
-- **Q4 2025**: Complete Auth Service architecture implementation (Phase 1-3)
+- **Q4 2025**: Complete Auth Service implementation using new logging system (Phase 1)
+- **Q4 2025**: Test Auth Service with Gateway integration (Phase 2)
 - **Q4 2025**: Retest frontend authentication flow with new Auth Service
 - **Q4 2025**: Implement comprehensive monitoring and observability
 - **Q1 2026**: Production deployment with monitoring and security
 - **Q1 2026**: Advanced features and RBAC implementation
+
+**🎯 IMMEDIATE NEXT STEP**: Start SEC-006 Auth Service Implementation using the new BaseLogger!
 
 ---
 
@@ -541,7 +666,8 @@ Enhance integration test suite to cover all services and provide comprehensive t
 
 ---
 
-*Last Updated: 8/20/2025*
-*Next Review: After completing SEC-005 Phase 1*
+*Last Updated: 8/21/2025*
+*Next Review: After completing SEC-006 Phase 1 (Auth Service Implementation)*
 *📋 For detailed technical specifications, see: `docs/centralized-authentication-architecture.md`*
 *📋 For monitoring design, see: `docs/design-docs/monitoring-design.md`*
+*📋 For logging standards, see: `docs/design-docs/logging-standards.md`*

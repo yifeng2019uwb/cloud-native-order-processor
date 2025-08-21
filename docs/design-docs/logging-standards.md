@@ -46,6 +46,69 @@
 | `duration_ms` | How long it took | `45` |
 | `extra` | Additional context | `{"ip": "...", "amount": 100}` |
 
+## 🏗️ **Infrastructure Architecture (One-Time Setup)**
+
+### **Log File Structure (Auto-Generated)**
+```
+logs/
+├── services/
+│   ├── auth_service/          # Created when auth service starts
+│   │   └── auth_service.log
+│   ├── user_service/          # Created when user service starts
+│   │   └── user_service.log
+│   ├── order_service/         # Created when order service starts
+│   │   └── order_service.log
+│   ├── inventory_service/     # Created when inventory service starts
+│   │   └── inventory_service.log
+│   └── any_new_service/      # Created automatically for new services!
+│       └── any_new_service.log
+```
+
+### **Key Infrastructure Principles**
+1. **One-Time Setup**: Log aggregation stack configured once
+2. **Auto-Discovery**: Promtail automatically finds new service log files
+3. **Zero Configuration**: New services just import BaseLogger and start logging
+4. **Service Isolation**: Each service gets its own log file and directory
+5. **Automatic Labeling**: Service name automatically extracted as Prometheus label
+
+### **Infrastructure Components**
+- **Loki**: Centralized log database
+- **Promtail**: Log collector with automatic service discovery
+- **Grafana**: Web interface for log querying and dashboards
+- **BaseLogger**: Common logging library for all services
+
+## 🔧 **Service Integration (Zero Configuration)**
+
+### **For Any New Service, Just Do This:**
+```python
+# 1. Import BaseLogger
+from services.common.src.logging import BaseLogger
+
+# 2. Create logger instance
+logger = BaseLogger("my_new_service", log_to_file=True)
+
+# 3. Start logging immediately
+logger.info("service_started", "New service is running")
+logger.info("user_action", "User performed action", user="john_doe")
+```
+
+### **What Happens Automatically:**
+1. **Log Directory Created**: `logs/services/my_new_service/`
+2. **Log File Created**: `logs/services/my_new_service/my_new_service.log`
+3. **Promtail Detection**: Automatically starts collecting from new directory
+4. **Grafana Queries**: `{service="my_new_service"}` works immediately
+5. **Service Labeling**: Service name automatically available as query label
+
+### **Environment Configuration (One-Time)**
+```bash
+# Set in Kubernetes config or environment
+export LOG_FILE_PATH="/var/log"  # Base path for all services
+
+# Or set per service (optional)
+export AUTH_SERVICE_LOG_PATH="/var/log/auth"
+export USER_SERVICE_LOG_PATH="/var/log/users"
+```
+
 ## 🌐 Gateway Logging (Go)
 
 ### **Simple Middleware**
@@ -266,7 +329,10 @@ class BaseRequestMiddleware(BaseHTTPMiddleware):
 
 ### **User Service Examples**
 ```python
-from common.base_logger import user_logger
+from services.common.src.logging import BaseLogger
+
+# Create logger for user service
+user_logger = BaseLogger("user_service", log_to_file=True)
 
 # Login success
 user_logger.info(
@@ -295,7 +361,10 @@ user_logger.info(
 
 ### **Order Service Examples**
 ```python
-from common.base_logger import order_logger
+from services.common.src.logging import BaseLogger
+
+# Create logger for order service
+order_logger = BaseLogger("order_service", log_to_file=True)
 
 # Order creation
 order_logger.info(
@@ -389,10 +458,10 @@ router.Use(middleware.BaseLoggingMiddleware())
 ```python
 # Add to each service's main.py
 from middleware.base_request_logging import BaseRequestMiddleware
-from common.base_logger import user_logger
+from services.common.src.logging import BaseLogger
 
 app = FastAPI()
-app.add_middleware(BaseRequestMiddleware, logger=user_logger)
+app.add_middleware(BaseRequestMiddleware, logger=BaseLogger("service_name", log_to_file=True))
 ```
 
 ### **3. Business Logic Logging**
@@ -425,6 +494,48 @@ def create_user(user_data):
 - Simple alert creation
 - Business metrics tracking
 
+## 🚀 **Adding New Services (Zero Configuration)**
+
+### **Step 1: Import BaseLogger**
+```python
+from services.common.src.logging import BaseLogger
+```
+
+### **Step 2: Create Logger Instance**
+```python
+# Create logger - zero configuration needed!
+logger = BaseLogger("my_new_service", log_to_file=True)
+```
+
+### **Step 3: Start Logging**
+```python
+logger.info("service_started", "New service is running")
+logger.info("user_action", "User performed action", user="john_doe")
+```
+
+### **Step 4: Deploy**
+```bash
+# Deploy to Kubernetes
+kubectl apply -f kubernetes/my_new_service/
+
+# Logs automatically appear in Grafana:
+# {service="my_new_service"}
+```
+
+## 📊 **Querying New Services (Immediate)**
+
+### **As Soon as Service Starts:**
+```logql
+# All logs from new service
+{service="my_new_service"}
+
+# Specific actions from new service
+{service="my_new_service", action="user_action"}
+
+# User activity in new service
+{service="my_new_service", user="john_doe"}
+```
+
 ## 📋 Quick Decision Log
 
 | Date | Component | Decision | Why | Impact | Status |
@@ -434,7 +545,11 @@ def create_user(user_data):
 | 8/20 | Log Levels | INFO, WARN, ERROR | Standard levels, easy filtering | Medium | ✅ Done |
 | 8/20 | Security Events | Dedicated security logging | Security monitoring and audit | High | ✅ Done |
 | 8/20 | Performance | Duration tracking | Performance monitoring | Medium | ✅ Done |
+| 8/21 | Infrastructure | One-time setup, auto-discovery | Zero config for new services | High | ✅ Done |
+| 8/21 | Service Integration | BaseLogger import only | Simple, consistent, scalable | High | ✅ Done |
 
 ---
 
 **🎯 This base approach gives you 80% of the benefits with 20% of the complexity - perfect for a personal project that still demonstrates professional practices!**
+
+**🚀 Once infrastructure is set up, adding new services is as simple as importing BaseLogger and creating an instance. Everything else happens automatically!**
