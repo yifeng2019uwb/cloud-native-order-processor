@@ -70,6 +70,29 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: auth-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: auth-service
+    environment: production
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+spec:
+  type: ClusterIP
+  selector:
+    app: order-processor
+    component: auth-service
+  ports:
+  - name: http
+    port: 8003
+    targetPort: 8003
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: frontend
   namespace: order-processor
   labels:

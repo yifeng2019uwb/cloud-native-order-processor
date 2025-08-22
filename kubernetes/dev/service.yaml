@@ -70,6 +70,27 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: auth-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: auth-service
+    environment: dev
+spec:
+  type: NodePort
+  selector:
+    app: order-processor
+    component: auth-service
+  ports:
+  - name: http
+    port: 8003
+    targetPort: 8003
+    nodePort: 30007
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: frontend
   namespace: order-processor
   labels:

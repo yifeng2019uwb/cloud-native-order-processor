@@ -38,6 +38,7 @@ Components:
     user                  Deploy user service only
     inventory             Deploy inventory service only
     order                 Deploy order service only
+    auth                  Deploy auth service only
     monitoring             Deploy monitoring stack
 
 Environments:
@@ -70,6 +71,7 @@ show_dev_urls() {
     log_info "  Frontend: http://localhost:30003"
     log_info "  Gateway:  http://localhost:30002"
     log_info "  Grafana:  http://localhost:30001 (admin/admin123)"
+    log_info "  Auth Service: http://localhost:30007"
     log_info "  User Service: http://localhost:30004"
     log_info "  Inventory Service: http://localhost:30005"
     log_info "  Order Service: http://localhost:30006"
@@ -175,16 +177,15 @@ deploy_monitoring() {
     log_info "Deploying monitoring stack for $ENVIRONMENT..."
 
     if [[ "$ENVIRONMENT" == "dev" ]]; then
-        # Dev: Docker Compose monitoring
-        log_info "Starting monitoring with Docker Compose..."
-        # cd monitoring && docker-compose -f docker-compose.logs.yml up -d
-        log_warning "Docker Compose monitoring skipped (commented out for demo)"
+        # Dev: Kubernetes monitoring
+        log_info "Monitoring stack already deployed with infrastructure..."
+        log_success "Kubernetes monitoring stack is ready"
 
     elif [[ "$ENVIRONMENT" == "prod" ]]; then
         # Prod: Kubernetes monitoring
         log_info "Deploying monitoring to Kubernetes..."
-        # kubectl apply -f kubernetes/base/monitoring.yaml
-        log_warning "K8s monitoring deployment skipped (commented out for demo)"
+        kubectl apply -f kubernetes/base/monitoring.yaml
+        log_success "Kubernetes monitoring stack deployed"
     fi
 
     log_success "Monitoring deployment completed"
@@ -340,11 +341,16 @@ deploy_services() {
         log_info "Building order service Docker image..."
         docker build --no-cache -t order-processor-order_service:latest -f docker/order-service/Dockerfile .
 
+        # Build auth service
+        log_info "Building auth service Docker image..."
+        docker build --no-cache -t order-processor-auth_service:latest -f docker/auth-service/Dockerfile .
+
         # Load images into Kind cluster (required for local Kind deployment)
         log_info "Loading Docker images into Kind cluster..."
         kind load docker-image order-processor-user_service:latest --name order-processor
         kind load docker-image order-processor-inventory_service:latest --name order-processor
         kind load docker-image order-processor-order_service:latest --name order-processor
+        kind load docker-image order-processor-auth_service:latest --name order-processor
 
         # Deploy to Kubernetes
         log_info "Applying Kubernetes manifests for all services..."
@@ -356,6 +362,7 @@ deploy_services() {
         kubectl rollout status deployment/user-service -n order-processor --timeout=300s
         kubectl rollout status deployment/inventory-service -n order-processor --timeout=300s
         kubectl rollout status deployment/order-service -n order-processor --timeout=300s
+        kubectl rollout status deployment/auth-service -n order-processor --timeout=300s
 
         log_success "All services deployed to Kubernetes"
 
@@ -369,6 +376,7 @@ deploy_services() {
         kubectl rollout status deployment/user-service -n order-processor --timeout=300s
         kubectl rollout status deployment/inventory-service -n order-processor --timeout=300s
         kubectl rollout status deployment/order-service -n order-processor --timeout=300s
+        kubectl rollout status deployment/auth-service -n order-processor --timeout=300s
     fi
 
     log_success "All services deployment completed"
@@ -426,7 +434,7 @@ parse_args() {
 
     while [[ $# -gt 0 ]]; do
         case $1 in
-            all|frontend|gateway|services|user|inventory|order|monitoring)
+            all|frontend|gateway|services|user|inventory|order|auth|monitoring)
                 COMPONENT="$1"
                 shift
                 ;;
@@ -524,6 +532,18 @@ main() {
                 kubectl apply -k kubernetes/dev/
                 kubectl rollout status deployment/order-service -n order-processor --timeout=300s
                 log_info "Order service accessible at: http://localhost:30006"
+            fi
+            ;;
+        auth)
+            log_info "Deploying auth service to $ENVIRONMENT..."
+            if [[ "$ENVIRONMENT" == "dev" ]]; then
+                cd "$ROOT_DIR"
+                docker build --no-cache -t order-processor-auth_service:latest -f docker/auth-service/Dockerfile .
+                kind load docker-image order-processor-auth_service:latest --name order-processor
+                kubectl apply -k kubernetes/base/
+                kubectl apply -k kubernetes/dev/
+                kubectl rollout status deployment/auth-service -n order-processor --timeout=300s
+                log_info "Auth service accessible at: http://localhost:30007"
             fi
             ;;
         monitoring)

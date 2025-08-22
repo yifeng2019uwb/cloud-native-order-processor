@@ -55,10 +55,12 @@ kubernetes/
 
 | Service | Container Port | Service Port | NodePort | External Access |
 |---------|----------------|--------------|----------|-----------------|
-| Frontend | 3000 | 80 | 30004 | http://localhost:30004 |
-| Gateway | 8080 | 8080 | 30000 | http://localhost:30000 |
-| User Service | 8000 | 8000 | - | Port-forward: 8000:8000 |
-| Inventory Service | 8001 | 8001 | - | Port-forward: 8001:8001 |
+| Frontend | 3000 | 80 | 30003 | http://localhost:30003 |
+| Gateway | 8080 | 8080 | 30002 | http://localhost:30002 |
+| Auth Service | 8003 | 8003 | 30007 | http://localhost:30007 |
+| User Service | 8000 | 8000 | 30004 | http://localhost:30004 |
+| Inventory Service | 8001 | 8001 | 30005 | http://localhost:30005 |
+| Order Service | 8002 | 8002 | 30006 | http://localhost:30006 |
 
 ## 🌍 Environment Setup
 

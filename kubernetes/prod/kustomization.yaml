@@ -32,6 +32,9 @@ images:
 - name: docker-order_service
   newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-order-service
   newTag: latest
+- name: docker-auth_service
+  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-auth-service
+  newTag: latest
 - name: docker-frontend-dev
   newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-frontend
   newTag: latest

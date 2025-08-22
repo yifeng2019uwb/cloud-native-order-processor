@@ -20,6 +20,8 @@ images:
   newTag: latest
 - name: order-processor-order_service
   newTag: latest
+- name: order-processor-auth_service
+  newTag: latest
 - name: order-processor-frontend
   newTag: latest
 - name: order-processor-gateway
