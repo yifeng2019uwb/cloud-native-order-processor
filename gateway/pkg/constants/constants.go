@@ -7,6 +7,7 @@ const (
 	UserService      = "user_service"
 	InventoryService = "inventory_service"
 	OrderService     = "order_service"
+	AuthService      = "auth_service"
 	GatewayService   = "gateway"
 )
 
@@ -60,6 +61,7 @@ const (
 	EnvUserServiceURL      = "USER_SERVICE_URL"
 	EnvInventoryServiceURL = "INVENTORY_SERVICE_URL"
 	EnvOrderServiceURL     = "ORDER_SERVICE_URL"
+	EnvAuthServiceURL      = "AUTH_SERVICE_URL"
 	EnvJWTSecretKey        = "JWT_SECRET_KEY"
 	EnvJWTAlgorithm        = "JWT_ALGORITHM"
 )
@@ -69,6 +71,7 @@ const (
 	DefaultUserServiceURL      = "http://user-service:8000"
 	DefaultInventoryServiceURL = "http://inventory-service:8001"
 	DefaultOrderServiceURL     = "http://order-service:8002"
+	DefaultAuthServiceURL      = "http://auth_service:8003"
 )
 
 // Time constants
@@ -162,6 +165,7 @@ const (
 	XUserRoleHeader      = "X-User-Role"
 	XAuthenticatedHeader = "X-Authenticated"
 	XSourceHeader        = "X-Source"
+	XAuthServiceHeader   = "X-Auth-Service"
 )
 
 // Error codes

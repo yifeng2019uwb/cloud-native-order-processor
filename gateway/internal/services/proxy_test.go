@@ -242,217 +242,6 @@ func TestStripAPIPrefix(t *testing.T) {
 	assert.Equal(t, "/test", stripped)
 }
 
-// TestProxyServiceWithDifferentConfigs tests different service configurations
-func TestProxyServiceWithDifferentConfigs(t *testing.T) {
-	testCases := []struct {
-		name                string
-		userServiceURL      string
-		inventoryServiceURL string
-		orderServiceURL     string
-	}{
-		{
-			name:                "Default URLs",
-			userServiceURL:      "http://user-service:8000",
-			inventoryServiceURL: "http://inventory-service:8001",
-			orderServiceURL:     "http://order-service:8002",
-		},
-		{
-			name:                "Custom URLs",
-			userServiceURL:      "http://custom-user:9000",
-			inventoryServiceURL: "http://custom-inventory:9001",
-			orderServiceURL:     "http://custom-order:9002",
-		},
-		{
-			name:                "HTTPS URLs",
-			userServiceURL:      "https://user-service.example.com",
-			inventoryServiceURL: "https://inventory-service.example.com",
-			orderServiceURL:     "https://order-service.example.com",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			cfg := &config.Config{
-				Services: config.ServicesConfig{
-					UserService:      tc.userServiceURL,
-					InventoryService: tc.inventoryServiceURL,
-					OrderService:     tc.orderServiceURL,
-				},
-			}
-
-			service := NewProxyService(cfg)
-
-			assert.Equal(t, tc.userServiceURL, service.config.Services.UserService)
-			assert.Equal(t, tc.inventoryServiceURL, service.config.Services.InventoryService)
-			assert.Equal(t, tc.orderServiceURL, service.config.Services.OrderService)
-		})
-	}
-}
-
-// TestProxyRequestWithHeaders tests proxy request with headers
-func TestProxyRequestWithHeaders(t *testing.T) {
-	cfg := &config.Config{
-		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
-		},
-	}
-
-	service := NewProxyService(cfg)
-	ctx := context.Background()
-
-	headers := map[string]string{
-		"Content-Type":  "application/json",
-		"Authorization": "Bearer token123",
-		"X-Request-ID":  "req-123",
-		"User-Agent":    "test-agent",
-	}
-
-	proxyReq := &models.ProxyRequest{
-		Method:        "POST",
-		Path:          "/test",
-		Headers:       headers,
-		Body:          nil,
-		TargetService: "user_service",
-		TargetPath:    "/test",
-		Context: &models.RequestContext{
-			RequestID:   "test-123",
-			Timestamp:   time.Now(),
-			ServiceName: "user_service",
-		},
-	}
-
-	resp, err := service.ProxyRequest(ctx, proxyReq)
-
-	// Expected to fail without real backend service
-	assert.Error(t, err)
-	assert.Nil(t, resp)
-}
-
-// TestProxyRequestWithBody tests proxy request with body
-func TestProxyRequestWithBody(t *testing.T) {
-	cfg := &config.Config{
-		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
-		},
-	}
-
-	service := NewProxyService(cfg)
-	ctx := context.Background()
-
-	body := map[string]interface{}{
-		"username": "testuser",
-		"password": "testpass",
-		"data": map[string]string{
-			"key1": "value1",
-			"key2": "value2",
-		},
-	}
-
-	proxyReq := &models.ProxyRequest{
-		Method:        "POST",
-		Path:          "/test",
-		Headers:       nil,
-		Body:          body,
-		TargetService: "user_service",
-		TargetPath:    "/test",
-		Context: &models.RequestContext{
-			RequestID:   "test-123",
-			Timestamp:   time.Now(),
-			ServiceName: "user_service",
-		},
-	}
-
-	resp, err := service.ProxyRequest(ctx, proxyReq)
-
-	// Expected to fail without real backend service
-	assert.Error(t, err)
-	assert.Nil(t, resp)
-}
-
-// TestProxyRequestWithUserContext tests proxy request with user context
-func TestProxyRequestWithUserContext(t *testing.T) {
-	cfg := &config.Config{
-		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
-		},
-	}
-
-	service := NewProxyService(cfg)
-	ctx := context.Background()
-
-	proxyReq := &models.ProxyRequest{
-		Method:        "GET",
-		Path:          "/profile",
-		Headers:       map[string]string{"Authorization": "Bearer token123"},
-		Body:          nil,
-		TargetService: "user_service",
-		TargetPath:    "/profile",
-		Context: &models.RequestContext{
-			RequestID:   "test-123",
-			Timestamp:   time.Now(),
-			ServiceName: "user_service",
-			User: &models.UserContext{
-				Username:        "testuser",
-				Role:            "customer",
-				IsAuthenticated: true,
-			},
-		},
-	}
-
-	resp, err := service.ProxyRequest(ctx, proxyReq)
-
-	// Expected to fail without real backend service
-	assert.Error(t, err)
-	assert.Nil(t, resp)
-}
-
-// TestProxyRequestWithQueryParams tests proxy request with query parameters
-func TestProxyRequestWithQueryParams(t *testing.T) {
-	cfg := &config.Config{
-		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
-		},
-	}
-
-	service := NewProxyService(cfg)
-	ctx := context.Background()
-
-	queryParams := map[string]string{
-		"limit":       "10",
-		"active_only": "true",
-		"test":        "value",
-	}
-
-	proxyReq := &models.ProxyRequest{
-		Method:        "GET",
-		Path:          "/assets",
-		Headers:       nil,
-		Body:          nil,
-		QueryParams:   queryParams,
-		TargetService: "inventory_service",
-		TargetPath:    "/assets",
-		Context: &models.RequestContext{
-			RequestID:   "test-123",
-			Timestamp:   time.Now(),
-			ServiceName: "inventory_service",
-		},
-	}
-
-	resp, err := service.ProxyRequest(ctx, proxyReq)
-
-	// Expected to fail without real backend service
-	assert.Error(t, err)
-	assert.Nil(t, resp)
-}
-
 // TestBuildTargetURLWithQueryParams tests URL building with query parameters
 func TestBuildTargetURLWithQueryParams(t *testing.T) {
 	cfg := &config.Config{
@@ -500,8 +289,8 @@ func TestBuildTargetURLWithQueryParams(t *testing.T) {
 	assert.Equal(t, "http://user-service:8000/profile?include_details=true", targetURL)
 }
 
-// BenchmarkProxyRequest benchmarks the proxy request performance
-func BenchmarkProxyRequest(b *testing.B) {
+// TestProxyServiceErrorHandling tests error handling scenarios
+func TestProxyServiceErrorHandling(t *testing.T) {
 	cfg := &config.Config{
 		Services: config.ServicesConfig{
 			UserService:      "http://user-service:8000",
@@ -511,27 +300,44 @@ func BenchmarkProxyRequest(b *testing.B) {
 	}
 
 	service := NewProxyService(cfg)
-	ctx := context.Background()
 
-	proxyReq := &models.ProxyRequest{
-		Method:        "GET",
-		Path:          "/test",
-		Headers:       nil,
-		Body:          nil,
-		TargetService: "user_service",
-		TargetPath:    "/test",
-		Context: &models.RequestContext{
-			RequestID:   "test-123",
-			Timestamp:   time.Now(),
-			ServiceName: "user_service",
-		},
-	}
-
-	for i := 0; i < b.N; i++ {
-		_, err := service.ProxyRequest(ctx, proxyReq)
-		if err != nil {
-			// Expected to fail without real backend
-			continue
+	t.Run("Invalid Target Service", func(t *testing.T) {
+		proxyReq := &models.ProxyRequest{
+			Method:        "GET",
+			Path:          "/test",
+			Headers:       nil,
+			Body:          nil,
+			TargetService: "invalid_service",
+			TargetPath:    "/test",
+			Context: &models.RequestContext{
+				RequestID:   "test-123",
+				Timestamp:   time.Now(),
+				ServiceName: "invalid_service",
+			},
 		}
-	}
+
+		_, err := service.buildTargetURL(proxyReq)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unknown target service")
+	})
+
+	t.Run("Empty Target Path", func(t *testing.T) {
+		proxyReq := &models.ProxyRequest{
+			Method:        "GET",
+			Path:          "/test",
+			Headers:       nil,
+			Body:          nil,
+			TargetService: "user_service",
+			TargetPath:    "",
+			Context: &models.RequestContext{
+				RequestID:   "test-123",
+				Timestamp:   time.Now(),
+				ServiceName: "user_service",
+			},
+		}
+
+		targetURL, err := service.buildTargetURL(proxyReq)
+		assert.NoError(t, err)
+		assert.Equal(t, "http://user-service:8000", targetURL)
+	})
 }

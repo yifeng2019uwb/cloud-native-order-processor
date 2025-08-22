@@ -128,8 +128,9 @@ func (p *ProxyService) createHTTPRequest(ctx context.Context, proxyReq *models.P
 		req.Header.Set(constants.XAuthenticatedHeader, "true")
 	}
 
-	// Add source header
+	// Add source and auth service headers for backend service validation
 	req.Header.Set(constants.XSourceHeader, "gateway")
+	req.Header.Set(constants.XAuthServiceHeader, "auth-service")
 
 	// Set content type if not present
 	if req.Header.Get("Content-Type") == "" && proxyReq.Body != nil {

@@ -1,0 +1,589 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>services: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">order-processor-gateway/internal/services/auth_client.go (94.1%)</option>
+				
+				<option value="file1">order-processor-gateway/internal/services/proxy.go (88.8%)</option>
+				
+				<option value="file2">order-processor-gateway/internal/services/redis.go (16.7%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package services
+
+import (
+        "bytes"
+        "context"
+        "encoding/json"
+        "fmt"
+        "io"
+        "net/http"
+
+        "order-processor-gateway/internal/config"
+        "order-processor-gateway/pkg/constants"
+        "order-processor-gateway/pkg/models"
+)
+
+// AuthServiceClient handles communication with the Auth Service
+type AuthServiceClient struct {
+        config *config.Config
+        client *http.Client
+}
+
+// NewAuthServiceClient creates a new auth service client
+func NewAuthServiceClient(cfg *config.Config) *AuthServiceClient <span class="cov8" title="1">{
+        return &amp;AuthServiceClient{
+                config: cfg,
+                client: &amp;http.Client{
+                        Timeout: constants.DefaultTimeout,
+                },
+        }
+}</span>
+
+// ValidateToken sends a JWT token to the Auth Service for validation
+func (a *AuthServiceClient) ValidateToken(ctx context.Context, token string) (*models.UserContext, error) <span class="cov8" title="1">{
+        // Prepare request payload
+        requestPayload := map[string]interface{}{
+                "token": token,
+        }
+
+        // Marshal request to JSON
+        requestBody, err := json.Marshal(requestPayload)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to marshal request: %w", err)
+        }</span>
+
+        // Create HTTP request
+        <span class="cov8" title="1">req, err := http.NewRequestWithContext(ctx, "POST", a.config.Services.AuthService+"/internal/auth/validate", bytes.NewBuffer(requestBody))
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to create request: %w", err)
+        }</span>
+
+        // Set headers
+        <span class="cov8" title="1">req.Header.Set("Content-Type", "application/json")
+        req.Header.Set("X-Source", "gateway")
+
+        // Send request to Auth Service
+        resp, err := a.client.Do(req)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("auth service request failed: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer resp.Body.Close()
+
+        // Read response body
+        responseBody, err := io.ReadAll(resp.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to read response body: %w", err)
+        }</span>
+
+        // Check HTTP status
+        <span class="cov8" title="1">if resp.StatusCode != http.StatusOK </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("auth service returned status %d: %s", resp.StatusCode, string(responseBody))
+        }</span>
+
+        // Parse response
+        <span class="cov8" title="1">var authResponse map[string]interface{}
+        if err := json.Unmarshal(responseBody, &amp;authResponse); err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to parse auth service response: %w", err)
+        }</span>
+
+        // Check if token is valid
+        <span class="cov8" title="1">valid, ok := authResponse["valid"].(bool)
+        if !ok || !valid </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("token validation failed: %s", authResponse["message"])
+        }</span>
+
+        // Extract user information
+        <span class="cov8" title="1">username, ok := authResponse["user"].(string)
+        if !ok </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("invalid user information in response")
+        }</span>
+
+        // Extract role from metadata if available, default to "customer"
+        <span class="cov8" title="1">role := "customer"
+        if metadata, ok := authResponse["metadata"].(map[string]interface{}); ok </span><span class="cov8" title="1">{
+                if userRole, ok := metadata["role"].(string); ok </span><span class="cov8" title="1">{
+                        role = userRole
+                }</span>
+        }
+
+        // Create user context
+        <span class="cov8" title="1">userContext := &amp;models.UserContext{
+                Username: username,
+                Role:     role,
+        }
+
+        return userContext, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package services
+
+import (
+        "bytes"
+        "context"
+        "encoding/json"
+        "fmt"
+        "io"
+        "net/http"
+        "net/url"
+        "strings"
+        "time"
+
+        "order-processor-gateway/internal/config"
+        "order-processor-gateway/pkg/constants"
+        "order-processor-gateway/pkg/models"
+)
+
+// ProxyService handles forwarding requests to backend services
+type ProxyService struct {
+        config *config.Config
+        client *http.Client
+}
+
+// NewProxyService creates a new proxy service
+func NewProxyService(cfg *config.Config) *ProxyService <span class="cov8" title="1">{
+        return &amp;ProxyService{
+                config: cfg,
+                client: &amp;http.Client{
+                        Timeout: constants.DefaultTimeout,
+                },
+        }
+}</span>
+
+// ProxyRequest forwards a request to a backend service
+// Phase 1: Basic request forwarding with error handling
+func (p *ProxyService) ProxyRequest(ctx context.Context, proxyReq *models.ProxyRequest) (*http.Response, error) <span class="cov8" title="1">{
+        // Phase 1: Simple request forwarding
+        // Phase 2: Add circuit breaker logic
+        // Phase 3: Add retry logic and advanced monitoring
+
+        // Build target URL
+        targetURL, err := p.buildTargetURL(proxyReq)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to build target URL: %w", err)
+        }</span>
+
+        // Create HTTP request
+        <span class="cov8" title="1">req, err := p.createHTTPRequest(ctx, proxyReq, targetURL)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+        }</span>
+
+        // Forward request to backend service
+        <span class="cov8" title="1">resp, err := p.client.Do(req)
+        if err != nil </span><span class="cov8" title="1">{
+                // Phase 2: Circuit breaker - increment failure count
+                return nil, fmt.Errorf("backend service request failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return resp, nil</span>
+}
+
+// buildTargetURL constructs the target URL for the backend service
+func (p *ProxyService) buildTargetURL(proxyReq *models.ProxyRequest) (string, error) <span class="cov8" title="1">{
+        var baseURL string
+
+        switch proxyReq.TargetService </span>{
+        case constants.UserService:<span class="cov8" title="1">
+                baseURL = p.config.Services.UserService</span>
+        case constants.InventoryService:<span class="cov8" title="1">
+                baseURL = p.config.Services.InventoryService</span>
+        case constants.OrderService:<span class="cov8" title="1">
+                baseURL = p.config.Services.OrderService</span>
+        default:<span class="cov8" title="1">
+                return "", fmt.Errorf("unknown target service: %s", proxyReq.TargetService)</span>
+        }
+
+        // Combine base URL with target path
+        <span class="cov8" title="1">targetURL := baseURL + proxyReq.TargetPath
+
+        // Add query parameters if present
+        if len(proxyReq.QueryParams) &gt; 0 </span><span class="cov8" title="1">{
+                u, err := url.Parse(targetURL)
+                if err != nil </span><span class="cov0" title="0">{
+                        return "", fmt.Errorf("failed to parse target URL: %w", err)
+                }</span>
+
+                <span class="cov8" title="1">q := u.Query()
+                for key, value := range proxyReq.QueryParams </span><span class="cov8" title="1">{
+                        q.Set(key, value)
+                }</span>
+                <span class="cov8" title="1">u.RawQuery = q.Encode()
+                targetURL = u.String()</span>
+        }
+
+        <span class="cov8" title="1">return targetURL, nil</span>
+}
+
+// createHTTPRequest creates an HTTP request for the backend service
+func (p *ProxyService) createHTTPRequest(ctx context.Context, proxyReq *models.ProxyRequest, targetURL string) (*http.Request, error) <span class="cov8" title="1">{
+        var body io.Reader
+
+        // Handle request body
+        if proxyReq.Body != nil </span><span class="cov8" title="1">{
+                bodyBytes, err := json.Marshal(proxyReq.Body)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to marshal request body: %w", err)
+                }</span>
+                <span class="cov8" title="1">body = bytes.NewBuffer(bodyBytes)</span>
+        }
+
+        // Create HTTP request
+        <span class="cov8" title="1">req, err := http.NewRequestWithContext(ctx, proxyReq.Method, targetURL, body)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+        }</span>
+
+        // Copy headers from original request
+        <span class="cov8" title="1">for key, value := range proxyReq.Headers </span><span class="cov8" title="1">{
+                req.Header.Set(key, value)
+        }</span>
+
+        // Add user context headers if user is authenticated
+        <span class="cov8" title="1">if proxyReq.Context != nil &amp;&amp; proxyReq.Context.User != nil &amp;&amp; proxyReq.Context.User.IsAuthenticated </span><span class="cov8" title="1">{
+                req.Header.Set(constants.XUserIDHeader, proxyReq.Context.User.Username)
+                req.Header.Set(constants.XUserRoleHeader, proxyReq.Context.User.Role)
+                req.Header.Set(constants.XAuthenticatedHeader, "true")
+        }</span>
+
+        // Add source and auth service headers for backend service validation
+        <span class="cov8" title="1">req.Header.Set(constants.XSourceHeader, "gateway")
+        req.Header.Set(constants.XAuthServiceHeader, "auth-service")
+
+        // Set content type if not present
+        if req.Header.Get("Content-Type") == "" &amp;&amp; proxyReq.Body != nil </span><span class="cov8" title="1">{
+                req.Header.Set("Content-Type", constants.ContentTypeJSON)
+        }</span>
+
+        <span class="cov8" title="1">return req, nil</span>
+}
+
+// ProxyToUserService forwards requests to user service
+func (p *ProxyService) ProxyToUserService(ctx context.Context, path string, method string, headers map[string]string, body interface{}) (*http.Response, error) <span class="cov8" title="1">{
+        proxyReq := &amp;models.ProxyRequest{
+                Method:        method,
+                Path:          path,
+                Headers:       headers,
+                Body:          body,
+                TargetService: constants.UserService,
+                TargetPath:    p.stripAPIPrefix(path, constants.APIV1AuthPath),
+                Context: &amp;models.RequestContext{
+                        RequestID:   generateRequestID(),
+                        Timestamp:   time.Now(),
+                        ServiceName: constants.UserService,
+                },
+        }
+
+        return p.ProxyRequest(ctx, proxyReq)
+}</span>
+
+// ProxyToInventoryService forwards requests to inventory service
+func (p *ProxyService) ProxyToInventoryService(ctx context.Context, path string, method string, headers map[string]string, body interface{}) (*http.Response, error) <span class="cov8" title="1">{
+        proxyReq := &amp;models.ProxyRequest{
+                Method:        method,
+                Path:          path,
+                Headers:       headers,
+                Body:          body,
+                TargetService: constants.InventoryService,
+                TargetPath:    p.stripAPIPrefix(path, constants.APIV1InventoryPath),
+                Context: &amp;models.RequestContext{
+                        RequestID:   generateRequestID(),
+                        Timestamp:   time.Now(),
+                        ServiceName: constants.InventoryService,
+                },
+        }
+
+        return p.ProxyRequest(ctx, proxyReq)
+}</span>
+
+// ProxyToOrderService forwards requests to order service
+func (p *ProxyService) ProxyToOrderService(ctx context.Context, path string, method string, headers map[string]string, body interface{}) (*http.Response, error) <span class="cov8" title="1">{
+        var targetPath string
+
+        // Handle different path prefixes for order service
+        switch </span>{
+        case strings.HasPrefix(path, constants.APIV1OrderPath):<span class="cov8" title="1">
+                targetPath = p.stripAPIPrefix(path, constants.APIV1OrderPath)</span>
+        case strings.HasPrefix(path, constants.APIV1PortfolioPath):<span class="cov0" title="0">
+                targetPath = p.stripAPIPrefix(path, constants.APIV1PortfolioPath)</span>
+        case strings.HasPrefix(path, constants.APIV1AssetPath):<span class="cov0" title="0">
+                targetPath = p.stripAPIPrefix(path, constants.APIV1AssetPath)</span>
+        default:<span class="cov0" title="0">
+                targetPath = path</span>
+        }
+
+        <span class="cov8" title="1">proxyReq := &amp;models.ProxyRequest{
+                Method:        method,
+                Path:          path,
+                Headers:       headers,
+                Body:          body,
+                TargetService: constants.OrderService,
+                TargetPath:    targetPath,
+                Context: &amp;models.RequestContext{
+                        RequestID:   generateRequestID(),
+                        Timestamp:   time.Now(),
+                        ServiceName: constants.OrderService,
+                },
+        }
+
+        return p.ProxyRequest(ctx, proxyReq)</span>
+}
+
+// stripAPIPrefix removes the API prefix from the path
+// e.g., "/api/v1/auth/login" -&gt; "/login"
+func (p *ProxyService) stripAPIPrefix(path, prefix string) string <span class="cov8" title="1">{
+        if strings.HasPrefix(path, prefix) </span><span class="cov8" title="1">{
+                return strings.TrimPrefix(path, prefix)
+        }</span>
+        <span class="cov8" title="1">return path</span>
+}
+
+// generateRequestID generates a simple request ID
+// Phase 2: Use UUID v4 for better uniqueness
+func generateRequestID() string <span class="cov8" title="1">{
+        return fmt.Sprintf("req-%d", time.Now().UnixNano())
+}</span>
+
+// GetRouteConfig returns the route configuration for a given path
+func (p *ProxyService) GetRouteConfig(path string) (*constants.RouteConfig, bool) <span class="cov8" title="1">{
+        fmt.Printf("🔍 STEP 3: GetRouteConfig - Looking up path: %s\n", path)
+        config, exists := constants.RouteConfigs[path]
+        if !exists </span><span class="cov8" title="1">{
+                fmt.Printf("🔍 STEP 3.1: GetRouteConfig - Route config not found for path: %s\n", path)
+                fmt.Printf("🔍 STEP 3.2: GetRouteConfig - Available routes: %v\n", constants.RouteConfigs)
+                return nil, false
+        }</span>
+        <span class="cov8" title="1">fmt.Printf("🔍 STEP 3.3: GetRouteConfig - Route config found for path: %s\n", path)
+        return &amp;config, true</span>
+}
+
+// GetTargetService determines the target service for a given path
+func (p *ProxyService) GetTargetService(path string) string <span class="cov8" title="1">{
+        switch </span>{
+        case strings.HasPrefix(path, constants.APIV1AuthPath):<span class="cov8" title="1">
+                return constants.UserService</span>
+        case strings.HasPrefix(path, constants.APIV1InventoryPath):<span class="cov8" title="1">
+                return constants.InventoryService</span>
+        case strings.HasPrefix(path, constants.APIV1OrderPath):<span class="cov8" title="1">
+                return constants.OrderService</span>
+        case strings.HasPrefix(path, constants.APIV1PortfolioPath):<span class="cov8" title="1">
+                return constants.OrderService</span> // Portfolio is handled by order service
+        case strings.HasPrefix(path, constants.APIV1BalancePath):<span class="cov8" title="1">
+                return constants.UserService</span> // Balance is handled by user service
+        case strings.HasPrefix(path, constants.APIV1AssetPath):<span class="cov8" title="1">
+                return constants.OrderService</span> // Asset balances handled by order service
+        default:<span class="cov8" title="1">
+                return ""</span>
+        }
+}
+
+// Phase 2: Circuit breaker pattern for service health monitoring (TODO)
+// CircuitBreaker tracks service health and prevents cascading failures
+// - Add failure count tracking
+// - Add timeout tracking
+// - Add state management (open, closed, half-open)
+// - Add failure threshold configuration
+
+// Phase 3: Advanced features (Future - simple comments)
+// - Service discovery integration
+// - Load balancing
+// - Advanced monitoring and metrics
+// - Retry logic with exponential backoff
+// - Advanced caching strategies
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package services
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "time"
+
+        "order-processor-gateway/internal/config"
+        "order-processor-gateway/pkg/constants"
+
+        "github.com/redis/go-redis/v9"
+)
+
+// RedisService handles Redis operations
+type RedisService struct {
+        client *redis.Client
+}
+
+// NewRedisService creates a new Redis service
+func NewRedisService(cfg *config.RedisConfig) (*RedisService, error) <span class="cov8" title="1">{
+        client := redis.NewClient(&amp;redis.Options{
+                Addr:     fmt.Sprintf("%s:%s", cfg.Host, cfg.Port),
+                Password: cfg.Password,
+                DB:       cfg.DB,
+        })
+
+        // Test connection
+        ctx, cancel := context.WithTimeout(context.Background(), constants.RedisTimeout)
+        defer cancel()
+
+        if err := client.Ping(ctx).Err(); err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("%s %w", constants.ErrorRedisConnectionFailed, err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;RedisService{client: client}, nil</span>
+}
+
+// StoreSession stores user session data
+func (r *RedisService) StoreSession(ctx context.Context, sessionID string, data map[string]interface{}, ttl time.Duration) error <span class="cov0" title="0">{
+        jsonData, err := json.Marshal(data)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return r.client.Set(ctx, constants.RedisKeyPrefixSession+sessionID, jsonData, ttl).Err()</span>
+}
+
+// GetSession retrieves user session data
+func (r *RedisService) GetSession(ctx context.Context, sessionID string) (map[string]interface{}, error) <span class="cov0" title="0">{
+        key := constants.RedisKeyPrefixSession + sessionID
+        data, err := r.client.Get(ctx, key).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">var session map[string]interface{}
+        if err := json.Unmarshal([]byte(data), &amp;session); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return session, nil</span>
+}
+
+// CheckRateLimit checks if request is within rate limits
+func (r *RedisService) CheckRateLimit(ctx context.Context, key string, limit int, window time.Duration) (bool, error) <span class="cov0" title="0">{
+        current, err := r.client.Incr(ctx, key).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return false, err
+        }</span>
+
+        // Set expiry on first request
+        <span class="cov0" title="0">if current == 1 </span><span class="cov0" title="0">{
+                r.client.Expire(ctx, key, window)
+        }</span>
+
+        <span class="cov0" title="0">return current &lt;= int64(limit), nil</span>
+}
+
+// CacheResponse caches API responses
+func (r *RedisService) CacheResponse(ctx context.Context, key string, data interface{}, ttl time.Duration) error <span class="cov0" title="0">{
+        jsonData, err := json.Marshal(data)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return r.client.Set(ctx, key, jsonData, ttl).Err()</span>
+}
+
+// GetCachedResponse retrieves cached response
+func (r *RedisService) GetCachedResponse(ctx context.Context, key string) ([]byte, error) <span class="cov0" title="0">{
+        return r.client.Get(ctx, key).Bytes()
+}</span>
+
+// Close closes Redis connection
+func (r *RedisService) Close() error <span class="cov0" title="0">{
+        return r.client.Close()
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

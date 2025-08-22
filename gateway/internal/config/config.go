@@ -36,6 +36,7 @@ type ServicesConfig struct {
 	UserService      string
 	InventoryService string
 	OrderService     string
+	AuthService      string
 }
 
 // JWTConfig holds JWT configuration
@@ -73,6 +74,7 @@ func Load() (*Config, error) {
 			UserService:      getEnv(constants.EnvUserServiceURL, constants.DefaultUserServiceURL),
 			InventoryService: getEnv(constants.EnvInventoryServiceURL, constants.DefaultInventoryServiceURL),
 			OrderService:     getEnv(constants.EnvOrderServiceURL, constants.DefaultOrderServiceURL),
+			AuthService:      getEnv(constants.EnvAuthServiceURL, constants.DefaultAuthServiceURL),
 		},
 		JWT: JWTConfig{
 			SecretKey: getEnv(constants.EnvJWTSecretKey, constants.DefaultJWTSecretKey),
