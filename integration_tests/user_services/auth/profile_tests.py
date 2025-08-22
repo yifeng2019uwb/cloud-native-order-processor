@@ -86,7 +86,8 @@ class UserProfileTests:
         # Should return 401 or 403 for unauthorized
         assert response.status_code in [401, 403], f"Expected 401/403, got {response.status_code}"
         data = response.json()
-        assert 'detail' in data
+        # Gateway returns error format: {"error":"PERM_001","message":"Insufficient permissions","code":"PERM_001","timestamp":"..."}
+        assert 'error' in data and 'message' in data, f"Expected error format, got: {data}"
         print("  ✅ Unauthorized profile access correctly rejected")
 
     def test_profile_invalid_token(self):

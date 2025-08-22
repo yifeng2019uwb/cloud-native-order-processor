@@ -6,7 +6,6 @@ Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
 from fastapi import APIRouter, HTTPException, Depends, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Union
 import logging
 
@@ -19,17 +18,12 @@ from api_models.auth.profile import (
 )
 from api_models.shared.common import ErrorResponse
 
-# Import common DAO models
-from common.entities.user import User
-
 # Import dependencies
 from common.database import get_user_dao
-from common.security import TokenManager
 
 # Import exceptions
 from common.exceptions.shared_exceptions import (
     EntityNotFoundException as UserNotFoundException,
-    TokenExpiredException,
     EntityAlreadyExistsException as UserAlreadyExistsException,
     EntityValidationException as UserValidationException
 )
@@ -43,41 +37,9 @@ from validation.business_validators import (
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["profile"])
 
-# Use FastAPI security scheme
-security = HTTPBearer()
-
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    user_dao = Depends(get_user_dao)
-) -> User:
-    """Extract and validate user from JWT token"""
-    try:
-        # Initialize TokenManager
-        token_manager = TokenManager()
-
-        # Use centralized token verification
-        username = token_manager.verify_access_token(credentials.credentials)
-
-        if not username:
-            raise TokenExpiredException("Token has expired")
-
-        # Get user from database using username from token
-        user = user_dao.get_user_by_username(username)
-        if not user:
-            raise UserNotFoundException(f"User '{username}' not found")
-
-        return user
-
-    except (TokenExpiredException, UserNotFoundException):
-        raise
-    except Exception as e:
-        logger.error(f"Token validation failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication failed",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
+# Import the centralized get_current_user from dependencies
+from .dependencies import get_current_user
+from common.entities.user import UserResponse
 
 
 @router.get(
@@ -95,7 +57,7 @@ async def get_current_user(
     }
 )
 async def get_profile(
-    current_user: User = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user)
 ) -> UserProfileResponse:
     """Get current user profile (requires JWT token)"""
     try:
@@ -145,7 +107,7 @@ async def get_profile(
 )
 async def update_profile(
     profile_data: UserProfileUpdateRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: UserResponse = Depends(get_current_user),
     user_dao = Depends(get_user_dao)
 ) -> ProfileUpdateSuccessResponse:
     """
@@ -191,7 +153,7 @@ async def update_profile(
             )
         )
 
-    except (UserNotFoundException, TokenExpiredException, HTTPException, UserValidationException, UserAlreadyExistsException):
+    except (UserNotFoundException, HTTPException, UserValidationException, UserAlreadyExistsException):
         raise
     except Exception as e:
         logger.error(f"Profile update failed for user {current_user.username}: {str(e)}")

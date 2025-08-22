@@ -1,46 +1,132 @@
-import sys
-import os
+"""
+Tests for auth dependencies module
+"""
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import MagicMock, patch
 from fastapi import HTTPException, status
-from api_models.auth.profile import UserProfileResponse
-from controllers.auth.dependencies import get_current_user
-import builtins
-import logging
-from fastapi.security import HTTPAuthorizationCredentials
-from controllers.auth import dependencies
-from jose.exceptions import JWTError
-from common.exceptions.shared_exceptions import TokenInvalidException
-import asyncio
+from fastapi.testclient import TestClient
 
-# Ensure src is in sys.path for import
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../src')))
+# Import the functions to test
+from src.controllers.auth.dependencies import (
+    verify_gateway_headers,
+    get_current_user,
+    get_optional_current_user,
+    require_admin_user
+)
 
-
-@pytest.mark.asyncio
-async def test_get_user_dao_success():
-    # Test the common database dependency
-    from common.database import get_user_dao
-
-    # Patch the UserDAO constructor
-    with patch("common.database.dependencies.UserDAO", return_value="user_dao_instance"), \
-         patch("common.database.dependencies.dynamodb_manager.get_connection", return_value="mock_connection"):
-        result = get_user_dao()
-        assert result == "user_dao_instance"
+# Import models
+from common.entities.user import UserResponse
 
 
 @pytest.mark.asyncio
-async def test_get_user_dao_error():
-    from common.database import get_user_dao
+async def test_verify_gateway_headers_valid():
+    """Test verify_gateway_headers with valid headers"""
+    mock_request = MagicMock()
 
-    # Patch to raise an exception
-    with patch("common.database.dependencies.dynamodb_manager.get_connection", side_effect=Exception("fail")):
-        with pytest.raises(Exception) as exc_info:
-            get_user_dao()
-        assert "fail" in str(exc_info.value)
+    result = await verify_gateway_headers(
+        request=mock_request,
+        x_source="gateway",
+        x_auth_service="auth-service",
+        x_user_id="testuser",
+        x_user_role="customer"
+    )
+
+    assert result == "testuser"
+
 
 @pytest.mark.asyncio
-async def test_get_current_user_valid_token():
+async def test_verify_gateway_headers_invalid_source():
+    """Test verify_gateway_headers with invalid source header"""
+    mock_request = MagicMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await verify_gateway_headers(
+            request=mock_request,
+            x_source="invalid-source",
+            x_auth_service="auth-service",
+            x_user_id="testuser",
+            x_user_role="customer"
+        )
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc_info.value.detail == "Invalid request source"
+
+
+@pytest.mark.asyncio
+async def test_verify_gateway_headers_invalid_auth_service():
+    """Test verify_gateway_headers with invalid auth service header"""
+    mock_request = MagicMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await verify_gateway_headers(
+            request=mock_request,
+            x_source="gateway",
+            x_auth_service="invalid-service",
+            x_user_id="testuser",
+            x_user_role="customer"
+        )
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc_info.value.detail == "Invalid authentication service"
+
+
+@pytest.mark.asyncio
+async def test_verify_gateway_headers_missing_user_id():
+    """Test verify_gateway_headers with missing user ID"""
+    mock_request = MagicMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await verify_gateway_headers(
+            request=mock_request,
+            x_source="gateway",
+            x_auth_service="auth-service",
+            x_user_id=None,
+            x_user_role="customer"
+        )
+
+    assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+    assert exc_info.value.detail == "User authentication required"
+
+
+@pytest.mark.asyncio
+async def test_verify_gateway_headers_missing_source():
+    """Test verify_gateway_headers with missing source header"""
+    mock_request = MagicMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await verify_gateway_headers(
+            request=mock_request,
+            x_source=None,
+            x_auth_service="auth-service",
+            x_user_id="testuser",
+            x_user_role="customer"
+        )
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc_info.value.detail == "Invalid request source"
+
+
+@pytest.mark.asyncio
+async def test_verify_gateway_headers_missing_auth_service():
+    """Test verify_gateway_headers with missing auth service header"""
+    mock_request = MagicMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await verify_gateway_headers(
+            request=mock_request,
+            x_source="gateway",
+            x_auth_service=None,
+            x_user_id="testuser",
+            x_user_role="customer"
+        )
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc_info.value.detail == "Invalid authentication service"
+
+
+@pytest.mark.asyncio
+async def test_get_current_user_success():
+    """Test get_current_user with valid Gateway headers"""
     mock_user = MagicMock()
     mock_user.username = "john_doe123"
     mock_user.email = "john.doe@example.com"
@@ -52,148 +138,147 @@ async def test_get_current_user_valid_token():
 
     mock_user_dao = MagicMock()
     mock_user_dao.get_user_by_username = MagicMock(return_value=mock_user)
-    with patch("src.controllers.auth.dependencies.verify_token_dependency", return_value="john_doe123"), \
-         patch("src.controllers.auth.dependencies.UserDAO", return_value=mock_user_dao):
+
+    with patch("src.controllers.auth.dependencies.verify_gateway_headers", return_value="john_doe123"):
         user = await get_current_user(username="john_doe123", user_dao=mock_user_dao)
         assert user.username == "john_doe123"
         assert user.email == "john.doe@example.com"
 
-@pytest.mark.asyncio
-async def test_get_current_user_invalid_token():
-    mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_username = MagicMock(return_value=None)
-    with patch("src.controllers.auth.dependencies.verify_token_dependency", side_effect=HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)), \
-         patch("src.controllers.auth.dependencies.UserDAO", return_value=mock_user_dao):
-        with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(username=None, user_dao=mock_user_dao)
-        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
 
 @pytest.mark.asyncio
 async def test_get_current_user_user_not_found():
+    """Test get_current_user when user not found"""
     mock_user_dao = MagicMock()
     mock_user_dao.get_user_by_username = MagicMock(return_value=None)
-    with patch("src.controllers.auth.dependencies.verify_token_dependency", return_value="john_doe123"), \
-         patch("src.controllers.auth.dependencies.UserDAO", return_value=mock_user_dao):
+
+    with patch("src.controllers.auth.dependencies.verify_gateway_headers", return_value="john_doe123"):
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(username="john_doe123", user_dao=mock_user_dao)
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
 
+
 @pytest.mark.asyncio
 async def test_get_current_user_database_error():
+    """Test get_current_user when database error occurs"""
     mock_user_dao = MagicMock()
     mock_user_dao.get_user_by_username = MagicMock(side_effect=Exception("DB error"))
-    with patch("src.controllers.auth.dependencies.verify_token_dependency", return_value="john_doe123"), \
-         patch("src.controllers.auth.dependencies.UserDAO", return_value=mock_user_dao):
+
+    with patch("src.controllers.auth.dependencies.verify_gateway_headers", return_value="john_doe123"):
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(username="john_doe123", user_dao=mock_user_dao)
         assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
-# Removed test_get_db_connection_success and test_get_optional_current_user_success as requested
 
 @pytest.mark.asyncio
-async def test_verify_token_dependency_valid():
-    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
+async def test_get_optional_current_user_with_headers():
+    """Test get_optional_current_user with valid headers"""
+    mock_user = MagicMock()
+    mock_user.username = "john_doe123"
+    mock_user.email = "john.doe@example.com"
+    mock_user.first_name = "John"
+    mock_user.last_name = "Doe"
+    mock_user.phone = "+1-555-123-4567"
+    mock_user.role = "customer"
+    mock_user.created_at = "2025-07-09T10:30:00Z"
+    mock_user.updated_at = "2025-07-09T10:30:00Z"
 
-    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
-        mock_token_manager = MagicMock()
-        mock_token_manager.verify_access_token.return_value = "user1"
-        mock_token_manager_class.return_value = mock_token_manager
+    mock_user_dao = MagicMock()
+    mock_user_dao.get_user_by_username = MagicMock(return_value=mock_user)
 
-        username = await dependencies.verify_token_dependency(creds)
-        assert username == "user1"
+    mock_request = MagicMock()
 
-@pytest.mark.asyncio
-async def test_verify_token_dependency_none():
-    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
+    result = await get_optional_current_user(
+        request=mock_request,
+        x_source="gateway",
+        x_auth_service="auth-service",
+        x_user_id="john_doe123",
+        x_user_role="customer",
+        user_dao=mock_user_dao
+    )
 
-    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
-        mock_token_manager = MagicMock()
-        mock_token_manager.verify_access_token.return_value = None
-        mock_token_manager_class.return_value = mock_token_manager
+    assert result is not None
+    assert result.username == "john_doe123"
 
-        with pytest.raises(HTTPException) as exc_info:
-            await dependencies.verify_token_dependency(creds)
-        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-
-@pytest.mark.asyncio
-async def test_verify_token_dependency_jwt_error():
-    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
-
-    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
-        mock_token_manager = MagicMock()
-        mock_token_manager.verify_access_token.side_effect = TokenInvalidException("bad token")
-        mock_token_manager_class.return_value = mock_token_manager
-
-        with pytest.raises(HTTPException) as exc_info:
-            await dependencies.verify_token_dependency(creds)
-        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
 
 @pytest.mark.asyncio
-async def test_verify_token_dependency_general_error():
-    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
+async def test_get_optional_current_user_missing_headers():
+    """Test get_optional_current_user with missing headers"""
+    mock_user_dao = MagicMock()
+    mock_request = MagicMock()
 
-    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
-        mock_token_manager = MagicMock()
-        mock_token_manager.verify_access_token.side_effect = Exception("fail")
-        mock_token_manager_class.return_value = mock_token_manager
+    result = await get_optional_current_user(
+        request=mock_request,
+        x_source=None,
+        x_auth_service="auth-service",
+        x_user_id="john_doe123",
+        x_user_role="customer",
+        user_dao=mock_user_dao
+    )
 
-        with pytest.raises(HTTPException) as exc_info:
-            await dependencies.verify_token_dependency(creds)
-        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-
-@pytest.mark.asyncio
-async def test_get_optional_current_user_none():
-    result = await dependencies.get_optional_current_user(None)
     assert result is None
 
-@pytest.mark.asyncio
-async def test_get_optional_current_user_invalid_token():
-    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
-    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
-        mock_token_manager = MagicMock()
-        mock_token_manager.verify_access_token.return_value = None
-        mock_token_manager_class.return_value = mock_token_manager
 
-        result = await dependencies.get_optional_current_user(creds)
-        assert result is None
+@pytest.mark.asyncio
+async def test_get_optional_current_user_invalid_headers():
+    """Test get_optional_current_user with invalid headers"""
+    mock_user_dao = MagicMock()
+    mock_request = MagicMock()
+
+    result = await get_optional_current_user(
+        request=mock_request,
+        x_source="invalid-source",
+        x_auth_service="auth-service",
+        x_user_id="john_doe123",
+        x_user_role="customer",
+        user_dao=mock_user_dao
+    )
+
+    assert result is None
+
 
 @pytest.mark.asyncio
 async def test_get_optional_current_user_user_not_found():
-    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
+    """Test get_optional_current_user when user not found"""
     mock_user_dao = MagicMock()
     mock_user_dao.get_user_by_username = MagicMock(return_value=None)
-    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
-        mock_token_manager = MagicMock()
-        mock_token_manager.verify_access_token.return_value = "user1"
-        mock_token_manager_class.return_value = mock_token_manager
+    mock_request = MagicMock()
 
-        result = await dependencies.get_optional_current_user(creds, user_dao=mock_user_dao)
-        assert result is None
+    result = await get_optional_current_user(
+        request=mock_request,
+        x_source="gateway",
+        x_auth_service="auth-service",
+        x_user_id="john_doe123",
+        x_user_role="customer",
+        user_dao=mock_user_dao
+    )
+
+    assert result is None
+
 
 @pytest.mark.asyncio
 async def test_get_optional_current_user_exception():
-    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token123")
+    """Test get_optional_current_user when exception occurs"""
     mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_email = MagicMock(side_effect=Exception("fail"))
-    with patch("controllers.auth.dependencies.TokenManager") as mock_token_manager_class:
-        mock_token_manager = MagicMock()
-        mock_token_manager.verify_access_token.return_value = "user1"
-        mock_token_manager_class.return_value = mock_token_manager
-        result = await dependencies.get_optional_current_user(creds, user_dao=mock_user_dao)
-        assert result is None
+    mock_user_dao.get_user_by_username = MagicMock(side_effect=Exception("fail"))
+    mock_request = MagicMock()
+
+    result = await get_optional_current_user(
+        request=mock_request,
+        x_source="gateway",
+        x_auth_service="auth-service",
+        x_user_id="john_doe123",
+        x_user_role="customer",
+        user_dao=mock_user_dao
+    )
+
+    assert result is None
 
 
-def test_require_admin_user_logs(monkeypatch):
-    # Just check it returns the user and logs
-    user = MagicMock()
-    user.email = "admin@email.com"
-    logs = []
-    def fake_log(msg):
-        logs.append(msg)
-    monkeypatch.setattr(logging.getLogger("src.controllers.auth.dependencies"), "debug", fake_log)
-    result = dependencies.require_admin_user(user)
-    assert result is user
+def test_require_admin_user():
+    """Test require_admin_user function"""
+    mock_user = MagicMock()
+    mock_user.email = "admin@example.com"
 
-# Helper for running async functions in pytest
-async def asyncio_run(coro):
-    return await coro
+    result = require_admin_user(current_user=mock_user)
+
+    assert result == mock_user

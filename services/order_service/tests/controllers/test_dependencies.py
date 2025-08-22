@@ -8,7 +8,7 @@ from unittest.mock import Mock, MagicMock, patch, AsyncMock
 from datetime import datetime
 from decimal import Decimal
 from fastapi import HTTPException, Request, Depends, status
-from fastapi.security import HTTPAuthorizationCredentials
+
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
@@ -91,12 +91,7 @@ class TestDependencies:
         connection = Mock()
         return connection
 
-    @pytest.fixture
-    def mock_token_manager(self):
-        """Mock TokenManager"""
-        manager = Mock()
-        manager.verify_access_token.return_value = "testuser"
-        return manager
+
 
     def test_get_order_dao_dependency(self):
         """Test get_order_dao_dependency"""
@@ -216,61 +211,122 @@ class TestDependencies:
             )
 
     @pytest.mark.asyncio
-    async def test_get_current_user_success(self, mock_token_manager):
-        """Test get_current_user with valid credentials"""
-        with patch('src.controllers.dependencies.token_manager', mock_token_manager):
-            # Mock credentials
-            mock_credentials = Mock(spec=HTTPAuthorizationCredentials)
-            mock_credentials.credentials = "valid.jwt.token"
+    async def test_get_current_user_success(self):
+        """Test get_current_user with valid Gateway headers"""
+        # Mock request and headers
+        mock_request = Mock()
 
-            result = await get_current_user(mock_credentials)
+        result = await get_current_user(
+            request=mock_request,
+            x_source="gateway",
+            x_auth_service="auth-service",
+            x_user_id="testuser",
+            x_user_role="customer"
+        )
 
-            assert result["username"] == "testuser"
-            assert result["role"] == "customer"
-            mock_token_manager.verify_access_token.assert_called_once_with("valid.jwt.token")
+        assert result["username"] == "testuser"
+        assert result["role"] == "customer"
 
     @pytest.mark.asyncio
     async def test_get_current_user_no_credentials(self):
-        """Test get_current_user with no credentials"""
+        """Test get_current_user with missing user ID header"""
+        mock_request = Mock()
+
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(None)
+            await get_current_user(
+                request=mock_request,
+                x_source="gateway",
+                x_auth_service="auth-service",
+                x_user_id=None,
+                x_user_role="customer"
+            )
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert exc_info.value.detail == "Authentication required"
+        assert exc_info.value.detail == "User authentication required"
 
     @pytest.mark.asyncio
-    async def test_get_current_user_invalid_token(self, mock_token_manager):
-        """Test get_current_user with invalid token"""
-        with patch('src.controllers.dependencies.token_manager', mock_token_manager):
-            # Mock credentials
-            mock_credentials = Mock(spec=HTTPAuthorizationCredentials)
-            mock_credentials.credentials = "invalid.jwt.token"
+    async def test_get_current_user_invalid_source(self):
+        """Test get_current_user with invalid source header"""
+        mock_request = Mock()
 
-            # Mock token verification failure
-            mock_token_manager.verify_access_token.side_effect = Exception("Invalid token")
+        with pytest.raises(HTTPException) as exc_info:
+            await get_current_user(
+                request=mock_request,
+                x_source="invalid-source",
+                x_auth_service="auth-service",
+                x_user_id="testuser",
+                x_user_role="customer"
+            )
 
-            with pytest.raises(HTTPException) as exc_info:
-                await get_current_user(mock_credentials)
-
-            assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-            assert exc_info.value.detail == "Invalid authentication credentials"
+        assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+        assert exc_info.value.detail == "Invalid request source"
 
     @pytest.mark.asyncio
-    async def test_get_current_user_token_verification_exception(self, mock_token_manager):
-        """Test get_current_user with token verification exception"""
-        with patch('src.controllers.dependencies.token_manager', mock_token_manager):
-            # Mock credentials
-            mock_credentials = Mock(spec=HTTPAuthorizationCredentials)
-            mock_credentials.credentials = "valid.jwt.token"
+    async def test_get_current_user_invalid_auth_service(self):
+        """Test get_current_user with invalid auth service header"""
+        mock_request = Mock()
 
-            # Mock token verification exception
-            mock_token_manager.verify_access_token.side_effect = Exception("Token expired")
+        with pytest.raises(HTTPException) as exc_info:
+            await get_current_user(
+                request=mock_request,
+                x_source="gateway",
+                x_auth_service="invalid-service",
+                x_user_id="testuser",
+                x_user_role="customer"
+            )
 
-            with pytest.raises(HTTPException) as exc_info:
-                await get_current_user(mock_credentials)
+        assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+        assert exc_info.value.detail == "Invalid authentication service"
 
-            assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-            assert exc_info.value.detail == "Invalid authentication credentials"
+    @pytest.mark.asyncio
+    async def test_get_current_user_missing_source_header(self):
+        """Test get_current_user with missing source header"""
+        mock_request = Mock()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_current_user(
+                request=mock_request,
+                x_source=None,
+                x_auth_service="auth-service",
+                x_user_id="testuser",
+                x_user_role="customer"
+            )
+
+        assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+        assert exc_info.value.detail == "Invalid request source"
+
+    @pytest.mark.asyncio
+    async def test_get_current_user_missing_auth_service_header(self):
+        """Test get_current_user with missing auth service header"""
+        mock_request = Mock()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_current_user(
+                request=mock_request,
+                x_source="gateway",
+                x_auth_service=None,
+                x_user_id="testuser",
+                x_user_role="customer"
+            )
+
+        assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+        assert exc_info.value.detail == "Invalid authentication service"
+
+    @pytest.mark.asyncio
+    async def test_get_current_user_default_role(self):
+        """Test get_current_user with default role when not provided"""
+        mock_request = Mock()
+
+        result = await get_current_user(
+            request=mock_request,
+            x_source="gateway",
+            x_auth_service="auth-service",
+            x_user_id="testuser",
+            x_user_role=None
+        )
+
+        assert result["username"] == "testuser"
+        assert result["role"] == "customer"  # Default role
 
     def test_get_current_market_price_success(self):
         """Test get_current_market_price with valid asset"""
@@ -369,37 +425,36 @@ class TestDependencies:
         mock_asset_dao.get_asset_by_id.assert_called_once_with("BTC")
 
     @pytest.mark.asyncio
-    async def test_get_current_user_logging_success(self, mock_token_manager):
+    async def test_get_current_user_logging_success(self):
         """Test that logging is performed correctly in get_current_user success case"""
-        with patch('src.controllers.dependencies.token_manager', mock_token_manager), \
-             patch('src.controllers.dependencies.logger') as mock_logger:
+        with patch('src.controllers.dependencies.logger') as mock_logger:
+            mock_request = Mock()
 
-            # Mock credentials
-            mock_credentials = Mock(spec=HTTPAuthorizationCredentials)
-            mock_credentials.credentials = "valid.jwt.token"
+            result = await get_current_user(
+                request=mock_request,
+                x_source="gateway",
+                x_auth_service="auth-service",
+                x_user_id="testuser",
+                x_user_role="customer"
+            )
 
-            await get_current_user(mock_credentials)
-
-            # Verify info logging was called
-            mock_logger.info.assert_called_once_with("User authenticated: testuser")
+            # Verify logging was called
+            mock_logger.info.assert_called_once_with("User authenticated via Gateway: testuser")
 
     @pytest.mark.asyncio
-    async def test_get_current_user_logging_failure(self, mock_token_manager):
+    async def test_get_current_user_logging_failure(self):
         """Test that logging is performed correctly in get_current_user failure case"""
-        with patch('src.controllers.dependencies.token_manager', mock_token_manager), \
-             patch('src.controllers.dependencies.logger') as mock_logger:
+        with patch('src.controllers.dependencies.logger') as mock_logger:
+            mock_request = Mock()
 
-            # Mock credentials
-            mock_credentials = Mock(spec=HTTPAuthorizationCredentials)
-            mock_credentials.credentials = "invalid.jwt.token"
-
-            # Mock token verification failure
-            mock_token_manager.verify_access_token.side_effect = Exception("Invalid token")
-
-            try:
-                await get_current_user(mock_credentials)
-            except HTTPException:
-                pass
+            with pytest.raises(HTTPException):
+                await get_current_user(
+                    request=mock_request,
+                    x_source="invalid-source",
+                    x_auth_service="auth-service",
+                    x_user_id="testuser",
+                    x_user_role="customer"
+                )
 
             # Verify warning logging was called
-            mock_logger.warning.assert_called_once_with("Authentication failed: Invalid token")
+            mock_logger.warning.assert_called_once_with("Invalid source header: invalid-source")

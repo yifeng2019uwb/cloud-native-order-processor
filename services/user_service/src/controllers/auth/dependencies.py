@@ -3,96 +3,75 @@ FastAPI dependencies for authentication
 """
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError
+from fastapi import Depends, HTTPException, status, Request, Header
 import logging
 
 from common.entities.user import UserResponse
 from common.dao.user import UserDAO
 from common.database import get_user_dao as get_common_user_dao
-from common.security import TokenManager, AuditLogger
-from common.exceptions.shared_exceptions import TokenExpiredException, TokenInvalidException
 
 logger = logging.getLogger(__name__)
 
-# Security scheme for JWT Bearer tokens
-security = HTTPBearer(auto_error=True)
 
-
-async def verify_token_dependency(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+async def verify_gateway_headers(
+    request: Request,
+    x_source: Optional[str] = Header(None, alias="X-Source"),
+    x_auth_service: Optional[str] = Header(None, alias="X-Auth-Service"),
+    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
+    x_user_role: Optional[str] = Header(None, alias="X-User-Role")
 ) -> str:
     """
-    Verify JWT token from Authorization header
+    Verify Gateway headers for authentication
 
     Args:
-        request: FastAPI request object for audit logging
-        credentials: HTTP authorization credentials
+        request: FastAPI request object
+        x_source: Source header (should be "gateway")
+        x_auth_service: Auth service header (should be "auth-service")
+        x_user_id: User ID header from Gateway
+        x_user_role: User role header from Gateway
 
     Returns:
-        User username from verified token
+        User username from Gateway headers
 
     Raises:
-        HTTPException: If token is invalid or expired
+        HTTPException: If headers are invalid or missing
     """
-    # Initialize security managers
-    token_manager = TokenManager()
-    audit_logger = AuditLogger()
+    # Validate source headers
+    if not x_source or x_source != "gateway":
+        logger.warning(f"Invalid source header: {x_source}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid request source"
+        )
 
-    # Get client IP for audit logging (optional for now)
-    client_ip = None
+    if not x_auth_service or x_auth_service != "auth-service":
+        logger.warning(f"Invalid auth service header: {x_auth_service}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid authentication service"
+        )
 
-    try:
-        logger.info(f"🔍 DEBUG: Verifying token: {credentials.credentials[:20]}...")
-
-        username = token_manager.verify_access_token(credentials.credentials)
-        logger.info(f"🔍 DEBUG: Token verification returned username: '{username}'")
-
-        if username is None:
-            logger.error("❌ DEBUG: Token verification returned None")
-            audit_logger.log_access_denied("unknown", "/api", "Invalid token", client_ip)
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        return username
-    except TokenExpiredException as e:
-        logger.warning(f"Token expired: {e}")
-        audit_logger.log_access_denied("unknown", "/api", "Token expired", client_ip)
+    # Extract user information from headers
+    if not x_user_id:
+        logger.warning("Missing user ID header")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="User authentication required"
         )
-    except TokenInvalidException as e:
-        logger.warning(f"Token invalid: {e}")
-        audit_logger.log_access_denied("unknown", "/api", "Invalid token", client_ip)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error in token verification: {e}")
-        audit_logger.log_access_denied("unknown", "/api", "Token verification failed", client_ip)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token verification failed",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+
+    logger.info(f"🔍 DEBUG: Gateway headers verified for user: '{x_user_id}'")
+    return x_user_id
 
 
 async def get_current_user(
-    username: str = Depends(verify_token_dependency),
+    username: str = Depends(verify_gateway_headers),
     user_dao: UserDAO = Depends(get_common_user_dao)
 ) -> UserResponse:
     """
-    Get current authenticated user from token
+    Get current authenticated user from Gateway headers
 
     Args:
-        username: User username from verified token
+        username: User username from Gateway headers
         user_dao: UserDAO instance
 
     Returns:
@@ -135,33 +114,37 @@ async def get_current_user(
 
 
 async def get_optional_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
-        HTTPBearer(auto_error=False)
-    ),
+    request: Request,
+    x_source: Optional[str] = Header(None, alias="X-Source"),
+    x_auth_service: Optional[str] = Header(None, alias="X-Auth-Service"),
+    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
+    x_user_role: Optional[str] = Header(None, alias="X-User-Role"),
     user_dao: UserDAO = Depends(get_common_user_dao)
 ) -> Optional[UserResponse]:
     """
-    Get current user if token is provided (optional authentication)
+    Get current user if Gateway headers are provided (optional authentication)
 
     Args:
-        credentials: Optional HTTP authorization credentials
+        request: FastAPI request object
+        x_source: Source header (should be "gateway")
+        x_auth_service: Auth service header (should be "auth-service")
+        x_user_id: User ID header from Gateway
+        x_user_role: User role header from Gateway
         user_dao: UserDAO instance
 
     Returns:
         Current user information if authenticated, None otherwise
     """
-    if credentials is None:
+    # Check if all required headers are present
+    if not all([x_source, x_auth_service, x_user_id]):
         return None
 
     try:
-        # Initialize TokenManager
-        token_manager = TokenManager()
-
-        username = token_manager.verify_access_token(credentials.credentials)
-        if username is None:
+        # Verify headers
+        if x_source != "gateway" or x_auth_service != "auth-service":
             return None
 
-        user = user_dao.get_user_by_username(username)
+        user = user_dao.get_user_by_username(x_user_id)
         if user is None:
             return None
 
