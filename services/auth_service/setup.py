@@ -16,6 +16,8 @@ setup(
         "python-dotenv==1.0.0",
         "pyyaml==6.0.1",
         "prometheus-client==0.19.0",
+        # Dependency on common package
+        "common",
     ],
     extras_require={
         "dev": [

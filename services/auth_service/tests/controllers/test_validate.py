@@ -9,7 +9,7 @@ from fastapi import FastAPI
 
 from src.controllers.validate import router, validate_jwt_token
 from src.api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
-from src.auth_exceptions import TokenExpiredException, TokenInvalidException
+from common.exceptions import TokenExpiredException, TokenInvalidException
 
 
 class TestValidateController:
@@ -56,10 +56,10 @@ class TestValidateJWTTokenEndpoint:
             }
         }
 
-        with patch('src.controllers.validate.JWTValidator') as mock_validator_class:
-            mock_validator = Mock()
-            mock_validator.validate_token.return_value = mock_user_context
-            mock_validator_class.return_value = mock_validator
+        with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
+            mock_token_manager = Mock()
+            mock_token_manager.validate_token_comprehensive.return_value = mock_user_context
+            mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function
             response = validate_jwt_token(request)
@@ -73,8 +73,8 @@ class TestValidateJWTTokenEndpoint:
             assert response.metadata == mock_user_context["metadata"]
             assert response.request_id == "test-req-123"
 
-            # Verify JWT validator was called
-            mock_validator.validate_token.assert_called_once_with("valid.jwt.token")
+            # Verify token manager was called
+            mock_token_manager.validate_token_comprehensive.assert_called_once_with("valid.jwt.token")
 
     def test_successful_token_validation_without_request_id(self):
         """Test successful JWT token validation without request_id."""
@@ -91,10 +91,10 @@ class TestValidateJWTTokenEndpoint:
             "metadata": {"algorithm": "HS256"}
         }
 
-        with patch('src.controllers.validate.JWTValidator') as mock_validator_class:
-            mock_validator = Mock()
-            mock_validator.validate_token.return_value = mock_user_context
-            mock_validator_class.return_value = mock_validator
+        with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
+            mock_token_manager = Mock()
+            mock_token_manager.validate_token_comprehensive.return_value = mock_user_context
+            mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function
             response = validate_jwt_token(request)
@@ -112,10 +112,10 @@ class TestValidateJWTTokenEndpoint:
             request_id="test-req-expired"
         )
 
-        with patch('src.controllers.validate.JWTValidator') as mock_validator_class:
-            mock_validator = Mock()
-            mock_validator.validate_token.side_effect = TokenExpiredException("Token has expired")
-            mock_validator_class.return_value = mock_validator
+        with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
+            mock_token_manager = Mock()
+            mock_token_manager.validate_token_comprehensive.side_effect = TokenExpiredException("Token has expired")
+            mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function
             response = validate_jwt_token(request)
@@ -135,10 +135,10 @@ class TestValidateJWTTokenEndpoint:
             request_id="test-req-invalid"
         )
 
-        with patch('src.controllers.validate.JWTValidator') as mock_validator_class:
-            mock_validator = Mock()
-            mock_validator.validate_token.side_effect = TokenInvalidException("Invalid token format")
-            mock_validator_class.return_value = mock_validator
+        with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
+            mock_token_manager = Mock()
+            mock_token_manager.validate_token_comprehensive.side_effect = TokenInvalidException("Invalid token format")
+            mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function
             response = validate_jwt_token(request)
@@ -158,10 +158,10 @@ class TestValidateJWTTokenEndpoint:
             request_id="test-req-error"
         )
 
-        with patch('src.controllers.validate.JWTValidator') as mock_validator_class:
-            mock_validator = Mock()
-            mock_validator.validate_token.side_effect = ValueError("Unexpected error")
-            mock_validator_class.return_value = mock_validator
+        with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
+            mock_token_manager = Mock()
+            mock_token_manager.validate_token_comprehensive.side_effect = ValueError("Unexpected error")
+            mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function
             response = validate_jwt_token(request)
@@ -189,10 +189,10 @@ class TestValidateJWTTokenEndpoint:
             "metadata": {"algorithm": "HS256"}
         }
 
-        with patch('src.controllers.validate.JWTValidator') as mock_validator_class:
-            mock_validator = Mock()
-            mock_validator.validate_token.return_value = mock_user_context
-            mock_validator_class.return_value = mock_validator
+        with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
+            mock_token_manager = Mock()
+            mock_token_manager.validate_token_comprehensive.return_value = mock_user_context
+            mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function
             response = validate_jwt_token(request)
@@ -216,10 +216,10 @@ class TestValidateJWTTokenEndpoint:
             "metadata": {"algorithm": "HS256"}
         }
 
-        with patch('src.controllers.validate.JWTValidator') as mock_validator_class:
-            mock_validator = Mock()
-            mock_validator.validate_token.return_value = mock_user_context
-            mock_validator_class.return_value = mock_validator
+        with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
+            mock_token_manager = Mock()
+            mock_token_manager.validate_token_comprehensive.return_value = mock_user_context
+            mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function
             response = validate_jwt_token(request)
@@ -247,10 +247,10 @@ class TestValidateJWTTokenEndpoint:
             }
         }
 
-        with patch('src.controllers.validate.JWTValidator') as mock_validator_class:
-            mock_validator = Mock()
-            mock_validator.validate_token.return_value = mock_user_context
-            mock_validator_class.return_value = mock_validator
+        with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
+            mock_token_manager = Mock()
+            mock_token_manager.validate_token_comprehensive.return_value = mock_user_context
+            mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function
             response = validate_jwt_token(request)
@@ -268,10 +268,10 @@ class TestValidateJWTTokenEndpoint:
         # Mock request data
         request = ValidateTokenRequest(token="error.token", request_id="test-req-error-struct")
 
-        with patch('src.controllers.validate.JWTValidator') as mock_validator_class:
-            mock_validator = Mock()
-            mock_validator.validate_token.side_effect = TokenInvalidException("Test error")
-            mock_validator_class.return_value = mock_validator
+        with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
+            mock_token_manager = Mock()
+            mock_token_manager.validate_token_comprehensive.side_effect = TokenInvalidException("Test error")
+            mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function
             response = validate_jwt_token(request)

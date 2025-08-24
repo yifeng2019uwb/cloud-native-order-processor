@@ -1,35 +1,45 @@
+# services/auth_service/Dockerfile - Production-Ready (No Tests)
 FROM python:3.11-slim
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# System dependencies - minimize and clean up
 RUN apt-get update && apt-get install -y \
     curl \
     gcc \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/cache/apt/*
 
-# Copy requirements first (for better caching)
-COPY services/auth_service/requirements.txt ./auth_service/
+# Install common package FIRST (best Docker layer caching)
+COPY services/common ./common/
+RUN cd ./common && \
+    pip install --no-cache-dir -e . && \
+    pip cache purge
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r ./auth_service/requirements.txt
+# Install service dependencies
+COPY services/auth_service/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip cache purge
 
-# Copy auth service source code
-COPY services/auth_service/src ./auth_service/src
+# Copy ONLY production source code (NO tests)
+COPY services/auth_service/src ./src/
 
-# Set Python path to include the auth service directory for imports
-ENV PYTHONPATH="/app:/app/auth_service/src"
+# Security: non-root user
+RUN useradd --create-home --shell /bin/bash --uid 1000 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
 
-# Set working directory to auth service
-WORKDIR /app/auth_service/src
-
-# Expose port
-EXPOSE 8003
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+# Optimized health check
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=2 \
     CMD curl -f http://localhost:8003/health || exit 1
 
-# Run the application directly (not as a module)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8003"]
+EXPOSE 8003
+
+# Optimized uvicorn settings
+CMD ["uvicorn", "src.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8003", \
+     "--workers", "1", \
+     "--access-log", \
+     "--log-level", "info"]

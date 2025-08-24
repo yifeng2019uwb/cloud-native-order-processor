@@ -30,7 +30,7 @@ services:
       dockerfile: docker/frontend/Dockerfile
     container_name: order-processor-frontend
     ports:
-      - "30003:80"
+      - "80:80"
     depends_on:
       - user_service
       - inventory_service
@@ -58,8 +58,9 @@ services:
       context: ../
       dockerfile: docker/user-service/Dockerfile
     container_name: order-processor-user_service
-    ports:
-      - "30004:8000"
+    # No external ports - only accessible through Gateway
+    expose:
+      - "8000"
     environment:
       # Use environment variables that can be overridden
       - ORDERS_TABLE=${ORDERS_TABLE:-order-processor-dev-orders}
@@ -109,8 +110,9 @@ services:
       context: ../
       dockerfile: docker/inventory-service/Dockerfile
     container_name: order-processor-inventory_service
-    ports:
-      - "30005:8001"
+    # No external ports - only accessible through Gateway
+    expose:
+      - "8001"
     environment:
       # Use environment variables that can be overridden
       - ORDERS_TABLE=${ORDERS_TABLE:-order-processor-dev-orders}
@@ -157,8 +159,9 @@ services:
       context: ../
       dockerfile: docker/order-service/Dockerfile
     container_name: order-processor-order_service
-    ports:
-      - "30006:8002"
+    # No external ports - only accessible through Gateway
+    expose:
+      - "8002"
     environment:
       # Use environment variables that can be overridden
       - ORDERS_TABLE=${ORDERS_TABLE:-order-processor-dev-orders}
@@ -207,8 +210,9 @@ services:
       context: ../
       dockerfile: docker/auth-service/Dockerfile
     container_name: order-processor-auth_service
-    ports:
-      - "30007:8003"
+    # No external ports - only accessible through Gateway
+    expose:
+      - "8003"
     environment:
       # Auth Service configuration
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-development-jwt-secret-key-here}
@@ -249,7 +253,7 @@ services:
       dockerfile: docker/gateway/Dockerfile
     container_name: order-processor-gateway
     ports:
-      - "30002:8080"
+      - "8080:8080"
     environment:
       # Gateway configuration
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-development-jwt-secret-key-here}

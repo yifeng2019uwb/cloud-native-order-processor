@@ -15,10 +15,12 @@
 - **Component**: Security & API Gateway
 - **Type**: Epic
 - **Priority**: 🔥 **HIGHEST PRIORITY**
-- **Status**: 🚧 **IN PROGRESS - Phase 1 COMPLETED**
+- **Status**: 🚧 **IN PROGRESS - Phase 1 COMPLETED, Phase 1 Update COMPLETED**
 
 **Description:**
 Implement centralized authentication architecture with a **centralized JWT system** where the Common Package owns all JWT logic and utilities, while the Auth Service provides API endpoints and uses Common Package JWT functions. This eliminates JWT code duplication, improves maintainability, and provides a clean separation of concerns with clear ownership.
+
+**Current Status**: ✅ **COMPLETED** - Auth Service now uses Common Package JWT utilities (`TokenManager`) and has production-ready Dockerfile. JWT validation working correctly through Gateway → Auth Service → User Service flow. Docker port configuration simplified (only Gateway 8080 exposed externally).
 
 **Acceptance Criteria:**
 - [x] **Phase 1: Auth Service Creation** ✅ **COMPLETED**
@@ -26,7 +28,7 @@ Implement centralized authentication architecture with a **centralized JWT syste
   - [x] Implement Auth Service API endpoints for JWT validation
   - [x] Set up internal communication endpoints
   - [x] Test Auth Service standalone functionality
-  - [ ] **NEW TASK**: Update Auth Service to use Common Package JWT utilities
+  - [x] **COMPLETED**: Update Auth Service to use Common Package JWT utilities (eliminate code duplication) ✅
 - [x] **Phase 2: Gateway Integration Testing** ✅ **COMPLETED**
   - [x] Integrate Auth Service with Gateway for authentication
   - [x] Implement request forwarding to Auth Service
@@ -530,6 +532,48 @@ Systematically review and fix all API endpoints and functions to ensure they onl
 **Risk Level**: Low
 **Success Criteria**: All functions use appropriate sync/async patterns, tests properly updated, clear guidelines established
 
+#### **INFRA-005: Docker Production-Ready Refactoring**
+- **Component**: Infrastructure & Docker
+- **Type**: Epic
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 🚧 **IN PROGRESS - Auth Service COMPLETED**
+
+**Description:**
+Refactor all service Dockerfiles to use production-ready patterns, eliminating unnecessary port forwarding and standardizing the build process across all microservices. This ensures consistent Docker practices, better security, and production readiness.
+
+**Current Status**: ✅ **Auth Service COMPLETED** - Production-ready Dockerfile with Common Package integration, simplified port configuration (only Gateway 8080 exposed externally).
+
+**Acceptance Criteria:**
+- [x] **Auth Service Dockerfile**: Production-ready with Common Package integration ✅ **COMPLETED**
+- [x] **Docker Port Simplification**: Remove unnecessary 3000x port forwarding ✅ **COMPLETED**
+- [ ] **User Service Dockerfile**: Apply production-ready pattern (Common Package integration, security improvements)
+- [ ] **Inventory Service Dockerfile**: Apply production-ready pattern (Common Package integration, security improvements)
+- [ ] **Order Service Dockerfile**: Apply production-ready pattern (Common Package integration, security improvements)
+- [ ] **Frontend Dockerfile**: Apply production-ready pattern (security improvements)
+- [ ] **Gateway Dockerfile**: Apply production-ready pattern (security improvements)
+
+**Technical Requirements:**
+- [ ] **Common Package Integration**: All services properly install Common Package dependencies
+- [ ] **Security Improvements**: Non-root users, proper file permissions, minimal attack surface
+- [ ] **Docker Layer Optimization**: Better caching, cache cleanup, optimized build process
+- [ ] **Port Configuration**: Only Gateway (8080) exposed externally, services internal only
+- [ ] **Production Settings**: Optimized uvicorn configuration, health checks, resource limits
+
+**Benefits:**
+- ✅ **Simplified Development**: Direct port access (800x) instead of confusing 3000x mappings
+- ✅ **Better Security**: Non-root users, proper file permissions, minimal attack surface
+- ✅ **Production Ready**: Optimized for production deployment with proper settings
+- ✅ **Consistent Architecture**: Same Docker patterns across all services
+- ✅ **Easy Scaling**: Each service is self-contained and independently scalable
+
+**Dependencies:**
+- ✅ **SEC-005 Phase 1**: Auth Service Common Package Integration
+- ✅ **INFRA-003**: Data Model Consistency & Common Package Standardization
+
+**Estimated Effort**: 1 week
+**Risk Level**: Low
+**Success Criteria**: All service Dockerfiles use production-ready patterns with consistent architecture
+
 ### **🧪 Testing & Quality Assurance**
 
 #### **TEST-001: Integration Test Suite Enhancement**
@@ -578,7 +622,7 @@ Enhance integration test suite to cover all services and provide comprehensive t
 - **Phase 6: Auth Service Implementation** - ✅ **COMPLETED** - Independent Auth Service with Docker deployment
 
 ### **🔄 Current Focus**
-- **SEC-005 Phase 1 Update**: Update Auth Service to use Common Package JWT utilities (🔥 HIGHEST PRIORITY)
+- **INFRA-005**: Docker Production-Ready Refactoring - Standardize all service Dockerfiles (🔥 HIGH PRIORITY)
 - **SEC-005 Phase 3**: Backend Service Cleanup - Remove JWT validation from backend services (🔥 HIGH PRIORITY)
 - **INFRA-003**: Data Model Consistency & Common Package Standardization (🔥 HIGH PRIORITY)
 - **MON-001**: Essential Authentication Monitoring (🔥 HIGH PRIORITY)
@@ -601,7 +645,7 @@ Enhance integration test suite to cover all services and provide comprehensive t
 - **Q1 2026**: Production deployment with monitoring and security
 - **Q1 2026**: Advanced features and RBAC implementation
 
-**🎯 IMMEDIATE NEXT STEP**: Update SEC-005 Phase 1 - Auth Service to use Common Package JWT utilities (eliminate code duplication) - Gateway integration is complete!
+**🎯 IMMEDIATE NEXT STEP**: INFRA-005 - Refactor remaining service Dockerfiles to production-ready patterns (Auth Service completed, User/Inventory/Order/Frontend/Gateway pending)
 
 ---
 

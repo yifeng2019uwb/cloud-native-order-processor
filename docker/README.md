@@ -1,20 +1,24 @@
 # Docker Setup for Cloud Native Order Processor
 
-**📊 Current Status: ALL SERVICES WORKING PERFECTLY** ✅
+**📊 Current Status: PRODUCTION-READY DOCKER ARCHITECTURE** ✅
 
-**Last Updated: 8/17/2025**
-- ✅ **All Services Healthy**: Frontend, Gateway, User, Inventory, Order services running
-- ✅ **No Critical Issues**: All backend problems resolved
-- ✅ **Production Ready**: System stable and handling all traffic
-- ✅ **Ready for Development**: Can focus on new features and improvements
+**Last Updated: 8/24/2025**
+- ✅ **Production-Ready Dockerfiles**: Auth Service completed, others pending
+- ✅ **Simplified Port Configuration**: Only Gateway (8080) exposed externally
+- ✅ **Microservices Architecture**: All requests go through Gateway
+- ✅ **Common Package Integration**: Auth Service using shared JWT utilities
+- ✅ **Security Improvements**: Non-root users, proper file permissions
 
 This directory contains Docker configurations for running the entire application stack.
 
 ## Services
 
-- **Frontend**: React application with Vite (port 3000)
-- **User Service**: FastAPI authentication service (port 8000)
-- **Inventory Service**: FastAPI inventory management service (port 8001)
+- **Frontend**: React application (port 80) - External access
+- **Gateway**: API Gateway (port 8080) - **ONLY EXTERNAL ENTRY POINT**
+- **User Service**: FastAPI authentication service (port 8000) - Internal only
+- **Inventory Service**: FastAPI inventory management service (port 8001) - Internal only
+- **Order Service**: FastAPI order processing service (port 8002) - Internal only
+- **Auth Service**: FastAPI JWT validation service (port 8003) - Internal only
 
 ## Prerequisites
 
@@ -31,9 +35,9 @@ This directory contains Docker configurations for running the entire application
 docker-compose up --build
 
 # Access the application
-# Frontend: http://localhost:3000
-# User Service API: http://localhost:8000
-# Inventory Service API: http://localhost:8001
+# Frontend: http://localhost:80
+# Gateway (API Entry Point): http://localhost:8080
+# Note: Individual services are internal only, access through Gateway
 ```
 
 ### Development Mode
@@ -43,9 +47,9 @@ docker-compose up --build
 docker-compose -f docker-compose.dev.yml up --build
 
 # Access the application
-# Frontend: http://localhost:3000 (with hot reloading)
-# User Service API: http://localhost:8000
-# Inventory Service API: http://localhost:8001
+# Frontend: http://localhost:80 (with hot reloading)
+# Gateway (API Entry Point): http://localhost:8080
+# Note: Individual services are internal only, access through Gateway
 ```
 
 ## Individual Service Commands
@@ -98,24 +102,27 @@ All services include health checks:
 
 ## API Endpoints
 
-### User Service (port 8000)
-- `POST /auth/register` - User registration
-- `POST /auth/login` - User login
-- `GET /auth/profile` - Get user profile
-- `POST /auth/logout` - User logout
-- `GET /health` - Health check
+### **Gateway (port 8080) - Main API Entry Point**
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/register` - User registration
+- `GET /api/v1/auth/profile` - Get user profile (requires JWT)
+- `POST /api/v1/auth/logout` - User logout
+- `GET /api/v1/inventory/assets` - List all assets
+- `GET /api/v1/inventory/assets/{id}` - Get asset details
+- `GET /health` - Gateway health check
 
-### Inventory Service (port 8001)
-- `GET /inventory/assets` - List all assets
-- `GET /inventory/assets/{id}` - Get asset details
-- `GET /health` - Health check
-
-### Frontend (port 3000)
+### **Frontend (port 80)**
 - `/` - Main application
 - `/inventory` - Inventory page
 - `/login` - Login page
 - `/register` - Registration page
 - `/dashboard` - User dashboard
+
+### **Internal Services (not directly accessible)**
+- **User Service (8000)**: Authentication and user management
+- **Inventory Service (8001)**: Asset and inventory management
+- **Order Service (8002)**: Order processing and management
+- **Auth Service (8003)**: JWT validation and token management
 
 ## Troubleshooting
 
@@ -159,6 +166,26 @@ docker-compose down --rmi all --volumes --remove-orphans
 2. Make changes to source code - they will be reflected automatically
 3. Use `docker-compose.yml` for production builds
 4. Test API endpoints using the exposed ports
+
+## New Architecture: Production-Ready Docker
+
+### **Port Configuration Strategy**
+- **External Access**: Only Frontend (80) and Gateway (8080) exposed
+- **Internal Services**: User (8000), Inventory (8001), Order (8002), Auth (8003) are internal only
+- **Microservices Pattern**: All API requests go through Gateway (8080)
+
+### **Production-Ready Features**
+- **Security**: Non-root users, proper file permissions, minimal attack surface
+- **Docker Optimization**: Layer caching, cache cleanup, optimized build process
+- **Common Package Integration**: Shared utilities properly installed in each service
+- **Health Checks**: Optimized health monitoring for all services
+
+### **Benefits**
+- ✅ **Simplified Development**: Direct port access (80, 8080) instead of confusing 3000x mappings
+- ✅ **Better Security**: Services not directly accessible from external network
+- ✅ **Production Ready**: Optimized for production deployment
+- ✅ **Consistent Architecture**: Same Docker patterns across all services
+- ✅ **Easy Scaling**: Each service is self-contained and independently scalable
 
 ## Network Configuration
 

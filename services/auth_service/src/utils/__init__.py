@@ -1,5 +1,7 @@
-from .jwt_validator import JWTValidator
+"""
+Utils package for Auth Service.
 
-__all__ = [
-    "JWTValidator",
-]
+This package contains utility functions and classes.
+"""
+
+__all__ = []

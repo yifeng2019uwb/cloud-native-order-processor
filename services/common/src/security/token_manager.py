@@ -124,6 +124,91 @@ class TokenManager:
             logger.error(f"Unexpected error verifying token: {e}")
             raise TokenInvalidException("Token verification failed")
 
+    def validate_token_comprehensive(self, token: str) -> Dict[str, Any]:
+        """
+        Validate JWT token and extract comprehensive user context.
+
+        Args:
+            token: JWT token string
+
+        Returns:
+            Dictionary with comprehensive user context including username, role, expiration, etc.
+
+        Raises:
+            TokenExpiredException: If token is expired
+            TokenInvalidException: If token is invalid
+        """
+        try:
+            logger.debug("Starting comprehensive token validation")
+
+            # Parse and validate token
+            payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
+
+            # Check token type
+            if payload.get("type") != "access_token":
+                logger.warning("Invalid token type: %s (expected: access_token)", payload.get("type"))
+                raise TokenInvalidException("Invalid token type")
+
+            # Extract username
+            username: str = payload.get("sub")
+            if username is None:
+                logger.warning("Token missing subject (username)")
+                raise TokenInvalidException("Token missing subject")
+
+            # Check if token is expired
+            exp_timestamp = payload.get("exp")
+            if exp_timestamp is None:
+                logger.warning("Token missing expiration")
+                raise TokenInvalidException("Token missing expiration")
+
+            current_timestamp = datetime.now(timezone.utc).timestamp()
+            if current_timestamp > exp_timestamp:
+                logger.warning("Token has expired for user: %s, expired_at: %s",
+                             username,
+                             datetime.fromtimestamp(exp_timestamp, tz=timezone.utc).isoformat())
+                raise TokenExpiredException("Token has expired")
+
+            # Extract additional claims
+            role = payload.get("role", "customer")  # Default role
+            iat_timestamp = payload.get("iat")
+            issuer = payload.get("iss", "auth_service")
+            audience = payload.get("aud", "trading_platform")
+
+            # Create comprehensive user context
+            user_context = {
+                "username": username,
+                "role": role,
+                "is_authenticated": True,
+                "expires_at": datetime.fromtimestamp(exp_timestamp, tz=timezone.utc).isoformat(),
+                "created_at": datetime.fromtimestamp(iat_timestamp, tz=timezone.utc).isoformat() if iat_timestamp else None,
+                "metadata": {
+                    "algorithm": self.jwt_algorithm,
+                    "issuer": issuer,
+                    "audience": audience
+                }
+            }
+
+            logger.info("Token validated successfully for user: %s, role: %s, expires_at: %s",
+                       username, role, user_context["expires_at"])
+
+            return user_context
+
+        except jwt.ExpiredSignatureError:
+            logger.warning("Token has expired (JWT library)")
+            raise TokenExpiredException("Token has expired")
+        except JWTError as e:
+            logger.warning("Invalid JWT token: %s", str(e))
+            raise TokenInvalidException("Invalid token")
+        except TokenExpiredException:
+            # Re-raise TokenExpiredException without wrapping
+            raise
+        except TokenInvalidException:
+            # Re-raise TokenInvalidException without wrapping
+            raise
+        except Exception as e:
+            logger.error("Unexpected error verifying token: %s (type: %s)", str(e), type(e).__name__)
+            raise TokenInvalidException("Token verification failed")
+
     def decode_token_payload(self, token: str) -> Dict[str, Any]:
         """
         Decode token payload without verification.

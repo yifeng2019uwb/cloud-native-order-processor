@@ -11,8 +11,8 @@ from fastapi.responses import JSONResponse
 
 from src.api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
 from typing import Union
-from src.utils.jwt_validator import JWTValidator
-from src.auth_exceptions import TokenExpiredException, TokenInvalidException
+from common.security import TokenManager
+from common.exceptions import TokenExpiredException, TokenInvalidException
 
 router = APIRouter(prefix="/internal/auth", tags=["internal"])
 logger = logging.getLogger(__name__)
@@ -33,11 +33,11 @@ def validate_jwt_token(request: ValidateTokenRequest):
         logger.info("JWT token validation request received - request_id: %s, token_length: %d",
                    request_id, len(request.token))
 
-        # Initialize JWT validator
-        jwt_validator = JWTValidator()
+        # Initialize token manager from common package
+        token_manager = TokenManager()
 
-        # Validate token and extract user context
-        user_context = jwt_validator.validate_token(request.token)
+        # Validate token and extract user context using common package
+        user_context = token_manager.validate_token_comprehensive(request.token)
 
         # Calculate processing time
         duration_ms = int((time.time() - start_time) * 1000)
