@@ -491,6 +491,45 @@ Ensure complete data model consistency across all services by standardizing the 
 **Risk Level**: Low
 **Success Criteria**: Complete data model consistency across all services with no missing fields
 
+#### **INFRA-004: API & Function Sync/Async Consistency Review**
+- **Component**: Infrastructure & Code Quality
+- **Type**: Epic
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 To Do
+
+**Description:**
+Systematically review and fix all API endpoints and functions to ensure they only use async/await when actually performing asynchronous operations. This addresses the tendency to default to async patterns without proper analysis.
+
+**Acceptance Criteria:**
+- [ ] **Function Analysis**: Review all functions across all services to identify unnecessary async usage
+- [ ] **Async Pattern Validation**: Ensure async is only used for actual async operations (database calls, HTTP requests, file I/O)
+- [ ] **Synchronous Function Conversion**: Convert functions that only do sync operations (data processing, validation, logging) to synchronous
+- [ ] **Test Updates**: Update all tests to remove unnecessary await calls and @pytest.mark.asyncio decorators
+- [ ] **Documentation**: Document clear guidelines for when to use async vs sync
+- [ ] **Code Review Process**: Establish process to prevent unnecessary async usage in future development
+
+**Technical Requirements:**
+- [ ] **Async Usage Criteria**: Only use async for actual async operations
+- [ ] **Function Conversion**: Convert sync functions back to synchronous
+- [ ] **Test Cleanup**: Remove unnecessary async test patterns
+- [ ] **Performance Impact**: Ensure no performance degradation from sync conversion
+- [ ] **Code Standards**: Establish clear async/sync usage guidelines
+
+**Common Issues to Fix:**
+- [ ] Functions marked async but only doing sync operations
+- [ ] Tests using await for sync functions
+- [ ] Unnecessary @pytest.mark.asyncio decorators
+- [ ] Default async patterns without analysis
+
+**Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup
+- ✅ **INFRA-002**: Request Tracing & Standardized Logging System
+- ✅ **INFRA-003**: Data Model Consistency & Common Package Standardization
+
+**Estimated Effort**: 1-2 weeks
+**Risk Level**: Low
+**Success Criteria**: All functions use appropriate sync/async patterns, tests properly updated, clear guidelines established
+
 ### **🧪 Testing & Quality Assurance**
 
 #### **TEST-001: Integration Test Suite Enhancement**
