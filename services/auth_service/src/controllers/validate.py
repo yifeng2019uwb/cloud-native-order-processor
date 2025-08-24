@@ -9,17 +9,17 @@ import logging
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
+from src.api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
 from typing import Union
-from utils.jwt_validator import JWTValidator
-from exceptions.auth_exceptions import TokenExpiredException, TokenInvalidException
+from src.utils.jwt_validator import JWTValidator
+from src.auth_exceptions import TokenExpiredException, TokenInvalidException
 
 router = APIRouter(prefix="/internal/auth", tags=["internal"])
 logger = logging.getLogger(__name__)
 
 
 @router.post("/validate", response_model=Union[ValidateTokenResponse, ValidateTokenErrorResponse])
-async def validate_jwt_token(request: ValidateTokenRequest):
+def validate_jwt_token(request: ValidateTokenRequest):
     """
     Validate JWT token and extract user context.
 

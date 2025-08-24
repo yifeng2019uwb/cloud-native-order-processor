@@ -133,6 +133,9 @@ async def test_get_current_user_success():
     mock_user.first_name = "John"
     mock_user.last_name = "Doe"
     mock_user.phone = "+1-555-123-4567"
+    mock_user.date_of_birth = None
+    mock_user.marketing_emails_consent = False
+    mock_user.role = "customer"
     mock_user.created_at = "2025-07-09T10:30:00Z"
     mock_user.updated_at = "2025-07-09T10:30:00Z"
 
@@ -140,7 +143,7 @@ async def test_get_current_user_success():
     mock_user_dao.get_user_by_username = MagicMock(return_value=mock_user)
 
     with patch("src.controllers.auth.dependencies.verify_gateway_headers", return_value="john_doe123"):
-        user = await get_current_user(username="john_doe123", user_dao=mock_user_dao)
+        user = get_current_user(username="john_doe123", user_dao=mock_user_dao)
         assert user.username == "john_doe123"
         assert user.email == "john.doe@example.com"
 
@@ -178,6 +181,8 @@ async def test_get_optional_current_user_with_headers():
     mock_user.first_name = "John"
     mock_user.last_name = "Doe"
     mock_user.phone = "+1-555-123-4567"
+    mock_user.date_of_birth = None
+    mock_user.marketing_emails_consent = False
     mock_user.role = "customer"
     mock_user.created_at = "2025-07-09T10:30:00Z"
     mock_user.updated_at = "2025-07-09T10:30:00Z"
@@ -187,7 +192,7 @@ async def test_get_optional_current_user_with_headers():
 
     mock_request = MagicMock()
 
-    result = await get_optional_current_user(
+    result = get_optional_current_user(
         request=mock_request,
         x_source="gateway",
         x_auth_service="auth-service",
@@ -200,13 +205,12 @@ async def test_get_optional_current_user_with_headers():
     assert result.username == "john_doe123"
 
 
-@pytest.mark.asyncio
-async def test_get_optional_current_user_missing_headers():
+def test_get_optional_current_user_missing_headers():
     """Test get_optional_current_user with missing headers"""
     mock_user_dao = MagicMock()
     mock_request = MagicMock()
 
-    result = await get_optional_current_user(
+    result = get_optional_current_user(
         request=mock_request,
         x_source=None,
         x_auth_service="auth-service",
@@ -218,13 +222,12 @@ async def test_get_optional_current_user_missing_headers():
     assert result is None
 
 
-@pytest.mark.asyncio
-async def test_get_optional_current_user_invalid_headers():
+def test_get_optional_current_user_invalid_headers():
     """Test get_optional_current_user with invalid headers"""
     mock_user_dao = MagicMock()
     mock_request = MagicMock()
 
-    result = await get_optional_current_user(
+    result = get_optional_current_user(
         request=mock_request,
         x_source="invalid-source",
         x_auth_service="auth-service",
@@ -236,14 +239,13 @@ async def test_get_optional_current_user_invalid_headers():
     assert result is None
 
 
-@pytest.mark.asyncio
-async def test_get_optional_current_user_user_not_found():
+def test_get_optional_current_user_user_not_found():
     """Test get_optional_current_user when user not found"""
     mock_user_dao = MagicMock()
     mock_user_dao.get_user_by_username = MagicMock(return_value=None)
     mock_request = MagicMock()
 
-    result = await get_optional_current_user(
+    result = get_optional_current_user(
         request=mock_request,
         x_source="gateway",
         x_auth_service="auth-service",
@@ -255,14 +257,13 @@ async def test_get_optional_current_user_user_not_found():
     assert result is None
 
 
-@pytest.mark.asyncio
-async def test_get_optional_current_user_exception():
+def test_get_optional_current_user_exception():
     """Test get_optional_current_user when exception occurs"""
     mock_user_dao = MagicMock()
     mock_user_dao.get_user_by_username = MagicMock(side_effect=Exception("fail"))
     mock_request = MagicMock()
 
-    result = await get_optional_current_user(
+    result = get_optional_current_user(
         request=mock_request,
         x_source="gateway",
         x_auth_service="auth-service",

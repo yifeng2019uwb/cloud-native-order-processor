@@ -9,7 +9,7 @@ import jwt as pyjwt
 from jose import jwt, JWTError
 
 from src.utils.jwt_validator import JWTValidator
-from src.exceptions.auth_exceptions import TokenExpiredException, TokenInvalidException
+from src.auth_exceptions import TokenExpiredException, TokenInvalidException
 
 
 class TestJWTValidator:

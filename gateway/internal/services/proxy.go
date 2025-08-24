@@ -122,7 +122,7 @@ func (p *ProxyService) createHTTPRequest(ctx context.Context, proxyReq *models.P
 	}
 
 	// Add user context headers if user is authenticated
-	if proxyReq.Context != nil && proxyReq.Context.User != nil && proxyReq.Context.User.IsAuthenticated {
+	if proxyReq.Context != nil && proxyReq.Context.User != nil && proxyReq.Context.User.Username != "" {
 		req.Header.Set(constants.XUserIDHeader, proxyReq.Context.User.Username)
 		req.Header.Set(constants.XUserRoleHeader, proxyReq.Context.User.Role)
 		req.Header.Set(constants.XAuthenticatedHeader, "true")
@@ -149,11 +149,7 @@ func (p *ProxyService) ProxyToUserService(ctx context.Context, path string, meth
 		Body:          body,
 		TargetService: constants.UserService,
 		TargetPath:    p.stripAPIPrefix(path, constants.APIV1AuthPath),
-		Context: &models.RequestContext{
-			RequestID:   generateRequestID(),
-			Timestamp:   time.Now(),
-			ServiceName: constants.UserService,
-		},
+		// Note: Context should be set by the server, not overridden here
 	}
 
 	return p.ProxyRequest(ctx, proxyReq)
@@ -168,11 +164,7 @@ func (p *ProxyService) ProxyToInventoryService(ctx context.Context, path string,
 		Body:          body,
 		TargetService: constants.InventoryService,
 		TargetPath:    p.stripAPIPrefix(path, constants.APIV1InventoryPath),
-		Context: &models.RequestContext{
-			RequestID:   generateRequestID(),
-			Timestamp:   time.Now(),
-			ServiceName: constants.InventoryService,
-		},
+		// Note: Context should be set by the server, not overridden here
 	}
 
 	return p.ProxyRequest(ctx, proxyReq)
@@ -201,11 +193,7 @@ func (p *ProxyService) ProxyToOrderService(ctx context.Context, path string, met
 		Body:          body,
 		TargetService: constants.OrderService,
 		TargetPath:    targetPath,
-		Context: &models.RequestContext{
-			RequestID:   generateRequestID(),
-			Timestamp:   time.Now(),
-			ServiceName: constants.OrderService,
-		},
+		// Note: Context should be set by the server, not overridden here
 	}
 
 	return p.ProxyRequest(ctx, proxyReq)

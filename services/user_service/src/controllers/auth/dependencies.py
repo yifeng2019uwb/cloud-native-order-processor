@@ -63,7 +63,7 @@ async def verify_gateway_headers(
     return x_user_id
 
 
-async def get_current_user(
+def get_current_user(
     username: str = Depends(verify_gateway_headers),
     user_dao: UserDAO = Depends(get_common_user_dao)
 ) -> UserResponse:
@@ -99,6 +99,9 @@ async def get_current_user(
             first_name=user.first_name,
             last_name=user.last_name,
             phone=user.phone,
+            date_of_birth=user.date_of_birth,
+            marketing_emails_consent=user.marketing_emails_consent,
+            role=user.role,
             created_at=user.created_at,
             updated_at=user.updated_at
         )
@@ -113,7 +116,7 @@ async def get_current_user(
         )
 
 
-async def get_optional_current_user(
+def get_optional_current_user(
     request: Request,
     x_source: Optional[str] = Header(None, alias="X-Source"),
     x_auth_service: Optional[str] = Header(None, alias="X-Auth-Service"),
@@ -154,6 +157,8 @@ async def get_optional_current_user(
             first_name=user.first_name,
             last_name=user.last_name,
             phone=user.phone,
+            date_of_birth=user.date_of_birth,
+            marketing_emails_consent=user.marketing_emails_consent,
             role=user.role,
             created_at=user.created_at,
             updated_at=user.updated_at

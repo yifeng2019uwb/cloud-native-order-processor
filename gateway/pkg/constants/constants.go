@@ -68,9 +68,9 @@ const (
 
 // Default service URLs
 const (
-	DefaultUserServiceURL      = "http://user-service:8000"
-	DefaultInventoryServiceURL = "http://inventory-service:8001"
-	DefaultOrderServiceURL     = "http://order-service:8002"
+	DefaultUserServiceURL      = "http://user_service:8000"
+	DefaultInventoryServiceURL = "http://inventory_service:8001"
+	DefaultOrderServiceURL     = "http://order_service:8002"
 	DefaultAuthServiceURL      = "http://auth_service:8003"
 )
 

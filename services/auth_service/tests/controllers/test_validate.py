@@ -9,7 +9,7 @@ from fastapi import FastAPI
 
 from src.controllers.validate import router, validate_jwt_token
 from src.api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
-from src.exceptions.auth_exceptions import TokenExpiredException, TokenInvalidException
+from src.auth_exceptions import TokenExpiredException, TokenInvalidException
 
 
 class TestValidateController:
@@ -31,11 +31,10 @@ class TestValidateController:
         assert router.prefix == "/internal/auth"
 
 
-@pytest.mark.asyncio
 class TestValidateJWTTokenEndpoint:
     """Test cases for validate_jwt_token endpoint function."""
 
-    async def test_successful_token_validation(self):
+    def test_successful_token_validation(self):
         """Test successful JWT token validation."""
         # Mock request data
         request = ValidateTokenRequest(
@@ -63,7 +62,7 @@ class TestValidateJWTTokenEndpoint:
             mock_validator_class.return_value = mock_validator
 
             # Call the endpoint function
-            response = await validate_jwt_token(request)
+            response = validate_jwt_token(request)
 
             # Verify response
             assert isinstance(response, ValidateTokenResponse)
@@ -77,7 +76,7 @@ class TestValidateJWTTokenEndpoint:
             # Verify JWT validator was called
             mock_validator.validate_token.assert_called_once_with("valid.jwt.token")
 
-    async def test_successful_token_validation_without_request_id(self):
+    def test_successful_token_validation_without_request_id(self):
         """Test successful JWT token validation without request_id."""
         # Mock request data without request_id
         request = ValidateTokenRequest(token="valid.jwt.token")
@@ -98,14 +97,14 @@ class TestValidateJWTTokenEndpoint:
             mock_validator_class.return_value = mock_validator
 
             # Call the endpoint function
-            response = await validate_jwt_token(request)
+            response = validate_jwt_token(request)
 
             # Verify response has generated request_id
             assert response.valid is True
             assert response.request_id is not None
             assert response.request_id.startswith("req-")
 
-    async def test_token_expired_exception(self):
+    def test_token_expired_exception(self):
         """Test handling of expired token exception."""
         # Mock request data
         request = ValidateTokenRequest(
@@ -119,7 +118,7 @@ class TestValidateJWTTokenEndpoint:
             mock_validator_class.return_value = mock_validator
 
             # Call the endpoint function
-            response = await validate_jwt_token(request)
+            response = validate_jwt_token(request)
 
             # Verify error response
             assert isinstance(response, ValidateTokenErrorResponse)
@@ -128,7 +127,7 @@ class TestValidateJWTTokenEndpoint:
             assert response.message == "JWT token has expired"
             assert response.request_id == "test-req-expired"
 
-    async def test_token_invalid_exception(self):
+    def test_token_invalid_exception(self):
         """Test handling of invalid token exception."""
         # Mock request data
         request = ValidateTokenRequest(
@@ -142,7 +141,7 @@ class TestValidateJWTTokenEndpoint:
             mock_validator_class.return_value = mock_validator
 
             # Call the endpoint function
-            response = await validate_jwt_token(request)
+            response = validate_jwt_token(request)
 
             # Verify error response
             assert isinstance(response, ValidateTokenErrorResponse)
@@ -151,7 +150,7 @@ class TestValidateJWTTokenEndpoint:
             assert response.message == "JWT token is invalid"
             assert response.request_id == "test-req-invalid"
 
-    async def test_unexpected_exception(self):
+    def test_unexpected_exception(self):
         """Test handling of unexpected exceptions."""
         # Mock request data
         request = ValidateTokenRequest(
@@ -165,7 +164,7 @@ class TestValidateJWTTokenEndpoint:
             mock_validator_class.return_value = mock_validator
 
             # Call the endpoint function
-            response = await validate_jwt_token(request)
+            response = validate_jwt_token(request)
 
             # Verify error response
             assert isinstance(response, ValidateTokenErrorResponse)
@@ -196,7 +195,7 @@ class TestValidateJWTTokenEndpoint:
             mock_validator_class.return_value = mock_validator
 
             # Call the endpoint function
-            response = await validate_jwt_token(request)
+            response = validate_jwt_token(request)
 
             # Verify response
             assert response.valid is True
@@ -223,7 +222,7 @@ class TestValidateJWTTokenEndpoint:
             mock_validator_class.return_value = mock_validator
 
             # Call the endpoint function
-            response = await validate_jwt_token(request)
+            response = validate_jwt_token(request)
 
             # Verify response
             assert response.valid is True
@@ -254,7 +253,7 @@ class TestValidateJWTTokenEndpoint:
             mock_validator_class.return_value = mock_validator
 
             # Call the endpoint function
-            response = await validate_jwt_token(request)
+            response = validate_jwt_token(request)
 
             # Verify all fields are properly extracted
             assert response.valid is True
@@ -275,7 +274,7 @@ class TestValidateJWTTokenEndpoint:
             mock_validator_class.return_value = mock_validator
 
             # Call the endpoint function
-            response = await validate_jwt_token(request)
+            response = validate_jwt_token(request)
 
             # Verify error response structure
             assert hasattr(response, 'valid')

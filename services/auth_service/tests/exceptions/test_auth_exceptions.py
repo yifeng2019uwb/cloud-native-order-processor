@@ -3,7 +3,7 @@ Test cases for custom exceptions.
 """
 
 import pytest
-from src.exceptions.auth_exceptions import TokenExpiredException, TokenInvalidException
+from src.auth_exceptions import TokenExpiredException, TokenInvalidException
 
 
 class TestTokenExpiredException:

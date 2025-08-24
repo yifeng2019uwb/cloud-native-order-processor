@@ -18,16 +18,15 @@
 - **Status**: 🚧 **IN PROGRESS - Phase 1 COMPLETED**
 
 **Description:**
-Implement centralized authentication architecture with a completely **independent Auth Service** that handles all JWT validation and user authentication, while the Gateway focuses on routing and request forwarding. This eliminates JWT secret distribution issues, improves security, and provides a clean separation of authentication concerns.
+Implement centralized authentication architecture with a **centralized JWT system** where the Common Package owns all JWT logic and utilities, while the Auth Service provides API endpoints and uses Common Package JWT functions. This eliminates JWT code duplication, improves maintainability, and provides a clean separation of concerns with clear ownership.
 
 **Acceptance Criteria:**
-- [x] **Phase 1: Independent Auth Service Creation** ✅ **COMPLETED**
+- [x] **Phase 1: Auth Service Creation** ✅ **COMPLETED**
   - [x] Create new Auth Service directory and structure
-  - [x] Implement new Auth class with independent JWT validation logic
-  - [x] Create independent JWT configuration and secret management
-  - [x] Implement JWT validation and user context extraction
+  - [x] Implement Auth Service API endpoints for JWT validation
   - [x] Set up internal communication endpoints
   - [x] Test Auth Service standalone functionality
+  - [ ] **NEW TASK**: Update Auth Service to use Common Package JWT utilities
 - [x] **Phase 2: Gateway Integration Testing** ✅ **COMPLETED**
   - [x] Integrate Auth Service with Gateway for authentication
   - [x] Implement request forwarding to Auth Service
@@ -73,15 +72,16 @@ Implement centralized authentication architecture with a completely **independen
   - [ ] Auth Service monitoring and metrics
 
 **Technical Requirements:**
-- [ ] **Independent Auth Service** validates JWT and extracts user context
-- [ ] **No shared code** - Auth Service has its own JWT validation logic
+- [ ] **Common Package owns all JWT logic** - centralized JWT utilities for all services
+- [ ] **Auth Service uses Common Package JWT functions** - no duplicate JWT code
+- [ ] **Auth Service provides API endpoints** for Gateway authentication calls
 - [ ] Gateway forwards requests to Auth Service for authentication
 - [ ] Gateway adds security headers based on Auth Service response
 - [ ] Gateway forwards requests to backend services with security headers
 - [ ] Backend services validate both `X-Source: gateway` and `X-Auth-Service: auth-service` headers
 - [ ] Backend services extract user info from Gateway headers
 - [ ] **No JWT validation** in backend services
-- [ ] **No JWT logic** in common package after cleanup
+- [ ] **JWT logic centralized in Common Package** - single source of truth
 - [ ] Network isolation ensures backend services not directly accessible
 - [ ] Backend services only accept requests from internal cluster IPs
 
@@ -95,12 +95,13 @@ Implement centralized authentication architecture with a completely **independen
 - [ ] Clear separation of concerns between authentication and routing
 
 **Architecture Benefits:**
-- [ ] **Complete independence** - Auth Service has no shared code dependencies
-- [ ] Better service separation (Gateway focuses on routing, Auth Service on authentication)
+- [ ] **Centralized JWT ownership** - Common Package owns all JWT logic, single source of truth
+- [ ] **No code duplication** - JWT utilities shared across all services
+- [ ] Better service separation (Gateway focuses on routing, Auth Service on API endpoints)
 - [ ] Improved scalability (Auth Service can be scaled independently)
-- [ ] **Clean separation** - authentication logic completely isolated
+- [ ] **Clean separation** - JWT logic in Common, API logic in Auth Service
 - [ ] Easier to add new authentication methods
-- [ ] **No shared state** - each service manages its own concerns
+- [ ] **Consistent JWT handling** - all services use same JWT utilities
 
 **Dependencies:**
 - ✅ **INFRA-003**: New Basic Logging System Implementation
@@ -119,17 +120,18 @@ Implement centralized authentication architecture with a completely **independen
 - **Status**: ✅ **COMPLETED**
 
 **Description:**
-Create the independent Auth Service with its own JWT validation logic, completely separate from the existing common package. This service will handle all authentication and provide user context to the Gateway.
+Create the Auth Service that provides API endpoints for JWT validation while using the Common Package's centralized JWT utilities. This service will handle authentication API calls from the Gateway and use shared JWT logic from the Common Package.
 
 **Acceptance Criteria:**
 - ✅ **Service Structure**: Complete directory structure with FastAPI app, health endpoints, Docker config, K8s deployment, port 8003
-- ✅ **Independent JWT Implementation**: New Auth class with independent JWT validation, no shared code with common package
+- ✅ **API Endpoints**: Auth Service provides JWT validation API endpoints
+- [ ] **JWT Integration**: Update Auth Service to use Common Package JWT utilities
 - ✅ **API Endpoints**: POST /internal/auth/validate, GET /health, proper request/response models, input validation
 - ✅ **Configuration & Environment**: Environment variables, JWT config, logging, health checks
 - ✅ **Testing & Validation**: Comprehensive test suite with 98.84% coverage, all critical paths tested
 
 **Technical Requirements:**
-- ✅ **Independent Code**: No shared JWT logic with common package
+- [ ] **Common Package Integration**: Use Common Package JWT utilities instead of duplicate code
 - ✅ **JWT Validation**: Validate JWT tokens and extract user context
 - ✅ **User Context**: Return username and basic permissions
 - ✅ **Error Handling**: Proper error responses for validation failures
@@ -153,7 +155,9 @@ Create the independent Auth Service with its own JWT validation logic, completel
 
 **Estimated Effort**: 1-2 weeks
 **Risk Level**: Low (new service, no existing code changes)
-**Success Criteria**: ✅ **COMPLETED** - Auth Service validates JWT tokens independently, provides user context, and integrates with existing infrastructure
+**Success Criteria**: ✅ **COMPLETED** - Auth Service provides JWT validation API endpoints and integrates with existing infrastructure
+
+**Next Task**: Update Auth Service to use Common Package JWT utilities (eliminate code duplication)
 
 #### **INFRA-003: New Basic Logging System Implementation**
 - **Component**: Infrastructure & Common Package
@@ -456,6 +460,37 @@ Implement comprehensive request tracing and standardized logging across all micr
 **Risk Level**: Low
 **Success Criteria**: ✅ **COMPLETED** - Complete request tracing, standardized logging across all services
 
+#### **INFRA-003: Data Model Consistency & Common Package Standardization**
+- **Component**: Infrastructure & Common Package
+- **Type**: Epic
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 🚧 **IN PROGRESS**
+
+**Description:**
+Ensure complete data model consistency across all services by standardizing the Common Package entities and ensuring all services use the same data models with complete field coverage.
+
+**Acceptance Criteria:**
+- [x] **Common Package UserResponse Model**: Update to include all fields (`date_of_birth`, `marketing_emails_consent`) ✅ **COMPLETED**
+- [x] **User Service Dependencies**: Update `get_current_user` and `get_optional_current_user` to return complete user data ✅ **COMPLETED**
+- [ ] **Common Package Standardization**: Ensure all entity models return complete field sets
+- [ ] **Service Integration**: Update all services to use complete Common Package models
+- [ ] **Data Model Testing**: Verify all services return consistent data structures
+- [ ] **Field Coverage Validation**: Ensure no missing fields in response models
+
+**Technical Requirements:**
+- [ ] **Complete Field Coverage**: All entity models must include all available fields from database
+- [ ] **Consistent Response Models**: Same field structure across all services
+- [ ] **Backward Compatibility**: Maintain existing API contracts while adding missing fields
+- [ ] **Service Updates**: All services must use updated Common Package models
+
+**Dependencies:**
+- ✅ **INFRA-001**: Local Kubernetes Development Setup
+- ✅ **INFRA-002**: Request Tracing & Standardized Logging System
+
+**Estimated Effort**: 1 week
+**Risk Level**: Low
+**Success Criteria**: Complete data model consistency across all services with no missing fields
+
 ### **🧪 Testing & Quality Assurance**
 
 #### **TEST-001: Integration Test Suite Enhancement**
@@ -504,7 +539,9 @@ Enhance integration test suite to cover all services and provide comprehensive t
 - **Phase 6: Auth Service Implementation** - ✅ **COMPLETED** - Independent Auth Service with Docker deployment
 
 ### **🔄 Current Focus**
-- **SEC-005 Phase 3**: Backend Service Cleanup - Remove JWT validation from backend services (🔥 HIGHEST PRIORITY)
+- **SEC-005 Phase 1 Update**: Update Auth Service to use Common Package JWT utilities (🔥 HIGHEST PRIORITY)
+- **SEC-005 Phase 3**: Backend Service Cleanup - Remove JWT validation from backend services (🔥 HIGH PRIORITY)
+- **INFRA-003**: Data Model Consistency & Common Package Standardization (🔥 HIGH PRIORITY)
 - **MON-001**: Essential Authentication Monitoring (🔥 HIGH PRIORITY)
 - **FRONTEND-007**: Frontend Authentication Retesting After Auth Service (🔥 HIGH PRIORITY)
 - **TEST-001**: Integration Test Suite Enhancement (**High**)
@@ -525,7 +562,7 @@ Enhance integration test suite to cover all services and provide comprehensive t
 - **Q1 2026**: Production deployment with monitoring and security
 - **Q1 2026**: Advanced features and RBAC implementation
 
-**🎯 IMMEDIATE NEXT STEP**: Begin SEC-005 Phase 3 (Backend Service Cleanup) - Gateway integration is complete!
+**🎯 IMMEDIATE NEXT STEP**: Update SEC-005 Phase 1 - Auth Service to use Common Package JWT utilities (eliminate code duplication) - Gateway integration is complete!
 
 ---
 

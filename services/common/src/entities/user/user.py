@@ -46,6 +46,8 @@ class UserResponse(BaseModel):
     first_name: str = Field(..., max_length=50)
     last_name: str = Field(..., max_length=50)
     phone: Optional[str] = Field(None, max_length=15)
+    date_of_birth: Optional[date] = None
+    marketing_emails_consent: bool = False
     role: str = Field(default=DEFAULT_USER_ROLE, max_length=20)
     created_at: datetime
     updated_at: datetime

@@ -2,7 +2,7 @@
 JWT Validator Service for Auth Service.
 
 This service handles JWT token validation and user context extraction.
-Copied from common package to ensure independence.
+Simplified implementation focused on validation only.
 """
 
 import os
@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from jose import jwt, JWTError
 
-from exceptions.auth_exceptions import TokenExpiredException, TokenInvalidException
+from src.auth_exceptions import TokenExpiredException, TokenInvalidException
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class JWTValidator:
             # Extract additional claims
             role = payload.get("role", "customer")  # Default role
             iat_timestamp = payload.get("iat")
-            issuer = payload.get("iss", "user_service")
+            issuer = payload.get("iss", "auth_service")
             audience = payload.get("aud", "trading_platform")
 
             # Create user context

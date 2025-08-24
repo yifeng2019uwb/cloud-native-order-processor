@@ -7,17 +7,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: user-service
+  name: user_service
   namespace: order-processor
   labels:
     app: order-processor
-    component: user-service
+    component: user_service
     environment: dev
 spec:
   type: NodePort
   selector:
     app: order-processor
-    component: user-service
+    component: user_service
   ports:
   - name: http
     port: 8000
@@ -28,17 +28,17 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: inventory-service
+  name: inventory_service
   namespace: order-processor
   labels:
     app: order-processor
-    component: inventory-service
+    component: inventory_service
     environment: dev
 spec:
   type: NodePort
   selector:
     app: order-processor
-    component: inventory-service
+    component: inventory_service
   ports:
   - name: http
     port: 8001
@@ -49,17 +49,17 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: order-service
+  name: order_service
   namespace: order-processor
   labels:
     app: order-processor
-    component: order-service
+    component: order_service
     environment: dev
 spec:
   type: NodePort
   selector:
     app: order-processor
-    component: order-service
+    component: order_service
   ports:
   - name: http
     port: 8002
@@ -70,17 +70,17 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: auth-service
+  name: auth_service
   namespace: order-processor
   labels:
     app: order-processor
-    component: auth-service
+    component: auth_service
     environment: dev
 spec:
   type: NodePort
   selector:
     app: order-processor
-    component: auth-service
+    component: auth_service
   ports:
   - name: http
     port: 8003
