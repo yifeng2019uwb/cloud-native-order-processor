@@ -85,6 +85,10 @@ build() {
     log_info "Installing dependencies..."
     pip install -r requirements.txt
 
+    # Install the auth_service package in editable mode (this will install common package)
+    log_info "Installing auth_service package in editable mode..."
+    pip install -e .
+
     # Build the package
     log_info "Building package..."
     python setup.py build
@@ -106,9 +110,6 @@ test() {
 
     # Activate virtual environment
     source .venv-auth_service/bin/activate
-
-    # Set up Python path for imports
-    export PYTHONPATH="${PWD}/src:${PYTHONPATH:-}"
 
     # Run tests (coverage is handled by pytest.ini)
     if [[ -n "$test_target" ]]; then

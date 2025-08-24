@@ -45,7 +45,7 @@ class TestRootEndpoint:
         """Test root endpoint returns correct response structure."""
         from src.main import root
 
-        response = await root()
+        response = root()
 
         # Verify response structure
         assert response["service"] == "Auth Service"
@@ -67,7 +67,7 @@ class TestRootEndpoint:
         from src.main import root
 
         with patch('src.main.logger') as mock_logger:
-            response = await root()
+            response = root()
 
             assert response is not None
             mock_logger.info.assert_called_once_with("Root endpoint accessed")
@@ -76,7 +76,7 @@ class TestRootEndpoint:
         """Test that timestamp is in correct ISO format."""
         from src.main import root
 
-        response = await root()
+        response = root()
 
         # Verify timestamp is in ISO format
         timestamp = response["timestamp"]

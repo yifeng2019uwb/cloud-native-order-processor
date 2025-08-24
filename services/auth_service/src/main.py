@@ -44,7 +44,7 @@ app.include_router(validate_router)
 
 # Root endpoint
 @app.get("/")
-async def root():
+def root():
     """Root endpoint with service information"""
     logger.info("Root endpoint accessed")
 
