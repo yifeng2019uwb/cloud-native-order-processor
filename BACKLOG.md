@@ -11,109 +11,95 @@
 
 ### **🔐 Security & Compliance**
 
+#### **CI-001: Fix CI/CD Pipeline - Add Missing Unit Tests** 🔥 **CRITICAL**
+- **Component**: CI/CD Pipeline
+- **Type**: Bug Fix
+- **Priority**: 🔥 **CRITICAL PRIORITY**
+- **Status**: 🚨 **BLOCKER - CI/CD Pipeline Incomplete**
+
+**Description:**
+The current CI/CD workflow is **missing unit test execution** for all services. This is a critical gap that allows broken code to pass CI/CD validation, potentially leading to production issues.
+
+**Current Problem:**
+- ❌ CI/CD only runs `./dev.sh build` (build validation)
+- ❌ CI/CD **NEVER runs** `./dev.sh test` (unit tests)
+- ❌ Build failures are caught ✅
+- ❌ Unit test failures are **NOT caught** ❌
+- ❌ Code quality issues are **NOT caught** ❌
+
+**Impact:**
+- **Broken code can pass CI/CD** and be deployed
+- **Unit test failures go undetected**
+- **Code quality issues are not validated**
+- **Production deployments may fail** due to untested code
+
+**Required Fix:**
+Update `.github/workflows/ci-cd.yaml` to include unit test execution:
+
+```yaml
+# Current (INCOMPLETE):
+- name: Build and Test Backend Services
+  run: |
+    for service_dir in services/*/; do
+      if [[ -d "$service_dir" ]] && [[ -f "${service_dir}dev.sh" ]]; then
+        service_name=$(basename "$service_dir")
+        echo "Building service: $service_name"
+        (cd "$service_dir" && ./dev.sh build)  # ❌ MISSING: ./dev.sh test
+      fi
+    done
+
+# Required (COMPLETE):
+- name: Build and Test Backend Services
+  run: |
+    for service_dir in services/*/; do
+      if [[ -d "$service_dir" ]] && [[ -f "${service_dir}dev.sh" ]]; then
+        service_name=$(basename "$service_dir")
+        echo "Building service: $service_name"
+        (cd "$service_dir" && ./dev.sh build)  # ✅ Build validation
+        (cd "$service_dir" && ./dev.sh test)   # ✅ Unit tests
+      fi
+    done
+```
+
+**Acceptance Criteria:**
+- [ ] CI/CD runs `./dev.sh build` for all services ✅ (already working)
+- [ ] CI/CD runs `./dev.sh test` for all services ❌ (MISSING)
+- [ ] CI/CD fails if any service unit tests fail
+- [ ] CI/CD fails if any service build fails
+- [ ] All services must pass both build AND unit tests to proceed
+- [ ] Test coverage reports are generated and uploaded
+- [ ] CI/CD pipeline is complete and reliable
+
+**Files to Update:**
+- `.github/workflows/ci-cd.yaml` - Add unit test execution
+- Ensure proper error handling and failure reporting
+
+**Priority Justification:**
+This is a **CRITICAL BLOCKER** because:
+1. **CI/CD is incomplete** and unreliable
+2. **Broken code can be deployed** to production
+3. **Quality gates are missing** for unit tests
+4. **Development workflow is compromised**
+
+---
+
 #### **SEC-005: Independent Auth Service Implementation**
 - **Component**: Security & API Gateway
 - **Type**: Epic
 - **Priority**: 🔥 **HIGHEST PRIORITY**
-- **Status**: 🚧 **IN PROGRESS - Phase 1 COMPLETED, Phase 1 Update COMPLETED**
+- **Status**: 🚧 **IN PROGRESS - Phase 1-2 COMPLETED, Phase 3 PARTIALLY COMPLETED**
 
 **Description:**
-Implement centralized authentication architecture with a **centralized JWT system** where the Common Package owns all JWT logic and utilities, while the Auth Service provides API endpoints and uses Common Package JWT functions. This eliminates JWT code duplication, improves maintainability, and provides a clean separation of concerns with clear ownership.
+Implement centralized authentication architecture with centralized JWT system in Common Package, Auth Service provides API endpoints, backend services use header-based validation.
 
-**Current Status**: ✅ **COMPLETED** - Auth Service now uses Common Package JWT utilities (`TokenManager`) and has production-ready Dockerfile. JWT validation working correctly through Gateway → Auth Service → User Service flow. Docker port configuration simplified (only Gateway 8080 exposed externally).
+**Current Status**:
+- ✅ Phase 1-2: Auth Service + Gateway integration completed
+- 🚧 Phase 3: User/Order services migrated, Inventory Service needs authentication system
+- ❌ Remaining: JWT exception imports cleanup
 
-**Acceptance Criteria:**
-- [x] **Phase 1: Auth Service Creation** ✅ **COMPLETED**
-  - [x] Create new Auth Service directory and structure
-  - [x] Implement Auth Service API endpoints for JWT validation
-  - [x] Set up internal communication endpoints
-  - [x] Test Auth Service standalone functionality
-  - [x] **COMPLETED**: Update Auth Service to use Common Package JWT utilities (eliminate code duplication) ✅
-- [x] **Phase 2: Gateway Integration Testing** ✅ **COMPLETED**
-  - [x] Integrate Auth Service with Gateway for authentication
-  - [x] Implement request forwarding to Auth Service
-  - [x] Add security header injection based on Auth Service response
-  - [x] Test Gateway-Auth Service integration
-  - [x] Validate complete authentication flow end-to-end
-  - [x] Ensure Gateway handles all request forwarding to backend services
-- [ ] **Phase 3: Backend Service Cleanup**
-  - [ ] Remove JWT validation from User Service
-  - [ ] Remove JWT validation from Order Service
-  - [ ] Remove JWT validation from Inventory Service
-  - [ ] Remove JWT-related dependencies and imports
-  - [ ] Implement source header validation (`X-Source: gateway`, `X-Auth-Service: auth-service`)
-  - [ ] Update user context extraction to use Gateway headers
-  - [ ] Test security measures and source validation
-- [ ] **Phase 4: Common Package Cleanup**
-  - [ ] Remove JWT-related code from common package
-  - [ ] Remove JWT token manager and utilities
-  - [ ] Remove JWT models and dependencies
-  - [ ] Keep non-auth utilities (logging, configuration, etc.)
-  - [ ] Test that remaining common package functionality works
-- [ ] **Phase 5: Network Security Implementation**
-  - [ ] Implement Kubernetes NetworkPolicy to restrict backend service access
-  - [ ] Update services to bind only to internal cluster IPs
-  - [ ] Configure IP whitelisting to reject external IP requests
-  - [ ] Ensure no external port exposure for backend services
-  - [ ] Remove external LoadBalancer services for backend
-  - [ ] Configure internal-only service communication
-- [ ] **Phase 6: Testing and Validation**
-  - [ ] Comprehensive security testing of new architecture
-  - [ ] Performance testing and optimization
-  - [ ] Integration testing with all services
-  - [ ] Security audit and penetration testing
-  - [ ] Network security testing to verify backend services reject external requests
-  - [ ] End-to-end authentication flow testing
-  - [ ] Performance impact validation
-- [ ] **Phase 7: Deployment and Monitoring**
-  - [ ] Production deployment of new auth architecture
-  - [ ] Monitoring and alerting setup for auth system
-  - [ ] Performance monitoring and optimization
-  - [ ] Security monitoring and incident response
-  - [ ] Network monitoring for unauthorized access attempts
-  - [ ] Auth Service monitoring and metrics
-
-**Technical Requirements:**
-- [ ] **Common Package owns all JWT logic** - centralized JWT utilities for all services
-- [ ] **Auth Service uses Common Package JWT functions** - no duplicate JWT code
-- [ ] **Auth Service provides API endpoints** for Gateway authentication calls
-- [ ] Gateway forwards requests to Auth Service for authentication
-- [ ] Gateway adds security headers based on Auth Service response
-- [ ] Gateway forwards requests to backend services with security headers
-- [ ] Backend services validate both `X-Source: gateway` and `X-Auth-Service: auth-service` headers
-- [ ] Backend services extract user info from Gateway headers
-- [ ] **No JWT validation** in backend services
-- [ ] **JWT logic centralized in Common Package** - single source of truth
-- [ ] Network isolation ensures backend services not directly accessible
-- [ ] Backend services only accept requests from internal cluster IPs
-
-**Security Benefits:**
-- [ ] Eliminates JWT secret distribution across services
-- [ ] Centralizes security control and policies in dedicated Auth Service
-- [ ] Reduces attack surface (no direct backend access)
-- [ ] Simplifies trust model and security architecture
-- [ ] Improves performance (no double JWT validation)
-- [ ] Network-level security controls prevent external access
-- [ ] Clear separation of concerns between authentication and routing
-
-**Architecture Benefits:**
-- [ ] **Centralized JWT ownership** - Common Package owns all JWT logic, single source of truth
-- [ ] **No code duplication** - JWT utilities shared across all services
-- [ ] Better service separation (Gateway focuses on routing, Auth Service on API endpoints)
-- [ ] Improved scalability (Auth Service can be scaled independently)
-- [ ] **Clean separation** - JWT logic in Common, API logic in Auth Service
-- [ ] Easier to add new authentication methods
-- [ ] **Consistent JWT handling** - all services use same JWT utilities
-
-**Dependencies:**
-- ✅ **INFRA-003**: New Basic Logging System Implementation
-- ✅ **GATEWAY-001**: Advanced Gateway Features
-- ✅ **SEC-002**: Security Hardening
-- [ ] **INFRA-003**: New Basic Logging System Implementation
-
-**Estimated Effort**: 3-4 weeks
-**Risk Level**: Medium (architectural change)
-**Success Criteria**: All services use centralized auth, no JWT validation in backend, improved security posture
+**Next Steps**: Complete Phase 3 (Inventory Service auth + JWT cleanup)
+**Dependencies**: INFRA-003, GATEWAY-001, SEC-002 ✅
+**Estimated Effort**: 1-2 days remaining
 
 #### **SEC-006: Auth Service Implementation Details**
 - **Component**: Security & API Gateway
@@ -122,44 +108,10 @@ Implement centralized authentication architecture with a **centralized JWT syste
 - **Status**: ✅ **COMPLETED**
 
 **Description:**
-Create the Auth Service that provides API endpoints for JWT validation while using the Common Package's centralized JWT utilities. This service will handle authentication API calls from the Gateway and use shared JWT logic from the Common Package.
+Create the Auth Service that provides API endpoints for JWT validation while using the Common Package's centralized JWT utilities.
 
-**Acceptance Criteria:**
-- ✅ **Service Structure**: Complete directory structure with FastAPI app, health endpoints, Docker config, K8s deployment, port 8003
-- ✅ **API Endpoints**: Auth Service provides JWT validation API endpoints
-- [ ] **JWT Integration**: Update Auth Service to use Common Package JWT utilities
-- ✅ **API Endpoints**: POST /internal/auth/validate, GET /health, proper request/response models, input validation
-- ✅ **Configuration & Environment**: Environment variables, JWT config, logging, health checks
-- ✅ **Testing & Validation**: Comprehensive test suite with 98.84% coverage, all critical paths tested
-
-**Technical Requirements:**
-- [ ] **Common Package Integration**: Use Common Package JWT utilities instead of duplicate code
-- ✅ **JWT Validation**: Validate JWT tokens and extract user context
-- ✅ **User Context**: Return username and basic permissions
-- ✅ **Error Handling**: Proper error responses for validation failures
-- ✅ **Health Checks**: Service health and readiness endpoints
-- ✅ **Configuration**: Environment-based JWT configuration
-- ✅ **Logging**: Structured logging for authentication events
-- ✅ **Containerization**: Docker container with proper health checks
-- ✅ **Kubernetes**: Deployment configuration with proper networking
-
-**Implementation Details:**
-- ✅ **Port**: 8003 (next available after existing services)
-- ✅ **Service Name**: `auth-service` in Kubernetes
-- ✅ **JWT Library**: Use `PyJWT` for token validation
-- ✅ **Response Format**: Simple JSON with authentication status
-- ✅ **Error Handling**: HTTP status codes with error details
-- ✅ **Health Checks**: Basic health and readiness probes
-- ✅ **Logging**: Structured JSON logging for observability
-
-**Dependencies:**
-- ✅ **INFRA-003**: New Basic Logging System Implementation
-
-**Estimated Effort**: 1-2 weeks
-**Risk Level**: Low (new service, no existing code changes)
-**Success Criteria**: ✅ **COMPLETED** - Auth Service provides JWT validation API endpoints and integrates with existing infrastructure
-
-**Next Task**: Update Auth Service to use Common Package JWT utilities (eliminate code duplication)
+**Status**: ✅ **COMPLETED** - Service implemented with 98.84% test coverage, production-ready Dockerfile, integrated with Gateway
+**Dependencies**: INFRA-003 ✅
 
 #### **INFRA-003: New Basic Logging System Implementation**
 - **Component**: Infrastructure & Common Package
@@ -168,28 +120,54 @@ Create the Auth Service that provides API endpoints for JWT validation while usi
 - **Status**: ✅ **COMPLETED**
 
 **Description:**
-Implement a new, clean basic logging system in the common package that will be used by the Auth Service and later migrated to other backend services. This creates a solid foundation for consistent logging across all services.
+Implement a new, clean basic logging system in the common package for consistent logging across all services.
+
+**Status**: ✅ **COMPLETED** - BaseLogger class implemented with structured JSON logging, request correlation, service identification. Working in Auth Service, ready for migration to other services.
+**Dependencies**: None
+
+#### **SEC-005-P3: Complete Backend Service Cleanup (Phase 3 Finalization)**
+- **Component**: Security & Backend Services
+- **Type**: Task
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 To Do
+
+**Description:**
+Complete the remaining tasks for SEC-005 Phase 3 to fully implement the new header-based authentication system across all backend services. This ensures consistent security architecture and completes the JWT cleanup.
 
 **Acceptance Criteria:**
-- ✅ **Phase 1: New Basic Logging System (Week 1)**: BaseLogger class with structured JSON logging, request correlation, service identification, comprehensive testing, clean K8s-focused design
-- ✅ **Phase 2: Auth Service with New Logging (Week 2)**: Auth Service successfully implemented using new logging system with 98.84% test coverage
-- ✅ **Phase 3: Test and Validate (Week 3)**: End-to-end testing completed, log format validated, performance verified in Docker and K8s environments
-- ✅ **Phase 4: Future Migration (Later)**: System ready for gradual migration to other services when convenient
+- [ ] **Inventory Service Authentication Implementation**
+  - [ ] Create `dependencies.py` with `verify_gateway_headers()` and `get_current_user()`
+  - [ ] Add authentication to protected endpoints (if any exist)
+  - [ ] Implement header validation (`X-Source: gateway`, `X-Auth-Service: auth-service`)
+  - [ ] Test authentication flow through Gateway
+- [ ] **JWT Exception Import Cleanup**
+  - [ ] Remove `TokenExpiredException` and `TokenInvalidException` from Order Service
+  - [ ] Remove `TokenExpiredException` and `TokenInvalidException` from Inventory Service
+  - [ ] Replace with appropriate non-JWT exceptions
+  - [ ] Verify no JWT-related imports remain in backend services
+- [ ] **Consistency Verification**
+  - [ ] Ensure all services use same authentication pattern
+  - [ ] Verify header validation is consistent across services
+  - [ ] Test authentication flow end-to-end for all services
+  - [ ] Document authentication architecture
 
 **Technical Requirements:**
-- ✅ **BaseLogger Class**: Clean, simple logging interface with structured JSON, request correlation, service identification, K8s-focused design, no Lambda code, fast performance, graceful error handling
-
-**Implementation Details:**
-- ✅ **Location**: `services/common/src/logging/base_logger.py`
-- ✅ **Format**: JSON with timestamp, level, service, request_id, action, message
-- ✅ **Features**: DEBUG/INFO/WARNING/ERROR/CRITICAL levels, UUID-based correlation, service info, context support, stdout/stderr output, Promtail collection support
+- [ ] Header validation: `X-Source: gateway`, `X-Auth-Service: auth-service`
+- [ ] User context extraction from `X-User-ID` header
+- [ ] Consistent error handling for authentication failures
+- [ ] No JWT validation logic in backend services
+- [ ] All services use Common Package authentication utilities
 
 **Dependencies:**
-- ✅ **INFRA-003**: New Basic Logging System Implementation
+- ✅ **SEC-005 Phase 1-2**: Auth Service and Gateway integration completed
+- ✅ **User Service**: Already using new authentication system
+- ✅ **Order Service**: Already using new authentication system
 
-**Estimated Effort**: 3 weeks (1 week per phase)
-**Risk Level**: Low (new implementation, no existing code changes)
-**Success Criteria**: ✅ **COMPLETED** - Clean logging system working in Auth Service, ready for gradual migration to other services
+**Estimated Effort**: 1-2 days
+**Risk Level**: Low (completing existing work)
+**Success Criteria**: All backend services use consistent header-based authentication, no JWT validation remains
+
+---
 
 #### **MON-001: Essential Authentication Monitoring (Simplified Scope)**
 - **Component**: Monitoring & Observability
@@ -198,86 +176,11 @@ Implement a new, clean basic logging system in the common package that will be u
 - **Status**: 📋 To Do
 
 **Description:**
-Implement essential monitoring for the new Auth Service architecture, focusing on authentication-related metrics that are easy to implement and test in a personal project environment. Start with basic metrics and gradually expand.
+Implement essential monitoring for the new Auth Service architecture with basic authentication metrics, Prometheus + Grafana setup, and simple dashboards.
 
-**Acceptance Criteria:**
-- [ ] **Phase 1: Basic Auth Service Metrics**
-  - [ ] Implement simple JWT validation success/failure counters
-  - [ ] Add basic request duration tracking for auth operations
-  - [ ] Create simple health check endpoint for Auth Service
-  - [ ] Add basic error rate tracking for authentication failures
-  - [ ] Test metrics collection with simple Prometheus setup
-- [ ] **Phase 2: Gateway Authentication Tracking**
-  - [ ] Add basic request counting for auth-related routes
-  - [ ] Implement simple authentication flow tracking
-  - [ ] Add basic error tracking for auth failures
-  - [ ] Create simple dashboard showing auth success/failure rates
-  - [ ] Test end-to-end metrics collection
-- [ ] **Phase 3: Essential Security Monitoring**
-  - [ ] Add basic rate limiting hit counters
-  - [ ] Implement simple suspicious activity detection (multiple failed logins)
-  - [ ] Add basic circuit breaker state monitoring
-  - [ ] Create simple security alerts for obvious issues
-  - [ ] Test security monitoring with basic scenarios
-- [ ] **Phase 4: Basic Dashboards & Alerting**
-  - [ ] Create simple Grafana dashboard for auth metrics
-  - [ ] Add basic alerting for authentication failures
-  - [ ] Implement simple log aggregation for auth events
-  - [ ] Test dashboard and alerting functionality
-  - [ ] Document how to use and maintain the monitoring
-
-**Technical Requirements:**
-- [ ] **Basic Auth Service Metrics**
-  - [ ] Simple counters for JWT validation success/failure
-  - [ ] Basic request duration tracking (histogram)
-  - [ ] Simple error rate calculation
-  - [ ] Health check endpoint with basic status
-- [ ] **Basic Gateway Metrics**
-  - [ ] Simple request counting for auth routes
-  - [ ] Basic authentication flow tracking
-  - [ ] Simple error tracking for auth failures
-  - [ ] Basic performance metrics
-- [ ] **Basic Security Monitoring**
-  - [ ] Simple rate limiting hit counters
-  - [ ] Basic suspicious activity detection (failed login attempts)
-  - [ ] Simple circuit breaker state monitoring
-  - [ ] Basic security alerts for obvious issues
-- [ ] **Simple Integration**
-  - [ ] Basic Prometheus metrics collection
-  - [ ] Simple Grafana dashboard
-  - [ ] Basic alerting rules
-  - [ ] Simple log aggregation
-
-**Monitoring Benefits:**
-- [ ] **Basic Visibility**: Essential visibility into authentication flow and basic security events
-- [ ] **Simple Security**: Basic detection of obvious authentication issues
-- [ ] **Performance Tracking**: Simple performance metrics for auth operations
-- [ ] **Operational Awareness**: Basic alerting for authentication failures
-- [ ] **Learning Value**: Understand monitoring fundamentals for personal project
-- [ ] **Easy Testing**: Simple metrics that are easy to test and validate
-
-**Dashboard Requirements:**
-- [ ] **Auth Service Overview**: Basic JWT validation success/failure rates
-- [ ] **Gateway Auth Tracking**: Simple authentication flow metrics
-- [ ] **Security Basics**: Rate limiting hits and suspicious activity
-- [ ] **Performance Basics**: Request duration and error rates
-- [ ] **Simple Alerts**: Basic alerting for authentication failures
-
-**Implementation Examples:**
-- [ ] **Gateway (Go)**: Simple Prometheus metrics for auth routes
-- [ ] **Auth Service (Python)**: Basic JWT validation metrics
-- [ ] **Metrics Integration**: Simple Prometheus + Grafana setup
-- [ ] **Basic Logging**: Simple structured logging for auth events
-- [ ] **Simple Alerting**: Basic AlertManager rules for failures
-
-**Dependencies:**
-- ✅ **INFRA-001**: Local Kubernetes Development Setup
-- ✅ **SEC-005**: Centralized Authentication Architecture Implementation (Phase 1-3)
-- ✅ **INFRA-003**: New Basic Logging System Implementation
-
+**Acceptance Criteria**: Basic auth metrics, Gateway tracking, security monitoring, dashboards & alerting
+**Dependencies**: INFRA-001, SEC-005, INFRA-003 ✅
 **Estimated Effort**: 3-4 weeks
-**Risk Level**: Low (simple monitoring implementation)
-**Success Criteria**: Basic authentication monitoring working, simple dashboards functional, easy to test and maintain
 
 ### **🌐 Frontend & User Experience**
 
@@ -288,85 +191,24 @@ Implement essential monitoring for the new Auth Service architecture, focusing o
 - **Status**: 📋 To Do
 
 **Description:**
-Retest and validate frontend authentication flow after the new Auth Service architecture is implemented. This ensures the frontend works correctly with the centralized authentication system and provides a smooth user experience.
+Retest and validate frontend authentication flow after the new Auth Service architecture is implemented.
 
-**Acceptance Criteria:**
-- [ ] **Authentication Flow Testing**
-  - [ ] User registration flow works with new Auth Service
-  - [ ] User login flow works with new Auth Service
-  - [ ] JWT token handling works correctly
-  - [ ] Authentication state management works properly
-  - [ ] Logout flow clears authentication state correctly
-- [ ] **Protected Route Testing**
-  - [ ] Dashboard access requires valid authentication
-  - [ ] Trading page access requires valid authentication
-  - [ ] Portfolio page access requires valid authentication
-  - [ ] Account page access requires valid authentication
-  - [ ] Unauthenticated users redirected to login
-- [ ] **Error Handling Testing**
-  - [ ] Invalid credentials show proper error messages
-  - [ ] Expired tokens handled gracefully
-  - [ ] Network errors show user-friendly messages
-  - [ ] Authentication failures don't crash the application
-- [ ] **Integration Testing**
-  - [ ] Frontend communicates correctly with Gateway
-  - [ ] Gateway forwards auth requests to Auth Service
-  - [ ] Auth Service responses handled correctly by frontend
-  - [ ] Security headers properly processed
-  - [ ] End-to-end authentication flow works seamlessly
-
-**Technical Requirements:**
-- [ ] Frontend uses new authentication endpoints
-- [ ] JWT tokens properly stored and managed
-- [ ] Authentication state synchronized across components
-- [ ] Error handling for all authentication scenarios
-- [ ] Proper loading states during authentication
-
-**Dependencies:**
-- ✅ **INFRA-001**: Local Kubernetes Development Setup
-- ✅ **SEC-005**: Centralized Authentication Architecture Implementation (Phase 1-3)
-- ✅ **MON-001**: Basic monitoring infrastructure
-
+**Acceptance Criteria**: Authentication flow testing, protected route testing, error handling, integration testing
+**Dependencies**: INFRA-001, SEC-005, MON-001 ✅
 **Estimated Effort**: 1-2 weeks
-**Risk Level**: Medium
-**Success Criteria**: Complete frontend authentication flow working with new Auth Service architecture
 
 #### **FRONTEND-006: Standardize Frontend Port to localhost:3000**
 - **Component**: Frontend
 - **Type**: Story
-- **Priority**: **Medium**
+- **Priority**: Medium
 - **Status**: 📋 To Do
 
 **Description:**
-Standardize frontend port access to localhost:3000 for both Docker and Kubernetes deployments, ensuring consistent user experience across all environments.
+Standardize frontend port access to localhost:3000 for both Docker and Kubernetes deployments.
 
-**Acceptance Criteria:**
-- [ ] **Docker Environment**
-  - [ ] Frontend accessible on localhost:3000
-  - [ ] Port forwarding configured correctly
-  - [ ] No port conflicts with other services
-- [ ] **Kubernetes Environment**
-  - [ ] Frontend accessible on localhost:3000 via port forwarding
-  - [ ] NodePort configuration maintained for external access
-  - [ ] Health checks working on correct port
-- [ ] **Port Forwarding Automation**
-  - [ ] Automatic port forwarding setup in deployment scripts
-  - [ ] Clear documentation for port access
-  - [ ] Consistent behavior across environments
-
-**Technical Requirements:**
-- [ ] Frontend container runs on port 3000
-- [ ] Kubernetes service exposes port 3000
-- [ ] Port forwarding maps localhost:3000 → service:3000
-- [ ] No external port conflicts
-- [ ] Health checks validate correct port
-
-**Dependencies:**
-- ✅ **INFRA-001**: Local Kubernetes Development Setup
-
+**Acceptance Criteria**: Docker environment, Kubernetes environment, port forwarding automation
+**Dependencies**: INFRA-001 ✅
 **Estimated Effort**: 2-4 hours
-**Risk Level**: Low
-**Success Criteria**: Frontend accessible on localhost:3000 in both Docker and K8s
 
 ### **📊 Performance & Scaling**
 
@@ -379,32 +221,8 @@ Standardize frontend port access to localhost:3000 for both Docker and Kubernete
 **Description:**
 Optimize system performance across all components for production scale.
 
-**Acceptance Criteria:**
-- [ ] **API Performance**
-  - [ ] Optimize database queries
-  - [ ] Implement response caching
-  - [ ] Add connection pooling
-  - [ ] Optimize serialization/deserialization
-- [ ] **Frontend Performance**
-  - [ ] Implement code splitting and lazy loading
-  - [ ] Optimize bundle size
-  - [ ] Add service worker for caching
-  - [ ] Implement progressive web app features
-- [ ] **Infrastructure Performance**
-  - [ ] Optimize Kubernetes resource allocation
-  - [ ] Implement horizontal pod autoscaling
-  - [ ] Optimize network policies
-  - [ ] Add CDN for static assets
-- [ ] **Database Performance**
-  - [ ] Optimize DynamoDB access patterns
-  - [ ] Implement efficient caching strategies
-  - [ ] Add read replicas where needed
-  - [ ] Optimize backup and recovery procedures
-
-**Dependencies:**
-- ✅ **DB-001**: Redis Optimization & Caching Strategy
-- ✅ **DB-002**: DynamoDB Optimization
-- ✅ **FRONTEND-001**: Enhanced Trading Interface
+**Acceptance Criteria**: API performance, frontend performance, infrastructure performance, database performance
+**Dependencies**: DB-001, DB-002, FRONTEND-001 ✅
 
 #### **PERF-002: Load Testing & Capacity Planning**
 - **Component**: Performance
@@ -415,29 +233,9 @@ Optimize system performance across all components for production scale.
 **Description:**
 Conduct comprehensive load testing and capacity planning for production deployment.
 
-**Acceptance Criteria:**
-- [ ] **Load Testing**
-  - [ ] Simulate realistic user traffic
-  - [ ] Test system under peak load
-  - [ ] Identify performance bottlenecks
-  - [ ] Measure system scalability limits
-- [ ] **Stress Testing**
-  - [ ] Test system behavior under extreme load
-  - [ ] Identify failure points
-  - [ ] Test recovery mechanisms
-  - [ ] Measure system resilience
-- [ ] **Capacity Planning**
-  - [ ] Define resource requirements
-  - [ ] Plan for growth scenarios
-  - [ ] Optimize resource allocation
-  - [ ] Create scaling strategies
-
-**Dependencies:**
-- ✅ **INFRA-001**: Local Kubernetes Development Setup
-
+**Acceptance Criteria**: Load testing, stress testing, capacity planning
+**Dependencies**: INFRA-001 ✅
 **Estimated Effort**: 1-2 weeks
-**Risk Level**: Medium
-**Success Criteria**: System performance validated, capacity requirements defined
 
 ### **🔧 Infrastructure & DevOps**
 
@@ -450,17 +248,8 @@ Conduct comprehensive load testing and capacity planning for production deployme
 **Description:**
 Implement comprehensive request tracing and standardized logging across all microservices for debugging, monitoring, and operational excellence.
 
-**Acceptance Criteria:**
-- ✅ **Request Tracing**: Correlation IDs across all services, request ID generation and propagation, end-to-end request flow tracking, monitoring integration
-- ✅ **Structured Logging**: JSON logging format across all services, consistent log levels and categories, correlation IDs in all log entries, user context and performance data
-- ✅ **Log Aggregation**: Centralized logs from all services, log search and analysis, retention and archival policies, log-based alerting rules
-
-**Dependencies:**
-- ✅ **INFRA-001**: Local Kubernetes Development Setup
-
-**Estimated Effort**: 1-2 weeks
-**Risk Level**: Low
-**Success Criteria**: ✅ **COMPLETED** - Complete request tracing, standardized logging across all services
+**Status**: ✅ **COMPLETED** - Complete request tracing, standardized logging across all services
+**Dependencies**: INFRA-001 ✅
 
 #### **INFRA-003: Data Model Consistency & Common Package Standardization**
 - **Component**: Infrastructure & Common Package
@@ -469,29 +258,12 @@ Implement comprehensive request tracing and standardized logging across all micr
 - **Status**: 🚧 **IN PROGRESS**
 
 **Description:**
-Ensure complete data model consistency across all services by standardizing the Common Package entities and ensuring all services use the same data models with complete field coverage.
+Ensure complete data model consistency across all services by standardizing the Common Package entities with complete field coverage.
 
-**Acceptance Criteria:**
-- [x] **Common Package UserResponse Model**: Update to include all fields (`date_of_birth`, `marketing_emails_consent`) ✅ **COMPLETED**
-- [x] **User Service Dependencies**: Update `get_current_user` and `get_optional_current_user` to return complete user data ✅ **COMPLETED**
-- [ ] **Common Package Standardization**: Ensure all entity models return complete field sets
-- [ ] **Service Integration**: Update all services to use complete Common Package models
-- [ ] **Data Model Testing**: Verify all services return consistent data structures
-- [ ] **Field Coverage Validation**: Ensure no missing fields in response models
-
-**Technical Requirements:**
-- [ ] **Complete Field Coverage**: All entity models must include all available fields from database
-- [ ] **Consistent Response Models**: Same field structure across all services
-- [ ] **Backward Compatibility**: Maintain existing API contracts while adding missing fields
-- [ ] **Service Updates**: All services must use updated Common Package models
-
-**Dependencies:**
-- ✅ **INFRA-001**: Local Kubernetes Development Setup
-- ✅ **INFRA-002**: Request Tracing & Standardized Logging System
-
+**Current Status**: UserResponse model updated, User Service dependencies completed
+**Remaining**: Common Package standardization, service integration, data model testing
+**Dependencies**: INFRA-001, INFRA-002 ✅
 **Estimated Effort**: 1 week
-**Risk Level**: Low
-**Success Criteria**: Complete data model consistency across all services with no missing fields
 
 #### **INFRA-004: API & Function Sync/Async Consistency Review**
 - **Component**: Infrastructure & Code Quality
@@ -500,37 +272,47 @@ Ensure complete data model consistency across all services by standardizing the 
 - **Status**: 📋 To Do
 
 **Description:**
-Systematically review and fix all API endpoints and functions to ensure they only use async/await when actually performing asynchronous operations. This addresses the tendency to default to async patterns without proper analysis.
+Systematically review and fix all API endpoints and functions to ensure they only use async/await when actually performing asynchronous operations.
+
+**Acceptance Criteria**: Function analysis, async pattern validation, synchronous function conversion, test updates, documentation
+**Dependencies**: INFRA-001, INFRA-002, INFRA-003 ✅
+**Estimated Effort**: 1-2 weeks
+
+#### **INFRA-006: Service Architecture Cleanup - Move Portfolio Logic**
+- **Component**: Infrastructure & Service Architecture
+- **Type**: Task
+- **Priority**: Medium
+- **Status**: 📋 To Do
+
+**Description:**
+Move `get_user_portfolio` functionality from `order_service` to `user_service` to improve service separation and architecture clarity.
+
+**Current Problem:**
+- `get_user_portfolio` is currently in `services/order_service/src/controllers/portfolio.py`
+- Portfolio management is user data, not order logic
+- Order service should only handle trading operations, not portfolio display
+
+**Required Changes:**
+- [ ] Move `get_user_portfolio` controller from `order_service` to `user_service`
+- [ ] Update any dependencies or imports
+- [ ] Ensure tests are moved and updated
+- [ ] Verify functionality works in new location
 
 **Acceptance Criteria:**
-- [ ] **Function Analysis**: Review all functions across all services to identify unnecessary async usage
-- [ ] **Async Pattern Validation**: Ensure async is only used for actual async operations (database calls, HTTP requests, file I/O)
-- [ ] **Synchronous Function Conversion**: Convert functions that only do sync operations (data processing, validation, logging) to synchronous
-- [ ] **Test Updates**: Update all tests to remove unnecessary await calls and @pytest.mark.asyncio decorators
-- [ ] **Documentation**: Document clear guidelines for when to use async vs sync
-- [ ] **Code Review Process**: Establish process to prevent unnecessary async usage in future development
+- [ ] Portfolio management is in `user_service` where it belongs
+- [ ] Order service only contains order-related functionality
+- [ ] All tests pass in new location
+- [ ] No functionality is broken
 
-**Technical Requirements:**
-- [ ] **Async Usage Criteria**: Only use async for actual async operations
-- [ ] **Function Conversion**: Convert sync functions back to synchronous
-- [ ] **Test Cleanup**: Remove unnecessary async test patterns
-- [ ] **Performance Impact**: Ensure no performance degradation from sync conversion
-- [ ] **Code Standards**: Establish clear async/sync usage guidelines
+**Files to Move:**
+- `services/order_service/src/controllers/portfolio.py` → `services/user_service/src/controllers/portfolio.py`
+- `services/order_service/tests/controllers/test_portfolio.py` → `services/user_service/tests/controllers/test_portfolio.py`
 
-**Common Issues to Fix:**
-- [ ] Functions marked async but only doing sync operations
-- [ ] Tests using await for sync functions
-- [ ] Unnecessary @pytest.mark.asyncio decorators
-- [ ] Default async patterns without analysis
+**Dependencies**: None - can be done independently
+**Estimated Effort**: 2-4 hours
+**Risk Level**: Low (moving existing code, not changing logic)
 
-**Dependencies:**
-- ✅ **INFRA-001**: Local Kubernetes Development Setup
-- ✅ **INFRA-002**: Request Tracing & Standardized Logging System
-- ✅ **INFRA-003**: Data Model Consistency & Common Package Standardization
-
-**Estimated Effort**: 1-2 weeks
-**Risk Level**: Low
-**Success Criteria**: All functions use appropriate sync/async patterns, tests properly updated, clear guidelines established
+---
 
 #### **INFRA-005: Docker Production-Ready Refactoring**
 - **Component**: Infrastructure & Docker
@@ -539,71 +321,26 @@ Systematically review and fix all API endpoints and functions to ensure they onl
 - **Status**: 🚧 **IN PROGRESS - Auth Service COMPLETED**
 
 **Description:**
-Refactor all service Dockerfiles to use production-ready patterns, eliminating unnecessary port forwarding and standardizing the build process across all microservices. This ensures consistent Docker practices, better security, and production readiness.
+Refactor all service Dockerfiles to use production-ready patterns, eliminating unnecessary port forwarding and standardizing the build process across all microservices.
 
-**Current Status**: ✅ **Auth Service COMPLETED** - Production-ready Dockerfile with Common Package integration, simplified port configuration (only Gateway 8080 exposed externally).
-
-**Acceptance Criteria:**
-- [x] **Auth Service Dockerfile**: Production-ready with Common Package integration ✅ **COMPLETED**
-- [x] **Docker Port Simplification**: Remove unnecessary 3000x port forwarding ✅ **COMPLETED**
-- [ ] **User Service Dockerfile**: Apply production-ready pattern (Common Package integration, security improvements)
-- [ ] **Inventory Service Dockerfile**: Apply production-ready pattern (Common Package integration, security improvements)
-- [ ] **Order Service Dockerfile**: Apply production-ready pattern (Common Package integration, security improvements)
-- [ ] **Frontend Dockerfile**: Apply production-ready pattern (security improvements)
-- [ ] **Gateway Dockerfile**: Apply production-ready pattern (security improvements)
-
-**Technical Requirements:**
-- [ ] **Common Package Integration**: All services properly install Common Package dependencies
-- [ ] **Security Improvements**: Non-root users, proper file permissions, minimal attack surface
-- [ ] **Docker Layer Optimization**: Better caching, cache cleanup, optimized build process
-- [ ] **Port Configuration**: Only Gateway (8080) exposed externally, services internal only
-- [ ] **Production Settings**: Optimized uvicorn configuration, health checks, resource limits
-
-**Benefits:**
-- ✅ **Simplified Development**: Direct port access (800x) instead of confusing 3000x mappings
-- ✅ **Better Security**: Non-root users, proper file permissions, minimal attack surface
-- ✅ **Production Ready**: Optimized for production deployment with proper settings
-- ✅ **Consistent Architecture**: Same Docker patterns across all services
-- ✅ **Easy Scaling**: Each service is self-contained and independently scalable
-
-**Dependencies:**
-- ✅ **SEC-005 Phase 1**: Auth Service Common Package Integration
-- ✅ **INFRA-003**: Data Model Consistency & Common Package Standardization
-
+**Current Status**: Auth Service completed with Common Package integration, simplified port configuration
+**Remaining**: User, Inventory, Order, Frontend, Gateway Dockerfiles
+**Dependencies**: SEC-005 Phase 1, INFRA-003 ✅
 **Estimated Effort**: 1 week
-**Risk Level**: Low
-**Success Criteria**: All service Dockerfiles use production-ready patterns with consistent architecture
 
 ### **🧪 Testing & Quality Assurance**
 
 #### **TEST-001: Integration Test Suite Enhancement**
 - **Component**: Testing
 - **Type**: Epic
-- **Priority**: **High**
+- **Priority**: High
 - **Status**: 📋 To Do
 
 **Description:**
 Enhance integration test suite to cover all services and provide comprehensive testing coverage for the complete system.
 
-**Acceptance Criteria:**
-- [ ] **Order Service Integration Tests**
-  - [ ] Order creation and management tests
-  - [ ] Portfolio calculation tests
-  - [ ] Asset balance and transaction tests
-  - [ ] Business validation tests
-- [ ] **API Gateway Integration Tests**
-  - [ ] Route forwarding tests
-  - [ ] Authentication and authorization tests
-  - [ ] Error handling tests
-  - [ ] Performance and load tests
-- [ ] **End-to-End Workflow Tests**
-  - [ ] Complete user registration to trading workflow
-  - [ ] Multi-asset portfolio management tests
-  - [ ] Error recovery and edge case tests
-  - [ ] Performance and scalability tests
-
-**Dependencies:**
-- ✅ **INFRA-001**: Local Kubernetes Development Setup
+**Acceptance Criteria**: Order Service tests, API Gateway tests, end-to-end workflow tests
+**Dependencies**: INFRA-001 ✅
 
 **Estimated Effort**: 1-2 weeks
 **Risk Level**: Low
@@ -668,7 +405,7 @@ Enhance integration test suite to cover all services and provide comprehensive t
 ---
 
 *Last Updated: 8/21/2025*
-*Next Review: After completing SEC-005 Phase 3 (Backend Service Cleanup)*
+*Next Review: After completing SEC-005-P3 (Complete Backend Service Cleanup) and CI-001 (Fix CI/CD Pipeline)*
 *📋 For detailed technical specifications, see: `docs/centralized-authentication-architecture.md`*
 *📋 For monitoring design, see: `docs/design-docs/monitoring-design.md`*
 *📋 For logging standards, see: `docs/design-docs/logging-standards.md`*

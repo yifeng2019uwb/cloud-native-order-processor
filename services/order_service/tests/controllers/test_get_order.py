@@ -50,8 +50,7 @@ class TestGetOrder:
         order.created_at = datetime.now(timezone.utc)
         return order
 
-    @pytest.mark.asyncio
-    async def test_get_order_success(
+    def test_get_order_success(
         self,
         mock_current_user,
         mock_order_dao,
@@ -67,7 +66,7 @@ class TestGetOrder:
             mock_order_dao.get_order.return_value = mock_order
 
             # Test the function
-            result = await get_order(
+            result = get_order(
                 order_id="order123",
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,
@@ -96,8 +95,7 @@ class TestGetOrder:
             # Verify logging
             mock_logger.info.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_get_order_unauthorized_access(
+    def test_get_order_unauthorized_access(
         self,
         mock_current_user,
         mock_order_dao,
@@ -117,7 +115,7 @@ class TestGetOrder:
 
             # Test that the exception is raised
             with pytest.raises(OrderNotFoundException, match="Order 'order123' not found"):
-                await get_order(
+                get_order(
                     order_id="order123",
                     current_user=mock_current_user,
                     order_dao=mock_order_dao,
@@ -127,8 +125,7 @@ class TestGetOrder:
             # Verify logging
             mock_logger.warning.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_get_order_not_found(
+    def test_get_order_not_found(
         self,
         mock_current_user,
         mock_order_dao,
@@ -142,15 +139,15 @@ class TestGetOrder:
 
             # Test that the exception is raised
             with pytest.raises(OrderNotFoundException, match="Order not found"):
-                await get_order(
+                get_order(
                     order_id="nonexistent",
                     current_user=mock_current_user,
                     order_dao=mock_order_dao,
                     user_dao=mock_user_dao
                 )
 
-    @pytest.mark.asyncio
-    async def test_get_order_unexpected_error(
+
+    def test_get_order_unexpected_error(
         self,
         mock_current_user,
         mock_order_dao,
@@ -165,7 +162,7 @@ class TestGetOrder:
 
             # Test that the exception is raised
             with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
-                await get_order(
+                get_order(
                     order_id="order123",
                     current_user=mock_current_user,
                     order_dao=mock_order_dao,
@@ -175,8 +172,7 @@ class TestGetOrder:
             # Verify logging
             mock_logger.error.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_get_order_different_user_order(
+    def test_get_order_different_user_order(
         self,
         mock_current_user,
         mock_order_dao,
@@ -196,7 +192,7 @@ class TestGetOrder:
 
             # Test that the exception is raised
             with pytest.raises(OrderNotFoundException, match="Order 'order123' not found"):
-                await get_order(
+                get_order(
                     order_id="order123",
                     current_user=mock_current_user,
                     order_dao=mock_order_dao,
@@ -206,8 +202,7 @@ class TestGetOrder:
             # Verify logging
             mock_logger.warning.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_get_order_logging_and_metrics(
+    def test_get_order_logging_and_metrics(
         self,
         mock_current_user,
         mock_order_dao,
@@ -223,7 +218,7 @@ class TestGetOrder:
             mock_order_dao.get_order.return_value = mock_order
 
             # Test the function
-            result = await get_order(
+            result = get_order(
                 order_id="order123",
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,

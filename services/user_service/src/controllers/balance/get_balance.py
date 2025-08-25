@@ -55,7 +55,7 @@ router = APIRouter(tags=["balance"])
         }
     }
 )
-async def get_user_balance(
+def get_user_balance(
     current_user: UserResponse = Depends(get_current_user),
     balance_dao = Depends(get_balance_dao)
 ) -> BalanceResponse:

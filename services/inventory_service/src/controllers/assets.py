@@ -63,7 +63,7 @@ router = APIRouter(prefix="/inventory", tags=["inventory"])
         }
     }
 )
-async def list_assets(
+def list_assets(
     active_only: Optional[bool] = Query(
         True,
         description="Show only active assets"
@@ -144,7 +144,7 @@ async def list_assets(
         }
     }
 )
-async def get_asset_by_id(
+def get_asset_by_id(
     asset_id: str,
     asset_dao: AssetDAO = Depends(get_asset_dao)
 ) -> AssetDetailResponse:

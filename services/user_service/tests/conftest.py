@@ -23,6 +23,10 @@ os.environ.setdefault('CI', 'true')
 # Add common package to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "common"))
 
+# Add current service src to path
+current_service_src = os.path.join(os.path.dirname(__file__), "..", "src")
+sys.path.insert(0, current_service_src)
+
 # Add order-service src to path for order-service tests
 order_service_src = os.path.join(
     os.path.dirname(__file__), "..", "order-service", "src"

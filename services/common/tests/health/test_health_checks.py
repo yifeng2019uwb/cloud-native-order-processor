@@ -51,10 +51,9 @@ class TestHealthChecker:
         """Create a HealthChecker instance"""
         return HealthChecker("test-service", "1.0.0", "test")
 
-    @pytest.mark.asyncio
-    async def test_basic_health_check(self, health_checker):
+    def test_basic_health_check(self, health_checker):
         """Test basic health check"""
-        result = await health_checker.basic_health_check()
+        result = health_checker.basic_health_check()
 
         assert result["status"] == "healthy"
         assert result["service"] == "test-service"
@@ -62,23 +61,21 @@ class TestHealthChecker:
         assert result["checks"]["api"] == "ok"
         assert result["checks"]["service"] == "running"
 
-    @pytest.mark.asyncio
-    async def test_liveness_check(self, health_checker):
+    def test_liveness_check(self, health_checker):
         """Test liveness check"""
-        result = await health_checker.liveness_check()
+        result = health_checker.liveness_check()
 
         assert result["status"] == "alive"
         assert result["service"] == "test-service"
         assert result["checks"]["api"] == "ok"
         assert result["checks"]["service"] == "alive"
 
-    @pytest.mark.asyncio
-    async def test_readiness_check_success(self, health_checker):
+    def test_readiness_check_success(self, health_checker):
         """Test successful readiness check"""
         with patch('common.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.return_value = True
 
-            result = await health_checker.readiness_check()
+            result = health_checker.readiness_check()
 
             assert result["status"] == "ready"
             assert result["service"] == "test-service"
@@ -86,63 +83,58 @@ class TestHealthChecker:
             assert result["checks"]["database"] == "ok"
             assert result["checks"]["service"] == "ready"
 
-    @pytest.mark.asyncio
-    async def test_readiness_check_database_failure(self, health_checker):
+    def test_readiness_check_database_failure(self, health_checker):
         """Test readiness check when database is unhealthy"""
         with patch('common.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.return_value = False
 
             with pytest.raises(HTTPException) as exc_info:
-                await health_checker.readiness_check()
+                health_checker.readiness_check()
 
             assert exc_info.value.status_code == 503
             assert "Database not ready" in str(exc_info.value.detail)
 
-    @pytest.mark.asyncio
-    async def test_readiness_check_exception(self, health_checker):
+    def test_readiness_check_exception(self, health_checker):
         """Test readiness check when exception occurs"""
         with patch('common.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.side_effect = Exception("Database connection failed")
 
             with pytest.raises(HTTPException) as exc_info:
-                await health_checker.readiness_check()
+                health_checker.readiness_check()
 
             assert exc_info.value.status_code == 503
             assert "Service not ready" in str(exc_info.value.detail)
 
-    @pytest.mark.asyncio
-    async def test_database_health_check_success(self, health_checker):
+    def test_database_health_check_success(self, health_checker):
         """Test successful database health check"""
         with patch('common.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.return_value = True
 
-            result = await health_checker.database_health_check()
+            result = health_checker.database_health_check()
 
             assert result["status"] == "healthy"
             assert result["service"] == "test-service-database"
             assert result["database"]["status"] == "healthy"
             assert result["database"]["connection"] == "ok"
 
-    @pytest.mark.asyncio
-    async def test_database_health_check_failure(self, health_checker):
+    def test_database_health_check_failure(self, health_checker):
         """Test database health check when database is unhealthy"""
         with patch('common.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.return_value = False
 
             with pytest.raises(HTTPException) as exc_info:
-                await health_checker.database_health_check()
+                health_checker.database_health_check()
 
             assert exc_info.value.status_code == 503
             assert "Database unhealthy" in str(exc_info.value.detail)
 
-    @pytest.mark.asyncio
-    async def test_database_health_check_exception(self, health_checker):
+    def test_database_health_check_exception(self, health_checker):
         """Test database health check when exception occurs"""
         with patch('common.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.side_effect = Exception("Database connection failed")
 
             with pytest.raises(HTTPException) as exc_info:
-                await health_checker.database_health_check()
+                health_checker.database_health_check()
 
             assert exc_info.value.status_code == 503
             assert "Database health check failed" in str(exc_info.value.detail)
@@ -163,32 +155,29 @@ class TestCreateHealthChecker:
 class TestGetDatabaseHealth:
     """Test get_database_health function"""
 
-    @pytest.mark.asyncio
-    async def test_get_database_health_success(self):
+    def test_get_database_health_success(self):
         """Test successful database health check"""
         with patch('common.health.health_checks.dynamodb_manager') as mock_db_manager:
-            mock_db_manager.health_check = AsyncMock(return_value=True)
+            mock_db_manager.health_check.return_value = True
 
-            result = await get_database_health()
+            result = get_database_health()
 
             assert result is True
 
-    @pytest.mark.asyncio
-    async def test_get_database_health_failure(self):
+    def test_get_database_health_failure(self):
         """Test database health check when database is unhealthy"""
         with patch('common.health.health_checks.dynamodb_manager') as mock_db_manager:
-            mock_db_manager.health_check = AsyncMock(return_value=False)
+            mock_db_manager.health_check.return_value = False
 
-            result = await get_database_health()
+            result = get_database_health()
 
             assert result is False
 
-    @pytest.mark.asyncio
-    async def test_get_database_health_exception(self):
+    def test_get_database_health_exception(self):
         """Test database health check when exception occurs"""
         with patch('common.health.health_checks.dynamodb_manager') as mock_db_manager:
-            mock_db_manager.health_check = AsyncMock(side_effect=Exception("Connection failed"))
+            mock_db_manager.health_check.side_effect = Exception("Connection failed")
 
-            result = await get_database_health()
+            result = get_database_health()
 
             assert result is False

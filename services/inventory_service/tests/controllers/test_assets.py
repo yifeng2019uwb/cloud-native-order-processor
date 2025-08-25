@@ -22,8 +22,7 @@ from common.exceptions import (
 )
 
 
-@pytest.mark.asyncio
-async def test_list_assets_success():
+def test_list_assets_success():
     """Test list_assets with mocked AssetDAO"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class:
         # Setup mock AssetDAO
@@ -66,7 +65,7 @@ async def test_list_assets_success():
         mock_dao.get_all_assets.side_effect = mock_get_all_assets
 
         # test the function
-        result = await list_assets(active_only=True, limit=2, asset_dao=mock_dao)
+        result = list_assets(active_only=True, limit=2, asset_dao=mock_dao)
 
         # Verify AssetDAO was called correctly (twice: once for active, once for total)
         assert mock_dao.get_all_assets.call_count == 2
@@ -79,14 +78,13 @@ async def test_list_assets_success():
         assert len(result.assets) == 2
 
         # Test result with active as false
-        result = await list_assets(active_only=False, limit=5, asset_dao=mock_dao)
+        result = list_assets(active_only=False, limit=5, asset_dao=mock_dao)
         assert result is not None
         assert hasattr(result, 'assets')
         assert len(result.assets) == 3
 
 
-@pytest.mark.asyncio
-async def test_list_assets_with_limit():
+def test_list_assets_with_limit():
     """Test list_assets with limit parameter"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class:
         mock_dao = MagicMock()
@@ -107,7 +105,7 @@ async def test_list_assets_with_limit():
         mock_dao.get_all_assets.return_value = mock_assets
 
         # test with limit
-        result = await list_assets(active_only=True, limit=3, asset_dao=mock_dao)
+        result = list_assets(active_only=True, limit=3, asset_dao=mock_dao)
 
         # Verify limit was applied
         assert len(result.assets) == 3
@@ -116,8 +114,7 @@ async def test_list_assets_with_limit():
         assert result.assets[2].asset_id == "ASSET2"
 
 
-@pytest.mark.asyncio
-async def test_list_assets_without_limit():
+def test_list_assets_without_limit():
     """Test list_assets without limit parameter"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class:
         mock_dao = MagicMock()
@@ -138,14 +135,13 @@ async def test_list_assets_without_limit():
         mock_dao.get_all_assets.return_value = mock_assets
 
         # test without limit
-        result = await list_assets(active_only=True, limit=None, asset_dao=mock_dao)
+        result = list_assets(active_only=True, limit=None, asset_dao=mock_dao)
 
         # Verify all assets were returned
         assert len(result.assets) == 3
 
 
-    @pytest.mark.asyncio
-    async def test_get_asset_by_id_success():
+    def test_get_asset_by_id_success():
         """Test get_asset_by_id with valid asset ID"""
         with patch('controllers.assets.AssetDAO') as mock_dao_class:
             mock_dao = MagicMock()
@@ -164,7 +160,7 @@ async def test_list_assets_without_limit():
             mock_dao.get_asset_by_id.return_value = mock_asset
 
             # test the function
-            result = await get_asset_by_id("BTC", asset_dao=mock_dao)
+            result = get_asset_by_id("BTC", asset_dao=mock_dao)
 
         # Verify AssetDAO was called with uppercase asset_id
         mock_dao.get_asset_by_id.assert_called_once_with("BTC")
@@ -175,8 +171,7 @@ async def test_list_assets_without_limit():
         assert result.asset_id == "BTC"
 
 
-@pytest.mark.asyncio
-async def test_get_asset_by_id_not_found():
+def test_get_asset_by_id_not_found():
     """Test get_asset_by_id with non-existent asset ID"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class:
         mock_dao = MagicMock()
@@ -187,15 +182,14 @@ async def test_get_asset_by_id_not_found():
 
         # Test that the function raises the correct exception
         with pytest.raises(InternalServerException) as exc_info:
-            await get_asset_by_id("INVALID", asset_dao=mock_dao)
+            get_asset_by_id("INVALID", asset_dao=mock_dao)
 
         error = exc_info.value
         # Check that the error message contains the operation context
         assert "failed to get asset invalid" in str(error).lower()
 
 
-    @pytest.mark.asyncio
-    async def test_get_asset_by_id_case_insensitive():
+    def test_get_asset_by_id_case_insensitive():
         """Test get_asset_by_id handles case insensitivity"""
         with patch('controllers.assets.AssetDAO') as mock_dao_class:
             mock_dao = MagicMock()
@@ -214,7 +208,7 @@ async def test_get_asset_by_id_not_found():
             mock_dao.get_asset_by_id.return_value = mock_asset
 
             # Test with lowercase input
-            result = await get_asset_by_id("btc", asset_dao=mock_dao)
+            result = get_asset_by_id("btc", asset_dao=mock_dao)
 
         # Verify AssetDAO was called with uppercase asset_id
         mock_dao.get_asset_by_id.assert_called_once_with("BTC")
@@ -231,36 +225,33 @@ async def test_get_asset_by_id_not_found():
 class TestAssetsControllerExceptionHandling:
     """Comprehensive tests for exception handling in assets controller"""
 
-    @pytest.mark.asyncio
-    async def test_list_assets_database_error_handling(self):
+    def test_list_assets_database_error_handling(self):
         """Test that database errors are properly converted to internal exceptions"""
         # Mock the asset DAO to raise an exception
         mock_asset_dao = MagicMock()
         mock_asset_dao.get_all_assets.side_effect = Exception("Database connection failed")
 
         with pytest.raises(InternalServerException) as exc_info:
-            await list_assets(active_only=True, limit=10, asset_dao=mock_asset_dao)
+            list_assets(active_only=True, limit=10, asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Check that the error message contains the operation context
         assert "failed to list assets" in str(error).lower()
 
-    @pytest.mark.asyncio
-    async def test_get_asset_by_id_database_error_handling(self):
+    def test_get_asset_by_id_database_error_handling(self):
         """Test that database errors in get_asset_by_id are properly handled"""
         # Mock the asset DAO to raise an exception
         mock_asset_dao = MagicMock()
         mock_asset_dao.get_asset_by_id.side_effect = Exception("Database query failed")
 
         with pytest.raises(InternalServerException) as exc_info:
-            await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+            get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Check that the error message contains the operation context
         assert "failed to get asset btc" in str(error).lower()
 
-    @pytest.mark.asyncio
-    async def test_list_assets_with_common_package_exception(self):
+    def test_list_assets_with_common_package_exception(self):
         """Test handling of common package exceptions in list_assets"""
         # Mock the asset DAO to raise a common package exception
         mock_asset_dao = MagicMock()
@@ -269,14 +260,13 @@ class TestAssetsControllerExceptionHandling:
         )
 
         with pytest.raises(InternalServerException) as exc_info:
-            await list_assets(active_only=True, limit=10, asset_dao=mock_asset_dao)
+            list_assets(active_only=True, limit=10, asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Check that the error message contains the operation context
         assert "failed to list assets" in str(error).lower()
 
-    @pytest.mark.asyncio
-    async def test_get_asset_by_id_with_common_package_exception(self):
+    def test_get_asset_by_id_with_common_package_exception(self):
         """Test handling of common package exceptions in get_asset_by_id"""
         # Mock the asset DAO to raise a common package exception
         mock_asset_dao = MagicMock()
@@ -285,29 +275,27 @@ class TestAssetsControllerExceptionHandling:
         )
 
         with pytest.raises(InternalServerException) as exc_info:
-            await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+            get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Check that the error message contains the operation context
         assert "failed to get asset btc" in str(error).lower()
 
-    @pytest.mark.asyncio
-    async def test_assets_controller_error_context(self):
+    def test_assets_controller_error_context(self):
         """Test that assets controller provides proper error context"""
         # Mock the asset DAO to raise an exception
         mock_asset_dao = MagicMock()
         mock_asset_dao.get_asset_by_id.side_effect = Exception("Test database error")
 
         with pytest.raises(InternalServerException) as exc_info:
-            await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+            get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Check that the error has proper context
         assert "failed to get asset btc" in str(error).lower()
         assert "Test database error" in str(error)
 
-    @pytest.mark.asyncio
-    async def test_assets_controller_exception_flow(self):
+    def test_assets_controller_exception_flow(self):
         """Test the complete exception flow in assets controller"""
         # Mock the asset DAO to raise a common package exception
         mock_asset_dao = MagicMock()
@@ -316,15 +304,14 @@ class TestAssetsControllerExceptionHandling:
         )
 
         with pytest.raises(InternalServerException) as exc_info:
-            await list_assets(active_only=True, limit=5, asset_dao=mock_asset_dao)
+            list_assets(active_only=True, limit=5, asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Verify the error is properly wrapped
         assert isinstance(error, InternalServerException)
         assert "failed to list assets" in str(error).lower()
 
-    @pytest.mark.asyncio
-    async def test_assets_controller_with_complex_exception(self):
+    def test_assets_controller_with_complex_exception(self):
         """Test assets controller with complex nested exceptions"""
         # Create a complex nested exception
         class ComplexDatabaseError(Exception):
@@ -340,14 +327,13 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao.get_asset_by_id.side_effect = complex_error
 
         with pytest.raises(InternalServerException) as exc_info:
-            await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+            get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
         assert "failed to get asset btc" in str(error).lower()
         assert "Complex error" in str(error)
 
-    @pytest.mark.asyncio
-    async def test_assets_controller_with_multiple_exceptions(self):
+    def test_assets_controller_with_multiple_exceptions(self):
         """Test assets controller handling multiple types of exceptions"""
         # Test with different exception types
         exceptions_to_test = [
@@ -362,15 +348,14 @@ class TestAssetsControllerExceptionHandling:
             mock_asset_dao.get_asset_by_id.side_effect = exc
 
             with pytest.raises(expected_exception_type) as exc_info:
-                await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+                get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
             error = exc_info.value
             assert isinstance(error, expected_exception_type)
             if expected_exception_type == InternalServerException:
                 assert "failed to get asset btc" in str(error).lower()
 
-    @pytest.mark.asyncio
-    async def test_assets_controller_validation_error_handling(self):
+    def test_assets_controller_validation_error_handling(self):
         """Test assets controller handling validation errors"""
         # Test with validation errors that should be converted to AssetValidationException
         validation_errors = [
@@ -384,15 +369,14 @@ class TestAssetsControllerExceptionHandling:
             mock_asset_dao.get_asset_by_id.side_effect = validation_error
 
             with pytest.raises(AssetValidationException) as exc_info:
-                await get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+                get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
             error = exc_info.value
             assert isinstance(error, AssetValidationException)
             assert "Invalid asset ID" in str(error)
 
 
-@pytest.mark.asyncio
-async def test_list_assets_metrics_recording():
+def test_list_assets_metrics_recording():
     """Test list_assets with metrics recording (lines 40-41)"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class, \
          patch('controllers.assets.METRICS_AVAILABLE', True), \
@@ -430,7 +414,7 @@ async def test_list_assets_metrics_recording():
         mock_dao.get_all_assets.side_effect = mock_get_all_assets
 
         # Test the function
-        result = await list_assets(active_only=True, limit=2, asset_dao=mock_dao)
+        result = list_assets(active_only=True, limit=2, asset_dao=mock_dao)
 
         # Verify metrics were recorded
         mock_record_retrieval.assert_called_once_with(category="all", active_only=True)
@@ -442,8 +426,7 @@ async def test_list_assets_metrics_recording():
         assert len(result.assets) == 2
 
 
-@pytest.mark.asyncio
-async def test_get_asset_by_id_validation_error_handling():
+def test_get_asset_by_id_validation_error_handling():
     """Test get_asset_by_id with AssetValidationException handling (lines 172-176)"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class, \
          patch('controllers.assets.validate_asset_exists') as mock_validate, \
@@ -473,7 +456,7 @@ async def test_get_asset_by_id_validation_error_handling():
         mock_validate.return_value = None  # No validation error
 
         # Test successful case first
-        result = await get_asset_by_id("BTC", asset_dao=mock_dao)
+        result = get_asset_by_id("BTC", asset_dao=mock_dao)
 
         # Verify validation was called
         mock_validate.assert_called_once_with("BTC", mock_dao)
@@ -485,7 +468,7 @@ async def test_get_asset_by_id_validation_error_handling():
         mock_validate.side_effect = AssetValidationException("Asset ID cannot be empty")
 
         with pytest.raises(AssetValidationException) as exc_info:
-            await get_asset_by_id("INVALID", asset_dao=mock_dao)
+            get_asset_by_id("INVALID", asset_dao=mock_dao)
 
         # Verify the exception message is properly formatted
         # The actual format is: "Invalid asset ID: AssetValidationException: Asset ID cannot be empty"
@@ -493,8 +476,7 @@ async def test_get_asset_by_id_validation_error_handling():
         assert "Asset ID cannot be empty" in str(exc_info.value)
 
 
-@pytest.mark.asyncio
-async def test_get_asset_by_id_metrics_recording():
+def test_get_asset_by_id_metrics_recording():
     """Test get_asset_by_id with metrics recording when METRICS_AVAILABLE is True"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class, \
          patch('controllers.assets.validate_asset_exists') as mock_validate, \
@@ -524,7 +506,7 @@ async def test_get_asset_by_id_metrics_recording():
         mock_validate.return_value = None  # No validation error
 
         # Test the function
-        result = await get_asset_by_id("ETH", asset_dao=mock_dao)
+        result = get_asset_by_id("ETH", asset_dao=mock_dao)
 
         # Verify metrics were recorded
         mock_record_view.assert_called_once_with(asset_id="ETH")

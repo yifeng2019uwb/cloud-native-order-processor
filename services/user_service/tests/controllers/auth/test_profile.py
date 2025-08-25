@@ -6,27 +6,36 @@ from api_models.auth.profile import UserProfileUpdateRequest
 from fastapi.security import HTTPAuthorizationCredentials
 from common.exceptions.shared_exceptions import EntityNotFoundException as UserNotFoundException, EntityAlreadyExistsException as UserAlreadyExistsException
 from common.exceptions.shared_exceptions import TokenExpiredException, TokenInvalidException
-from datetime import datetime
+from datetime import datetime, timezone
 
-@pytest.mark.asyncio
-async def test_get_profile_valid_token():
+def test_get_profile_success():
+    # Mock user data
     mock_user = MagicMock()
-    mock_user.username = "john_doe"
-    mock_user.email = "john@example.com"
-    mock_user.first_name = "John"
-    mock_user.last_name = "Doe"
+    mock_user.username = "testuser"
+    mock_user.email = "test@example.com"
+    mock_user.first_name = "Test"
+    mock_user.last_name = "User"
     mock_user.phone = "+1234567890"
-    mock_user.date_of_birth = "1990-01-01"
+    mock_user.date_of_birth = datetime(1990, 1, 1).date()
     mock_user.marketing_emails_consent = True
-    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
-    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
+    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0, tzinfo=timezone.utc)
 
-    result = await get_profile(current_user=mock_user)
-    assert result.username == "john_doe"
-    assert result.email == "john@example.com"
+    # Call the function
+    result = get_profile(current_user=mock_user)
 
-@pytest.mark.asyncio
-async def test_update_profile_valid():
+    # Verify result
+    assert result.username == "testuser"
+    assert result.email == "test@example.com"
+    assert result.first_name == "Test"
+    assert result.last_name == "User"
+    assert result.phone == "+1234567890"
+    assert result.date_of_birth == datetime(1990, 1, 1).date()
+    assert result.marketing_emails_consent is True
+    assert result.created_at == datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    assert result.updated_at == datetime(2024, 1, 2, 0, 0, 0, tzinfo=timezone.utc)
+
+def test_update_profile_success():
     mock_user = MagicMock()
     mock_user.username = "john_doe"
     mock_user.email = "john@example.com"
@@ -60,13 +69,12 @@ async def test_update_profile_valid():
         phone="+1234567890",
         date_of_birth="1990-01-01"
     )
-    result = await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
+    result = update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
     assert result.message == "Profile updated successfully"
     assert result.user.username == "john_doe"
     assert result.user.email == "john.new@example.com"
 
-@pytest.mark.asyncio
-async def test_update_profile_email_in_use():
+def test_update_profile_email_in_use():
     mock_user = MagicMock()
     mock_user.username = "john_doe"
     mock_user.email = "john@example.com"
@@ -89,11 +97,10 @@ async def test_update_profile_email_in_use():
         date_of_birth="1990-01-01"
     )
     with pytest.raises(HTTPException) as exc_info:
-        await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
+        update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
     assert exc_info.value.status_code == 500  # The exception is caught and re-raised as 500
 
-@pytest.mark.asyncio
-async def test_update_profile_unauthorized():
+def test_update_profile_unauthorized():
     mock_user = MagicMock()
     mock_user.username = "john_doe"
     mock_user.email = "john@example.com"
@@ -116,11 +123,10 @@ async def test_update_profile_unauthorized():
         date_of_birth="1990-01-01"
     )
     with pytest.raises(UserNotFoundException) as exc_info:
-        await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
+        update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
     assert "User 'john_doe' not found" in str(exc_info.value)
 
-@pytest.mark.asyncio
-async def test_update_profile_user_not_found():
+def test_update_profile_user_not_found():
     mock_user = MagicMock()
     mock_user.username = "john_doe"
     mock_user.email = "john@example.com"
@@ -143,7 +149,7 @@ async def test_update_profile_user_not_found():
         date_of_birth="1990-01-01"
     )
     with pytest.raises(UserNotFoundException) as exc_info:
-        await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
+        update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
     assert "User 'john_doe' not found" in str(exc_info.value)
 
 @pytest.mark.asyncio

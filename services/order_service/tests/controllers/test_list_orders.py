@@ -54,8 +54,7 @@ class TestListOrders:
             orders.append(order)
         return orders
 
-    @pytest.mark.asyncio
-    async def test_list_orders_success(
+    def test_list_orders_success(
         self,
         mock_current_user,
         mock_order_dao,
@@ -72,7 +71,7 @@ class TestListOrders:
             mock_order_dao.get_orders_by_user.return_value = mock_orders
 
             # Test the function
-            result = await list_orders(
+            result = list_orders(
                 asset_id=None,
                 order_type=None,
                 limit=50,
@@ -104,8 +103,8 @@ class TestListOrders:
             # Verify logging
             mock_logger.info.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_list_orders_with_asset_filter(
+
+    def test_list_orders_with_asset_filter(
         self,
         mock_current_user,
         mock_order_dao,
@@ -121,7 +120,7 @@ class TestListOrders:
             mock_order_dao.get_orders_by_user.return_value = mock_orders
 
             # Test the function with BTC filter
-            result = await list_orders(
+            result = list_orders(
                 asset_id="BTC",
                 order_type=None,
                 limit=50,
@@ -145,8 +144,8 @@ class TestListOrders:
                 user_dao=mock_user_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_list_orders_with_order_type_filter(
+
+    def test_list_orders_with_order_type_filter(
         self,
         mock_current_user,
         mock_order_dao,
@@ -162,7 +161,7 @@ class TestListOrders:
             mock_order_dao.get_orders_by_user.return_value = mock_orders
 
             # Test the function with MARKET_BUY filter
-            result = await list_orders(
+            result = list_orders(
                 asset_id=None,
                 order_type=OrderType.MARKET_BUY,
                 limit=50,
@@ -186,8 +185,8 @@ class TestListOrders:
                 user_dao=mock_user_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_list_orders_with_pagination(
+
+    def test_list_orders_with_pagination(
         self,
         mock_current_user,
         mock_order_dao,
@@ -203,7 +202,7 @@ class TestListOrders:
             mock_order_dao.get_orders_by_user.return_value = mock_orders
 
             # Test the function with limit=2 and offset=1
-            result = await list_orders(
+            result = list_orders(
                 asset_id=None,
                 order_type=None,
                 limit=2,
@@ -231,8 +230,8 @@ class TestListOrders:
                 user_dao=mock_user_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_list_orders_with_combined_filters(
+
+    def test_list_orders_with_combined_filters(
         self,
         mock_current_user,
         mock_order_dao,
@@ -248,7 +247,7 @@ class TestListOrders:
             mock_order_dao.get_orders_by_user.return_value = mock_orders
 
             # Test the function with both asset and order type filters
-            result = await list_orders(
+            result = list_orders(
                 asset_id="BTC",
                 order_type=OrderType.MARKET_BUY,
                 limit=50,
@@ -274,8 +273,8 @@ class TestListOrders:
                 user_dao=mock_user_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_list_orders_empty_result(
+
+    def test_list_orders_empty_result(
         self,
         mock_current_user,
         mock_order_dao,
@@ -291,7 +290,7 @@ class TestListOrders:
             mock_order_dao.get_orders_by_user.return_value = []
 
             # Test the function
-            result = await list_orders(
+            result = list_orders(
                 asset_id=None,
                 order_type=None,
                 limit=50,
@@ -311,8 +310,8 @@ class TestListOrders:
             # Verify logging
             mock_logger.info.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_list_orders_has_more_true(
+
+    def test_list_orders_has_more_true(
         self,
         mock_current_user,
         mock_order_dao,
@@ -339,7 +338,7 @@ class TestListOrders:
             mock_order_dao.get_orders_by_user.return_value = many_orders
 
             # Test the function with limit=50
-            result = await list_orders(
+            result = list_orders(
                 asset_id=None,
                 order_type=None,
                 limit=50,
@@ -355,8 +354,8 @@ class TestListOrders:
             assert len(result.data) == 50
             assert result.has_more is True  # 50 orders = limit of 50
 
-    @pytest.mark.asyncio
-    async def test_list_orders_unexpected_error(
+
+    def test_list_orders_unexpected_error(
         self,
         mock_current_user,
         mock_order_dao,
@@ -372,7 +371,7 @@ class TestListOrders:
 
             # Test that the exception is raised
             with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
-                await list_orders(
+                list_orders(
                     asset_id=None,
                     order_type=None,
                     limit=50,
@@ -386,8 +385,8 @@ class TestListOrders:
             # Verify logging
             mock_logger.error.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_list_orders_logging_and_metrics(
+
+    def test_list_orders_logging_and_metrics(
         self,
         mock_current_user,
         mock_order_dao,
@@ -404,7 +403,7 @@ class TestListOrders:
             mock_order_dao.get_orders_by_user.return_value = mock_orders
 
             # Test the function
-            result = await list_orders(
+            result = list_orders(
                 asset_id=None,
                 order_type=None,
                 limit=50,

@@ -699,56 +699,60 @@ class TestBusinessValidators:
         result = validate_role_permissions("user", "admin")
         assert result is None  # pass statement returns None
 
-    @pytest.mark.asyncio
-    async def test_validate_sufficient_balance_sufficient_funds(self):
-        """Test sufficient balance validation when user has enough funds"""
-        mock_balance_dao = Mock()
-        mock_balance = Mock()
-        mock_balance.current_balance = 1000.0
-        mock_balance_dao.get_balance.return_value = mock_balance
+def test_validate_sufficient_balance_success():
+    """Test successful balance validation"""
+    mock_balance_dao = MagicMock()
+    mock_balance = MagicMock()
+    mock_balance.current_balance = 1000.0
+    mock_balance_dao.get_balance.return_value = mock_balance
+    
+    result = validate_sufficient_balance("testuser", 500.0, mock_balance_dao)
+    
+    assert result is True
+    mock_balance_dao.get_balance.assert_called_once_with("testuser")
 
-        result = await validate_sufficient_balance("user123", 500.0, mock_balance_dao)
-        assert result is True
-        mock_balance_dao.get_balance.assert_called_once_with("user123")
+def test_validate_sufficient_balance_insufficient():
+    """Test insufficient balance validation"""
+    mock_balance_dao = MagicMock()
+    mock_balance = MagicMock()
+    mock_balance.current_balance = 100.0
+    mock_balance_dao.get_balance.return_value = mock_balance
+    
+    with pytest.raises(UserValidationException) as exc_info:
+        validate_sufficient_balance("testuser", 500.0, mock_balance_dao)
+    
+    assert "Insufficient balance" in str(exc_info.value)
+    assert "Current balance: $100.0" in str(exc_info.value)
+    assert "Required: $500.0" in str(exc_info.value)
 
-    @pytest.mark.asyncio
-    async def test_validate_sufficient_balance_insufficient_funds(self):
-        """Test sufficient balance validation when user doesn't have enough funds"""
-        mock_balance_dao = Mock()
-        mock_balance = Mock()
-        mock_balance.current_balance = 100.0
-        mock_balance_dao.get_balance.return_value = mock_balance
+def test_validate_sufficient_balance_exact():
+    """Test exact balance validation"""
+    mock_balance_dao = MagicMock()
+    mock_balance = MagicMock()
+    mock_balance.current_balance = 500.0
+    mock_balance_dao.get_balance.return_value = mock_balance
+    
+    result = validate_sufficient_balance("testuser", 500.0, mock_balance_dao)
+    
+    assert result is True
 
-        with pytest.raises(UserValidationException, match="Insufficient balance. Current balance: \\$100\\.0, Required: \\$500\\.0"):
-            await validate_sufficient_balance("user123", 500.0, mock_balance_dao)
+def test_validate_sufficient_balance_user_not_found():
+    """Test balance validation when user not found"""
+    mock_balance_dao = MagicMock()
+    mock_balance_dao.get_balance.return_value = None
+    
+    with pytest.raises(UserValidationException) as exc_info:
+        validate_sufficient_balance("testuser", 500.0, mock_balance_dao)
+    
+    assert "User balance not found" in str(exc_info.value)
 
-    @pytest.mark.asyncio
-    async def test_validate_sufficient_balance_no_balance_found(self):
-        """Test sufficient balance validation when user balance is not found"""
-        mock_balance_dao = Mock()
-        mock_balance_dao.get_balance.return_value = None
-
-        with pytest.raises(UserValidationException, match="User balance not found"):
-            await validate_sufficient_balance("user123", 100.0, mock_balance_dao)
-
-    @pytest.mark.asyncio
-    async def test_validate_sufficient_balance_exact_amount(self):
-        """Test sufficient balance validation when amount equals current balance"""
-        mock_balance_dao = Mock()
-        mock_balance = Mock()
-        mock_balance.current_balance = 100.0
-        mock_balance_dao.get_balance.return_value = mock_balance
-
-        result = await validate_sufficient_balance("user123", 100.0, mock_balance_dao)
-        assert result is True
-
-    @pytest.mark.asyncio
-    async def test_validate_sufficient_balance_zero_amount(self):
-        """Test sufficient balance validation with zero amount"""
-        mock_balance_dao = Mock()
-        mock_balance = Mock()
-        mock_balance.current_balance = 100.0  # Set a positive balance
-        mock_balance_dao.get_balance.return_value = mock_balance
-
-        result = await validate_sufficient_balance("user123", 0.0, mock_balance_dao)
-        assert result is True
+def test_validate_sufficient_balance_zero_amount():
+    """Test balance validation with zero amount"""
+    mock_balance_dao = MagicMock()
+    mock_balance = MagicMock()
+    mock_balance.current_balance = 100.0
+    mock_balance_dao.get_balance.return_value = mock_balance
+    
+    result = validate_sufficient_balance("testuser", 0.0, mock_balance_dao)
+    
+    assert result is True

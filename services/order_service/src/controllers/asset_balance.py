@@ -90,7 +90,7 @@ def get_real_market_data(asset_dao: AssetDAO, asset_id: str) -> dict:
         }
     }
 )
-async def get_user_asset_balances(
+def get_user_asset_balances(
     request: Request,
     current_user: dict = Depends(get_current_user),
     asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency),
@@ -185,7 +185,7 @@ async def get_user_asset_balances(
         }
     }
 )
-async def get_user_asset_balance(
+def get_user_asset_balance(
     asset_id: str,
     request: Request,
     current_user: dict = Depends(get_current_user),

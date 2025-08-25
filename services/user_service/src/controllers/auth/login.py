@@ -51,7 +51,7 @@ router = APIRouter(tags=["authentication"])
         }
     }
 )
-async def login_user(
+def login_user(
     login_data: UserLoginRequest,
     user_dao=Depends(get_user_dao)
 ) -> LoginSuccessResponse:

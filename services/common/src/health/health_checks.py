@@ -56,7 +56,7 @@ class HealthChecker:
         self.environment = environment or os.getenv("ENVIRONMENT", "development")
         self.response = HealthCheckResponse(service_name, version, self.environment)
 
-    async def basic_health_check(self) -> Dict[str, Any]:
+    def basic_health_check(self) -> Dict[str, Any]:
         """
         Basic health check for Kubernetes liveness probe
 
@@ -71,7 +71,7 @@ class HealthChecker:
             }
         }
 
-    async def readiness_check(self) -> Dict[str, Any]:
+    def readiness_check(self) -> Dict[str, Any]:
         """
         Readiness check for Kubernetes readiness probe
 
@@ -80,7 +80,7 @@ class HealthChecker:
         """
         try:
             # Test database connection
-            db_healthy = await get_database_health()
+            db_healthy = get_database_health()
 
             if not db_healthy:
                 raise HTTPException(
@@ -107,7 +107,7 @@ class HealthChecker:
                 detail="Service not ready"
             )
 
-    async def liveness_check(self) -> Dict[str, Any]:
+    def liveness_check(self) -> Dict[str, Any]:
         """
         Liveness check for Kubernetes liveness probe
 
@@ -123,7 +123,7 @@ class HealthChecker:
             }
         }
 
-    async def database_health_check(self) -> Dict[str, Any]:
+    def database_health_check(self) -> Dict[str, Any]:
         """
         Database connectivity health check
 
@@ -131,7 +131,7 @@ class HealthChecker:
         Useful for monitoring and debugging database issues.
         """
         try:
-            db_status = await get_database_health()
+            db_status = get_database_health()
 
             if not db_status:
                 raise HTTPException(
@@ -174,7 +174,7 @@ def create_health_checker(service_name: str, version: str = "1.0.0") -> HealthCh
     return HealthChecker(service_name, version)
 
 
-async def get_database_health() -> bool:
+def get_database_health() -> bool:
     """
     Check database health status
 
@@ -183,7 +183,7 @@ async def get_database_health() -> bool:
     """
     try:
         # Test DynamoDB connection
-        health_ok = await dynamodb_manager.health_check()
+        health_ok = dynamodb_manager.health_check()
         return health_ok
     except Exception as e:
         logger.warning(f"Database health check failed: {e}")

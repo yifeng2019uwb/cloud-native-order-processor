@@ -89,12 +89,12 @@ class TestAssetTransactionController:
         with patch('src.controllers.asset_transaction.validate_order_history_business_rules') as mock:
             yield mock
 
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_success(self, mock_request, mock_current_user,
+
+    def test_get_asset_transactions_success(self, mock_request, mock_current_user,
                                                  mock_asset_transaction_dao, mock_asset_dao,
                                                  mock_user_dao, mock_validate_order_history_business_rules):
         """Test successful retrieval of asset transactions"""
-        result = await get_asset_transactions(
+        result = get_asset_transactions(
             asset_id="BTC",
             limit=50,
             offset=0,
@@ -140,8 +140,8 @@ class TestAssetTransactionController:
         assert transaction2.price == Decimal("46000.00")
         assert transaction2.status == "COMPLETED"
 
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_with_limit_reached(self, mock_request, mock_current_user,
+
+    def test_get_asset_transactions_with_limit_reached(self, mock_request, mock_current_user,
                                                            mock_asset_transaction_dao, mock_asset_dao,
                                                            mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions when limit is reached (has_more=True)"""
@@ -159,7 +159,7 @@ class TestAssetTransactionController:
 
         mock_asset_transaction_dao.get_user_asset_transactions.return_value = mock_transactions
 
-        result = await get_asset_transactions(
+        result = get_asset_transactions(
             asset_id="BTC",
             limit=50,
             offset=0,
@@ -173,12 +173,12 @@ class TestAssetTransactionController:
         assert result.has_more is True  # 50 == 50, so has_more should be True
         assert len(result.data) == 50
 
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_with_custom_limit_and_offset(self, mock_request, mock_current_user,
+
+    def test_get_asset_transactions_with_custom_limit_and_offset(self, mock_request, mock_current_user,
                                                                      mock_asset_transaction_dao, mock_asset_dao,
                                                                      mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions with custom limit and offset"""
-        result = await get_asset_transactions(
+        result = get_asset_transactions(
             asset_id="BTC",
             limit=10,
             offset=20,
@@ -198,9 +198,7 @@ class TestAssetTransactionController:
         assert len(result.data) == 2
 
 
-
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_entity_not_found(self, mock_request, mock_current_user,
+    def test_get_asset_transactions_entity_not_found(self, mock_request, mock_current_user,
                                                          mock_asset_transaction_dao, mock_asset_dao,
                                                          mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions with entity not found exception"""
@@ -208,7 +206,7 @@ class TestAssetTransactionController:
 
         mock_asset_transaction_dao.get_user_asset_transactions.side_effect = EntityNotFoundException("Not found")
 
-        result = await get_asset_transactions(
+        result = get_asset_transactions(
             asset_id="BTC",
             limit=50,
             offset=0,
@@ -225,8 +223,8 @@ class TestAssetTransactionController:
         assert len(result.data) == 0
         assert result.has_more is False
 
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_database_error(self, mock_request, mock_current_user,
+
+    def test_get_asset_transactions_database_error(self, mock_request, mock_current_user,
                                                        mock_asset_transaction_dao, mock_asset_dao,
                                                        mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions with database operation exception"""
@@ -235,7 +233,7 @@ class TestAssetTransactionController:
         mock_asset_transaction_dao.get_user_asset_transactions.side_effect = DatabaseOperationException("DB error")
 
         with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
-            await get_asset_transactions(
+             get_asset_transactions(
                 asset_id="BTC",
                 limit=50,
                 offset=0,
@@ -246,8 +244,8 @@ class TestAssetTransactionController:
                 user_dao=mock_user_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_unexpected_error(self, mock_request, mock_current_user,
+
+    def test_get_asset_transactions_unexpected_error(self, mock_request, mock_current_user,
                                                          mock_asset_transaction_dao, mock_asset_dao,
                                                          mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions with unexpected exception"""
@@ -256,7 +254,7 @@ class TestAssetTransactionController:
         mock_asset_transaction_dao.get_user_asset_transactions.side_effect = Exception("Unexpected error")
 
         with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
-            await get_asset_transactions(
+            get_asset_transactions(
                 asset_id="BTC",
                 limit=50,
                 offset=0,
@@ -267,14 +265,14 @@ class TestAssetTransactionController:
                 user_dao=mock_user_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_empty_result(self, mock_request, mock_current_user,
+
+    def test_get_asset_transactions_empty_result(self, mock_request, mock_current_user,
                                                      mock_asset_transaction_dao, mock_asset_dao,
                                                      mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions with empty result"""
         mock_asset_transaction_dao.get_user_asset_transactions.return_value = []
 
-        result = await get_asset_transactions(
+        result = get_asset_transactions(
             asset_id="BTC",
             limit=50,
             offset=0,
@@ -289,8 +287,8 @@ class TestAssetTransactionController:
         assert len(result.data) == 0
         assert result.has_more is False
 
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_with_different_asset(self, mock_request, mock_current_user,
+
+    def test_get_asset_transactions_with_different_asset(self, mock_request, mock_current_user,
                                                              mock_asset_transaction_dao, mock_asset_dao,
                                                              mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions with different asset ID"""
@@ -305,7 +303,7 @@ class TestAssetTransactionController:
 
         mock_asset_transaction_dao.get_user_asset_transactions.return_value = [mock_eth_transaction]
 
-        result = await get_asset_transactions(
+        result = get_asset_transactions(
             asset_id="ETH",
             limit=50,
             offset=0,
@@ -325,13 +323,13 @@ class TestAssetTransactionController:
         assert eth_transaction.quantity == Decimal("10.0")
         assert eth_transaction.price == Decimal("3000.00")
 
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_logging(self, mock_request, mock_current_user,
+
+    def test_get_asset_transactions_logging(self, mock_request, mock_current_user,
                                                 mock_asset_transaction_dao, mock_asset_dao,
                                                 mock_user_dao, mock_validate_order_history_business_rules):
         """Test that logging is performed correctly in get_asset_transactions"""
         with patch('src.controllers.asset_transaction.logger') as mock_logger:
-            await get_asset_transactions(
+            get_asset_transactions(
                 asset_id="BTC",
                 limit=50,
                 offset=0,
@@ -349,8 +347,8 @@ class TestAssetTransactionController:
             success_calls = [call[0][0] for call in mock_logger.info.call_args_list]
             assert any("Asset transactions retrieved successfully" in call for call in success_calls)
 
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_error_logging(self, mock_request, mock_current_user,
+
+    def test_get_asset_transactions_error_logging(self, mock_request, mock_current_user,
                                                       mock_asset_transaction_dao, mock_asset_dao,
                                                       mock_user_dao, mock_validate_order_history_business_rules):
         """Test that error logging is performed correctly in get_asset_transactions"""
@@ -360,7 +358,7 @@ class TestAssetTransactionController:
 
         with patch('src.controllers.asset_transaction.logger') as mock_logger:
             try:
-                await get_asset_transactions(
+                get_asset_transactions(
                     asset_id="BTC",
                     limit=50,
                     offset=0,
@@ -380,8 +378,8 @@ class TestAssetTransactionController:
             error_calls = [call[0][0] for call in mock_logger.error.call_args_list]
             assert any("Database operation failed for asset transactions" in call for call in error_calls)
 
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_with_high_precision_values(self, mock_request, mock_current_user,
+
+    def test_get_asset_transactions_with_high_precision_values(self, mock_request, mock_current_user,
                                                                    mock_asset_transaction_dao, mock_asset_dao,
                                                                    mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions with high precision quantity and price"""
@@ -396,7 +394,7 @@ class TestAssetTransactionController:
 
         mock_asset_transaction_dao.get_user_asset_transactions.return_value = [mock_precise_transaction]
 
-        result = await get_asset_transactions(
+        result = get_asset_transactions(
             asset_id="BTC",
             limit=50,
             offset=0,
@@ -414,8 +412,8 @@ class TestAssetTransactionController:
         assert precise_transaction.quantity == Decimal("1.12345678")
         assert precise_transaction.price == Decimal("45000.12345")
 
-    @pytest.mark.asyncio
-    async def test_get_asset_transactions_with_different_statuses(self, mock_request, mock_current_user,
+
+    def test_get_asset_transactions_with_different_statuses(self, mock_request, mock_current_user,
                                                                 mock_asset_transaction_dao, mock_asset_dao,
                                                                 mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions with different transaction statuses"""
@@ -438,7 +436,7 @@ class TestAssetTransactionController:
 
         mock_asset_transaction_dao.get_user_asset_transactions.return_value = [mock_pending_transaction, mock_failed_transaction]
 
-        result = await get_asset_transactions(
+        result = get_asset_transactions(
             asset_id="BTC",
             limit=50,
             offset=0,

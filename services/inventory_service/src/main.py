@@ -190,7 +190,7 @@ async def root():
 
 # Main health check (API layer only - NO database calls)
 @app.get("/health")
-async def main_health_check():
+def main_health_check():
     """Main application health check - API layer only, no database access"""
     try:
         health_status = {
@@ -219,6 +219,33 @@ async def main_health_check():
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         raise HTTPException(status_code=503, detail="Service unhealthy")
+
+
+# Additional health check endpoints using common health checker
+try:
+    from common.health import HealthChecker
+    
+    # Create inventory service health checker instance
+    health_checker = HealthChecker("inventory-service", "1.0.0")
+    
+    @app.get("/health/ready", status_code=200)
+    def readiness_check():
+        """Readiness check endpoint for Kubernetes readiness probe."""
+        return health_checker.readiness_check()
+    
+    @app.get("/health/live", status_code=200)
+    def liveness_check():
+        """Liveness check endpoint for Kubernetes liveness probe."""
+        return health_checker.liveness_check()
+    
+    @app.get("/health/db", status_code=200)
+    def database_health_check():
+        """Database health check endpoint."""
+        return health_checker.database_health_check()
+        
+    logger.info("✅ Common health check endpoints loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Common health check endpoints not available: {e}")
 
 
 # Enhanced startup event

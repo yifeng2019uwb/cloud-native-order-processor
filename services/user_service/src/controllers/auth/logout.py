@@ -40,7 +40,8 @@ router = APIRouter(tags=["authentication"])
         }
     }
 )
-async def logout_user(
+
+def logout_user(
     logout_data: LogoutRequest,
     current_user = Depends(get_current_user)
 ) -> LogoutSuccessResponse:
@@ -70,7 +71,7 @@ async def logout_user(
 
 
 @router.get("/logout/debug", status_code=status.HTTP_200_OK)
-async def logout_debug(
+def logout_debug(
     current_user = Depends(get_current_user)
 ):
     """Debug endpoint to test token verification and user lookup"""

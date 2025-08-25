@@ -53,7 +53,7 @@ router = APIRouter(tags=["balance"])
         }
     }
 )
-async def get_user_transactions(
+def get_user_transactions(
     current_user: UserResponse = Depends(get_current_user),
     balance_dao = Depends(get_balance_dao)
 ) -> TransactionListResponse:

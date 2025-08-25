@@ -304,8 +304,7 @@ class TestDynamoDBIntegration:
         'AWS_REGION': 'us-west-2'
     })
     @patch('src.database.dynamodb_connection.boto3.Session')
-    @pytest.mark.asyncio
-    async def test_end_to_end_connection_flow(self, mock_boto3_session):
+    def test_end_to_end_connection_flow(self, mock_boto3_session):
         mock_session = MagicMock()
         mock_resource = MagicMock()
         mock_users_table = MagicMock()

@@ -65,7 +65,7 @@ router = APIRouter(tags=["portfolio"])
         }
     }
 )
-async def get_user_portfolio(
+def get_user_portfolio(
     username: str,
     request: Request,
     current_user: dict = Depends(get_current_user),

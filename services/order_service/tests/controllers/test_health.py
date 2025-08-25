@@ -2,7 +2,7 @@
 Unit tests for src/controllers/health.py - Health check controller
 """
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 from fastapi import HTTPException, status
 from datetime import datetime, timezone
 import os
@@ -18,10 +18,9 @@ from controllers.health import (
 class TestHealthFunctions:
     """Test individual health functions"""
 
-    @pytest.mark.asyncio
-    async def test_basic_health_check_success(self):
+    def test_basic_health_check_success(self):
         """Test successful basic health check"""
-        result = await basic_health_check()
+        result = basic_health_check()
 
         assert result["status"] == "healthy"
         assert result["service"] == "order-service"
@@ -32,10 +31,9 @@ class TestHealthFunctions:
         assert result["checks"]["api"] == "ok"
         assert result["checks"]["service"] == "running"
 
-    @pytest.mark.asyncio
-    async def test_readiness_check_success(self):
+    def test_readiness_check_success(self):
         """Test successful readiness check"""
-        result = await readiness_check()
+        result = readiness_check()
 
         assert result["status"] == "ready"
         assert result["service"] == "order-service"
@@ -44,10 +42,9 @@ class TestHealthFunctions:
         assert result["checks"]["api"] == "ok"
         assert result["checks"]["service"] == "ready"
 
-    @pytest.mark.asyncio
-    async def test_liveness_check_success(self):
+    def test_liveness_check_success(self):
         """Test successful liveness check"""
-        result = await liveness_check()
+        result = liveness_check()
 
         assert result["status"] == "alive"
         assert result["service"] == "order-service"

@@ -54,7 +54,7 @@ router = APIRouter(tags=["orders"])
         }
     }
 )
-async def list_orders(
+def list_orders(
     asset_id: Optional[str] = Query(None, description="Filter by asset ID"),
     order_type: Optional[OrderType] = Query(None, description="Filter by order type"),
     limit: int = Query(50, ge=1, le=100, description="Maximum number of orders to return"),

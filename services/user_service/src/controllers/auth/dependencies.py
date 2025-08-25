@@ -13,7 +13,7 @@ from common.database import get_user_dao as get_common_user_dao
 logger = logging.getLogger(__name__)
 
 
-async def verify_gateway_headers(
+def verify_gateway_headers(
     request: Request,
     x_source: Optional[str] = Header(None, alias="X-Source"),
     x_auth_service: Optional[str] = Header(None, alias="X-Auth-Service"),

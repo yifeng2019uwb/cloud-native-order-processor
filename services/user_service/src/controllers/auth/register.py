@@ -68,7 +68,7 @@ router = APIRouter(tags=["register"])
         }
     }
 )
-async def register_user(
+def register_user(
     user_data: UserRegistrationRequest,
     request: Request,
     user_dao = Depends(get_user_dao),

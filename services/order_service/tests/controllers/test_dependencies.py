@@ -210,13 +210,12 @@ class TestDependencies:
                 asset_transaction_dao=mock_asset_transaction_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_success(self):
+    def test_get_current_user_success(self):
         """Test get_current_user with valid Gateway headers"""
         # Mock request and headers
         mock_request = Mock()
 
-        result = await get_current_user(
+        result = get_current_user(
             request=mock_request,
             x_source="gateway",
             x_auth_service="auth-service",
@@ -227,13 +226,12 @@ class TestDependencies:
         assert result["username"] == "testuser"
         assert result["role"] == "customer"
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_no_credentials(self):
+    def test_get_current_user_no_credentials(self):
         """Test get_current_user with missing user ID header"""
         mock_request = Mock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(
+            get_current_user(
                 request=mock_request,
                 x_source="gateway",
                 x_auth_service="auth-service",
@@ -244,13 +242,12 @@ class TestDependencies:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert exc_info.value.detail == "User authentication required"
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_invalid_source(self):
+    def test_get_current_user_invalid_source(self):
         """Test get_current_user with invalid source header"""
         mock_request = Mock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(
+            get_current_user(
                 request=mock_request,
                 x_source="invalid-source",
                 x_auth_service="auth-service",
@@ -261,13 +258,12 @@ class TestDependencies:
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert exc_info.value.detail == "Invalid request source"
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_invalid_auth_service(self):
+    def test_get_current_user_invalid_auth_service(self):
         """Test get_current_user with invalid auth service header"""
         mock_request = Mock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(
+            get_current_user(
                 request=mock_request,
                 x_source="gateway",
                 x_auth_service="invalid-service",
@@ -278,13 +274,12 @@ class TestDependencies:
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert exc_info.value.detail == "Invalid authentication service"
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_missing_source_header(self):
+    def test_get_current_user_missing_source_header(self):
         """Test get_current_user with missing source header"""
         mock_request = Mock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(
+            get_current_user(
                 request=mock_request,
                 x_source=None,
                 x_auth_service="auth-service",
@@ -295,13 +290,12 @@ class TestDependencies:
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert exc_info.value.detail == "Invalid request source"
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_missing_auth_service_header(self):
+    def test_get_current_user_missing_auth_service_header(self):
         """Test get_current_user with missing auth service header"""
         mock_request = Mock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(
+            get_current_user(
                 request=mock_request,
                 x_source="gateway",
                 x_auth_service=None,
@@ -312,12 +306,11 @@ class TestDependencies:
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert exc_info.value.detail == "Invalid authentication service"
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_default_role(self):
+    def test_get_current_user_default_role(self):
         """Test get_current_user with default role when not provided"""
         mock_request = Mock()
 
-        result = await get_current_user(
+        result = get_current_user(
             request=mock_request,
             x_source="gateway",
             x_auth_service="auth-service",
@@ -424,13 +417,13 @@ class TestDependencies:
 
         mock_asset_dao.get_asset_by_id.assert_called_once_with("BTC")
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_logging_success(self):
+
+    def test_get_current_user_logging_success(self):
         """Test that logging is performed correctly in get_current_user success case"""
         with patch('src.controllers.dependencies.logger') as mock_logger:
             mock_request = Mock()
 
-            result = await get_current_user(
+            result = get_current_user(
                 request=mock_request,
                 x_source="gateway",
                 x_auth_service="auth-service",
@@ -441,14 +434,14 @@ class TestDependencies:
             # Verify logging was called
             mock_logger.info.assert_called_once_with("User authenticated via Gateway: testuser")
 
-    @pytest.mark.asyncio
-    async def test_get_current_user_logging_failure(self):
+
+    def test_get_current_user_logging_failure(self):
         """Test that logging is performed correctly in get_current_user failure case"""
         with patch('src.controllers.dependencies.logger') as mock_logger:
             mock_request = Mock()
 
             with pytest.raises(HTTPException):
-                await get_current_user(
+                get_current_user(
                     request=mock_request,
                     x_source="invalid-source",
                     x_auth_service="auth-service",

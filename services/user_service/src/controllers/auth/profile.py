@@ -56,7 +56,8 @@ from common.entities.user import UserResponse
         }
     }
 )
-async def get_profile(
+
+def get_profile(
     current_user: UserResponse = Depends(get_current_user)
 ) -> UserProfileResponse:
     """Get current user profile (requires JWT token)"""
@@ -105,7 +106,7 @@ async def get_profile(
         }
     }
 )
-async def update_profile(
+def update_profile(
     profile_data: UserProfileUpdateRequest,
     current_user: UserResponse = Depends(get_current_user),
     user_dao = Depends(get_user_dao)

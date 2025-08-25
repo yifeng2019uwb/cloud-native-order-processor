@@ -66,12 +66,11 @@ class TestGetUserTransactions:
 
         return transactions
 
-    @pytest.mark.asyncio
-    async def test_get_transactions_success(self, mock_current_user, mock_balance_dao, sample_transactions):
+    def test_get_transactions_success(self, mock_current_user, mock_balance_dao, sample_transactions):
         """Test successful retrieval of transactions"""
         mock_balance_dao.get_user_transactions.return_value = (sample_transactions, 3)
 
-        result = await get_user_transactions(
+        result = get_user_transactions(
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -100,12 +99,11 @@ class TestGetUserTransactions:
 
         mock_balance_dao.get_user_transactions.assert_called_once_with("testuser123")
 
-    @pytest.mark.asyncio
-    async def test_get_transactions_empty_list(self, mock_current_user, mock_balance_dao):
+    def test_get_transactions_empty_list(self, mock_current_user, mock_balance_dao):
         """Test retrieval when user has no transactions"""
         mock_balance_dao.get_user_transactions.return_value = (None, 0)
 
-        result = await get_user_transactions(
+        result = get_user_transactions(
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -113,12 +111,11 @@ class TestGetUserTransactions:
         assert len(result.transactions) == 0
         assert result.total_count == 0
 
-    @pytest.mark.asyncio
-    async def test_get_transactions_empty_list_from_dao(self, mock_current_user, mock_balance_dao):
+    def test_get_transactions_empty_list_from_dao(self, mock_current_user, mock_balance_dao):
         """Test retrieval when DAO returns empty list"""
         mock_balance_dao.get_user_transactions.return_value = ([], 0)
 
-        result = await get_user_transactions(
+        result = get_user_transactions(
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -126,19 +123,17 @@ class TestGetUserTransactions:
         assert len(result.transactions) == 0
         assert result.total_count == 0
 
-    @pytest.mark.asyncio
-    async def test_get_transactions_exception_handling(self, mock_current_user, mock_balance_dao):
+    def test_get_transactions_exception_handling(self, mock_current_user, mock_balance_dao):
         """Test exception handling during transaction retrieval"""
         mock_balance_dao.get_user_transactions.side_effect = Exception("Database error")
 
         with pytest.raises(InternalServerException, match="Failed to get transactions: Database error"):
-            await get_user_transactions(
+            get_user_transactions(
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_transactions_single_transaction(self, mock_current_user, mock_balance_dao):
+    def test_get_transactions_single_transaction(self, mock_current_user, mock_balance_dao):
         """Test retrieval of single transaction"""
         from common.entities.user import BalanceTransaction
         from common.entities.user.balance_enums import TransactionType, TransactionStatus
@@ -152,7 +147,7 @@ class TestGetUserTransactions:
 
         mock_balance_dao.get_user_transactions.return_value = ([single_transaction], 1)
 
-        result = await get_user_transactions(
+        result = get_user_transactions(
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -161,8 +156,7 @@ class TestGetUserTransactions:
         assert result.total_count == 1
         assert result.transactions[0].transaction_id == "txn_single"
 
-    @pytest.mark.asyncio
-    async def test_get_transactions_large_list(self, mock_current_user, mock_balance_dao):
+    def test_get_transactions_large_list(self, mock_current_user, mock_balance_dao):
         """Test retrieval of large transaction list"""
         from common.entities.user import BalanceTransaction
         from common.entities.user.balance_enums import TransactionType, TransactionStatus
@@ -180,7 +174,7 @@ class TestGetUserTransactions:
 
         mock_balance_dao.get_user_transactions.return_value = (large_transactions, 10)
 
-        result = await get_user_transactions(
+        result = get_user_transactions(
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )

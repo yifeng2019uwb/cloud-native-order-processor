@@ -147,12 +147,12 @@ class TestAssetBalanceController:
         assert result["current_price"] == 0.0
         mock_asset_dao.get_asset_by_id.assert_called_once_with("BTC")
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balances_success(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balances_success(self, mock_request, mock_current_user,
                                                    mock_asset_balance_dao, mock_user_dao,
                                                    mock_asset_dao, mock_validate_user_permissions):
         """Test successful retrieval of all asset balances"""
-        result = await get_user_asset_balances(
+        result = get_user_asset_balances(
             request=mock_request,
             current_user=mock_current_user,
             asset_balance_dao=mock_asset_balance_dao,
@@ -183,8 +183,8 @@ class TestAssetBalanceController:
         assert balance_data.current_price == 45000.50
         assert balance_data.total_value == 67500.75  # 1.5 * 45000.50
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balances_database_error(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balances_database_error(self, mock_request, mock_current_user,
                                                          mock_asset_balance_dao, mock_user_dao,
                                                          mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balances with database operation exception"""
@@ -193,7 +193,7 @@ class TestAssetBalanceController:
         mock_asset_balance_dao.get_all_asset_balances.side_effect = DatabaseOperationException("DB error")
 
         with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
-            await get_user_asset_balances(
+            get_user_asset_balances(
                 request=mock_request,
                 current_user=mock_current_user,
                 asset_balance_dao=mock_asset_balance_dao,
@@ -201,8 +201,8 @@ class TestAssetBalanceController:
                 asset_dao=mock_asset_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balances_unexpected_error(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balances_unexpected_error(self, mock_request, mock_current_user,
                                                            mock_asset_balance_dao, mock_user_dao,
                                                            mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balances with unexpected exception"""
@@ -211,7 +211,7 @@ class TestAssetBalanceController:
         mock_asset_balance_dao.get_all_asset_balances.side_effect = Exception("Unexpected error")
 
         with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
-            await get_user_asset_balances(
+            get_user_asset_balances(
                 request=mock_request,
                 current_user=mock_current_user,
                 asset_balance_dao=mock_asset_balance_dao,
@@ -219,12 +219,12 @@ class TestAssetBalanceController:
                 asset_dao=mock_asset_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balance_success(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balance_success(self, mock_request, mock_current_user,
                                                  mock_asset_balance_dao, mock_user_dao,
                                                  mock_asset_dao, mock_validate_user_permissions):
         """Test successful retrieval of specific asset balance"""
-        result = await get_user_asset_balance(
+        result = get_user_asset_balance(
             asset_id="BTC",
             request=mock_request,
             current_user=mock_current_user,
@@ -253,8 +253,8 @@ class TestAssetBalanceController:
         assert result.data.current_price == 45000.50
         assert result.data.total_value == 67500.75
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balance_not_found(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balance_not_found(self, mock_request, mock_current_user,
                                                    mock_asset_balance_dao, mock_user_dao,
                                                    mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balance with entity not found exception"""
@@ -263,7 +263,7 @@ class TestAssetBalanceController:
         mock_asset_balance_dao.get_asset_balance.side_effect = EntityNotFoundException("Not found")
 
         with pytest.raises(AssetNotFoundException, match="Asset balance for BTC not found"):
-            await get_user_asset_balance(
+            get_user_asset_balance(
                 asset_id="BTC",
                 request=mock_request,
                 current_user=mock_current_user,
@@ -272,8 +272,8 @@ class TestAssetBalanceController:
                 asset_dao=mock_asset_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balance_database_error(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balance_database_error(self, mock_request, mock_current_user,
                                                         mock_asset_balance_dao, mock_user_dao,
                                                         mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balance with database operation exception"""
@@ -282,7 +282,7 @@ class TestAssetBalanceController:
         mock_asset_balance_dao.get_asset_balance.side_effect = DatabaseOperationException("DB error")
 
         with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
-            await get_user_asset_balance(
+            get_user_asset_balance(
                 asset_id="BTC",
                 request=mock_request,
                 current_user=mock_current_user,
@@ -291,8 +291,8 @@ class TestAssetBalanceController:
                 asset_dao=mock_asset_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balance_unexpected_error(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balance_unexpected_error(self, mock_request, mock_current_user,
                                                           mock_asset_balance_dao, mock_user_dao,
                                                           mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balance with unexpected exception"""
@@ -301,7 +301,7 @@ class TestAssetBalanceController:
         mock_asset_balance_dao.get_asset_balance.side_effect = Exception("Unexpected error")
 
         with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
-            await get_user_asset_balance(
+            get_user_asset_balance(
                 asset_id="BTC",
                 request=mock_request,
                 current_user=mock_current_user,
@@ -310,8 +310,8 @@ class TestAssetBalanceController:
                 asset_dao=mock_asset_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balances_multiple_assets(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balances_multiple_assets(self, mock_request, mock_current_user,
                                                           mock_asset_balance_dao, mock_user_dao,
                                                           mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balances with multiple assets"""
@@ -340,7 +340,7 @@ class TestAssetBalanceController:
             mock_eth_asset  # ETH
         ]
 
-        result = await get_user_asset_balances(
+        result = get_user_asset_balances(
             request=mock_request,
             current_user=mock_current_user,
             asset_balance_dao=mock_asset_balance_dao,
@@ -362,14 +362,14 @@ class TestAssetBalanceController:
         assert eth_data.asset_name == "Ethereum"
         assert eth_data.total_value == 30000.00
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balances_empty_list(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balances_empty_list(self, mock_request, mock_current_user,
                                                      mock_asset_balance_dao, mock_user_dao,
                                                      mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balances with no assets"""
         mock_asset_balance_dao.get_all_asset_balances.return_value = []
 
-        result = await get_user_asset_balances(
+        result = get_user_asset_balances(
             request=mock_request,
             current_user=mock_current_user,
             asset_balance_dao=mock_asset_balance_dao,
@@ -380,8 +380,8 @@ class TestAssetBalanceController:
         assert result.success is True
         assert len(result.data) == 0
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balance_with_zero_price(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balance_with_zero_price(self, mock_request, mock_current_user,
                                                          mock_asset_balance_dao, mock_user_dao,
                                                          mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balance with asset having zero price"""
@@ -392,7 +392,7 @@ class TestAssetBalanceController:
 
         mock_asset_dao.get_asset_by_id.return_value = mock_zero_price_asset
 
-        result = await get_user_asset_balance(
+        result = get_user_asset_balance(
             asset_id="ZERO",
             request=mock_request,
             current_user=mock_current_user,
@@ -404,8 +404,8 @@ class TestAssetBalanceController:
         assert result.data.current_price == 0.0
         assert result.data.total_value == 0.0
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balance_with_high_precision_quantity(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balance_with_high_precision_quantity(self, mock_request, mock_current_user,
                                                                       mock_asset_balance_dao, mock_user_dao,
                                                                       mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balance with high precision quantity"""
@@ -418,7 +418,7 @@ class TestAssetBalanceController:
 
         mock_asset_balance_dao.get_asset_balance.return_value = mock_precise_balance
 
-        result = await get_user_asset_balance(
+        result = get_user_asset_balance(
             asset_id="BTC",
             request=mock_request,
             current_user=mock_current_user,
@@ -454,13 +454,13 @@ class TestAssetBalanceController:
         assert result["asset_name"] == "NOPRICE"
         assert result["current_price"] == 0.0
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balances_logging(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balances_logging(self, mock_request, mock_current_user,
                                                   mock_asset_balance_dao, mock_user_dao,
                                                   mock_asset_dao, mock_validate_user_permissions):
         """Test that logging is performed correctly in get_user_asset_balances"""
         with patch('src.controllers.asset_balance.logger') as mock_logger:
-            await get_user_asset_balances(
+            get_user_asset_balances(
                 request=mock_request,
                 current_user=mock_current_user,
                 asset_balance_dao=mock_asset_balance_dao,
@@ -475,13 +475,13 @@ class TestAssetBalanceController:
             success_calls = [call[0][0] for call in mock_logger.info.call_args_list]
             assert any("Asset balances retrieved successfully" in call for call in success_calls)
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balance_logging(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balance_logging(self, mock_request, mock_current_user,
                                                  mock_asset_balance_dao, mock_user_dao,
                                                  mock_asset_dao, mock_validate_user_permissions):
         """Test that logging is performed correctly in get_user_asset_balance"""
         with patch('src.controllers.asset_balance.logger') as mock_logger:
-            await get_user_asset_balance(
+            get_user_asset_balance(
                 asset_id="BTC",
                 request=mock_request,
                 current_user=mock_current_user,
@@ -497,8 +497,8 @@ class TestAssetBalanceController:
             success_calls = [call[0][0] for call in mock_logger.info.call_args_list]
             assert any("Asset balance retrieved successfully" in call for call in success_calls)
 
-    @pytest.mark.asyncio
-    async def test_get_user_asset_balance_error_logging(self, mock_request, mock_current_user,
+
+    def test_get_user_asset_balance_error_logging(self, mock_request, mock_current_user,
                                                        mock_asset_balance_dao, mock_user_dao,
                                                        mock_asset_dao, mock_validate_user_permissions):
         """Test that error logging is performed correctly in get_user_asset_balance"""
@@ -508,7 +508,7 @@ class TestAssetBalanceController:
 
         with patch('src.controllers.asset_balance.logger') as mock_logger:
             try:
-                await get_user_asset_balance(
+                get_user_asset_balance(
                     asset_id="BTC",
                     request=mock_request,
                     current_user=mock_current_user,

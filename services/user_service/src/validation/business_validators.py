@@ -172,7 +172,7 @@ def validate_role_permissions(user_role: str, required_role: str) -> bool:
     pass
 
 
-async def validate_sufficient_balance(username: str, amount: float, balance_dao: Any) -> bool:
+def validate_sufficient_balance(username: str, amount: float, balance_dao: Any) -> bool:
     """
     Validate that user has sufficient balance for withdrawal
 

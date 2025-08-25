@@ -15,7 +15,7 @@ router = APIRouter(tags=["health"])
 class UserServiceHealthChecker(HealthChecker):
     """User service health checker"""
 
-    async def readiness_check(self) -> Dict[str, Any]:
+    def readiness_check(self) -> Dict[str, Any]:
         """
         Readiness check for Kubernetes readiness probe
 
@@ -35,30 +35,30 @@ health_checker = UserServiceHealthChecker("user-auth-service", "1.0.0")
 
 
 @router.get("/health", status_code=status.HTTP_200_OK)
-async def basic_health_check():
+def basic_health_check():
     """
     Basic health check endpoint for Kubernetes liveness probe
 
     This is a lightweight check that only verifies the service is running.
     """
-    return await health_checker.basic_health_check()
+    return health_checker.basic_health_check()
 
 
 @router.get("/health/ready", status_code=status.HTTP_200_OK)
-async def readiness_check():
+def readiness_check():
     """
     Readiness check endpoint for Kubernetes readiness probe
 
     This checks if the service is ready to receive traffic.
     """
-    return await health_checker.readiness_check()
+    return health_checker.readiness_check()
 
 
 @router.get("/health/live", status_code=status.HTTP_200_OK)
-async def liveness_check():
+def liveness_check():
     """
     Liveness check endpoint for Kubernetes liveness probe
 
     This checks if the service is alive and responding.
     """
-    return await health_checker.liveness_check()
+    return health_checker.liveness_check()

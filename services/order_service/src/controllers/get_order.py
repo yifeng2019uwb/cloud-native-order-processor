@@ -57,7 +57,7 @@ router = APIRouter(tags=["orders"])
         }
     }
 )
-async def get_order(
+def get_order(
     order_id: str,
     current_user: dict = Depends(get_current_user),
     order_dao: OrderDAO = Depends(get_order_dao_dependency),

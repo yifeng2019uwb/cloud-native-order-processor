@@ -68,7 +68,7 @@ router = APIRouter(tags=["asset-transactions"])
         }
     }
 )
-async def get_asset_transactions(
+def get_asset_transactions(
     asset_id: str,
     limit: int = 50,
     offset: int = 0,

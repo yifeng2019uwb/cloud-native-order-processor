@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 import pytest
 from decimal import Decimal
 from datetime import datetime, timezone
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 from botocore.exceptions import ClientError
 
 from src.dao.order.order_dao import OrderDAO
@@ -118,8 +118,7 @@ class TestOrderDAO:
         assert 'GSI-PK' in item
         assert 'GSI-SK' in item
 
-    @pytest.mark.asyncio
-    async def test_create_order_already_exists(self, order_dao, sample_order):
+    def test_create_order_already_exists(self, order_dao, sample_order):
         """Test order creation when order already exists"""
         # The DAO doesn't check for existing orders, so this test should pass
         # Business validation should be handled at the service layer
@@ -129,8 +128,7 @@ class TestOrderDAO:
             result = order_dao.create_order(sample_order)
             assert result == sample_order
 
-    @pytest.mark.asyncio
-    async def test_create_order_database_error(self, order_dao, sample_order, mock_db_connection):
+    def test_create_order_database_error(self, order_dao, sample_order, mock_db_connection):
         """Test order creation with database error"""
         order_dao.order_exists = Mock(return_value=False)
         mock_db_connection.orders_table.put_item.side_effect = ClientError(
@@ -173,8 +171,7 @@ class TestOrderDAO:
         with pytest.raises(OrderNotFoundException):
             order_dao.get_order("nonexistent_order")
 
-    @pytest.mark.asyncio
-    async def test_get_order_database_error(self, order_dao, mock_db_connection):
+    def test_get_order_database_error(self, order_dao, mock_db_connection):
         """Test order retrieval with database error"""
         mock_db_connection.orders_table.get_item.side_effect = ClientError(
             {'Error': {'Code': 'InternalServerError', 'Message': 'Internal server error'}},
@@ -233,8 +230,7 @@ class TestOrderDAO:
         with pytest.raises(DatabaseOperationException):
             order_dao.update_order("nonexistent_order", update_data)
 
-    @pytest.mark.asyncio
-    async def test_update_order_database_error(self, order_dao, sample_order, mock_db_connection):
+    def test_update_order_database_error(self, order_dao, sample_order, mock_db_connection):
         """Test order update with database error"""
         mock_db_connection.orders_table.update_item.side_effect = ClientError(
             {'Error': {'Code': 'InternalServerError', 'Message': 'Internal server error'}},
@@ -309,8 +305,7 @@ class TestOrderDAO:
         call_args = mock_db_connection.orders_table.query.call_args[1]
         assert call_args['Limit'] == 10
 
-    @pytest.mark.asyncio
-    async def test_get_orders_by_user_database_error(self, order_dao, mock_db_connection):
+    def test_get_orders_by_user_database_error(self, order_dao, mock_db_connection):
         """Test retrieval of user orders with database error"""
         mock_db_connection.orders_table.query.side_effect = ClientError(
             {'Error': {'Code': 'InternalServerError', 'Message': 'Internal server error'}},
@@ -350,8 +345,7 @@ class TestOrderDAO:
         assert call_args['IndexName'] == 'UserOrdersIndex'
         # Don't check ExpressionAttributeValues as they may not be set
 
-    @pytest.mark.asyncio
-    async def test_get_orders_by_user_and_asset_database_error(self, order_dao, mock_db_connection):
+    def test_get_orders_by_user_and_asset_database_error(self, order_dao, mock_db_connection):
         """Test retrieval of user orders for specific asset with database error"""
         mock_db_connection.orders_table.query.side_effect = ClientError(
             {'Error': {'Code': 'InternalServerError', 'Message': 'Internal server error'}},
@@ -457,8 +451,7 @@ class TestOrderDAO:
         assert result.order_id == "order_123"
         assert result.status == OrderStatus.COMPLETED
 
-    @pytest.mark.asyncio
-    async def test_update_order_status_database_error(self, order_dao, sample_order):
+    def test_update_order_status_database_error(self, order_dao, sample_order):
         """Test order status update with database error"""
         with patch.object(order_dao, 'update_order') as mock_update:
             mock_update.side_effect = DatabaseOperationException("Database error")
@@ -492,8 +485,7 @@ class TestOrderDAO:
             ProjectionExpression='order_id'
         )
 
-    @pytest.mark.asyncio
-    async def test_order_exists_database_error(self, order_dao, mock_db_connection):
+    def test_order_exists_database_error(self, order_dao, mock_db_connection):
         """Test order exists check with database error"""
         mock_db_connection.orders_table.get_item.side_effect = ClientError(
             {'Error': {'Code': 'InternalServerError', 'Message': 'Internal server error'}},

@@ -10,8 +10,7 @@ from datetime import date, timedelta
 from common.exceptions.shared_exceptions import EntityAlreadyExistsException
 from common.exceptions.shared_exceptions import UserValidationException
 
-@pytest.mark.asyncio
-async def test_register_success():
+def test_register_success():
     from uuid import uuid4
 
     mock_user_dao = MagicMock()
@@ -41,12 +40,11 @@ async def test_register_success():
         "token_type": "bearer",
         "expires_in": 3600
     }
-    result = await register_user(reg_data, request=mock_request, user_dao=mock_user_dao, balance_dao=mock_balance_dao)
+    result = register_user(reg_data, request=mock_request, user_dao=mock_user_dao, balance_dao=mock_balance_dao)
     assert result.message == "User registered successfully"
     assert result.success is True
 
-@pytest.mark.asyncio
-async def test_register_username_exists():
+def test_register_username_exists():
     mock_user_dao = MagicMock()
     mock_user_dao.get_user_by_username = MagicMock(return_value=MagicMock())
     mock_user_dao.get_user_by_email = MagicMock(return_value=None)
@@ -62,11 +60,10 @@ async def test_register_username_exists():
         phone="+1-555-123-4567"
     )
     with pytest.raises(UserAlreadyExistsException) as exc_info:
-        await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
+        register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
     assert "Username 'newuser' already exists" in exc_info.value.message
 
-@pytest.mark.asyncio
-async def test_register_email_exists():
+def test_register_email_exists():
     mock_user_dao = MagicMock()
     mock_user_dao.get_user_by_username = MagicMock(return_value=None)
     mock_user_dao.get_user_by_email = MagicMock(return_value=MagicMock())
@@ -82,11 +79,10 @@ async def test_register_email_exists():
         phone="+1-555-123-4567"
     )
     with pytest.raises(UserAlreadyExistsException) as exc_info:
-        await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
+        register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
     assert "Email 'newuser@example.com' already exists" in exc_info.value.message
 
-@pytest.mark.asyncio
-async def test_register_validation_error():
+def test_register_validation_error():
     mock_user_dao = MagicMock()
     mock_user_dao.get_user_by_username = MagicMock(return_value=None)
     mock_user_dao.get_user_by_email = MagicMock(return_value=None)
@@ -103,7 +99,7 @@ async def test_register_validation_error():
         phone="+1-555-123-4567"
     )
     with pytest.raises(InternalServerException) as exc_info:
-        await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
+        register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
     assert "EntityAlreadyExistsException: Some validation error" in str(exc_info.value)
 
 @pytest.mark.asyncio

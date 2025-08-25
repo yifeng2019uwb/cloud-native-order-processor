@@ -150,13 +150,11 @@ class TestPortfolioController:
             yield mock
 
 
-
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_success(self, mock_request, mock_current_user,
+    def test_get_user_portfolio_success(self, mock_request, mock_current_user,
                                             mock_balance_dao, mock_asset_balance_dao,
                                             mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test successful retrieval of user portfolio"""
-        result = await get_user_portfolio(
+        result = get_user_portfolio(
             username="testuser",
             request=mock_request,
             current_user=mock_current_user,
@@ -215,15 +213,15 @@ class TestPortfolioController:
         assert 62.0 < btc_percentage < 63.0  # 67500/107500 ≈ 62.79%
         assert 27.0 < eth_percentage < 28.0  # 30000/107500 ≈ 27.91%
 
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_unauthorized_access(self, mock_request, mock_current_user,
+
+    def test_get_user_portfolio_unauthorized_access(self, mock_request, mock_current_user,
                                                         mock_balance_dao, mock_asset_balance_dao,
                                                         mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_portfolio with unauthorized access attempt"""
         from src.controllers.portfolio import UserValidationException
 
         with pytest.raises(UserValidationException, match="You can only view your own portfolio"):
-            await get_user_portfolio(
+            get_user_portfolio(
                 username="otheruser",  # Different username
                 request=mock_request,
                 current_user=mock_current_user,
@@ -233,15 +231,15 @@ class TestPortfolioController:
                 asset_dao=mock_asset_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_no_usd_balance(self, mock_request, mock_current_user,
+
+    def test_get_user_portfolio_no_usd_balance(self, mock_request, mock_current_user,
                                                     mock_balance_dao, mock_asset_balance_dao,
                                                     mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_portfolio when user has no USD balance"""
         # Mock no USD balance
         mock_balance_dao.get_balance.return_value = None
 
-        result = await get_user_portfolio(
+        result = get_user_portfolio(
             username="testuser",
             request=mock_request,
             current_user=mock_current_user,
@@ -257,15 +255,15 @@ class TestPortfolioController:
         assert portfolio_data["usd_balance"] == Decimal("0")
         assert portfolio_data["total_portfolio_value"] == Decimal("97500.00")  # Only asset value
 
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_no_assets(self, mock_request, mock_current_user,
+
+    def test_get_user_portfolio_no_assets(self, mock_request, mock_current_user,
                                                mock_balance_dao, mock_asset_balance_dao,
                                                mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_portfolio when user has no assets"""
         # Mock no asset balances
         mock_asset_balance_dao.get_all_asset_balances.return_value = []
 
-        result = await get_user_portfolio(
+        result = get_user_portfolio(
             username="testuser",
             request=mock_request,
             current_user=mock_current_user,
@@ -283,8 +281,8 @@ class TestPortfolioController:
         assert portfolio_data["total_asset_value"] == Decimal("0")
         assert portfolio_data["total_portfolio_value"] == Decimal("10000.00")  # Only USD balance
 
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_zero_total_value(self, mock_request, mock_current_user,
+
+    def test_get_user_portfolio_zero_total_value(self, mock_request, mock_current_user,
                                                      mock_balance_dao, mock_asset_balance_dao,
                                                      mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_portfolio when total portfolio value is zero"""
@@ -292,7 +290,7 @@ class TestPortfolioController:
         mock_balance_dao.get_balance.return_value = None
         mock_asset_balance_dao.get_all_asset_balances.return_value = []
 
-        result = await get_user_portfolio(
+        result = get_user_portfolio(
             username="testuser",
             request=mock_request,
             current_user=mock_current_user,
@@ -311,8 +309,8 @@ class TestPortfolioController:
         assets = portfolio_data["assets"]
         assert len(assets) == 0
 
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_database_error(self, mock_request, mock_current_user,
+
+    def test_get_user_portfolio_database_error(self, mock_request, mock_current_user,
                                                     mock_balance_dao, mock_asset_balance_dao,
                                                     mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_portfolio with database operation exception"""
@@ -321,7 +319,7 @@ class TestPortfolioController:
         mock_balance_dao.get_balance.side_effect = DatabaseOperationException("DB error")
 
         with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
-            await get_user_portfolio(
+            get_user_portfolio(
                 username="testuser",
                 request=mock_request,
                 current_user=mock_current_user,
@@ -331,8 +329,8 @@ class TestPortfolioController:
                 asset_dao=mock_asset_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_unexpected_error(self, mock_request, mock_current_user,
+
+    def test_get_user_portfolio_unexpected_error(self, mock_request, mock_current_user,
                                                      mock_balance_dao, mock_asset_balance_dao,
                                                      mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_portfolio with unexpected exception"""
@@ -341,7 +339,7 @@ class TestPortfolioController:
         mock_balance_dao.get_balance.side_effect = Exception("Unexpected error")
 
         with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
-            await get_user_portfolio(
+            get_user_portfolio(
                 username="testuser",
                 request=mock_request,
                 current_user=mock_current_user,
@@ -351,8 +349,8 @@ class TestPortfolioController:
                 asset_dao=mock_asset_dao
             )
 
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_with_high_precision_values(self, mock_request, mock_current_user,
+
+    def test_get_user_portfolio_with_high_precision_values(self, mock_request, mock_current_user,
                                                                mock_balance_dao, mock_asset_balance_dao,
                                                                mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_portfolio with high precision quantity and price values"""
@@ -376,7 +374,7 @@ class TestPortfolioController:
 
         mock_asset_dao.get_asset_by_id.side_effect = mock_get_asset_by_id_precise
 
-        result = await get_user_portfolio(
+        result = get_user_portfolio(
             username="testuser",
             request=mock_request,
             current_user=mock_current_user,
@@ -400,13 +398,13 @@ class TestPortfolioController:
         expected_market_value = Decimal("1.12345678") * Decimal("45000.12345")
         assert btc_asset.market_value == expected_market_value
 
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_logging(self, mock_request, mock_current_user,
+
+    def test_get_user_portfolio_logging(self, mock_request, mock_current_user,
                                             mock_balance_dao, mock_asset_balance_dao,
                                             mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test that logging is performed correctly in get_user_portfolio"""
         with patch('src.controllers.portfolio.logger') as mock_logger:
-            await get_user_portfolio(
+            get_user_portfolio(
                 username="testuser",
                 request=mock_request,
                 current_user=mock_current_user,
@@ -423,14 +421,14 @@ class TestPortfolioController:
             success_calls = [call[0][0] for call in mock_logger.info.call_args_list]
             assert any("Portfolio retrieved successfully" in call for call in success_calls)
 
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_unauthorized_logging(self, mock_request, mock_current_user,
+
+    def test_get_user_portfolio_unauthorized_logging(self, mock_request, mock_current_user,
                                                          mock_balance_dao, mock_asset_balance_dao,
                                                          mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test that unauthorized access logging is performed correctly"""
         with patch('src.controllers.portfolio.logger') as mock_logger:
             try:
-                await get_user_portfolio(
+                get_user_portfolio(
                     username="otheruser",
                     request=mock_request,
                     current_user=mock_current_user,
@@ -449,8 +447,8 @@ class TestPortfolioController:
             warning_calls = [call[0][0] for call in mock_logger.warning.call_args_list]
             assert any("Unauthorized portfolio access attempt" in call for call in warning_calls)
 
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_error_logging(self, mock_request, mock_current_user,
+
+    def test_get_user_portfolio_error_logging(self, mock_request, mock_current_user,
                                                   mock_balance_dao, mock_asset_balance_dao,
                                                   mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test that error logging is performed correctly in get_user_portfolio"""
@@ -460,7 +458,7 @@ class TestPortfolioController:
 
         with patch('src.controllers.portfolio.logger') as mock_logger:
             try:
-                await get_user_portfolio(
+                get_user_portfolio(
                     username="testuser",
                     request=mock_request,
                     current_user=mock_current_user,
@@ -479,8 +477,8 @@ class TestPortfolioController:
             error_calls = [call[0][0] for call in mock_logger.error.call_args_list]
             assert any("Database operation failed for portfolio" in call for call in error_calls)
 
-    @pytest.mark.asyncio
-    async def test_get_user_portfolio_with_single_asset(self, mock_request, mock_current_user,
+
+    def test_get_user_portfolio_with_single_asset(self, mock_request, mock_current_user,
                                                       mock_balance_dao, mock_asset_balance_dao,
                                                       mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_portfolio with single asset (100% allocation)"""
@@ -494,7 +492,7 @@ class TestPortfolioController:
         # Mock zero USD balance to make asset 100% of portfolio
         mock_balance_dao.get_balance.return_value = None
 
-        result = await get_user_portfolio(
+        result = get_user_portfolio(
             username="testuser",
             request=mock_request,
             current_user=mock_current_user,

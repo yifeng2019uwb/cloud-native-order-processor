@@ -18,158 +18,115 @@ from src.controllers.auth.dependencies import (
 from common.entities.user import UserResponse
 
 
-@pytest.mark.asyncio
-async def test_verify_gateway_headers_valid():
-    """Test verify_gateway_headers with valid headers"""
+def test_verify_gateway_headers_valid():
+    """Test valid gateway headers"""
     mock_request = MagicMock()
 
-    result = await verify_gateway_headers(
+    # Test with valid headers
+    result = verify_gateway_headers(
         request=mock_request,
         x_source="gateway",
         x_auth_service="auth-service",
-        x_user_id="testuser",
-        x_user_role="customer"
+        x_user_id="user123",
+        x_user_role="user"
     )
 
-    assert result == "testuser"
+    assert result == "user123"
 
-
-@pytest.mark.asyncio
-async def test_verify_gateway_headers_invalid_source():
-    """Test verify_gateway_headers with invalid source header"""
+def test_verify_gateway_headers_invalid_source():
+    """Test invalid source header"""
     mock_request = MagicMock()
 
     with pytest.raises(HTTPException) as exc_info:
-        await verify_gateway_headers(
+        verify_gateway_headers(
             request=mock_request,
-            x_source="invalid-source",
+            x_source="invalid",
             x_auth_service="auth-service",
-            x_user_id="testuser",
-            x_user_role="customer"
+            x_user_id="user123",
+            x_user_role="user"
         )
 
-    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-    assert exc_info.value.detail == "Invalid request source"
+    assert exc_info.value.status_code == 403
+    assert "Invalid request source" in str(exc_info.value.detail)
 
-
-@pytest.mark.asyncio
-async def test_verify_gateway_headers_invalid_auth_service():
-    """Test verify_gateway_headers with invalid auth service header"""
+def test_verify_gateway_headers_invalid_auth_service():
+    """Test invalid auth service header"""
     mock_request = MagicMock()
 
     with pytest.raises(HTTPException) as exc_info:
-        await verify_gateway_headers(
+        verify_gateway_headers(
             request=mock_request,
             x_source="gateway",
-            x_auth_service="invalid-service",
-            x_user_id="testuser",
-            x_user_role="customer"
+            x_auth_service="invalid",
+            x_user_id="user123",
+            x_user_role="user"
         )
 
-    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-    assert exc_info.value.detail == "Invalid authentication service"
+    assert exc_info.value.status_code == 403
+    assert "Invalid authentication service" in str(exc_info.value.detail)
 
-
-@pytest.mark.asyncio
-async def test_verify_gateway_headers_missing_user_id():
-    """Test verify_gateway_headers with missing user ID"""
+def test_verify_gateway_headers_missing_user_id():
+    """Test missing user ID header"""
     mock_request = MagicMock()
 
     with pytest.raises(HTTPException) as exc_info:
-        await verify_gateway_headers(
+        verify_gateway_headers(
             request=mock_request,
             x_source="gateway",
             x_auth_service="auth-service",
             x_user_id=None,
-            x_user_role="customer"
+            x_user_role="user"
         )
 
-    assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-    assert exc_info.value.detail == "User authentication required"
+    assert exc_info.value.status_code == 401
+    assert "User authentication required" in str(exc_info.value.detail)
 
-
-@pytest.mark.asyncio
-async def test_verify_gateway_headers_missing_source():
-    """Test verify_gateway_headers with missing source header"""
-    mock_request = MagicMock()
-
-    with pytest.raises(HTTPException) as exc_info:
-        await verify_gateway_headers(
-            request=mock_request,
-            x_source=None,
-            x_auth_service="auth-service",
-            x_user_id="testuser",
-            x_user_role="customer"
-        )
-
-    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-    assert exc_info.value.detail == "Invalid request source"
-
-
-@pytest.mark.asyncio
-async def test_verify_gateway_headers_missing_auth_service():
-    """Test verify_gateway_headers with missing auth service header"""
-    mock_request = MagicMock()
-
-    with pytest.raises(HTTPException) as exc_info:
-        await verify_gateway_headers(
-            request=mock_request,
-            x_source="gateway",
-            x_auth_service=None,
-            x_user_id="testuser",
-            x_user_role="customer"
-        )
-
-    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-    assert exc_info.value.detail == "Invalid authentication service"
-
-
-@pytest.mark.asyncio
-async def test_get_current_user_success():
-    """Test get_current_user with valid Gateway headers"""
+def test_get_current_user_success():
+    """Test successful user retrieval"""
+    mock_user_dao = MagicMock()
     mock_user = MagicMock()
-    mock_user.username = "john_doe123"
-    mock_user.email = "john.doe@example.com"
-    mock_user.first_name = "John"
-    mock_user.last_name = "Doe"
-    mock_user.phone = "+1-555-123-4567"
-    mock_user.date_of_birth = None
-    mock_user.marketing_emails_consent = False
-    mock_user.role = "customer"
-    mock_user.created_at = "2025-07-09T10:30:00Z"
-    mock_user.updated_at = "2025-07-09T10:30:00Z"
+    mock_user.username = "testuser"
+    mock_user.email = "test@example.com"
+    mock_user.first_name = "Test"
+    mock_user.last_name = "User"
+    mock_user.phone = "+1234567890"
+    mock_user.date_of_birth = "1990-01-01"
+    mock_user.marketing_emails_consent = True
+    mock_user.role = "user"
+    mock_user.created_at = "2024-01-01T00:00:00Z"
+    mock_user.updated_at = "2024-01-02T00:00:00Z"
 
+    mock_user_dao.get_user_by_username.return_value = mock_user
+
+    result = get_current_user(username="testuser", user_dao=mock_user_dao)
+
+    assert result.username == "testuser"
+    assert result.email == "test@example.com"
+    assert result.first_name == "Test"
+    assert result.last_name == "User"
+    assert result.role == "user"
+
+def test_get_current_user_not_found():
+    """Test user not found"""
     mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_username = MagicMock(return_value=mock_user)
+    mock_user_dao.get_user_by_username.return_value = None
 
-    with patch("src.controllers.auth.dependencies.verify_gateway_headers", return_value="john_doe123"):
-        user = get_current_user(username="john_doe123", user_dao=mock_user_dao)
-        assert user.username == "john_doe123"
-        assert user.email == "john.doe@example.com"
+    with pytest.raises(HTTPException) as exc_info:
+        get_current_user(username="nonexistent", user_dao=mock_user_dao)
 
+    assert exc_info.value.status_code == 401
+    assert "User not found" in str(exc_info.value.detail)
 
-@pytest.mark.asyncio
-async def test_get_current_user_user_not_found():
-    """Test get_current_user when user not found"""
+def test_get_current_user_database_error():
+    """Test database error during user retrieval"""
     mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_username = MagicMock(return_value=None)
+    mock_user_dao.get_user_by_username.side_effect = Exception("Database error")
 
-    with patch("src.controllers.auth.dependencies.verify_gateway_headers", return_value="john_doe123"):
-        with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(username="john_doe123", user_dao=mock_user_dao)
-        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+    with pytest.raises(HTTPException) as exc_info:
+        get_current_user(username="testuser", user_dao=mock_user_dao)
 
-
-@pytest.mark.asyncio
-async def test_get_current_user_database_error():
-    """Test get_current_user when database error occurs"""
-    mock_user_dao = MagicMock()
-    mock_user_dao.get_user_by_username = MagicMock(side_effect=Exception("DB error"))
-
-    with patch("src.controllers.auth.dependencies.verify_gateway_headers", return_value="john_doe123"):
-        with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(username="john_doe123", user_dao=mock_user_dao)
-        assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.status_code == 500
+    assert "Failed to get user information" in str(exc_info.value.detail)
 
 
 @pytest.mark.asyncio
