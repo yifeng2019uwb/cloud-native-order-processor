@@ -37,11 +37,10 @@ class TestMainApp:
         assert app.version == "1.0.0"
 
 
-@pytest.mark.asyncio
 class TestRootEndpoint:
     """Test cases for the root endpoint to achieve full coverage."""
 
-    async def test_root_endpoint_response(self):
+    def test_root_endpoint_response(self):
         """Test root endpoint returns correct response structure."""
         from src.main import root
 
@@ -62,7 +61,7 @@ class TestRootEndpoint:
         assert response["environment"]["service"] == "auth-service"
         assert response["environment"]["environment"] == "development"
 
-    async def test_root_endpoint_logging(self):
+    def test_root_endpoint_logging(self):
         """Test that root endpoint logs correctly."""
         from src.main import root
 
@@ -72,7 +71,7 @@ class TestRootEndpoint:
             assert response is not None
             mock_logger.info.assert_called_once_with("Root endpoint accessed")
 
-    async def test_root_endpoint_timestamp_format(self):
+    def test_root_endpoint_timestamp_format(self):
         """Test that timestamp is in correct ISO format."""
         from src.main import root
 

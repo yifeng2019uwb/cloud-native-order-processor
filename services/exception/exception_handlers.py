@@ -156,13 +156,13 @@ def register_exception_handlers(app):
     configure_service_exceptions()
 
     @app.exception_handler(PydanticValidationError)
-    async def validation_exception_handler(request: Request, exc: PydanticValidationError):
+    def validation_exception_handler(request: Request, exc: PydanticValidationError):
         return handle_validation_error(request, exc)
 
     @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException):
+    def http_exception_handler(request: Request, exc: HTTPException):
         return handle_http_exception(request, exc)
 
     @app.exception_handler(Exception)
-    async def general_exception_handler(request: Request, exc: Exception):
+    def general_exception_handler(request: Request, exc: Exception):
         return handle_general_exception(request, exc)

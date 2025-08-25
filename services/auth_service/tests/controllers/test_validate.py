@@ -173,7 +173,7 @@ class TestValidateJWTTokenEndpoint:
             assert response.message == "Token validation failed"
             assert response.request_id == "test-req-error"
 
-    async def test_token_length_logging(self):
+    def test_token_length_logging(self):
         """Test that token length is logged correctly."""
         # Mock request data with specific token length
         long_token = "a" * 100  # 100 character token
@@ -201,7 +201,7 @@ class TestValidateJWTTokenEndpoint:
             assert response.valid is True
             assert response.user == "testuser"
 
-    async def test_processing_time_calculation(self):
+    def test_processing_time_calculation(self):
         """Test that processing time is calculated and included in logging."""
         # Mock request data
         request = ValidateTokenRequest(token="test.token", request_id="test-req-time")
@@ -228,7 +228,7 @@ class TestValidateJWTTokenEndpoint:
             assert response.valid is True
             # Processing time should be calculated (we can't easily test exact values due to timing)
 
-    async def test_user_context_extraction(self):
+    def test_user_context_extraction(self):
         """Test that all user context fields are properly extracted."""
         # Mock request data
         request = ValidateTokenRequest(token="test.token", request_id="test-req-context")
@@ -263,7 +263,7 @@ class TestValidateJWTTokenEndpoint:
             assert response.metadata == mock_user_context["metadata"]
             assert response.request_id == "test-req-context"
 
-    async def test_error_response_structure(self):
+    def test_error_response_structure(self):
         """Test that error responses have correct structure."""
         # Mock request data
         request = ValidateTokenRequest(token="error.token", request_id="test-req-error-struct")
