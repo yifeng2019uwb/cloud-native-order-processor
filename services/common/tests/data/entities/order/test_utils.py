@@ -13,7 +13,7 @@ from datetime import datetime, timezone, timedelta
 
 from src.data.entities.order.utils import OrderIdGenerator, OrderStatusManager, OrderValidationUtils, OrderBusinessRules, OrderStatusTransition
 from src.data.entities.order.enums import OrderType, OrderStatus
-from src.exceptions.shared_exceptions import CNOPOrderValidationException
+from src.exceptions import CNOPEntityValidationException
 
 
 class TestOrderIdGenerator:
@@ -89,14 +89,14 @@ class TestOrderIdGenerator:
         """Test parsing invalid order ID format."""
         invalid_id = "invalid_123"
 
-        with pytest.raises(CNOPOrderValidationException, match="Invalid order ID format"):
+        with pytest.raises(CNOPEntityValidationException, match="Invalid order ID format"):
             OrderIdGenerator.parse_order_id(invalid_id)
 
     def test_parse_order_id_insufficient_parts(self):
         """Test parsing order ID with insufficient parts."""
         invalid_id = "ord_123"
 
-        with pytest.raises(CNOPOrderValidationException, match="Invalid order ID format"):
+        with pytest.raises(CNOPEntityValidationException, match="Invalid order ID format"):
             OrderIdGenerator.parse_order_id(invalid_id)
 
     def test_parse_order_id_date_time_format(self):

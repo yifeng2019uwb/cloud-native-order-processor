@@ -12,7 +12,7 @@ from decimal import Decimal
 from pydantic import BaseModel, Field
 
 from .enums import OrderStatus, OrderType
-from ....exceptions.shared_exceptions import CNOPOrderValidationException
+from ....exceptions import CNOPEntityValidationException
 
 
 class OrderStatusTransition(BaseModel):
@@ -382,12 +382,12 @@ class OrderIdGenerator:
             Dictionary with parsed components
         """
         if not order_id.startswith(cls.ORDER_PREFIX):
-            raise CNOPOrderValidationException(f"Invalid order ID format: {order_id}")
+            raise CNOPEntityValidationException(f"Invalid order ID format: {order_id}")
 
         parts = order_id.split(cls.SEPARATOR)
 
         if len(parts) < 3:
-            raise CNOPOrderValidationException(f"Invalid order ID format: {order_id}")
+            raise CNOPEntityValidationException(f"Invalid order ID format: {order_id}")
 
         result = {
             "prefix": parts[0],
@@ -428,7 +428,7 @@ class OrderIdGenerator:
         try:
             cls.parse_order_id(order_id)
             return True
-        except CNOPOrderValidationException:
+        except CNOPEntityValidationException:
             return False
 
     @classmethod

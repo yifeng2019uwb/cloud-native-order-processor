@@ -14,7 +14,7 @@ from ...entities.order import Order, OrderUpdate
 from ...entities.order.enums import OrderStatus
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPOrderNotFoundException
-from ....exceptions.shared_exceptions import CNOPOrderValidationException
+from ....exceptions import CNOPEntityValidationException
 
 logger = logging.getLogger(__name__)
 

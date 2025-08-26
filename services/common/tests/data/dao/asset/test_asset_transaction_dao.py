@@ -171,7 +171,7 @@ class TestAssetTransactionDAO:
             'PutItem'
         )
 
-        with pytest.raises(CNOPTransactionNotFoundException):
+        with pytest.raises(CNOPDatabaseOperationException):
             asset_transaction_dao.create_asset_transaction(sample_transaction_create)
 
     def test_get_asset_transaction_success(self, asset_transaction_dao, sample_asset_transaction, mock_db_connection):

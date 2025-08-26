@@ -19,19 +19,11 @@ os.environ.setdefault('PYTHONUNBUFFERED', '1')
 os.environ.setdefault('TESTING', 'true')
 os.environ.setdefault('CI', 'true')
 
-# Add common package to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "common"))
+# Add src directory to path for absolute imports (src.auth.security.password_manager)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-# Add order-service src to path for order-service tests
-order_service_src = os.path.join(
-    os.path.dirname(__file__), "..", "order-service", "src"
-)
-if os.path.exists(order_service_src):
-    sys.path.insert(0, order_service_src)
-
-# Add services root to path
-services_root = os.path.join(os.path.dirname(__file__), "..")
-sys.path.insert(0, services_root)
+# Add current working directory to path for relative imports (..exceptions)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 @pytest.fixture(scope="session")

@@ -12,7 +12,7 @@ from ..base_dao import BaseDAO
 from ...entities.user import User, UserCreate, UserLogin
 from ...entities.user import DEFAULT_USER_ROLE
 from ....exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
-from ....security import PasswordManager
+from ....auth.security import PasswordManager
 
 
 logger = logging.getLogger(__name__)
