@@ -18,7 +18,7 @@ from api_models.shared.common import ErrorResponse
 from common.data.entities.user import UserResponse
 
 # Import dependencies
-from common.core.utils import get_transaction_manager
+from controllers.dependencies import get_transaction_manager
 from controllers.auth.dependencies import get_current_user
 
 # Import exceptions

@@ -83,6 +83,40 @@ Complete the remaining tasks for SEC-005 Phase 3 to fully implement the new head
 
 ---
 
+#### **LOGIC-003: Fix TransactionManager Factory Function**
+- **Component**: Common Package & User Service
+- **Type**: Bug Fix
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 To Do
+
+**Description**:
+The `get_transaction_manager()` factory function in `common.core.utils` is trying to create a `TransactionManager` instance without required DAO dependencies. The `TransactionManager` constructor requires 6 DAOs (`user_dao`, `balance_dao`, `order_dao`, `asset_dao`, `asset_balance_dao`, `asset_transaction_dao`), but the User Service only has access to `user_dao` and `balance_dao`.
+
+**Files**:
+- `services/common/src/core/utils/__init__.py` (get_transaction_manager function)
+- `services/common/src/core/utils/transaction_manager.py` (TransactionManager class)
+
+**Acceptance Criteria:**
+- [ ] Update `get_transaction_manager()` to accept DAO dependencies as parameters
+- [ ] Or create service-specific transaction manager factory functions
+- [ ] Or refactor TransactionManager to be more flexible with optional DAOs
+- [ ] Ensure User Service can use TransactionManager for balance operations
+
+**Technical Requirements:**
+- [ ] Factory function should accept required DAOs as parameters
+- [ ] User Service should be able to create TransactionManager with available DAOs
+- [ ] Maintain backward compatibility if possible
+
+**Dependencies**:
+- ✅ **Common Package Restructuring**: Completed
+- ✅ **User Service Import Updates**: Completed
+
+**Estimated Effort**: 1 day
+**Risk Level**: Medium (affects transaction operations)
+**Success Criteria**: User Service can successfully perform deposit/withdraw operations using TransactionManager
+
+---
+
 #### **LOGIC-001: Fix Exception Handling in Business Validators**
 - **Component**: User Service & Common Package
 - **Type**: Bug Fix

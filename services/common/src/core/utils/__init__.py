@@ -17,15 +17,10 @@ from .lock_manager import (
     LOCK_TIMEOUTS
 )
 
-def get_transaction_manager() -> TransactionManager:
-    """Factory function to get TransactionManager instance"""
-    return TransactionManager()
-
 __all__ = [
     # Transaction Manager
     "TransactionManager",
     "TransactionResult",
-    "get_transaction_manager",
 
     # Lock Manager
     "UserLock",

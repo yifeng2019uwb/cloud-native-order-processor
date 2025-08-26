@@ -22,7 +22,7 @@ from common.data.database import get_balance_dao
 from controllers.auth.dependencies import get_current_user
 
 # Import exceptions
-from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
+from common.exceptions.shared_exceptions import CNOPInternalServerException
 
 
 logger = logging.getLogger(__name__)

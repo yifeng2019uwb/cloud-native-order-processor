@@ -221,6 +221,11 @@ services:
       - SERVICE_PORT=8003
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
+      # Required environment variables for common package initialization
+      - USERS_TABLE=${USERS_TABLE:-order-processor-dev-users}
+      - ORDERS_TABLE=${ORDERS_TABLE:-order-processor-dev-orders}
+      - INVENTORY_TABLE=${INVENTORY_TABLE:-order-processor-dev-inventory}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
       # No Redis dependency for Auth Service (JWT validation only)
     volumes:
       - ~/.aws:/root/.aws:ro

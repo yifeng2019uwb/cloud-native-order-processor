@@ -1,4 +1,6 @@
-# Inventory Service Dockerfile - Following CNOP Standard Template
+# Standard Dockerfile Template for CNOP Python Services
+# Usage: Copy this file and replace SERVICE_NAME and SERVICE_PORT
+
 FROM python:3.11-slim
 
 # Set working directory
@@ -13,30 +15,30 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements first (for better caching)
 COPY services/common/requirements.txt ./common/
-COPY services/inventory_service/requirements.txt ./inventory_service/
+COPY services/SERVICE_NAME/requirements.txt ./SERVICE_NAME/
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r ./common/requirements.txt
-RUN pip install --no-cache-dir -r ./inventory_service/requirements.txt
+RUN pip install --no-cache-dir -r ./SERVICE_NAME/requirements.txt
 
 # Copy the common source directory
 COPY services/common/src ./common
 
-# Copy inventory service source code
-COPY services/inventory_service/src ./inventory_service/src
+# Copy service source code
+COPY services/SERVICE_NAME/src ./SERVICE_NAME/src
 
 # Set Python path to include the app directory for imports
 ENV PYTHONPATH="/app"
 
 # Set working directory to service src for proper imports
-WORKDIR /app/inventory_service/src
+WORKDIR /app/SERVICE_NAME/src
 
 # Expose port
-EXPOSE 8001
+EXPOSE SERVICE_PORT
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8001/health || exit 1
+    CMD curl -f http://localhost:SERVICE_PORT/health || exit 1
 
 # Run the application
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "SERVICE_PORT"]
