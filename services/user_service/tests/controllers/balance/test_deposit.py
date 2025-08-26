@@ -11,13 +11,13 @@ from fastapi.testclient import TestClient
 
 from src.controllers.balance.deposit import deposit_funds, router
 from src.api_models.balance.balance_models import DepositRequest, DepositResponse
-from common.entities.user import UserResponse
+from common.data.entities.user import UserResponse
 from common.exceptions import (
-    DatabaseOperationException,
-    EntityNotFoundException,
-    LockAcquisitionException
+    CNOPDatabaseOperationException,
+    CNOPEntityNotFoundException,
+    CNOPLockAcquisitionException
 )
-from user_exceptions import UserNotFoundException, InternalServerException
+from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
 
 
 class TestDepositFunds:
@@ -88,9 +88,9 @@ class TestDepositFunds:
     async def test_deposit_lock_acquisition_failure(self, mock_request, mock_current_user,
                                                   mock_transaction_manager, sample_deposit_request):
         """Test deposit when lock acquisition fails"""
-        mock_transaction_manager.deposit_funds.side_effect = LockAcquisitionException("Lock failed")
+        mock_transaction_manager.deposit_funds.side_effect = CNOPLockAcquisitionException("Lock failed")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             await deposit_funds(
                 deposit_data=sample_deposit_request,
                 request=mock_request,
@@ -102,9 +102,9 @@ class TestDepositFunds:
     async def test_deposit_user_balance_not_found(self, mock_request, mock_current_user,
                                                 mock_transaction_manager, sample_deposit_request):
         """Test deposit when user balance not found"""
-        mock_transaction_manager.deposit_funds.side_effect = EntityNotFoundException("Balance not found")
+        mock_transaction_manager.deposit_funds.side_effect = CNOPEntityNotFoundException("Balance not found")
 
-        with pytest.raises(UserNotFoundException, match="User balance not found"):
+        with pytest.raises(CNOPUserNotFoundException, match="User balance not found"):
             await deposit_funds(
                 deposit_data=sample_deposit_request,
                 request=mock_request,
@@ -116,9 +116,9 @@ class TestDepositFunds:
     async def test_deposit_database_operation_failure(self, mock_request, mock_current_user,
                                                     mock_transaction_manager, sample_deposit_request):
         """Test deposit when database operation fails"""
-        mock_transaction_manager.deposit_funds.side_effect = DatabaseOperationException("DB error")
+        mock_transaction_manager.deposit_funds.side_effect = CNOPDatabaseOperationException("DB error")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             await deposit_funds(
                 deposit_data=sample_deposit_request,
                 request=mock_request,
@@ -132,7 +132,7 @@ class TestDepositFunds:
         """Test deposit when unexpected exception occurs"""
         mock_transaction_manager.deposit_funds.side_effect = Exception("Unexpected error")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             await deposit_funds(
                 deposit_data=sample_deposit_request,
                 request=mock_request,

@@ -5,7 +5,7 @@ Path: services/user_service/src/user_exceptions/exceptions.py
 These exceptions are for user service business logic validation and are exposed to clients.
 """
 
-from common.exceptions import CNOPClientException
+from common.exceptions.base_exception import CNOPClientException
 
 
 class CNOPUserAlreadyExistsException(CNOPClientException):

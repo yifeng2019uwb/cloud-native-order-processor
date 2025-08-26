@@ -3,6 +3,11 @@ Exception Mapping Utilities
 
 Maps internal service-specific exceptions to external standardized exceptions
 for consistent error handling across all services.
+
+Updated for new Common Package structure:
+- All exceptions now use CNOP prefix (e.g., CNOPTokenExpiredException)
+- Imports updated to use new package paths
+- Backward compatibility maintained through aliases in common package
 """
 
 import logging
@@ -195,60 +200,58 @@ def configure_service_exceptions():
         # Import shared exceptions (mapped to external error codes)
         from common.exceptions.shared_exceptions import (
             # Authentication exceptions (shared)
-            InvalidCredentialsException,
-            TokenExpiredException,
-            TokenInvalidException,
+            CNOPInvalidCredentialsException,
+            CNOPTokenExpiredException,
+            CNOPTokenInvalidException,
 
             # Resource exceptions (shared)
-            EntityNotFoundException,
-            EntityAlreadyExistsException,
-            UserNotFoundException,
-            OrderNotFoundException,
-            AssetNotFoundException,
+            CNOPEntityNotFoundException,
+            CNOPEntityAlreadyExistsException,
+            CNOPUserNotFoundException,
+            CNOPOrderNotFoundException,
+            CNOPAssetNotFoundException,
 
             # Validation exceptions (shared)
-            EntityValidationException,
-            UserValidationException,
-            OrderValidationException,
-            AssetValidationException,
+            CNOPEntityValidationException,
+            # Note: UserValidationException, OrderValidationException, AssetValidationException
+            # are not in shared_exceptions - they may be service-specific
 
             # Authorization exceptions (shared)
-            AuthorizationException,
-            AccessDeniedException,
-            InsufficientPermissionsException,
+            CNOPAuthorizationException,
+            CNOPAccessDeniedException,
+            CNOPInsufficientPermissionsException,
 
             # Internal server exception (shared)
-            InternalServerException,
+            CNOPInternalServerException,
         )
 
         # Register authentication exceptions (shared)
-        exception_mapper.register_exception_mapping(InvalidCredentialsException, ErrorCode.AUTHENTICATION_FAILED)
-        exception_mapper.register_exception_mapping(TokenExpiredException, ErrorCode.AUTHENTICATION_FAILED)
-        exception_mapper.register_exception_mapping(TokenInvalidException, ErrorCode.AUTHENTICATION_FAILED)
+        exception_mapper.register_exception_mapping(CNOPInvalidCredentialsException, ErrorCode.AUTHENTICATION_FAILED)
+        exception_mapper.register_exception_mapping(CNOPTokenExpiredException, ErrorCode.AUTHENTICATION_FAILED)
+        exception_mapper.register_exception_mapping(CNOPTokenInvalidException, ErrorCode.AUTHENTICATION_FAILED)
 
         # Register authorization exceptions (shared)
-        exception_mapper.register_exception_mapping(AuthorizationException, ErrorCode.ACCESS_DENIED)
-        exception_mapper.register_exception_mapping(AccessDeniedException, ErrorCode.ACCESS_DENIED)
-        exception_mapper.register_exception_mapping(InsufficientPermissionsException, ErrorCode.ACCESS_DENIED)
+        exception_mapper.register_exception_mapping(CNOPAuthorizationException, ErrorCode.ACCESS_DENIED)
+        exception_mapper.register_exception_mapping(CNOPAccessDeniedException, ErrorCode.ACCESS_DENIED)
+        exception_mapper.register_exception_mapping(CNOPInsufficientPermissionsException, ErrorCode.ACCESS_DENIED)
 
         # Register resource exceptions (shared)
-        exception_mapper.register_exception_mapping(EntityNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
-        # UserNotFoundException is special - it can be either 404 (resource not found) or 401 (authentication failed)
+        exception_mapper.register_exception_mapping(CNOPEntityNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
+        # CNOPUserNotFoundException is special - it can be either 404 (resource not found) or 401 (authentication failed)
         # The context determines which one to use. For now, we'll use 404 as default, but services can override this.
-        exception_mapper.register_exception_mapping(UserNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
-        exception_mapper.register_exception_mapping(OrderNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
-        exception_mapper.register_exception_mapping(AssetNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
+        exception_mapper.register_exception_mapping(CNOPUserNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
+        exception_mapper.register_exception_mapping(CNOPOrderNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
+        exception_mapper.register_exception_mapping(CNOPAssetNotFoundException, ErrorCode.RESOURCE_NOT_FOUND)
 
-        exception_mapper.register_exception_mapping(EntityAlreadyExistsException, ErrorCode.RESOURCE_ALREADY_EXISTS)
+        exception_mapper.register_exception_mapping(CNOPEntityAlreadyExistsException, ErrorCode.RESOURCE_ALREADY_EXISTS)
 
         # Register validation exceptions (shared)
-        exception_mapper.register_exception_mapping(EntityValidationException, ErrorCode.VALIDATION_ERROR)
-        exception_mapper.register_exception_mapping(UserValidationException, ErrorCode.VALIDATION_ERROR)
-        exception_mapper.register_exception_mapping(OrderValidationException, ErrorCode.VALIDATION_ERROR)
-        exception_mapper.register_exception_mapping(AssetValidationException, ErrorCode.VALIDATION_ERROR)
+        exception_mapper.register_exception_mapping(CNOPEntityValidationException, ErrorCode.VALIDATION_ERROR)
+        # Note: UserValidationException, OrderValidationException, AssetValidationException
+        # are not in shared_exceptions - they may be service-specific
 
         # Register internal server exception (shared)
-        exception_mapper.register_exception_mapping(InternalServerException, ErrorCode.INTERNAL_SERVER_ERROR)
+        exception_mapper.register_exception_mapping(CNOPInternalServerException, ErrorCode.INTERNAL_SERVER_ERROR)
 
         # Import and register service-specific exceptions
         try:

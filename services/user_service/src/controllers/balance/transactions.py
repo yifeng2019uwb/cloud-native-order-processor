@@ -15,17 +15,15 @@ from api_models.balance import TransactionListResponse
 from api_models.shared.common import ErrorResponse
 
 # Import common DAO models
-from common.entities.user import UserResponse
+from common.data.entities.user import UserResponse
 
 # Import dependencies
-from common.database import get_balance_dao
+from common.data.database import get_balance_dao
 from controllers.auth.dependencies import get_current_user
 
 # Import exceptions
-from user_exceptions import (
-    UserNotFoundException,
-    InternalServerException
-)
+from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["balance"])
@@ -94,4 +92,4 @@ def get_user_transactions(
 
     except Exception as e:
         logger.error(f"Failed to get transactions for user {current_user.username}: {str(e)}", exc_info=True)
-        raise InternalServerException(f"Failed to get transactions: {str(e)}")
+        raise CNOPInternalServerException(f"Failed to get transactions: {str(e)}")

@@ -3,7 +3,7 @@ from fastapi import HTTPException, status
 from unittest.mock import AsyncMock, patch, MagicMock
 from controllers.auth.login import login_user
 from api_models.auth.login import UserLoginRequest
-from common.exceptions.shared_exceptions import InvalidCredentialsException, UserNotFoundException
+from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
 import pydantic
 
 def test_login_success():
@@ -35,7 +35,7 @@ def test_login_invalid_credentials():
     login_data = UserLoginRequest(username="testuser", password="ValidPass123!@#")
 
     # Test that the function raises the correct exception
-    with pytest.raises(InvalidCredentialsException) as exc_info:
+    with pytest.raises(CNOPInvalidCredentialsException) as exc_info:
         login_user(login_data, user_dao=mock_user_dao)
 
     assert "Invalid credentials for user 'testuser'" in str(exc_info.value)
@@ -43,13 +43,13 @@ def test_login_invalid_credentials():
 def test_login_user_not_found():
     # Mock user DAO to raise UserNotFoundException
     mock_user_dao = MagicMock()
-    mock_user_dao.authenticate_user.side_effect = UserNotFoundException("User not found")
+    mock_user_dao.authenticate_user.side_effect = CNOPUserNotFoundException("User not found")
 
     # Test data
     login_data = UserLoginRequest(username="nonexistent", password="ValidPass123!@#")
 
     # Test that the function raises the correct exception
-    with pytest.raises(UserNotFoundException) as exc_info:
+    with pytest.raises(CNOPUserNotFoundException) as exc_info:
         login_user(login_data, user_dao=mock_user_dao)
 
     assert "User not found" in str(exc_info.value)

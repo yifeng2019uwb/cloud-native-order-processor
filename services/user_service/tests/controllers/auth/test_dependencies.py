@@ -15,7 +15,7 @@ from src.controllers.auth.dependencies import (
 )
 
 # Import models
-from common.entities.user import UserResponse
+from common.data.entities.user import UserResponse
 
 
 def test_verify_gateway_headers_valid():

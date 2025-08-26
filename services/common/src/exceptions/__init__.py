@@ -6,6 +6,14 @@ All exceptions use the CNOP prefix to avoid naming conflicts and provide clear o
 
 IMPORTANT: Only truly cross-service exceptions and internal data exceptions are provided here.
 Service-specific validation exceptions should be imported from their respective services.
+
+⚠️  DEPRECATION WARNING ⚠️
+Authentication exceptions are now provided via the auth package:
+    from common.auth.exceptions import CNOPAuthTokenExpiredException  # ✅ NEW
+    from common.exceptions import CNOPTokenExpiredException          # ❌ DEPRECATED
+
+The old authentication exceptions are provided as aliases for backward compatibility
+but will be removed once all services are migrated to the new package structure.
 """
 
 from .base_exception import CNOPException, CNOPInternalException, CNOPClientException
@@ -54,6 +62,37 @@ from .exceptions import (
     CNOPCommonServerException,
 )
 
+# =============================================================================
+# BACKWARD COMPATIBILITY ALIASES - DEPRECATED - USE NEW AUTH PACKAGE INSTEAD
+# =============================================================================
+#
+# IMPORTANT: These aliases are provided for backward compatibility during migration.
+# DO NOT use these in new code. Import from the appropriate package instead:
+#
+# ✅ CORRECT (new code):
+#   from common.auth.exceptions import CNOPAuthTokenExpiredException
+#   from common.auth.exceptions import CNOPAuthTokenInvalidException
+#
+# ❌ DEPRECATED (old code - will be removed):
+#   from common.exceptions import CNOPTokenExpiredException
+#   from common.exceptions import CNOPTokenInvalidException
+#
+# Migration Plan:
+# 1. Update all services to use new package paths (common.auth.exceptions.*)
+# 2. Remove these aliases once all services are migrated
+# 3. Keep only the new auth package exceptions going forward
+# =============================================================================
+
+# Authentication exceptions - DEPRECATED ALIASES
+from ..auth.exceptions import (
+    CNOPAuthTokenExpiredException as CNOPTokenExpiredException,
+    CNOPAuthTokenInvalidException as CNOPTokenInvalidException,
+    CNOPAuthInvalidCredentialsException as CNOPInvalidCredentialsException,
+    CNOPAuthAuthorizationException as CNOPAuthorizationException,
+    CNOPAuthAccessDeniedException as CNOPAccessDeniedException,
+    CNOPAuthInsufficientPermissionsException as CNOPInsufficientPermissionsException,
+)
+
 __all__ = [
     # Base exceptions
     "CNOPException",
@@ -61,12 +100,6 @@ __all__ = [
     "CNOPClientException",
 
     # Shared exceptions (mapped to external error codes)
-    "CNOPInvalidCredentialsException",
-    "CNOPTokenExpiredException",
-    "CNOPTokenInvalidException",
-    "CNOPAuthorizationException",
-    "CNOPAccessDeniedException",
-    "CNOPInsufficientPermissionsException",
     "CNOPEntityNotFoundException",
     "CNOPEntityAlreadyExistsException",
     "CNOPUserNotFoundException",
@@ -88,4 +121,19 @@ __all__ = [
     "CNOPLockTimeoutException",
     "CNOPEntityValidationException",
     "CNOPCommonServerException",
+
+    # =============================================================================
+    # BACKWARD COMPATIBILITY ALIASES - DEPRECATED - USE NEW AUTH PACKAGE INSTEAD
+    # =============================================================================
+    # These aliases are provided for backward compatibility during migration.
+    # DO NOT use these in new code. Import from common.auth.exceptions instead.
+    # =============================================================================
+
+    # Authentication exceptions - DEPRECATED ALIASES
+    "CNOPInvalidCredentialsException",      # Use CNOPAuthInvalidCredentialsException instead
+    "CNOPTokenExpiredException",           # Use CNOPAuthTokenExpiredException instead
+    "CNOPTokenInvalidException",           # Use CNOPAuthTokenInvalidException instead
+    "CNOPAuthorizationException",          # Use CNOPAuthAuthorizationException instead
+    "CNOPAccessDeniedException",           # Use CNOPAuthAccessDeniedException instead
+    "CNOPInsufficientPermissionsException", # Use CNOPAuthInsufficientPermissionsException instead
 ]

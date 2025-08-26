@@ -20,14 +20,14 @@ from api_models.shared.common import ErrorResponse
 from api_models.shared.common import UserBaseInfo
 
 # Import common DAO models
-from common.entities.user import User
+from common.data.entities.user import User
 
 # Import dependencies
-from common.database import get_user_dao
-from common.security import TokenManager, AuditLogger
+from common.data.database import get_user_dao
+from common.auth.security import TokenManager, AuditLogger
 
 # Import exceptions
-from common.exceptions.shared_exceptions import InvalidCredentialsException, UserNotFoundException
+from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["authentication"])
@@ -78,7 +78,7 @@ def login_user(
         if not user:
             logger.warning(f"Authentication failed for: {login_data.username}")
             audit_logger.log_login_failure(login_data.username, "Invalid credentials", client_ip, user_agent)
-            raise InvalidCredentialsException(f"Invalid credentials for user '{login_data.username}'")
+            raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{login_data.username}'")
 
         logger.info(f"User authenticated successfully: {login_data.username}")
 
@@ -104,9 +104,9 @@ def login_user(
             data=login_response
         )
 
-    except InvalidCredentialsException:
+    except CNOPInvalidCredentialsException:
         # Let the exception bubble up to be handled by RFC 7807 handlers
         raise
-    except UserNotFoundException:
+    except CNOPUserNotFoundException:
         # Let the exception bubble up to be handled by RFC 7807 handlers
         raise

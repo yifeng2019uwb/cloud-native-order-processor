@@ -6,9 +6,9 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status, Request, Header
 import logging
 
-from common.entities.user import UserResponse
-from common.dao.user import UserDAO
-from common.database import get_user_dao as get_common_user_dao
+from common.data.entities.user import UserResponse
+from common.data.dao.user import UserDAO
+from common.data.database import get_user_dao as get_common_user_dao
 
 logger = logging.getLogger(__name__)
 

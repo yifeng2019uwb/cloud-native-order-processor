@@ -9,7 +9,7 @@ from fastapi import FastAPI
 
 from src.controllers.validate import router, validate_jwt_token
 from src.api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
-from common.exceptions import TokenExpiredException, TokenInvalidException
+from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 
 
 class TestValidateController:
@@ -114,7 +114,7 @@ class TestValidateJWTTokenEndpoint:
 
         with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
             mock_token_manager = Mock()
-            mock_token_manager.validate_token_comprehensive.side_effect = TokenExpiredException("Token has expired")
+            mock_token_manager.validate_token_comprehensive.side_effect = CNOPAuthTokenExpiredException("Token has expired")
             mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function
@@ -137,7 +137,7 @@ class TestValidateJWTTokenEndpoint:
 
         with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
             mock_token_manager = Mock()
-            mock_token_manager.validate_token_comprehensive.side_effect = TokenInvalidException("Invalid token format")
+            mock_token_manager.validate_token_comprehensive.side_effect = CNOPAuthTokenInvalidException("Invalid token format")
             mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function
@@ -270,7 +270,7 @@ class TestValidateJWTTokenEndpoint:
 
         with patch('src.controllers.validate.TokenManager') as mock_token_manager_class:
             mock_token_manager = Mock()
-            mock_token_manager.validate_token_comprehensive.side_effect = TokenInvalidException("Test error")
+            mock_token_manager.validate_token_comprehensive.side_effect = CNOPAuthTokenInvalidException("Test error")
             mock_token_manager_class.return_value = mock_token_manager
 
             # Call the endpoint function

@@ -11,8 +11,10 @@ from fastapi.testclient import TestClient
 
 from src.controllers.balance.transactions import get_user_transactions, router
 from src.api_models.balance.balance_models import TransactionListResponse, TransactionResponse
-from common.entities.user import UserResponse
-from user_exceptions import InternalServerException
+from common.data.entities.user import UserResponse, BalanceTransaction
+from common.data.entities.user.balance_enums import TransactionType, TransactionStatus
+
+from common.exceptions.shared_exceptions import CNOPInternalServerException
 
 
 class TestGetUserTransactions:
@@ -34,8 +36,6 @@ class TestGetUserTransactions:
     @pytest.fixture
     def sample_transactions(self):
         """Sample transaction data"""
-        from common.entities.user import BalanceTransaction
-        from common.entities.user.balance_enums import TransactionType, TransactionStatus
 
         transactions = [
             Mock(spec=BalanceTransaction),
@@ -127,7 +127,7 @@ class TestGetUserTransactions:
         """Test exception handling during transaction retrieval"""
         mock_balance_dao.get_user_transactions.side_effect = Exception("Database error")
 
-        with pytest.raises(InternalServerException, match="Failed to get transactions: Database error"):
+        with pytest.raises(CNOPInternalServerException, match="Failed to get transactions: Database error"):
             get_user_transactions(
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao
@@ -135,8 +135,6 @@ class TestGetUserTransactions:
 
     def test_get_transactions_single_transaction(self, mock_current_user, mock_balance_dao):
         """Test retrieval of single transaction"""
-        from common.entities.user import BalanceTransaction
-        from common.entities.user.balance_enums import TransactionType, TransactionStatus
 
         single_transaction = Mock(spec=BalanceTransaction)
         single_transaction.transaction_id = "txn_single"
@@ -158,8 +156,6 @@ class TestGetUserTransactions:
 
     def test_get_transactions_large_list(self, mock_current_user, mock_balance_dao):
         """Test retrieval of large transaction list"""
-        from common.entities.user import BalanceTransaction
-        from common.entities.user.balance_enums import TransactionType, TransactionStatus
 
         # Create 10 transactions
         large_transactions = []

@@ -5,7 +5,7 @@ This module contains authentication-specific exceptions that are exposed to clie
 via the gateway and mapped to appropriate HTTP status codes.
 """
 
-from ...exceptions import CNOPClientException
+from ...exceptions.base_exception import CNOPClientException
 
 
 class CNOPAuthInvalidCredentialsException(CNOPClientException):

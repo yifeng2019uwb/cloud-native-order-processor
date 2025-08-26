@@ -9,12 +9,10 @@ from typing import Optional, Any
 from datetime import date
 
 # Import proper exceptions
-from common.exceptions import (
-    UserNotFoundException,
-    UserValidationException
+from common.exceptions.shared_exceptions import (
+    CNOPUserNotFoundException
 )
-
-from user_exceptions import UserAlreadyExistsException
+from user_exceptions import CNOPUserAlreadyExistsException, CNOPUserValidationException
 
 
 def validate_username_uniqueness(username: str, user_dao: Any, exclude_username: Optional[str] = None) -> bool:
@@ -44,16 +42,20 @@ def validate_username_uniqueness(username: str, user_dao: Any, exclude_username:
 
         if existing_user:
             logger.warning(f"🔍 DEBUG: User found! Username '{username}' already exists")
-            raise UserAlreadyExistsException(f"Username '{username}' already exists")
+            raise CNOPUserAlreadyExistsException(f"Username '{username}' already exists")
         else:
             logger.warning(f"🔍 DEBUG: User not found! Username '{username}' is unique")
             return True
 
-    except UserNotFoundException as e:
+    except CNOPUserNotFoundException as e:
         # User doesn't exist, which means username is unique
         logger.warning(f"🔍 DEBUG: User not found! Username '{username}' is unique. Exception: {str(e)}")
         return True
     except Exception as e:
+        # TODO: BACKLOG TASK - This generic exception handler incorrectly catches CNOPUserAlreadyExistsException
+        # and converts it to a generic Exception, which then gets caught by the profile controller's
+        # generic handler and converted to HTTPException. This breaks the expected exception flow.
+        # Consider removing this generic handler or making it more specific.
         logger.warning(f"🔍 DEBUG: Unexpected exception in username validation: {str(e)}")
         raise
 
@@ -84,17 +86,24 @@ def validate_email_uniqueness(email: str, user_dao: Any, exclude_username: Optio
         existing_user = user_dao.get_user_by_email(email)
 
         if existing_user:
+            # TODO: BACKLOG TASK - The exclude_username parameter is not being used!
+            # This should check if existing_user.username != exclude_username before raising the exception
+            # Currently it raises the exception even when the email belongs to the same user (updating profile)
             logger.warning(f"🔍 DEBUG: User found! Email '{email}' already exists")
-            raise UserAlreadyExistsException(f"Email '{email}' already exists")
+            raise CNOPUserAlreadyExistsException(f"Email '{email}' already exists")
         else:
             logger.warning(f"🔍 DEBUG: User not found! Email '{email}' is unique")
             return True
 
-    except UserNotFoundException as e:
+    except CNOPUserNotFoundException as e:
         # User doesn't exist, which means email is unique
         logger.warning(f"🔍 DEBUG: User not found! Email '{email}' is unique. Exception: {str(e)}")
         return True
     except Exception as e:
+        # TODO: BACKLOG TASK - This generic exception handler incorrectly catches CNOPUserAlreadyExistsException
+        # and converts it to a generic Exception, which then gets caught by the profile controller's
+        # generic handler and converted to HTTPException. This breaks the expected exception flow.
+        # Consider removing this generic handler or making it more specific.
         logger.warning(f"🔍 DEBUG: Unexpected exception in email validation: {str(e)}")
         raise
 
@@ -117,7 +126,7 @@ def validate_user_exists(username: str, user_dao: Any) -> bool:
     user = user_dao.get_user_by_username(username)
 
     if not user:
-        raise UserNotFoundException(f"User with username '{username}' not found")
+        raise CNOPUserNotFoundException(f"User with username '{username}' not found")
 
     return True
 
@@ -143,11 +152,11 @@ def validate_age_requirements(date_of_birth: date) -> bool:
 
     # Check minimum age (13 years for COPPA compliance)
     if age < 13:
-        raise UserValidationException("User must be at least 13 years old")
+        raise CNOPUserValidationException("User must be at least 13 years old")
 
     # Check maximum reasonable age (120 years)
     if age > 120:
-        raise UserValidationException("Invalid date of birth")
+        raise CNOPUserValidationException("Invalid date of birth")
 
     return True
 
@@ -191,10 +200,10 @@ def validate_sufficient_balance(username: str, amount: float, balance_dao: Any) 
     balance = balance_dao.get_balance(username)
 
     if not balance:
-        raise UserValidationException("User balance not found")
+        raise CNOPUserValidationException("User balance not found")
 
     # Check if user has sufficient funds
     if balance.current_balance < amount:
-        raise UserValidationException(f"Insufficient balance. Current balance: ${balance.current_balance}, Required: ${amount}")
+        raise CNOPUserValidationException(f"Insufficient balance. Current balance: ${balance.current_balance}, Required: ${amount}")
 
     return True

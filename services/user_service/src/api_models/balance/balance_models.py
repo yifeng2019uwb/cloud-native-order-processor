@@ -17,9 +17,6 @@ from validation.field_validators import (
     validate_amount
 )
 
-# Import custom exceptions
-from common.exceptions.shared_exceptions import UserValidationException
-
 
 class BalanceResponse(BaseModel):
     """Response model for getting current balance"""

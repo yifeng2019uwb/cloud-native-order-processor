@@ -25,24 +25,23 @@ from fastapi.exceptions import RequestValidationError
 
 # Import common exceptions (shared across services)
 from common.exceptions.shared_exceptions import (
-    EntityNotFoundException,
-    UserValidationException,
-    InvalidCredentialsException,
-    UserNotFoundException,
-    InternalServerException
+    CNOPInvalidCredentialsException,
+    CNOPUserNotFoundException,
+    CNOPInternalServerException
 )
+from user_exceptions import CNOPUserValidationException
 
 # Import other common exceptions
 from common.exceptions import (
     # Database exceptions
-    DatabaseOperationException,
+    CNOPDatabaseOperationException,
     # Business logic exceptions
-    InsufficientBalanceException
+    CNOPInsufficientBalanceException
 )
 
 # Import user service specific exceptions
 from user_exceptions import (
-    UserAlreadyExistsException
+    CNOPUserAlreadyExistsException
 )
 
 # Load environment variables from services/.env
@@ -171,7 +170,7 @@ async def validation_exception_handler(request, exc):
         content={"detail": str(exc)}
     )
 
-@app.exception_handler(UserValidationException)
+@app.exception_handler(CNOPUserValidationException)
 async def user_validation_exception_handler(request, exc):
     """Handle user validation exceptions"""
     logger.warning(f"User validation error: {exc}")
@@ -180,7 +179,7 @@ async def user_validation_exception_handler(request, exc):
         content={"detail": str(exc)}
     )
 
-@app.exception_handler(UserAlreadyExistsException)
+@app.exception_handler(CNOPUserAlreadyExistsException)
 async def user_already_exists_exception_handler(request, exc):
     """Handle user already exists exceptions"""
     logger.warning(f"User already exists: {exc}")
@@ -189,7 +188,7 @@ async def user_already_exists_exception_handler(request, exc):
         content={"detail": str(exc)}
     )
 
-@app.exception_handler(InvalidCredentialsException)
+@app.exception_handler(CNOPInvalidCredentialsException)
 async def invalid_credentials_exception_handler(request, exc):
     """Handle invalid credentials exceptions"""
     logger.warning(f"Invalid credentials: {exc}")
@@ -198,7 +197,7 @@ async def invalid_credentials_exception_handler(request, exc):
         content={"detail": str(exc)}
     )
 
-@app.exception_handler(UserNotFoundException)
+@app.exception_handler(CNOPUserNotFoundException)
 async def user_not_found_exception_handler(request, exc):
     """Handle user not found exceptions"""
     logger.warning(f"User not found: {exc}")
@@ -226,7 +225,7 @@ async def http_exception_handler(request, exc):
         content={"detail": exc.detail}
     )
 
-@app.exception_handler(DatabaseOperationException)
+@app.exception_handler(CNOPDatabaseOperationException)
 async def database_operation_exception_handler(request, exc):
     """Handle database operation exceptions"""
     import traceback
@@ -238,7 +237,7 @@ async def database_operation_exception_handler(request, exc):
         content={"detail": str(exc)}
     )
 
-@app.exception_handler(InsufficientBalanceException)
+@app.exception_handler(CNOPInsufficientBalanceException)
 async def insufficient_balance_exception_handler(request, exc):
     """Handle insufficient balance exceptions"""
     logger.warning(f"Insufficient balance: {exc}")

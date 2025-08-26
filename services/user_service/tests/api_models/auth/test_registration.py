@@ -11,7 +11,7 @@ from api_models.auth.registration import (
     RegistrationErrorResponse
 )
 from api_models.shared.common import ErrorResponse
-from common.exceptions.shared_exceptions import UserValidationException
+from user_exceptions import CNOPUserValidationException
 
 
 def test_valid_registration_data():
@@ -170,7 +170,7 @@ def test_first_name_validation():
 
 def test_first_name_non_letters():
     # First name with non-letters - validation now happens at model level
-    with pytest.raises(UserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
+    with pytest.raises(CNOPUserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
         UserRegistrationRequest(
             username="johndoe",
             email="test@example.com",
@@ -194,7 +194,7 @@ def test_last_name_validation():
 
 def test_last_name_non_letters():
     # Last name with non-letters - validation now happens at model level
-    with pytest.raises(UserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
+    with pytest.raises(CNOPUserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
         UserRegistrationRequest(
             username="johndoe",
             email="test@example.com",
@@ -233,7 +233,7 @@ def test_phone_valid_formats():
 
 def test_phone_invalid_format():
     # Phone validation now happens at model level
-    with pytest.raises(UserValidationException, match="Phone number must contain 10-15 digits"):
+    with pytest.raises(CNOPUserValidationException, match="Phone number must contain 10-15 digits"):
         UserRegistrationRequest(
             username="johndoe",
             email="test@example.com",
@@ -260,7 +260,7 @@ def test_date_of_birth_validation():
 def test_date_of_birth_future():
     # Future date validation now happens at model level
     future_date = date.today() + timedelta(days=1)
-    with pytest.raises(UserValidationException, match="User must be at least 13 years old"):
+    with pytest.raises(CNOPUserValidationException, match="User must be at least 13 years old"):
         UserRegistrationRequest(
             username="johndoe",
             email="test@example.com",
@@ -274,7 +274,7 @@ def test_date_of_birth_future():
 def test_date_of_birth_under_13():
     # Under 13 validation now happens at model level
     under_13 = date.today() - timedelta(days=12*365)
-    with pytest.raises(UserValidationException, match="User must be at least 13 years old"):
+    with pytest.raises(CNOPUserValidationException, match="User must be at least 13 years old"):
         UserRegistrationRequest(
             username="johndoe",
             email="test@example.com",

@@ -19,14 +19,14 @@ from api_models.auth.profile import (
 from api_models.shared.common import ErrorResponse
 
 # Import dependencies
-from common.database import get_user_dao
+from common.data.database import get_user_dao
 
 # Import exceptions
 from common.exceptions.shared_exceptions import (
-    EntityNotFoundException as UserNotFoundException,
-    EntityAlreadyExistsException as UserAlreadyExistsException,
-    EntityValidationException as UserValidationException
+    CNOPEntityNotFoundException as CNOPUserNotFoundException,
+    CNOPEntityAlreadyExistsException as CNOPUserAlreadyExistsException
 )
+from user_exceptions import CNOPUserValidationException
 
 # Import business validation functions only (Layer 2)
 from validation.business_validators import (
@@ -39,7 +39,7 @@ router = APIRouter(tags=["profile"])
 
 # Import the centralized get_current_user from dependencies
 from .dependencies import get_current_user
-from common.entities.user import UserResponse
+from common.data.entities.user import UserResponse
 
 
 @router.get(
@@ -122,6 +122,8 @@ def update_profile(
 
         # Layer 2: Business validation only
         if profile_data.email and profile_data.email != current_user.email:
+            # TODO: BACKLOG TASK - validate_email_uniqueness should include exclude_username parameter
+            # to prevent the current user's email from being considered a conflict during updates
             validate_email_uniqueness(profile_data.email, user_dao)
         if profile_data.date_of_birth:
             validate_age_requirements(profile_data.date_of_birth)
@@ -135,7 +137,7 @@ def update_profile(
         )
 
         if not updated_user:
-            raise UserNotFoundException(f"User '{current_user.username}' not found")
+            raise CNOPUserNotFoundException(f"User '{current_user.username}' not found")
 
         logger.info(f"Profile updated successfully for user: {current_user.username}")
 
@@ -153,8 +155,7 @@ def update_profile(
                 updated_at=updated_user.updated_at
             )
         )
-
-    except (UserNotFoundException, HTTPException, UserValidationException, UserAlreadyExistsException):
+    except (CNOPUserNotFoundException, HTTPException, CNOPUserValidationException, CNOPUserAlreadyExistsException):
         raise
     except Exception as e:
         logger.error(f"Profile update failed for user {current_user.username}: {str(e)}")

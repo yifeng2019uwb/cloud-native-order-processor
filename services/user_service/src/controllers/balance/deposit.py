@@ -15,23 +15,18 @@ from api_models.balance import DepositRequest, DepositResponse
 from api_models.shared.common import ErrorResponse
 
 # Import common DAO models
-from common.entities.user import UserResponse
+from common.data.entities.user import UserResponse
 
 # Import dependencies
-from common.database import get_transaction_manager
+from common.core.utils import get_transaction_manager
 from controllers.auth.dependencies import get_current_user
 
 # Import exceptions
-from user_exceptions import (
-    UserNotFoundException,
-    InternalServerException
-)
-
-# Import common exceptions for transaction manager
+from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
 from common.exceptions import (
-    DatabaseOperationException,
-    EntityNotFoundException,
-    LockAcquisitionException
+    CNOPDatabaseOperationException,
+    CNOPEntityNotFoundException,
+    CNOPLockAcquisitionException
 )
 
 logger = logging.getLogger(__name__)
@@ -112,15 +107,15 @@ async def deposit_funds(
             timestamp=datetime.utcnow()
         )
 
-    except LockAcquisitionException as e:
+    except CNOPLockAcquisitionException as e:
         logger.warning(f"Lock acquisition failed for deposit: user={current_user.username}, error={str(e)}")
-        raise InternalServerException("Service temporarily unavailable")
-    except EntityNotFoundException as e:
+        raise CNOPInternalServerException("Service temporarily unavailable")
+    except CNOPEntityNotFoundException as e:
         logger.error(f"User balance not found for deposit: user={current_user.username}, error={str(e)}")
-        raise UserNotFoundException("User balance not found")
-    except DatabaseOperationException as e:
+        raise CNOPUserNotFoundException("User balance not found")
+    except CNOPDatabaseOperationException as e:
         logger.error(f"Database operation failed for deposit: user={current_user.username}, error={str(e)}")
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(f"Unexpected error during deposit: user={current_user.username}, error={str(e)}", exc_info=True)
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")

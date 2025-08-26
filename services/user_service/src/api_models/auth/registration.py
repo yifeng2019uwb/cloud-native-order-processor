@@ -17,10 +17,6 @@ from validation.field_validators import (
     validate_phone, validate_password, validate_date_of_birth
 )
 
-# Import custom exceptions
-from common.exceptions.shared_exceptions import UserValidationException
-
-
 class UserRegistrationRequest(BaseModel):
     """
     Request model for POST /auth/register - Required + Optional Fields

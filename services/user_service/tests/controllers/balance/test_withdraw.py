@@ -11,14 +11,14 @@ from fastapi.testclient import TestClient
 
 from src.controllers.balance.withdraw import withdraw_funds, router
 from src.api_models.balance.balance_models import WithdrawRequest, WithdrawResponse
-from common.entities.user import UserResponse
-from common.exceptions import (
-    DatabaseOperationException,
-    LockAcquisitionException,
-    InsufficientBalanceException,
-    UserValidationException as CommonUserValidationException
+from common.data.entities.user import UserResponse
+from common.exceptions.shared_exceptions import (
+    CNOPUserNotFoundException,
+    CNOPInsufficientBalanceException,
+    CNOPInternalServerException
 )
-from common.exceptions.shared_exceptions import UserValidationException, InternalServerException
+from common.exceptions import CNOPLockAcquisitionException, CNOPDatabaseOperationException
+from user_exceptions import CNOPUserValidationException
 
 
 class TestWithdrawFunds:
@@ -125,9 +125,9 @@ class TestWithdrawFunds:
         sample_withdraw_request
     ):
         """Test withdrawal with lock acquisition failure"""
-        mock_transaction_manager.withdraw_funds.side_effect = LockAcquisitionException("Lock timeout")
+        mock_transaction_manager.withdraw_funds.side_effect = CNOPLockAcquisitionException("Lock timeout")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             await withdraw_funds(
                 withdraw_data=sample_withdraw_request,
                 request=mock_request,
@@ -143,7 +143,7 @@ class TestWithdrawFunds:
 
         # Verify warning was logged - the actual message includes the exception class
         mock_logger.warning.assert_called_with(
-            "Lock acquisition failed for withdrawal: user=testuser, error=LockAcquisitionException: Lock timeout"
+            "Lock acquisition failed for withdrawal: user=testuser, error=CNOPLockAcquisitionException: Lock timeout"
         )
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -156,9 +156,9 @@ class TestWithdrawFunds:
         sample_withdraw_request
     ):
         """Test withdrawal with insufficient balance"""
-        mock_transaction_manager.withdraw_funds.side_effect = InsufficientBalanceException("Insufficient funds")
+        mock_transaction_manager.withdraw_funds.side_effect = CNOPInsufficientBalanceException("Insufficient funds")
 
-        with pytest.raises(UserValidationException, match="Insufficient funds"):
+        with pytest.raises(CNOPUserValidationException, match="Insufficient funds"):
             await withdraw_funds(
                 withdraw_data=sample_withdraw_request,
                 request=mock_request,
@@ -174,7 +174,7 @@ class TestWithdrawFunds:
 
         # Verify warning was logged - the actual message includes the exception class
         mock_logger.warning.assert_called_with(
-            "Insufficient balance for withdrawal: user=testuser, error=InsufficientBalanceException: Insufficient funds"
+            "Insufficient balance for withdrawal: user=testuser, error=CNOPInsufficientBalanceException: Insufficient funds"
         )
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -187,9 +187,9 @@ class TestWithdrawFunds:
         sample_withdraw_request
     ):
         """Test withdrawal with common user validation error"""
-        mock_transaction_manager.withdraw_funds.side_effect = CommonUserValidationException("User not found")
+        mock_transaction_manager.withdraw_funds.side_effect = CNOPUserValidationException("User not found")
 
-        with pytest.raises(UserValidationException, match="User not found"):
+        with pytest.raises(CNOPUserValidationException, match="User not found"):
             await withdraw_funds(
                 withdraw_data=sample_withdraw_request,
                 request=mock_request,
@@ -205,7 +205,7 @@ class TestWithdrawFunds:
 
         # Verify warning was logged - the actual message includes the exception class
         mock_logger.warning.assert_called_with(
-            "User validation error for withdrawal: user=testuser, error=UserValidationException: User not found"
+            "User validation error for withdrawal: user=testuser, error=CNOPUserValidationException: User not found"
         )
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -218,9 +218,9 @@ class TestWithdrawFunds:
         sample_withdraw_request
     ):
         """Test withdrawal with database operation error - user balance not found"""
-        mock_transaction_manager.withdraw_funds.side_effect = DatabaseOperationException("User balance not found")
+        mock_transaction_manager.withdraw_funds.side_effect = CNOPDatabaseOperationException("User balance not found")
 
-        with pytest.raises(InternalServerException, match="System error - please contact support"):
+        with pytest.raises(CNOPInternalServerException, match="System error - please contact support"):
             await withdraw_funds(
                 withdraw_data=sample_withdraw_request,
                 request=mock_request,
@@ -236,7 +236,7 @@ class TestWithdrawFunds:
 
         # Verify error was logged - the actual message includes the exception class
         mock_logger.error.assert_called_with(
-            "System error - user balance not found for withdrawal: user=testuser, error=DatabaseOperationException: User balance not found"
+            "System error - user balance not found for withdrawal: user=testuser, error=CNOPDatabaseOperationException: User balance not found"
         )
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -249,9 +249,9 @@ class TestWithdrawFunds:
         sample_withdraw_request
     ):
         """Test withdrawal with general database operation error"""
-        mock_transaction_manager.withdraw_funds.side_effect = DatabaseOperationException("Connection timeout")
+        mock_transaction_manager.withdraw_funds.side_effect = CNOPDatabaseOperationException("Connection timeout")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             await withdraw_funds(
                 withdraw_data=sample_withdraw_request,
                 request=mock_request,
@@ -267,7 +267,7 @@ class TestWithdrawFunds:
 
         # Verify error was logged - the actual message includes the exception class
         mock_logger.error.assert_called_with(
-            "Database operation failed for withdrawal: user=testuser, error=DatabaseOperationException: Connection timeout"
+            "Database operation failed for withdrawal: user=testuser, error=CNOPDatabaseOperationException: Connection timeout"
         )
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -282,7 +282,7 @@ class TestWithdrawFunds:
         """Test withdrawal with unexpected error"""
         mock_transaction_manager.withdraw_funds.side_effect = Exception("Unexpected system error")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             await withdraw_funds(
                 withdraw_data=sample_withdraw_request,
                 request=mock_request,

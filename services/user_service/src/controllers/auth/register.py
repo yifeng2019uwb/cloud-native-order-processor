@@ -20,19 +20,19 @@ from api_models.auth.registration import (
 from api_models.shared.common import ErrorResponse
 
 # Import common DAO models - simple imports
-from common.entities.user import UserCreate, User, Balance, BalanceCreate
+from common.data.entities.user import UserCreate, User, Balance, BalanceCreate
 
 # Import dependencies and simplified exceptions
-from common.database import get_user_dao, get_balance_dao
+from common.data.database import get_user_dao, get_balance_dao
 from common.exceptions.shared_exceptions import (
-    UserNotFoundException,
-    UserValidationException,
-    InternalServerException
+    CNOPUserNotFoundException,
+    CNOPInternalServerException
 )
+from user_exceptions import CNOPUserValidationException
 from user_exceptions import (
-    UserAlreadyExistsException
+    CNOPUserAlreadyExistsException
 )
-from common.security import TokenManager
+from common.auth.security import TokenManager
 
 # Import business validation functions only (Layer 2)
 from validation.business_validators import (
@@ -147,10 +147,10 @@ def register_user(
             message="User registered successfully"
         )
 
-    except (UserAlreadyExistsException, UserValidationException):
+    except (CNOPUserAlreadyExistsException, CNOPUserValidationException):
         # Re-raise these exceptions as they should be handled by the exception mapper
         raise
     except Exception as e:
         # Log unexpected errors and convert to internal server exception
         logger.error(f"Unexpected error during user registration: {str(e)}")
-        raise InternalServerException(f"Registration failed: {str(e)}")
+        raise CNOPInternalServerException(f"Registration failed: {str(e)}")

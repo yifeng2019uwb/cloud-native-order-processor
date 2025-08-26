@@ -7,7 +7,7 @@ from api_models.auth.profile import (
     ProfileUpdateErrorResponse
 )
 from datetime import datetime, date, timedelta
-from common.exceptions.shared_exceptions import UserValidationException
+from user_exceptions import CNOPUserValidationException
 
 # --- UserProfileResponse: Serialization with all fields ---
 def test_user_profile_response_serialization():
@@ -51,16 +51,16 @@ def test_user_profile_update_request_valid():
 # --- First/last name validation ---
 def test_user_profile_update_request_first_name_invalid():
     # Validation now happens at model level
-    with pytest.raises(UserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
+    with pytest.raises(CNOPUserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
         UserProfileUpdateRequest(first_name="John1")
-    with pytest.raises(UserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
+    with pytest.raises(CNOPUserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
         UserProfileUpdateRequest(first_name="J@hn")
 
 def test_user_profile_update_request_last_name_invalid():
     # Validation now happens at model level
-    with pytest.raises(UserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
+    with pytest.raises(CNOPUserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
         UserProfileUpdateRequest(last_name="Doe1")
-    with pytest.raises(UserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
+    with pytest.raises(CNOPUserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
         UserProfileUpdateRequest(last_name="D0e")
 
 def test_user_profile_update_request_first_last_name_valid():
@@ -71,12 +71,12 @@ def test_user_profile_update_request_first_last_name_valid():
 # --- Phone validation ---
 def test_user_profile_update_request_phone_too_short():
     # Validation now happens at model level
-    with pytest.raises(UserValidationException, match="Phone number must contain 10-15 digits"):
+    with pytest.raises(CNOPUserValidationException, match="Phone number must contain 10-15 digits"):
         UserProfileUpdateRequest(phone="12345")
 
 def test_user_profile_update_request_phone_too_long():
     # Validation now happens at model level
-    with pytest.raises(UserValidationException, match="Phone number must contain 10-15 digits"):
+    with pytest.raises(CNOPUserValidationException, match="Phone number must contain 10-15 digits"):
         UserProfileUpdateRequest(phone="1"*20)
 
 def test_user_profile_update_request_phone_valid():
@@ -87,13 +87,13 @@ def test_user_profile_update_request_phone_valid():
 def test_user_profile_update_request_dob_in_future():
     # Validation now happens at model level
     future_date = date.today() + timedelta(days=1)
-    with pytest.raises(UserValidationException, match="User must be at least 13 years old"):
+    with pytest.raises(CNOPUserValidationException, match="User must be at least 13 years old"):
         UserProfileUpdateRequest(date_of_birth=future_date)
 
 def test_user_profile_update_request_dob_under_13():
     # Validation now happens at model level
     under_13 = date.today() - timedelta(days=12*365)
-    with pytest.raises(UserValidationException, match="User must be at least 13 years old"):
+    with pytest.raises(CNOPUserValidationException, match="User must be at least 13 years old"):
         UserProfileUpdateRequest(date_of_birth=under_13)
 
 def test_user_profile_update_request_dob_over_120():
@@ -101,7 +101,7 @@ def test_user_profile_update_request_dob_over_120():
     # Create a date that's exactly 121 years ago
     today = date.today()
     over_120 = date(today.year - 121, today.month, today.day)
-    with pytest.raises(UserValidationException, match="Invalid date of birth"):
+    with pytest.raises(CNOPUserValidationException, match="Invalid date of birth"):
         UserProfileUpdateRequest(date_of_birth=over_120)
 
 def test_user_profile_update_request_dob_valid():

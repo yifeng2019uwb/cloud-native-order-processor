@@ -1,14 +1,16 @@
 import pytest
+import pydantic
 from fastapi import HTTPException, status
 from unittest.mock import AsyncMock, patch, MagicMock
+from datetime import date, timedelta
 from controllers.auth.register import register_user
 from api_models.auth.registration import UserRegistrationRequest
-from common.exceptions.shared_exceptions import InternalServerException
-from user_exceptions import UserAlreadyExistsException
-import pydantic
-from datetime import date, timedelta
-from common.exceptions.shared_exceptions import EntityAlreadyExistsException
-from common.exceptions.shared_exceptions import UserValidationException
+from user_exceptions import CNOPUserAlreadyExistsException, CNOPUserValidationException
+
+from common.exceptions.shared_exceptions import (
+    CNOPEntityAlreadyExistsException,
+    CNOPInternalServerException
+)
 
 def test_register_success():
     from uuid import uuid4
@@ -59,7 +61,7 @@ def test_register_username_exists():
         last_name="User",
         phone="+1-555-123-4567"
     )
-    with pytest.raises(UserAlreadyExistsException) as exc_info:
+    with pytest.raises(CNOPUserAlreadyExistsException) as exc_info:
         register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
     assert "Username 'newuser' already exists" in exc_info.value.message
 
@@ -78,7 +80,7 @@ def test_register_email_exists():
         last_name="User",
         phone="+1-555-123-4567"
     )
-    with pytest.raises(UserAlreadyExistsException) as exc_info:
+    with pytest.raises(CNOPUserAlreadyExistsException) as exc_info:
         register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
     assert "Email 'newuser@example.com' already exists" in exc_info.value.message
 
@@ -86,7 +88,7 @@ def test_register_validation_error():
     mock_user_dao = MagicMock()
     mock_user_dao.get_user_by_username = MagicMock(return_value=None)
     mock_user_dao.get_user_by_email = MagicMock(return_value=None)
-    mock_user_dao.create_user = MagicMock(side_effect=EntityAlreadyExistsException("Some validation error"))
+    mock_user_dao.create_user = MagicMock(side_effect=CNOPEntityAlreadyExistsException("Some validation error"))
     mock_request = MagicMock()
     mock_request.client = MagicMock(host="127.0.0.1")
     mock_request.headers = {"user-agent": "pytest"}
@@ -98,9 +100,9 @@ def test_register_validation_error():
         last_name="User",
         phone="+1-555-123-4567"
     )
-    with pytest.raises(InternalServerException) as exc_info:
+    with pytest.raises(CNOPInternalServerException) as exc_info:
         register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
-    assert "EntityAlreadyExistsException: Some validation error" in str(exc_info.value)
+    assert "CNOPEntityAlreadyExistsException: Some validation error" in str(exc_info.value)
 
 @pytest.mark.asyncio
 async def test_register_unexpected_error():
@@ -119,7 +121,7 @@ async def test_register_unexpected_error():
         last_name="User",
         phone="+1-555-123-4567"
     )
-    with pytest.raises(InternalServerException) as exc_info:
+    with pytest.raises(CNOPInternalServerException) as exc_info:
         await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
     assert "Registration failed: Unexpected error" in str(exc_info.value)
 
@@ -159,7 +161,7 @@ async def test_register_weak_password():
 @pytest.mark.asyncio
 async def test_register_invalid_phone():
     # Validation now happens at model level
-    with pytest.raises(UserValidationException, match="Phone number must contain 10-15 digits"):
+    with pytest.raises(CNOPUserValidationException, match="Phone number must contain 10-15 digits"):
         UserRegistrationRequest(
             username="johndoe",
             email="test@example.com",
@@ -173,7 +175,7 @@ async def test_register_invalid_phone():
 async def test_register_future_date_of_birth():
     # Validation now happens at model level
     future_date = date.today() + timedelta(days=1)
-    with pytest.raises(UserValidationException, match="User must be at least 13 years old"):
+    with pytest.raises(CNOPUserValidationException, match="User must be at least 13 years old"):
         UserRegistrationRequest(
             username="johndoe",
             email="test@example.com",

@@ -11,7 +11,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 # Import proper exceptions
-from common.exceptions.shared_exceptions import UserValidationException
+from user_exceptions import CNOPUserValidationException
 
 
 def sanitize_string(value: str, max_length: int = None) -> str:
@@ -60,22 +60,22 @@ def validate_username(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise UserValidationException("Username cannot be empty")
+        raise CNOPUserValidationException("Username cannot be empty")
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
-        raise UserValidationException("Username contains potentially malicious content")
+        raise CNOPUserValidationException("Username contains potentially malicious content")
 
     # 2. Basic sanitization (remove HTML tags, trim whitespace)
     v = sanitize_string(v)
 
     # 3. Check for empty after sanitization
     if not v:
-        raise UserValidationException("Username cannot be empty")
+        raise CNOPUserValidationException("Username cannot be empty")
 
     # 4. Format validation - alphanumeric and underscores only, 6-30 chars
     if not re.match(r'^[a-zA-Z0-9_]{6,30}$', v):
-        raise UserValidationException("Username must be 6-30 alphanumeric characters and underscores only")
+        raise CNOPUserValidationException("Username must be 6-30 alphanumeric characters and underscores only")
 
     # 5. Convert to lowercase for consistency
     return v.lower()
@@ -87,22 +87,22 @@ def validate_name(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise UserValidationException("Name cannot be empty")
+        raise CNOPUserValidationException("Name cannot be empty")
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
-        raise UserValidationException("Name contains potentially malicious content")
+        raise CNOPUserValidationException("Name contains potentially malicious content")
 
     # 2. Basic sanitization (remove HTML tags, trim whitespace)
     v = sanitize_string(v)
 
     # 3. Check for empty after sanitization
     if not v:
-        raise UserValidationException("Name cannot be empty")
+        raise CNOPUserValidationException("Name cannot be empty")
 
     # 4. Format validation - letters, spaces, apostrophes, and hyphens only
     if not re.match(r'^[a-zA-Z\s\'-]+$', v):
-        raise UserValidationException("Name must contain only letters, spaces, apostrophes, and hyphens")
+        raise CNOPUserValidationException("Name must contain only letters, spaces, apostrophes, and hyphens")
 
     # 5. Convert to title case
     return v.title()
@@ -114,22 +114,22 @@ def validate_email(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise UserValidationException("Email cannot be empty")
+        raise CNOPUserValidationException("Email cannot be empty")
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
-        raise UserValidationException("Email contains potentially malicious content")
+        raise CNOPUserValidationException("Email contains potentially malicious content")
 
     # 2. Format validation - check email pattern before sanitization
     if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', v):
-        raise UserValidationException("Invalid email format")
+        raise CNOPUserValidationException("Invalid email format")
 
     # 3. Basic sanitization (remove HTML tags, trim whitespace)
     v = sanitize_string(v)
 
     # 4. Check for empty after sanitization
     if not v:
-        raise UserValidationException("Email cannot be empty")
+        raise CNOPUserValidationException("Email cannot be empty")
 
     # 5. Convert to lowercase
     return v.lower()
@@ -145,7 +145,7 @@ def validate_phone(v: str) -> str:
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
-        raise UserValidationException("Phone contains potentially malicious content")
+        raise CNOPUserValidationException("Phone contains potentially malicious content")
 
     # 2. Basic sanitization (remove HTML tags, trim whitespace)
     v = sanitize_string(v)
@@ -159,7 +159,7 @@ def validate_phone(v: str) -> str:
 
     # 5. Format validation - 10-15 digits
     if not re.match(r'^[0-9]{10,15}$', digits_only):
-        raise UserValidationException("Phone number must contain 10-15 digits")
+        raise CNOPUserValidationException("Phone number must contain 10-15 digits")
 
     return digits_only
 
@@ -170,37 +170,37 @@ def validate_password(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise UserValidationException("Password cannot be empty")
+        raise CNOPUserValidationException("Password cannot be empty")
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
-        raise UserValidationException("Password contains potentially malicious content")
+        raise CNOPUserValidationException("Password contains potentially malicious content")
 
     # 2. Basic sanitization (remove HTML tags, trim whitespace)
     v = sanitize_string(v)
 
     # 3. Check for empty after sanitization
     if not v:
-        raise UserValidationException("Password cannot be empty")
+        raise CNOPUserValidationException("Password cannot be empty")
 
     # 4. Length validation
     if len(v) < 12:
-        raise UserValidationException("Password must be at least 12 characters long")
+        raise CNOPUserValidationException("Password must be at least 12 characters long")
     if len(v) > 20:
-        raise UserValidationException("Password must be no more than 20 characters long")
+        raise CNOPUserValidationException("Password must be no more than 20 characters long")
 
     # 5. Complexity validation
     if not re.search(r"[A-Z]", v):
-        raise UserValidationException("Password must contain at least one uppercase letter")
+        raise CNOPUserValidationException("Password must contain at least one uppercase letter")
 
     if not re.search(r"[a-z]", v):
-        raise UserValidationException("Password must contain at least one lowercase letter")
+        raise CNOPUserValidationException("Password must contain at least one lowercase letter")
 
     if not re.search(r"\d", v):
-        raise UserValidationException("Password must contain at least one number")
+        raise CNOPUserValidationException("Password must contain at least one number")
 
     if not re.search(r"[!@#$%^&*()\-_=+]", v):
-        raise UserValidationException("Password must contain at least one special character (!@#$%^&*()-_=+)")
+        raise CNOPUserValidationException("Password must contain at least one special character (!@#$%^&*()-_=+)")
 
     return v
 
@@ -217,11 +217,11 @@ def validate_date_of_birth(v: date) -> date:
 
     # Check minimum age (13 years for COPPA compliance)
     if age < 13:
-        raise UserValidationException("User must be at least 13 years old")
+        raise CNOPUserValidationException("User must be at least 13 years old")
 
     # Check maximum reasonable age (120 years)
     if age > 120:
-        raise UserValidationException("Invalid date of birth")
+        raise CNOPUserValidationException("Invalid date of birth")
 
     return v
 
@@ -231,18 +231,18 @@ def validate_amount(v: Decimal) -> Decimal:
     User service: amount validation for balance operations
     """
     if not v:
-        raise UserValidationException("Amount cannot be empty")
+        raise CNOPUserValidationException("Amount cannot be empty")
 
     # Check for positive amount
     if v <= 0:
-        raise UserValidationException("Amount must be greater than 0")
+        raise CNOPUserValidationException("Amount must be greater than 0")
 
     # Check for reasonable maximum amount (1 million)
     if v > 1000000:
-        raise UserValidationException("Amount cannot exceed 1,000,000")
+        raise CNOPUserValidationException("Amount cannot exceed 1,000,000")
 
     # Check for reasonable precision (2 decimal places)
     if v.as_tuple().exponent < -2:
-        raise UserValidationException("Amount cannot have more than 2 decimal places")
+        raise CNOPUserValidationException("Amount cannot have more than 2 decimal places")
 
     return v

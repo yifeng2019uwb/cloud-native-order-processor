@@ -16,7 +16,7 @@ from validation.field_validators import (
 )
 
 # Import custom exceptions
-from common.exceptions.shared_exceptions import UserValidationException
+from common.exceptions import CNOPEntityValidationException
 
 
 class UserLoginRequest(BaseModel):

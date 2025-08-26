@@ -11,8 +11,8 @@ from fastapi.testclient import TestClient
 
 from src.controllers.balance.get_balance import get_user_balance, router
 from src.api_models.balance.balance_models import BalanceResponse
-from common.entities.user import UserResponse
-from user_exceptions import UserNotFoundException, InternalServerException
+from common.data.entities.user import Balance, UserResponse
+from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
 
 
 class TestGetUserBalance:
@@ -34,7 +34,6 @@ class TestGetUserBalance:
     @pytest.fixture
     def sample_balance(self):
         """Sample balance data"""
-        from common.entities.user import Balance
 
         balance = Mock(spec=Balance)
         balance.current_balance = Decimal('1250.75')
@@ -57,7 +56,6 @@ class TestGetUserBalance:
 
     def test_get_user_balance_zero_balance(self, mock_current_user, mock_balance_dao):
         """Test balance retrieval when user has zero balance"""
-        from common.entities.user import Balance
 
         zero_balance = Mock(spec=Balance)
         zero_balance.current_balance = Decimal('0.00')
@@ -75,7 +73,6 @@ class TestGetUserBalance:
 
     def test_get_user_balance_negative_balance(self, mock_current_user, mock_balance_dao):
         """Test balance retrieval when user has negative balance (overdraft)"""
-        from common.entities.user import Balance
 
         negative_balance = Mock(spec=Balance)
         negative_balance.current_balance = Decimal('-50.25')
@@ -93,7 +90,6 @@ class TestGetUserBalance:
 
     def test_get_user_balance_large_amount(self, mock_current_user, mock_balance_dao):
         """Test balance retrieval with large amount"""
-        from common.entities.user import Balance
 
         large_balance = Mock(spec=Balance)
         large_balance.current_balance = Decimal('999999.99')
@@ -111,7 +107,6 @@ class TestGetUserBalance:
 
     def test_get_user_balance_decimal_precision(self, mock_current_user, mock_balance_dao):
         """Test balance retrieval with precise decimal amounts"""
-        from common.entities.user import Balance
 
         precise_balance = Mock(spec=Balance)
         precise_balance.current_balance = Decimal('123.456789')
@@ -129,10 +124,10 @@ class TestGetUserBalance:
 
     def test_get_user_balance_user_not_found_exception(self, mock_current_user, mock_balance_dao):
         """Test balance retrieval when UserNotFoundException is raised"""
-        mock_balance_dao.get_balance.side_effect = UserNotFoundException("User not found")
+        mock_balance_dao.get_balance.side_effect = CNOPUserNotFoundException("User not found")
 
         # UserNotFoundException should be re-raised without modification
-        with pytest.raises(UserNotFoundException, match="User not found"):
+        with pytest.raises(CNOPUserNotFoundException, match="User not found"):
             get_user_balance(
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao
@@ -142,7 +137,7 @@ class TestGetUserBalance:
         """Test balance retrieval when generic exception occurs"""
         mock_balance_dao.get_balance.side_effect = Exception("Database connection failed")
 
-        with pytest.raises(InternalServerException, match="Failed to get balance: Database connection failed"):
+        with pytest.raises(CNOPInternalServerException, match="Failed to get balance: Database connection failed"):
             get_user_balance(
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao
@@ -152,7 +147,7 @@ class TestGetUserBalance:
         """Test balance retrieval when database error occurs"""
         mock_balance_dao.get_balance.side_effect = Exception("Table does not exist")
 
-        with pytest.raises(InternalServerException, match="Failed to get balance: Table does not exist"):
+        with pytest.raises(CNOPInternalServerException, match="Failed to get balance: Table does not exist"):
             get_user_balance(
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao
@@ -162,7 +157,7 @@ class TestGetUserBalance:
         """Test balance retrieval when network error occurs"""
         mock_balance_dao.get_balance.side_effect = Exception("Connection timeout")
 
-        with pytest.raises(InternalServerException, match="Failed to get balance: Connection timeout"):
+        with pytest.raises(CNOPInternalServerException, match="Failed to get balance: Connection timeout"):
             get_user_balance(
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao
@@ -170,7 +165,6 @@ class TestGetUserBalance:
 
     def test_get_user_balance_different_user(self, mock_balance_dao):
         """Test balance retrieval for different user"""
-        from common.entities.user import Balance
 
         different_user = Mock(spec=UserResponse)
         different_user.username = "anotheruser456"

@@ -9,10 +9,10 @@ import logging
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from src.api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
+from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
 from typing import Union
-from common.security import TokenManager
-from common.exceptions import TokenExpiredException, TokenInvalidException
+from common.auth.security import TokenManager
+from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 
 router = APIRouter(prefix="/internal/auth", tags=["internal"])
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ def validate_jwt_token(request: ValidateTokenRequest):
             request_id=request_id
         )
 
-    except TokenExpiredException as e:
+    except CNOPAuthTokenExpiredException as e:
         duration_ms = int((time.time() - start_time) * 1000)
 
         logger.warning("JWT token expired - request_id: %s, duration_ms: %d", request_id, duration_ms)
@@ -69,7 +69,7 @@ def validate_jwt_token(request: ValidateTokenRequest):
             request_id=request_id
         )
 
-    except TokenInvalidException as e:
+    except CNOPAuthTokenInvalidException as e:
         duration_ms = int((time.time() - start_time) * 1000)
 
         logger.warning("JWT token invalid - request_id: %s, duration_ms: %d, error_message: %s",

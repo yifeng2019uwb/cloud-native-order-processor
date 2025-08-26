@@ -4,15 +4,20 @@ Tests for user service validation
 import pytest
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock, Mock
+from decimal import Decimal
 
 from src.validation.field_validators import (
+    is_suspicious,
+    validate_amount,
     validate_username,
     validate_name,
     validate_email,
     validate_phone,
     validate_password,
-    validate_date_of_birth
+    validate_date_of_birth,
+    sanitize_string
 )
+
 from src.validation.business_validators import (
     validate_username_uniqueness,
     validate_email_uniqueness,
@@ -21,8 +26,8 @@ from src.validation.business_validators import (
     validate_role_permissions,
     validate_sufficient_balance
 )
-from common.exceptions.shared_exceptions import UserValidationException, UserNotFoundException
-from user_exceptions import UserAlreadyExistsException
+from common.exceptions.shared_exceptions import CNOPUserNotFoundException
+from user_exceptions import CNOPUserAlreadyExistsException, CNOPUserValidationException
 
 
 class TestFieldValidators:
@@ -47,12 +52,12 @@ class TestFieldValidators:
 
         def test_empty_username(self):
             """Test empty username"""
-            with pytest.raises(UserValidationException, match="Username cannot be empty"):
+            with pytest.raises(CNOPUserValidationException, match="Username cannot be empty"):
                 validate_username("")
 
         def test_whitespace_only_username(self):
             """Test whitespace-only username"""
-            with pytest.raises(UserValidationException, match="Username cannot be empty"):
+            with pytest.raises(CNOPUserValidationException, match="Username cannot be empty"):
                 validate_username("   ")
 
         def test_invalid_characters(self):
@@ -66,17 +71,17 @@ class TestFieldValidators:
             ]
 
             for username in invalid_usernames:
-                with pytest.raises(UserValidationException, match="Username must be 6-30 alphanumeric characters and underscores only"):
+                with pytest.raises(CNOPUserValidationException, match="Username must be 6-30 alphanumeric characters and underscores only"):
                     validate_username(username)
 
         def test_too_short_username(self):
             """Test username that's too short"""
-            with pytest.raises(UserValidationException, match="Username must be 6-30 alphanumeric characters and underscores only"):
+            with pytest.raises(CNOPUserValidationException, match="Username must be 6-30 alphanumeric characters and underscores only"):
                 validate_username("abc")
 
         def test_too_long_username(self):
             """Test username that's too long"""
-            with pytest.raises(UserValidationException, match="Username must be 6-30 alphanumeric characters and underscores only"):
+            with pytest.raises(CNOPUserValidationException, match="Username must be 6-30 alphanumeric characters and underscores only"):
                 validate_username("a" * 31)
 
         def test_suspicious_content(self):
@@ -88,7 +93,7 @@ class TestFieldValidators:
             ]
 
             for username in suspicious_usernames:
-                with pytest.raises(UserValidationException, match="Username contains potentially malicious content"):
+                with pytest.raises(CNOPUserValidationException, match="Username contains potentially malicious content"):
                     validate_username(username)
 
         def test_case_conversion(self):
@@ -101,7 +106,7 @@ class TestFieldValidators:
             # This tests line 101 in field_validators.py
             # Note: The actual logic checks suspicious content first, so we need a different approach
             # Use a string that will pass suspicious check but become empty after sanitization
-            with pytest.raises(UserValidationException, match="Username cannot be empty"):
+            with pytest.raises(CNOPUserValidationException, match="Username cannot be empty"):
                 validate_username("   ")  # Whitespace only becomes empty after sanitization
 
     class TestNameValidation:
@@ -124,7 +129,7 @@ class TestFieldValidators:
 
         def test_empty_name(self):
             """Test empty name"""
-            with pytest.raises(UserValidationException, match="Name cannot be empty"):
+            with pytest.raises(CNOPUserValidationException, match="Name cannot be empty"):
                 validate_name("")
 
         def test_invalid_characters(self):
@@ -137,7 +142,7 @@ class TestFieldValidators:
             ]
 
             for name in invalid_names:
-                with pytest.raises(UserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
+                with pytest.raises(CNOPUserValidationException, match="Name must contain only letters, spaces, apostrophes, and hyphens"):
                     validate_name(name)
 
         def test_valid_names_with_hyphens(self):
@@ -161,7 +166,7 @@ class TestFieldValidators:
             ]
 
             for name in suspicious_names:
-                with pytest.raises(UserValidationException, match="Name contains potentially malicious content"):
+                with pytest.raises(CNOPUserValidationException, match="Name contains potentially malicious content"):
                     validate_name(name)
 
         def test_case_conversion(self):
@@ -174,8 +179,6 @@ class TestFieldValidators:
 
         def test_sanitize_string_non_string_input(self):
             """Test sanitize_string with non-string input (line 20)"""
-            from src.validation.field_validators import sanitize_string
-
             # Test with integer
             result = sanitize_string(123)
             assert result == "123"
@@ -190,7 +193,6 @@ class TestFieldValidators:
 
         def test_sanitize_string_with_max_length(self):
             """Test sanitize_string with max_length truncation (line 38)"""
-            from src.validation.field_validators import sanitize_string
 
             long_string = "This is a very long string that should be truncated"
             result = sanitize_string(long_string, max_length=20)
@@ -200,7 +202,6 @@ class TestFieldValidators:
 
         def test_sanitize_string_remove_html_tags(self):
             """Test sanitize_string removes HTML tags"""
-            from src.validation.field_validators import sanitize_string
 
             html_string = "<script>alert('xss')</script>Hello World"
             result = sanitize_string(html_string)
@@ -213,7 +214,6 @@ class TestFieldValidators:
 
         def test_is_suspicious_non_string_input(self):
             """Test is_suspicious with non-string input (line 30)"""
-            from src.validation.field_validators import is_suspicious
 
             # Test with integer
             assert is_suspicious(123) is False
@@ -226,7 +226,6 @@ class TestFieldValidators:
 
         def test_is_suspicious_suspicious_patterns(self):
             """Test is_suspicious detects various attack patterns"""
-            from src.validation.field_validators import is_suspicious
 
             suspicious_inputs = [
                 "<script>alert('xss')</script>",
@@ -241,7 +240,6 @@ class TestFieldValidators:
 
         def test_is_suspicious_clean_input(self):
             """Test is_suspicious with clean input"""
-            from src.validation.field_validators import is_suspicious
 
             clean_inputs = [
                 "Hello World",
@@ -271,7 +269,7 @@ class TestFieldValidators:
 
         def test_empty_email(self):
             """Test empty email"""
-            with pytest.raises(UserValidationException, match="Email cannot be empty"):
+            with pytest.raises(CNOPUserValidationException, match="Email cannot be empty"):
                 validate_email("")
 
         def test_invalid_email_format(self):
@@ -287,7 +285,7 @@ class TestFieldValidators:
             ]
 
             for email in invalid_emails:
-                with pytest.raises(UserValidationException, match="Invalid email format"):
+                with pytest.raises(CNOPUserValidationException, match="Invalid email format"):
                     validate_email(email)
 
         def test_suspicious_content(self):
@@ -299,7 +297,7 @@ class TestFieldValidators:
             ]
 
             for email in suspicious_emails:
-                with pytest.raises(UserValidationException, match="Email contains potentially malicious content"):
+                with pytest.raises(CNOPUserValidationException, match="Email contains potentially malicious content"):
                     validate_email(email)
 
         def test_case_conversion(self):
@@ -354,12 +352,12 @@ class TestFieldValidators:
 
         def test_invalid_phone_too_short(self):
             """Test phone with too few digits"""
-            with pytest.raises(UserValidationException, match="Phone number must contain 10-15 digits"):
+            with pytest.raises(CNOPUserValidationException, match="Phone number must contain 10-15 digits"):
                 validate_phone("123")  # Only 3 digits
 
         def test_invalid_phone_too_long(self):
             """Test phone with too many digits"""
-            with pytest.raises(UserValidationException, match="Phone number must contain 10-15 digits"):
+            with pytest.raises(CNOPUserValidationException, match="Phone number must contain 10-15 digits"):
                 validate_phone("1234567890123456")  # 16 digits
 
         def test_suspicious_content(self):
@@ -370,7 +368,7 @@ class TestFieldValidators:
             ]
 
             for phone in suspicious_phones:
-                with pytest.raises(UserValidationException, match="Phone contains potentially malicious content"):
+                with pytest.raises(CNOPUserValidationException, match="Phone contains potentially malicious content"):
                     validate_phone(phone)
 
         def test_phone_after_sanitization_empty(self):
@@ -381,7 +379,7 @@ class TestFieldValidators:
 
         def test_phone_with_insufficient_digits(self):
             """Test phone with insufficient digits after extraction (line 155)"""
-            with pytest.raises(UserValidationException, match="Phone number must contain 10-15 digits"):
+            with pytest.raises(CNOPUserValidationException, match="Phone number must contain 10-15 digits"):
                 validate_phone("abc-def-ghi")  # No digits, so empty after extraction
 
     class TestPasswordValidation:
@@ -402,37 +400,37 @@ class TestFieldValidators:
 
         def test_empty_password(self):
             """Test empty password"""
-            with pytest.raises(UserValidationException, match="Password cannot be empty"):
+            with pytest.raises(CNOPUserValidationException, match="Password cannot be empty"):
                 validate_password("")
 
         def test_password_too_short(self):
             """Test password that's too short"""
-            with pytest.raises(UserValidationException, match="Password must be at least 12 characters long"):
+            with pytest.raises(CNOPUserValidationException, match="Password must be at least 12 characters long"):
                 validate_password("Short1!")
 
         def test_password_too_long(self):
             """Test password that's too long"""
-            with pytest.raises(UserValidationException, match="Password must be no more than 20 characters long"):
+            with pytest.raises(CNOPUserValidationException, match="Password must be no more than 20 characters long"):
                 validate_password("VeryLongPassword123!ExtraLong")
 
         def test_password_no_uppercase(self):
             """Test password without uppercase letter"""
-            with pytest.raises(UserValidationException, match="Password must contain at least one uppercase letter"):
+            with pytest.raises(CNOPUserValidationException, match="Password must contain at least one uppercase letter"):
                 validate_password("lowercase123!")
 
         def test_password_no_lowercase(self):
             """Test password without lowercase letter"""
-            with pytest.raises(UserValidationException, match="Password must contain at least one lowercase letter"):
+            with pytest.raises(CNOPUserValidationException, match="Password must contain at least one lowercase letter"):
                 validate_password("UPPERCASE123!")
 
         def test_password_no_number(self):
             """Test password without number"""
-            with pytest.raises(UserValidationException, match="Password must contain at least one number"):
+            with pytest.raises(CNOPUserValidationException, match="Password must contain at least one number"):
                 validate_password("NoNumbers!ExtraLong")
 
         def test_password_no_special_char(self):
             """Test password without special character"""
-            with pytest.raises(UserValidationException, match="Password must contain at least one special character"):
+            with pytest.raises(CNOPUserValidationException, match="Password must contain at least one special character"):
                 validate_password("NoSpecialChar123")
 
         def test_suspicious_content(self):
@@ -443,13 +441,13 @@ class TestFieldValidators:
             ]
 
             for password in suspicious_passwords:
-                with pytest.raises(UserValidationException, match="Password contains potentially malicious content"):
+                with pytest.raises(CNOPUserValidationException, match="Password contains potentially malicious content"):
                     validate_password(password)
 
         def test_password_after_sanitization_empty(self):
             """Test password that becomes empty after sanitization (line 184)"""
             # Use a string that will pass suspicious check but become empty after sanitization
-            with pytest.raises(UserValidationException, match="Password cannot be empty"):
+            with pytest.raises(CNOPUserValidationException, match="Password cannot be empty"):
                 validate_password("   ")  # Whitespace only becomes empty after sanitization
 
     class TestDateOfBirthValidation:
@@ -478,7 +476,7 @@ class TestFieldValidators:
             today = date.today()
             too_young = today - timedelta(days=12 * 365)  # 12 years old
 
-            with pytest.raises(UserValidationException, match="User must be at least 13 years old"):
+            with pytest.raises(CNOPUserValidationException, match="User must be at least 13 years old"):
                 validate_date_of_birth(too_young)
 
         def test_too_old(self):
@@ -486,7 +484,7 @@ class TestFieldValidators:
             today = date.today()
             too_old = today - timedelta(days=125 * 365)  # 125 years old
 
-            with pytest.raises(UserValidationException, match="Invalid date of birth"):
+            with pytest.raises(CNOPUserValidationException, match="Invalid date of birth"):
                 validate_date_of_birth(too_old)
 
         def test_date_edge_case_13_years_exact(self):
@@ -512,8 +510,6 @@ class TestFieldValidators:
 
         def test_valid_amounts(self):
             """Test valid amount values"""
-            from decimal import Decimal
-            from src.validation.field_validators import validate_amount
 
             valid_amounts = [
                 Decimal("0.01"),
@@ -528,42 +524,33 @@ class TestFieldValidators:
 
         def test_empty_amount(self):
             """Test empty amount"""
-            from decimal import Decimal
-            from src.validation.field_validators import validate_amount
 
-            with pytest.raises(UserValidationException, match="Amount cannot be empty"):
+            with pytest.raises(CNOPUserValidationException, match="Amount cannot be empty"):
                 validate_amount(None)
 
         def test_zero_amount(self):
             """Test zero amount"""
-            from decimal import Decimal
-            from src.validation.field_validators import validate_amount
 
-            with pytest.raises(UserValidationException, match="Amount cannot be empty"):
+            with pytest.raises(CNOPUserValidationException, match="Amount cannot be empty"):
                 validate_amount(Decimal("0"))
 
         def test_negative_amount(self):
             """Test negative amount"""
-            from decimal import Decimal
-            from src.validation.field_validators import validate_amount
 
-            with pytest.raises(UserValidationException, match="Amount must be greater than 0"):
+
+            with pytest.raises(CNOPUserValidationException, match="Amount must be greater than 0"):
                 validate_amount(Decimal("-100"))
 
         def test_amount_exceeds_maximum(self):
             """Test amount that exceeds maximum limit (line 242)"""
-            from decimal import Decimal
-            from src.validation.field_validators import validate_amount
 
-            with pytest.raises(UserValidationException, match="Amount cannot exceed 1,000,000"):
+            with pytest.raises(CNOPUserValidationException, match="Amount cannot exceed 1,000,000"):
                 validate_amount(Decimal("1000000.01"))
 
         def test_amount_too_many_decimal_places(self):
             """Test amount with too many decimal places (line 246)"""
-            from decimal import Decimal
-            from src.validation.field_validators import validate_amount
 
-            with pytest.raises(UserValidationException, match="Amount cannot have more than 2 decimal places"):
+            with pytest.raises(CNOPUserValidationException, match="Amount cannot have more than 2 decimal places"):
                 validate_amount(Decimal("100.123"))
 
 
@@ -586,7 +573,7 @@ class TestBusinessValidators:
         mock_user.username = "user123"
         mock_dao.get_user_by_username.return_value = mock_user
 
-        with pytest.raises(UserAlreadyExistsException, match="Username 'existinguser' already exists"):
+        with pytest.raises(CNOPUserAlreadyExistsException, match="Username 'existinguser' already exists"):
             validate_username_uniqueness("existinguser", mock_dao)
 
     # Removed test_validate_username_uniqueness_exclude_current as we simplified the logic
@@ -608,7 +595,7 @@ class TestBusinessValidators:
         mock_user.username = "user123"
         mock_dao.get_user_by_email.return_value = mock_user
 
-        with pytest.raises(UserAlreadyExistsException, match="Email 'existing@example.com' already exists"):
+        with pytest.raises(CNOPUserAlreadyExistsException, match="Email 'existing@example.com' already exists"):
             validate_email_uniqueness("existing@example.com", mock_dao)
 
     def test_validate_user_exists_found(self):
@@ -626,7 +613,7 @@ class TestBusinessValidators:
         mock_dao = Mock()
         mock_dao.get_user_by_username.return_value = None
 
-        with pytest.raises(UserNotFoundException, match="User with username 'nonexistent' not found"):
+        with pytest.raises(CNOPUserNotFoundException, match="User with username 'nonexistent' not found"):
             validate_user_exists("nonexistent", mock_dao)
 
     def test_validate_age_requirements_valid(self):
@@ -647,7 +634,7 @@ class TestBusinessValidators:
         today = date.today()
         too_young = today - timedelta(days=12 * 365)  # 12 years old
 
-        with pytest.raises(UserValidationException, match="User must be at least 13 years old"):
+        with pytest.raises(CNOPUserValidationException, match="User must be at least 13 years old"):
             validate_age_requirements(too_young)
 
     def test_validate_age_requirements_too_old(self):
@@ -655,13 +642,13 @@ class TestBusinessValidators:
         today = date.today()
         too_old = today - timedelta(days=125 * 365)  # 125 years old
 
-        with pytest.raises(UserValidationException, match="Invalid date of birth"):
+        with pytest.raises(CNOPUserValidationException, match="Invalid date of birth"):
             validate_age_requirements(too_old)
 
     def test_validate_username_uniqueness_user_not_found_exception(self):
         """Test username uniqueness when UserNotFoundException occurs"""
         mock_dao = Mock()
-        mock_dao.get_user_by_username.side_effect = UserNotFoundException("User not found")
+        mock_dao.get_user_by_username.side_effect = CNOPUserNotFoundException("User not found")
 
         result = validate_username_uniqueness("newuser", mock_dao)
         assert result is True
@@ -678,7 +665,7 @@ class TestBusinessValidators:
     def test_validate_email_uniqueness_user_not_found_exception(self):
         """Test email uniqueness when UserNotFoundException occurs"""
         mock_dao = Mock()
-        mock_dao.get_user_by_email.side_effect = UserNotFoundException("User not found")
+        mock_dao.get_user_by_email.side_effect = CNOPUserNotFoundException("User not found")
 
         result = validate_email_uniqueness("new@example.com", mock_dao)
         assert result is True
@@ -705,9 +692,9 @@ def test_validate_sufficient_balance_success():
     mock_balance = MagicMock()
     mock_balance.current_balance = 1000.0
     mock_balance_dao.get_balance.return_value = mock_balance
-    
+
     result = validate_sufficient_balance("testuser", 500.0, mock_balance_dao)
-    
+
     assert result is True
     mock_balance_dao.get_balance.assert_called_once_with("testuser")
 
@@ -717,10 +704,10 @@ def test_validate_sufficient_balance_insufficient():
     mock_balance = MagicMock()
     mock_balance.current_balance = 100.0
     mock_balance_dao.get_balance.return_value = mock_balance
-    
-    with pytest.raises(UserValidationException) as exc_info:
+
+    with pytest.raises(CNOPUserValidationException) as exc_info:
         validate_sufficient_balance("testuser", 500.0, mock_balance_dao)
-    
+
     assert "Insufficient balance" in str(exc_info.value)
     assert "Current balance: $100.0" in str(exc_info.value)
     assert "Required: $500.0" in str(exc_info.value)
@@ -731,19 +718,19 @@ def test_validate_sufficient_balance_exact():
     mock_balance = MagicMock()
     mock_balance.current_balance = 500.0
     mock_balance_dao.get_balance.return_value = mock_balance
-    
+
     result = validate_sufficient_balance("testuser", 500.0, mock_balance_dao)
-    
+
     assert result is True
 
 def test_validate_sufficient_balance_user_not_found():
     """Test balance validation when user not found"""
     mock_balance_dao = MagicMock()
     mock_balance_dao.get_balance.return_value = None
-    
-    with pytest.raises(UserValidationException) as exc_info:
+
+    with pytest.raises(CNOPUserValidationException) as exc_info:
         validate_sufficient_balance("testuser", 500.0, mock_balance_dao)
-    
+
     assert "User balance not found" in str(exc_info.value)
 
 def test_validate_sufficient_balance_zero_amount():
@@ -752,7 +739,7 @@ def test_validate_sufficient_balance_zero_amount():
     mock_balance = MagicMock()
     mock_balance.current_balance = 100.0
     mock_balance_dao.get_balance.return_value = mock_balance
-    
+
     result = validate_sufficient_balance("testuser", 0.0, mock_balance_dao)
-    
+
     assert result is True

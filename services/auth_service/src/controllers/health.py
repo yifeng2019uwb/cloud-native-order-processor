@@ -7,7 +7,7 @@ Health check endpoints for Kubernetes probes.
 from fastapi import APIRouter, status
 from typing import Dict, Any
 
-from common.health import HealthChecker
+from common.shared.health import HealthChecker
 
 router = APIRouter(tags=["health"])
 

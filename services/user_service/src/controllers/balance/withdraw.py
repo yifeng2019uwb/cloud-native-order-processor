@@ -15,25 +15,25 @@ from api_models.balance import WithdrawRequest, WithdrawResponse
 from api_models.shared.common import ErrorResponse
 
 # Import common DAO models
-from common.entities.user import UserResponse
+from common.data.entities.user import UserResponse
 
 # Import dependencies
-from common.database import get_transaction_manager
+from common.core.utils import get_transaction_manager
 from controllers.auth.dependencies import get_current_user
 
 # Import exceptions
 from common.exceptions.shared_exceptions import (
-    UserNotFoundException,
-    UserValidationException,
-    InternalServerException
+    CNOPUserNotFoundException,
+    CNOPInternalServerException
 )
+from user_exceptions import CNOPUserValidationException
 
 # Import common exceptions for transaction manager
 from common.exceptions import (
-    DatabaseOperationException,
-    EntityNotFoundException,
-    LockAcquisitionException,
-    InsufficientBalanceException
+    CNOPDatabaseOperationException,
+    CNOPEntityNotFoundException,
+    CNOPLockAcquisitionException,
+    CNOPInsufficientBalanceException
 )
 
 logger = logging.getLogger(__name__)
@@ -111,23 +111,23 @@ async def withdraw_funds(
             timestamp=datetime.utcnow()
         )
 
-    except LockAcquisitionException as e:
+    except CNOPLockAcquisitionException as e:
         logger.warning(f"Lock acquisition failed for withdrawal: user={current_user.username}, error={str(e)}")
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")
 
-    except InsufficientBalanceException as e:
+    except CNOPInsufficientBalanceException as e:
         logger.warning(f"Insufficient balance for withdrawal: user={current_user.username}, error={str(e)}")
-        raise UserValidationException(str(e))
-    except UserValidationException as e:
+        raise CNOPUserValidationException(str(e))
+    except CNOPUserValidationException as e:
         logger.warning(f"User validation error for withdrawal: user={current_user.username}, error={str(e)}")
-        raise UserValidationException(str(e))
-    except DatabaseOperationException as e:
+        raise CNOPUserValidationException(str(e))
+    except CNOPDatabaseOperationException as e:
         if "User balance not found" in str(e):
             logger.error(f"System error - user balance not found for withdrawal: user={current_user.username}, error={str(e)}")
-            raise InternalServerException("System error - please contact support")
+            raise CNOPInternalServerException("System error - please contact support")
         else:
             logger.error(f"Database operation failed for withdrawal: user={current_user.username}, error={str(e)}")
-            raise InternalServerException("Service temporarily unavailable")
+            raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(f"Unexpected error during withdrawal: user={current_user.username}, error={str(e)}", exc_info=True)
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")
