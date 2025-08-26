@@ -10,15 +10,15 @@ from decimal import Decimal
 from typing import Dict, Any, Optional
 
 from .lock_manager import UserLock, LOCK_TIMEOUTS
-from ..dao.user import UserDAO, BalanceDAO
-from ..dao.order import OrderDAO
-from ..dao.inventory import AssetDAO
-from ..dao.asset import AssetBalanceDAO, AssetTransactionDAO
-from ..entities.user import BalanceTransaction, TransactionType, TransactionStatus
-from ..entities.order import Order, OrderStatus, OrderType
-from ..entities.asset import AssetTransactionCreate, AssetTransactionType, AssetTransactionStatus
-from ..exceptions import DatabaseOperationException, EntityNotFoundException, LockAcquisitionException, InsufficientBalanceException
-from ..exceptions.shared_exceptions import UserValidationException, AssetBalanceNotFoundException
+from ..data.dao.user import UserDAO, BalanceDAO
+from ..data.dao.order import OrderDAO
+from ..data.dao.inventory import AssetDAO
+from ..data.dao.asset import AssetBalanceDAO, AssetTransactionDAO
+from ..data.entities.user import BalanceTransaction, TransactionType, TransactionStatus
+from ..data.entities.order import Order, OrderStatus, OrderType
+from ..data.entities.asset import AssetTransactionCreate, AssetTransactionType
+from ..data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException
+from ..exceptions.shared_exceptions import CNOPInsufficientBalanceException
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ class TransactionManager:
                     # If balance update fails, clean up the transaction record to maintain consistency
                     logger.error(f"Balance update failed, cleaning up transaction: user={username}, error={str(e)}")
                     # TODO: Implement transaction cleanup method in balance_dao
-                    raise DatabaseOperationException(f"Transaction failed: {str(e)}")
+                    raise CNOPDatabaseOperationException(f"Transaction failed: {str(e)}")
 
                 # Get updated balance
                 balance = self.balance_dao.get_balance(username)  # Use username directly
@@ -113,12 +113,12 @@ class TransactionManager:
                     lock_duration=lock_duration
                 )
 
-        except LockAcquisitionException as e:
+        except CNOPLockAcquisitionException as e:
             logger.warning(f"Lock acquisition failed for deposit: user={username}, error={str(e)}")
-            raise DatabaseOperationException("Service temporarily unavailable")
+            raise CNOPDatabaseOperationException("Service temporarily unavailable")
         except Exception as e:
             logger.error(f"Deposit failed: user={username}, amount={amount}, error={str(e)}")
-            raise DatabaseOperationException(f"Deposit failed: {str(e)}")
+            raise CNOPDatabaseOperationException(f"Deposit failed: {str(e)}")
 
     async def withdraw_funds(self, username: str, amount: Decimal) -> TransactionResult:
         """
@@ -142,14 +142,14 @@ class TransactionManager:
                     # If this occurs, it indicates a serious system issue (database corruption, race condition, or bug)
                     logger.critical(f"CRITICAL SYSTEM ERROR: User balance missing for user {username}. "
                                   f"This should NEVER happen as balance is created during user registration.")
-                    raise DatabaseOperationException(
+                    raise CNOPDatabaseOperationException(
                         f"Critical system error: User balance missing for user {username}. "
                         f"This indicates a serious system issue. Please contact support immediately."
                     )
 
                 if balance.current_balance < amount:
                     shortfall = amount - balance.current_balance
-                    raise InsufficientBalanceException(
+                    raise CNOPInsufficientBalanceException(
                         f"Insufficient balance for withdrawal. "
                         f"Current balance: ${balance.current_balance:.2f}, "
                         f"Required amount: ${amount:.2f}, "
@@ -180,7 +180,7 @@ class TransactionManager:
                     # If balance update fails, clean up the transaction record to maintain consistency
                     logger.error(f"Balance update failed, cleaning up transaction: user={username}, error={str(e)}")
                     # TODO: Implement transaction cleanup method in balance_dao
-                    raise DatabaseOperationException(f"Transaction failed: {str(e)}")
+                    raise CNOPDatabaseOperationException(f"Transaction failed: {str(e)}")
 
                 # Get updated balance
                 updated_balance = self.balance_dao.get_balance(username)  # Use username directly
@@ -199,15 +199,15 @@ class TransactionManager:
                     lock_duration=lock_duration
                 )
 
-        except LockAcquisitionException as e:
+        except CNOPLockAcquisitionException as e:
             logger.warning(f"Lock acquisition failed for withdrawal: user={username}, error={str(e)}")
-            raise DatabaseOperationException("Service temporarily unavailable")
-        except InsufficientBalanceException:
-            # Re-raise InsufficientBalanceException directly
+            raise CNOPDatabaseOperationException("Service temporarily unavailable")
+        except CNOPInsufficientBalanceException:
+            # Re-raise CNOPInsufficientBalanceException directly
             raise
         except Exception as e:
             logger.error(f"Withdrawal failed: user={username}, amount={amount}, error={str(e)}")
-            raise DatabaseOperationException(f"Withdrawal failed: {str(e)}")
+            raise CNOPDatabaseOperationException(f"Withdrawal failed: {str(e)}")
 
     async def create_buy_order_with_balance_update(
         self,
@@ -240,14 +240,14 @@ class TransactionManager:
                     # If this occurs, it indicates a serious system issue (database corruption, race condition, or bug)
                     logger.critical(f"CRITICAL SYSTEM ERROR: User balance missing for user {username}. "
                                   f"This should NEVER happen as balance is created during user registration.")
-                    raise DatabaseOperationException(
+                    raise CNOPDatabaseOperationException(
                         f"Critical system error: User balance missing for user {username}. "
                         f"This indicates a serious system issue. Please contact support immediately."
                     )
 
                 if balance.current_balance < total_cost:
                     shortfall = total_cost - balance.current_balance
-                    raise InsufficientBalanceException(
+                    raise CNOPInsufficientBalanceException(
                         f"Insufficient balance for buy order. "
                         f"Current balance: ${balance.current_balance:.2f}, "
                         f"Order cost: ${total_cost:.2f}, "
@@ -338,15 +338,15 @@ class TransactionManager:
                     lock_duration=lock_duration
                 )
 
-        except LockAcquisitionException as e:
+        except CNOPLockAcquisitionException as e:
             logger.warning(f"Lock acquisition failed for buy order: user={username}, error={str(e)}")
-            raise DatabaseOperationException("Service temporarily unavailable")
-        except InsufficientBalanceException:
-            # Re-raise InsufficientBalanceException directly
+            raise CNOPDatabaseOperationException("Service temporarily unavailable")
+        except CNOPInsufficientBalanceException:
+            # Re-raise CNOPInsufficientBalanceException directly
             raise
         except Exception as e:
             logger.error(f"Buy order creation failed: user={username}, error={str(e)}")
-            raise DatabaseOperationException(f"Order creation failed: {str(e)}")
+            raise CNOPDatabaseOperationException(f"Order creation failed: {str(e)}")
 
     async def create_sell_order_with_balance_update(
         self,
@@ -452,9 +452,9 @@ class TransactionManager:
                     lock_duration=lock_duration
                 )
 
-        except LockAcquisitionException as e:
+        except CNOPLockAcquisitionException as e:
             logger.warning(f"Lock acquisition failed for sell order: user={username}, error={str(e)}")
-            raise DatabaseOperationException("Service temporarily unavailable")
+            raise CNOPDatabaseOperationException("Service temporarily unavailable")
         except Exception as e:
             logger.error(f"Sell order creation failed: user={username}, error={str(e)}")
-            raise DatabaseOperationException(f"Order creation failed: {str(e)}")
+            raise CNOPDatabaseOperationException(f"Order creation failed: {str(e)}")

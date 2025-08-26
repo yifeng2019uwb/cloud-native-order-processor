@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 from datetime import datetime, timezone
 from fastapi import HTTPException
 
-from common.health.health_checks import (
+from src.health.health_checks import (
     HealthCheckResponse,
     HealthChecker,
     create_health_checker,
@@ -72,7 +72,7 @@ class TestHealthChecker:
 
     def test_readiness_check_success(self, health_checker):
         """Test successful readiness check"""
-        with patch('common.health.health_checks.get_database_health') as mock_db_health:
+        with patch('src.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.return_value = True
 
             result = health_checker.readiness_check()
@@ -85,7 +85,7 @@ class TestHealthChecker:
 
     def test_readiness_check_database_failure(self, health_checker):
         """Test readiness check when database is unhealthy"""
-        with patch('common.health.health_checks.get_database_health') as mock_db_health:
+        with patch('src.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.return_value = False
 
             with pytest.raises(HTTPException) as exc_info:
@@ -96,7 +96,7 @@ class TestHealthChecker:
 
     def test_readiness_check_exception(self, health_checker):
         """Test readiness check when exception occurs"""
-        with patch('common.health.health_checks.get_database_health') as mock_db_health:
+        with patch('src.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.side_effect = Exception("Database connection failed")
 
             with pytest.raises(HTTPException) as exc_info:
@@ -107,7 +107,7 @@ class TestHealthChecker:
 
     def test_database_health_check_success(self, health_checker):
         """Test successful database health check"""
-        with patch('common.health.health_checks.get_database_health') as mock_db_health:
+        with patch('src.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.return_value = True
 
             result = health_checker.database_health_check()
@@ -119,7 +119,7 @@ class TestHealthChecker:
 
     def test_database_health_check_failure(self, health_checker):
         """Test database health check when database is unhealthy"""
-        with patch('common.health.health_checks.get_database_health') as mock_db_health:
+        with patch('src.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.return_value = False
 
             with pytest.raises(HTTPException) as exc_info:
@@ -130,7 +130,7 @@ class TestHealthChecker:
 
     def test_database_health_check_exception(self, health_checker):
         """Test database health check when exception occurs"""
-        with patch('common.health.health_checks.get_database_health') as mock_db_health:
+        with patch('src.health.health_checks.get_database_health') as mock_db_health:
             mock_db_health.side_effect = Exception("Database connection failed")
 
             with pytest.raises(HTTPException) as exc_info:
@@ -157,7 +157,7 @@ class TestGetDatabaseHealth:
 
     def test_get_database_health_success(self):
         """Test successful database health check"""
-        with patch('common.health.health_checks.dynamodb_manager') as mock_db_manager:
+        with patch('src.health.health_checks.dynamodb_manager') as mock_db_manager:
             mock_db_manager.health_check.return_value = True
 
             result = get_database_health()
@@ -166,7 +166,7 @@ class TestGetDatabaseHealth:
 
     def test_get_database_health_failure(self):
         """Test database health check when database is unhealthy"""
-        with patch('common.health.health_checks.dynamodb_manager') as mock_db_manager:
+        with patch('src.health.health_checks.dynamodb_manager') as mock_db_manager:
             mock_db_manager.health_check.return_value = False
 
             result = get_database_health()
@@ -175,7 +175,7 @@ class TestGetDatabaseHealth:
 
     def test_get_database_health_exception(self):
         """Test database health check when exception occurs"""
-        with patch('common.health.health_checks.dynamodb_manager') as mock_db_manager:
+        with patch('src.health.health_checks.dynamodb_manager') as mock_db_manager:
             mock_db_manager.health_check.side_effect = Exception("Connection failed")
 
             result = get_database_health()

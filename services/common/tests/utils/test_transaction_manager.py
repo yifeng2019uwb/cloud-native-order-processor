@@ -9,14 +9,14 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from src.utils.transaction_manager import TransactionManager, TransactionResult
-from src.dao.user import UserDAO, BalanceDAO
-from src.dao.order import OrderDAO
-from src.dao.inventory import AssetDAO
-from src.dao.asset import AssetBalanceDAO, AssetTransactionDAO
-from src.entities.user import Balance, BalanceTransaction, TransactionType, TransactionStatus
-from src.entities.order import Order, OrderStatus, OrderType
-from src.exceptions import DatabaseOperationException, EntityNotFoundException, LockAcquisitionException, InsufficientBalanceException
-from src.exceptions.shared_exceptions import UserValidationException
+from src.data.dao.user import UserDAO, BalanceDAO
+from src.data.dao.order import OrderDAO
+from src.data.dao.inventory import AssetDAO
+from src.data.dao.asset import AssetBalanceDAO, AssetTransactionDAO
+from src.data.entities.user import Balance, BalanceTransaction, TransactionType, TransactionStatus
+from src.data.entities.order import Order, OrderStatus, OrderType
+from src.data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException
+from src.exceptions.shared_exceptions import CNOPEntityNotFoundException, CNOPUserValidationException, CNOPInsufficientBalanceException
 
 
 class TestTransactionManager:
@@ -126,7 +126,7 @@ class TestTransactionManager:
             balance_dao._update_balance_from_transaction.side_effect = Exception("Balance update failed")
             balance_dao.create_transaction.return_value = MagicMock()
 
-            with pytest.raises(DatabaseOperationException, match="Transaction failed"):
+            with pytest.raises(CNOPDatabaseOperationException, match="Transaction failed"):
                 await transaction_manager.deposit_funds("testuser123", Decimal('50.00'))
 
     @pytest.mark.asyncio
@@ -165,9 +165,9 @@ class TestTransactionManager:
 
             # Mock insufficient balance
             balance_dao.get_balance.return_value = mock_balance
-            balance_dao._update_balance_from_transaction.side_effect = InsufficientBalanceException("Insufficient funds")
+            balance_dao._update_balance_from_transaction.side_effect = CNOPInsufficientBalanceException("Insufficient funds")
 
-            with pytest.raises(InsufficientBalanceException):
+            with pytest.raises(CNOPInsufficientBalanceException):
                 await transaction_manager.withdraw_funds("testuser123", Decimal('150.00'))
 
     @pytest.mark.asyncio
@@ -182,9 +182,9 @@ class TestTransactionManager:
             mock_release_lock.return_value = True
 
             # Mock user not found
-            balance_dao.get_balance.side_effect = EntityNotFoundException("User not found")
+            balance_dao.get_balance.side_effect = CNOPEntityNotFoundException("User not found")
 
-            with pytest.raises(DatabaseOperationException, match="Withdrawal failed"):
+            with pytest.raises(CNOPDatabaseOperationException, match="Withdrawal failed"):
                 await transaction_manager.withdraw_funds("nonexistent_user", Decimal('25.00'))
 
     @pytest.mark.asyncio
@@ -252,9 +252,9 @@ class TestTransactionManager:
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
         with patch('src.utils.lock_manager.acquire_lock') as mock_acquire_lock:
-            mock_acquire_lock.side_effect = LockAcquisitionException("Lock acquisition failed")
+            mock_acquire_lock.side_effect = CNOPLockAcquisitionException("Lock acquisition failed")
 
-            with pytest.raises(DatabaseOperationException, match="Service temporarily unavailable"):
+            with pytest.raises(CNOPDatabaseOperationException, match="Service temporarily unavailable"):
                 await transaction_manager.deposit_funds("testuser123", Decimal('50.00'))
 
     @pytest.mark.asyncio
@@ -274,7 +274,7 @@ class TestTransactionManager:
             balance_dao.create_transaction.return_value = mock_transaction
 
             # When lock release fails, the transaction manager should raise an exception
-            with pytest.raises(DatabaseOperationException, match="Deposit failed: Lock release failed"):
+            with pytest.raises(CNOPDatabaseOperationException, match="Deposit failed: Lock release failed"):
                 await transaction_manager.deposit_funds("testuser123", Decimal('50.00'))
 
 
@@ -316,8 +316,8 @@ class TestTransactionManager:
 
             # Test various error conditions
             test_cases = [
-                (DatabaseOperationException("Database error"), "Transaction failed"),
-                (UserValidationException("Validation error"), "Transaction failed"),
+                (CNOPDatabaseOperationException("Database error"), "Transaction failed"),
+                (CNOPUserValidationException("Validation error"), "Transaction failed"),
                 (Exception("Unknown error"), "Transaction failed")
             ]
 
@@ -325,7 +325,7 @@ class TestTransactionManager:
                 balance_dao._update_balance_from_transaction.side_effect = exception
                 balance_dao.create_transaction.return_value = MagicMock()
 
-                with pytest.raises(DatabaseOperationException, match=expected_message):
+                with pytest.raises(CNOPDatabaseOperationException, match=expected_message):
                     await transaction_manager.deposit_funds("testuser123", Decimal('50.00'))
 
 

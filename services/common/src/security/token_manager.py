@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
 
 from ..exceptions.shared_exceptions import TokenExpiredException, TokenInvalidException
-from ..entities.user import DEFAULT_USER_ROLE
+from ..data.entities.user import DEFAULT_USER_ROLE
 
 logger = logging.getLogger(__name__)
 

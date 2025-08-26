@@ -9,7 +9,7 @@ import json
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 
-from ..database.redis_connection import (
+from ..data.database.redis_connection import (
     get_redis_client,
     redis_set,
     redis_get,
@@ -17,7 +17,7 @@ from ..database.redis_connection import (
     redis_exists,
     get_redis_namespace
 )
-from ..database.redis_config import is_production
+from ..data.database.redis_config import is_production
 
 logger = logging.getLogger(__name__)
 

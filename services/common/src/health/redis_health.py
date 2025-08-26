@@ -9,7 +9,7 @@ import time
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-from ..database.redis_connection import get_redis_manager, test_redis_connection
+from ..data.database.redis_connection import get_redis_manager, test_redis_connection
 
 logger = logging.getLogger(__name__)
 

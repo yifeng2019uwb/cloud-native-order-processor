@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from jose import jwt
 from src.security.token_manager import TokenManager
 from src.exceptions.shared_exceptions import TokenExpiredException, TokenInvalidException
-from src.entities.user import DEFAULT_USER_ROLE
+from src.data.entities.user import DEFAULT_USER_ROLE
 
 
 class TestTokenManager:

@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timezone, timedelta
 import uuid
 
-from common.utils.lock_manager import (
+from src.utils.lock_manager import (
     UserLock, acquire_lock, release_lock, LOCK_TIMEOUTS
 )
-from common.exceptions import DatabaseOperationException, LockAcquisitionException, LockTimeoutException
+from src.data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException, CNOPLockTimeoutException
 
 
 class TestUserLock:
@@ -23,8 +23,8 @@ class TestUserLock:
         operation = "deposit"
         timeout = 10
 
-        with patch('common.utils.lock_manager.acquire_lock') as mock_acquire:
-            with patch('common.utils.lock_manager.release_lock') as mock_release:
+        with patch('src.utils.lock_manager.acquire_lock') as mock_acquire:
+            with patch('src.utils.lock_manager.release_lock') as mock_release:
                 mock_acquire.return_value = "lock-123"
                 mock_release.return_value = True
 
@@ -41,10 +41,10 @@ class TestUserLock:
         operation = "deposit"
         timeout = 10
 
-        with patch('common.utils.lock_manager.acquire_lock') as mock_acquire:
-            mock_acquire.side_effect = LockAcquisitionException("Lock failed")
+        with patch('src.utils.lock_manager.acquire_lock') as mock_acquire:
+            mock_acquire.side_effect = CNOPLockAcquisitionException("Lock failed")
 
-            with pytest.raises(LockAcquisitionException):
+            with pytest.raises(CNOPLockAcquisitionException):
                 async with UserLock(username, operation, timeout):
                     pass
 
@@ -55,8 +55,8 @@ class TestUserLock:
         operation = "deposit"
         timeout = 10
 
-        with patch('common.utils.lock_manager.acquire_lock') as mock_acquire:
-            with patch('common.utils.lock_manager.release_lock') as mock_release:
+        with patch('src.utils.lock_manager.acquire_lock') as mock_acquire:
+            with patch('src.utils.lock_manager.release_lock') as mock_release:
                 mock_acquire.return_value = "lock-123"
                 mock_release.return_value = True
 
@@ -73,11 +73,11 @@ class TestUserLock:
         operation = "deposit"
         timeout = 10
 
-        with patch('common.utils.lock_manager.acquire_lock') as mock_acquire:
-            with patch('common.utils.lock_manager.release_lock') as mock_release:
-                mock_acquire.side_effect = LockAcquisitionException("Lock failed")
+        with patch('src.utils.lock_manager.acquire_lock') as mock_acquire:
+            with patch('src.utils.lock_manager.release_lock') as mock_release:
+                mock_acquire.side_effect = CNOPLockAcquisitionException("Lock failed")
 
-                with pytest.raises(LockAcquisitionException):
+                with pytest.raises(CNOPLockAcquisitionException):
                     async with UserLock(username, operation, timeout):
                         pass
 
@@ -93,7 +93,7 @@ class TestAcquireLock:
         operation = "deposit"
         timeout = 10
 
-        with patch('common.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.utils.lock_manager.dynamodb_manager') as mock_db_manager:
             mock_table = MagicMock()
             mock_db_manager.get_connection.return_value.users_table = mock_table
 
@@ -121,7 +121,7 @@ class TestAcquireLock:
         operation = "deposit"
         timeout = 10
 
-        with patch('common.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.utils.lock_manager.dynamodb_manager') as mock_db_manager:
             mock_table = MagicMock()
             mock_db_manager.get_connection.return_value.users_table = mock_table
 
@@ -135,7 +135,7 @@ class TestAcquireLock:
             }
             mock_table.put_item.side_effect = ClientError(error_response, 'PutItem')
 
-            with pytest.raises(LockAcquisitionException, match="Lock acquisition failed"):
+            with pytest.raises(CNOPLockAcquisitionException, match="Lock acquisition failed"):
                 acquire_lock(username, operation, timeout)
 
     def test_acquire_lock_database_error(self):
@@ -144,14 +144,14 @@ class TestAcquireLock:
         operation = "deposit"
         timeout = 10
 
-        with patch('common.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.utils.lock_manager.dynamodb_manager') as mock_db_manager:
             mock_table = MagicMock()
             mock_db_manager.get_connection.return_value.users_table = mock_table
 
             # Simulate database error
             mock_table.put_item.side_effect = Exception("Database connection failed")
 
-            with pytest.raises(DatabaseOperationException, match="Failed to acquire lock"):
+            with pytest.raises(CNOPDatabaseOperationException, match="Failed to acquire lock"):
                 acquire_lock(username, operation, timeout)
 
 
@@ -163,7 +163,7 @@ class TestReleaseLock:
         username = "test-user-123"
         lock_id = "lock-123"
 
-        with patch('common.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.utils.lock_manager.dynamodb_manager') as mock_db_manager:
             mock_table = MagicMock()
             mock_db_manager.get_connection.return_value.users_table = mock_table
 
@@ -185,7 +185,7 @@ class TestReleaseLock:
         username = "test-user-123"
         lock_id = "lock-123"
 
-        with patch('common.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.utils.lock_manager.dynamodb_manager') as mock_db_manager:
             mock_table = MagicMock()
             mock_db_manager.get_connection.return_value.users_table = mock_table
 
@@ -208,12 +208,12 @@ class TestReleaseLock:
         username = "test-user-123"
         lock_id = "lock-123"
 
-        with patch('common.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.utils.lock_manager.dynamodb_manager') as mock_db_manager:
             mock_table = MagicMock()
             mock_db_manager.get_connection.return_value.users_table = mock_table
 
             # Simulate database error
             mock_table.delete_item.side_effect = Exception("Database connection failed")
 
-            with pytest.raises(DatabaseOperationException, match="Failed to release lock"):
+            with pytest.raises(CNOPDatabaseOperationException, match="Failed to release lock"):
                 release_lock(username, lock_id)

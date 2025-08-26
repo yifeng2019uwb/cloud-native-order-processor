@@ -10,7 +10,7 @@ import logging
 from typing import Dict, Any
 from botocore.exceptions import ClientError, NoCredentialsError
 
-from ..database.redis_connection import test_redis_connection
+from ..data.database.redis_connection import test_redis_connection
 
 logger = logging.getLogger(__name__)
 

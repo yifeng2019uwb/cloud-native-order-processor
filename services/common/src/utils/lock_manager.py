@@ -9,8 +9,8 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 from contextlib import asynccontextmanager
 
-from ..database.dynamodb_connection import dynamodb_manager
-from ..exceptions import DatabaseOperationException, LockAcquisitionException, LockTimeoutException
+from ..data.database.dynamodb_connection import dynamodb_manager
+from ..data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException, CNOPLockTimeoutException
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class UserLock:
             self.acquired = True
             logger.info(f"Lock acquired: user={self.username}, operation={self.operation}, lock_id={self.lock_id}")
             return self
-        except LockAcquisitionException as e:
+        except CNOPLockAcquisitionException as e:
             raise e
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -63,7 +63,7 @@ def acquire_lock(username: str, operation: str, timeout_seconds: int = 15) -> Op
         Lock ID if acquired, None if failed
 
     Raises:
-        DatabaseOperationException: If database operation fails
+        CNOPDatabaseOperationException: If database operation fails
     """
     try:
         lock_id = f"lock_{uuid.uuid4().hex[:8]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -95,10 +95,10 @@ def acquire_lock(username: str, operation: str, timeout_seconds: int = 15) -> Op
     except Exception as e:
         if "ConditionalCheckFailedException" in str(e):
             logger.debug(f"Lock acquisition failed - lock exists: user={username}, operation={operation}")
-            raise LockAcquisitionException(f"Lock acquisition failed for user {username}, operation {operation}")
+            raise CNOPLockAcquisitionException(f"Lock acquisition failed for user {username}, operation {operation}")
         else:
             logger.error(f"Lock acquisition error: user={username}, operation={operation}, error={str(e)}")
-            raise DatabaseOperationException(f"Failed to acquire lock: {str(e)}")
+            raise CNOPDatabaseOperationException(f"Failed to acquire lock: {str(e)}")
 
 
 def release_lock(username: str, lock_id: str) -> bool:
@@ -113,7 +113,7 @@ def release_lock(username: str, lock_id: str) -> bool:
         True if lock was released, False if lock was already released or changed
 
     Raises:
-        DatabaseOperationException: If database operation fails
+        CNOPDatabaseOperationException: If database operation fails
     """
     try:
         # Delete lock if it matches our lock_id
@@ -137,7 +137,7 @@ def release_lock(username: str, lock_id: str) -> bool:
             return False
         else:
             logger.error(f"Lock release error: user={username}, lock_id={lock_id}, error={str(e)}")
-            raise DatabaseOperationException(f"Failed to release lock: {str(e)}")
+            raise CNOPDatabaseOperationException(f"Failed to release lock: {str(e)}")
 
 
 

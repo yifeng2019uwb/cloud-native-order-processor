@@ -41,6 +41,7 @@ from common.exceptions import (
 # Import user service specific exceptions
 from .exceptions import (
     UserAlreadyExistsException,
+    CNOPInsufficientBalanceException,
 )
 
 __all__ = [

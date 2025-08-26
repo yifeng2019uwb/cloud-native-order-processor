@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from fastapi import HTTPException, status
 
-from ..database.dynamodb_connection import dynamodb_manager
+from ..data.database.dynamodb_connection import dynamodb_manager
 from ..exceptions.exceptions import DatabaseOperationException
 
 logger = logging.getLogger(__name__)
