@@ -1,30 +1,20 @@
 """
-Exceptions for common package/component only
-Path: services/common/src/exceptions/exceptions.py
+Data Exceptions Package
 
-These exceptions are for common package/component only and should be handled internally.
-They should NOT be mapped to external error codes.
-Services should catch these and convert them to their own InternalServerException.
+This package contains all data-related exceptions for the CNOP system.
+Data exceptions are for internal system/infrastructure issues only.
+Business logic exceptions are handled in service layer or shared layer.
 """
 
-from .base_exception import BaseInternalException
+from .base_exception import CNOPInternalException
 
 
-class CommonException(BaseInternalException):
-    """Base class for common package exceptions that should be handled internally"""
-    pass
-
-
-# ========================================
-# DATABASE EXCEPTIONS (500 scenarios)
-# ========================================
-
-class DatabaseConnectionException(CommonException):
+class CNOPDatabaseConnectionException(CNOPInternalException):
     """Database connection exception"""
     pass
 
 
-class DatabaseOperationException(CommonException):
+class CNOPDatabaseOperationException(CNOPInternalException):
     """Database operation exception"""
     pass
 
@@ -33,52 +23,54 @@ class DatabaseOperationException(CommonException):
 # CONFIGURATION EXCEPTIONS (500 scenarios)
 # ========================================
 
-class ConfigurationException(CommonException):
+class CNOPConfigurationException(CNOPInternalException):
     """Configuration exception"""
     pass
 
 
-# ========================================
-# EXTERNAL SERVICE EXCEPTIONS (503 scenarios)
-# ========================================
-
-class AWSServiceException(CommonException):
+class CNOPAWSServiceException(CNOPInternalException):
     """AWS service exception"""
     pass
 
 
-class ExternalServiceException(CommonException):
+class CNOPExternalServiceException(CNOPInternalException):
     """External service exception"""
     pass
 
 
-# ========================================
-# LOCKING EXCEPTIONS (500 scenarios)
-# ========================================
-
-class LockAcquisitionException(CommonException):
+class CNOPLockAcquisitionException(CNOPInternalException):
     """Raised when lock acquisition fails"""
     pass
 
 
-class LockTimeoutException(CommonException):
+class CNOPLockTimeoutException(CNOPInternalException):
     """Raised when lock acquisition times out"""
     pass
 
 
-# ========================================
-# BUSINESS LOGIC EXCEPTIONS (400/422 scenarios)
-# ========================================
-
-class InsufficientBalanceException(CommonException):
-    """Insufficient balance exception - specific to balance operations"""
+class CNOPEntityValidationException(CNOPInternalException):
+    """Entity validation exception - internal data validation only"""
     pass
 
 
-# ========================================
-# GENERIC COMMON SERVER EXCEPTION (500 scenarios)
-# ========================================
-
-class CommonServerException(CommonException):
+class CNOPCommonServerException(CNOPInternalException):
     """Generic common server exception for catch-all scenarios in common package"""
     pass
+
+
+__all__ = [
+    # Database exceptions (internal infrastructure)
+    "CNOPDatabaseConnectionException",
+    "CNOPDatabaseOperationException",
+
+    # System exceptions (internal infrastructure)
+    "CNOPConfigurationException",
+    "CNOPAWSServiceException",
+    "CNOPExternalServiceException",
+    "CNOPLockAcquisitionException",
+    "CNOPLockTimeoutException",
+    "CNOPCommonServerException",
+
+    # Generic validation exception (internal data validation only)
+    "CNOPEntityValidationException",
+]

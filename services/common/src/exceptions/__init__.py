@@ -1,141 +1,91 @@
 """
 Common exceptions package
 
-This package provides two types of exceptions:
-1. Shared exceptions - for business logic across all services
-2. Common exceptions - for common package/component only
+This package provides CNOP prefixed exceptions for the common package.
+All exceptions use the CNOP prefix to avoid naming conflicts and provide clear ownership.
 
-NEW: CNOP prefixed exceptions for gradual migration
-EXISTING: Current exceptions (to be deprecated after migration)
+IMPORTANT: Only truly cross-service exceptions and internal data exceptions are provided here.
+Service-specific validation exceptions should be imported from their respective services.
 """
 
-from .base_exception import BaseInternalException, CNOPException, CNOPInternalException, CNOPClientException
+from .base_exception import CNOPException, CNOPInternalException, CNOPClientException
 
 # Import shared exceptions (mapped to external error codes)
 from .shared_exceptions import (
-    SharedException,
     # Authentication exceptions
-    InvalidCredentialsException,
     CNOPInvalidCredentialsException,
-    TokenExpiredException,
     CNOPTokenExpiredException,
-    TokenInvalidException,
     CNOPTokenInvalidException,
     # Authorization exceptions
-    AuthorizationException,
     CNOPAuthorizationException,
-    AccessDeniedException,
     CNOPAccessDeniedException,
-    InsufficientPermissionsException,
     CNOPInsufficientPermissionsException,
     # Resource exceptions
-    EntityNotFoundException,
     CNOPEntityNotFoundException,
-    EntityAlreadyExistsException,
     CNOPEntityAlreadyExistsException,
-    UserNotFoundException,
     CNOPUserNotFoundException,
-    OrderNotFoundException,
     CNOPOrderNotFoundException,
-    AssetNotFoundException,
     CNOPAssetNotFoundException,
-    BalanceNotFoundException,
     CNOPBalanceNotFoundException,
-    AssetBalanceNotFoundException,
     CNOPAssetBalanceNotFoundException,
-    TransactionNotFoundException,
     CNOPTransactionNotFoundException,
-    # Validation exceptions
-    EntityValidationException,
-    CNOPEntityValidationException,
-    UserValidationException,
-    CNOPUserValidationException,
-    OrderValidationException,
-    CNOPOrderValidationException,
-    AssetValidationException,
-    CNOPAssetValidationException,
+    # Business logic exceptions
+    CNOPInsufficientBalanceException,
     # Internal server exception
-    InternalServerException,
     CNOPInternalServerException,
 )
 
-# Import common exceptions (handled internally, NOT mapped)
+# Import data exceptions (internal infrastructure only)
 from .exceptions import (
-    CommonException,
     # Database exceptions
-    DatabaseConnectionException,
-    DatabaseOperationException,
+    CNOPDatabaseConnectionException,
+    CNOPDatabaseOperationException,
     # Configuration exceptions
-    ConfigurationException,
+    CNOPConfigurationException,
     # External service exceptions
-    AWSServiceException,
-    ExternalServiceException,
+    CNOPAWSServiceException,
+    CNOPExternalServiceException,
     # Locking exceptions
-    LockAcquisitionException,
-    LockTimeoutException,
-    # Business logic exceptions
-    InsufficientBalanceException,
+    CNOPLockAcquisitionException,
+    CNOPLockTimeoutException,
+    # Generic validation exception (internal data validation only)
+    CNOPEntityValidationException,
     # Generic common server exception
-    CommonServerException,
+    CNOPCommonServerException,
 )
 
 __all__ = [
     # Base exceptions
-    "BaseInternalException",
     "CNOPException",
     "CNOPInternalException",
     "CNOPClientException",
 
     # Shared exceptions (mapped to external error codes)
-    "SharedException",
-    "InvalidCredentialsException",
     "CNOPInvalidCredentialsException",
-    "TokenExpiredException",
     "CNOPTokenExpiredException",
-    "TokenInvalidException",
     "CNOPTokenInvalidException",
-    "AuthorizationException",
     "CNOPAuthorizationException",
-    "AccessDeniedException",
     "CNOPAccessDeniedException",
-    "InsufficientPermissionsException",
     "CNOPInsufficientPermissionsException",
-    "EntityNotFoundException",
     "CNOPEntityNotFoundException",
-    "EntityAlreadyExistsException",
     "CNOPEntityAlreadyExistsException",
-    "UserNotFoundException",
     "CNOPUserNotFoundException",
-    "OrderNotFoundException",
     "CNOPOrderNotFoundException",
-    "AssetNotFoundException",
     "CNOPAssetNotFoundException",
-    "BalanceNotFoundException",
     "CNOPBalanceNotFoundException",
-    "AssetBalanceNotFoundException",
     "CNOPAssetBalanceNotFoundException",
-    "TransactionNotFoundException",
     "CNOPTransactionNotFoundException",
-    "EntityValidationException",
-    "CNOPEntityValidationException",
-    "UserValidationException",
-    "CNOPUserValidationException",
-    "OrderValidationException",
-    "CNOPOrderValidationException",
-    "AssetValidationException",
-    "CNOPAssetValidationException",
-    "InternalServerException",
+    "CNOPInsufficientBalanceException",
     "CNOPInternalServerException",
 
-    # Common exceptions (handled internally, NOT mapped)
-    "CommonException",
-    "DatabaseConnectionException",
-    "DatabaseOperationException",
-    "ConfigurationException",
-    "AWSServiceException",
-    "ExternalServiceException",
-    "LockAcquisitionException",
-    "LockTimeoutException",
-    "InsufficientBalanceException",
-    "CommonServerException",
+    # Data exceptions (internal infrastructure only)
+    "CNOPDatabaseConnectionException",
+    "CNOPDatabaseOperationException",
+    "CNOPConfigurationException",
+    "CNOPAWSServiceException",
+    "CNOPExternalServiceException",
+    "CNOPLockAcquisitionException",
+    "CNOPLockTimeoutException",
+    "CNOPEntityValidationException",
+    "CNOPCommonServerException",
 ]

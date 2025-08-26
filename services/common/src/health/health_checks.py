@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 from fastapi import HTTPException, status
 
 from ..data.database.dynamodb_connection import dynamodb_manager
-from ..exceptions.exceptions import DatabaseOperationException
+from ..exceptions import CNOPDatabaseOperationException
 
 logger = logging.getLogger(__name__)
 

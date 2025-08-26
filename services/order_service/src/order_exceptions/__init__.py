@@ -1,7 +1,8 @@
 """
-User service exceptions package
+Order service exceptions package
+Path: services/order_service/src/exceptions/__init__.py
 
-This package contains user service-specific exceptions for business logic validation.
+This package contains order service-specific exceptions for business logic validation.
 These exceptions are exposed to clients via the gateway and mapped to appropriate HTTP status codes.
 
 NOTE: Old exception imports are commented out but kept for reference in case they're still needed
@@ -16,7 +17,13 @@ for service-level or integration tests. They can be uncommented if needed.
 #     TokenInvalidException,
 #
 #     # Resources (404)
+#     OrderNotFoundException,
 #     UserNotFoundException,
+#     AssetNotFoundException,
+#
+#     # Validation (422)
+#     OrderValidationException,
+#     UserValidationException,
 #
 #     # Internal Server (500) - general use by services
 #     InternalServerException,
@@ -28,15 +35,14 @@ for service-level or integration tests. They can be uncommented if needed.
 #     DatabaseOperationException,
 #     ConfigurationException,
 #     ExternalServiceException,
-#     # Business logic exceptions
-#     InsufficientBalanceException,
+#     AWSServiceException,
 # )
 
-# Import user service specific exceptions
+# Import order service specific exceptions
 from .exceptions import (
-    CNOPUserAlreadyExistsException,
-    CNOPUserServerException,
-    CNOPUserValidationException,
+    CNOPOrderAlreadyExistsException,
+    CNOPOrderServerException,
+    CNOPOrderValidationException,
 )
 
 __all__ = [
@@ -44,7 +50,10 @@ __all__ = [
     # "InvalidCredentialsException",
     # "TokenExpiredException",
     # "TokenInvalidException",
+    # "OrderNotFoundException",
     # "UserNotFoundException",
+    # "AssetNotFoundException",
+    # "OrderValidationException",
     # "UserValidationException",
     # "InternalServerException",
 
@@ -52,10 +61,10 @@ __all__ = [
     # "DatabaseOperationException",
     # "ConfigurationException",
     # "ExternalServiceException",
-    # "InsufficientBalanceException",
+    # "AWSServiceException",
 
-    # User service specific exceptions
-    "CNOPUserAlreadyExistsException",
-    "CNOPUserServerException",
-    "CNOPUserValidationException",
+    # Order service specific exceptions
+    "CNOPOrderAlreadyExistsException",
+    "CNOPOrderServerException",
+    "CNOPOrderValidationException",
 ]

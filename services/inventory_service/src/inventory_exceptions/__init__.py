@@ -1,7 +1,8 @@
 """
-User service exceptions package
+Inventory service exceptions package
+Path: services/inventory_service/src/exceptions/__init__.py
 
-This package contains user service-specific exceptions for business logic validation.
+This package contains inventory service-specific exceptions for business logic validation.
 These exceptions are exposed to clients via the gateway and mapped to appropriate HTTP status codes.
 
 NOTE: Old exception imports are commented out but kept for reference in case they're still needed
@@ -16,7 +17,10 @@ for service-level or integration tests. They can be uncommented if needed.
 #     TokenInvalidException,
 #
 #     # Resources (404)
-#     UserNotFoundException,
+#     AssetNotFoundException,
+#
+#     # Validation (422)
+#     AssetValidationException,
 #
 #     # Internal Server (500) - general use by services
 #     InternalServerException,
@@ -28,15 +32,14 @@ for service-level or integration tests. They can be uncommented if needed.
 #     DatabaseOperationException,
 #     ConfigurationException,
 #     ExternalServiceException,
-#     # Business logic exceptions
-#     InsufficientBalanceException,
+#     AWSServiceException,
 # )
 
-# Import user service specific exceptions
+# Import inventory service specific exceptions
 from .exceptions import (
-    CNOPUserAlreadyExistsException,
-    CNOPUserServerException,
-    CNOPUserValidationException,
+    CNOPAssetAlreadyExistsException,
+    CNOPInventoryServerException,
+    CNOPAssetValidationException,
 )
 
 __all__ = [
@@ -44,18 +47,18 @@ __all__ = [
     # "InvalidCredentialsException",
     # "TokenExpiredException",
     # "TokenInvalidException",
-    # "UserNotFoundException",
-    # "UserValidationException",
+    # "AssetNotFoundException",
+    # "AssetValidationException",
     # "InternalServerException",
 
     # Common exceptions (handled internally, NOT mapped) - COMMENTED OUT BUT KEPT FOR REFERENCE
     # "DatabaseOperationException",
     # "ConfigurationException",
     # "ExternalServiceException",
-    # "InsufficientBalanceException",
+    # "AWSServiceException",
 
-    # User service specific exceptions
-    "CNOPUserAlreadyExistsException",
-    "CNOPUserServerException",
-    "CNOPUserValidationException",
+    # Inventory service specific exceptions
+    "CNOPAssetAlreadyExistsException",
+    "CNOPInventoryServerException",
+    "CNOPAssetValidationException",
 ]

@@ -5,44 +5,24 @@ Path: services/common/src/exceptions/shared_exceptions.py
 These exceptions are shared across all services and get mapped to external error codes.
 They represent business logic exceptions that can be exposed to clients.
 
-NEW: CNOP prefixed exceptions for gradual migration
-EXISTING: Current exceptions (to be deprecated after migration)
+IMPORTANT: Only truly cross-service exceptions should be here.
+Service-specific validation exceptions should be in their respective services.
 """
 
-from .base_exception import BaseInternalException, CNOPClientException
-
-
-class SharedException(BaseInternalException):
-    """Base class for shared exceptions that get mapped to external error codes"""
-    pass
+from .base_exception import CNOPClientException
 
 
 # ========================================
 # AUTHENTICATION EXCEPTIONS (401 scenarios)
 # ========================================
 
-class InvalidCredentialsException(SharedException):
-    """Invalid credentials exception"""
-    pass
-
-
 class CNOPInvalidCredentialsException(CNOPClientException):
     """Invalid credentials exception - CNOP version"""
     pass
 
 
-class TokenExpiredException(SharedException):
-    """Token expired exception"""
-    pass
-
-
 class CNOPTokenExpiredException(CNOPClientException):
     """Token expired exception - CNOP version"""
-    pass
-
-
-class TokenInvalidException(SharedException):
-    """Token invalid/malformed exception"""
     pass
 
 
@@ -55,28 +35,13 @@ class CNOPTokenInvalidException(CNOPClientException):
 # AUTHORIZATION EXCEPTIONS (403 scenarios)
 # ========================================
 
-class AuthorizationException(SharedException):
-    """Authorization/permission exception"""
-    pass
-
-
 class CNOPAuthorizationException(CNOPClientException):
     """Authorization/permission exception - CNOP version"""
     pass
 
 
-class AccessDeniedException(SharedException):
-    """Access denied exception"""
-    pass
-
-
 class CNOPAccessDeniedException(CNOPClientException):
     """Access denied exception - CNOP version"""
-    pass
-
-
-class InsufficientPermissionsException(SharedException):
-    """Insufficient permissions exception"""
     pass
 
 
@@ -89,28 +54,13 @@ class CNOPInsufficientPermissionsException(CNOPClientException):
 # RESOURCE EXCEPTIONS (404, 409 scenarios)
 # ========================================
 
-class EntityNotFoundException(SharedException):
-    """Generic entity not found exception"""
-    pass
-
-
 class CNOPEntityNotFoundException(CNOPClientException):
     """Generic entity not found exception - CNOP version"""
     pass
 
 
-class EntityAlreadyExistsException(SharedException):
-    """Generic entity already exists exception"""
-    pass
-
-
 class CNOPEntityAlreadyExistsException(CNOPClientException):
-    """Generic entity already exists exception - CNOP version"""
-    pass
-
-
-class UserNotFoundException(SharedException):
-    """User not found exception"""
+    """Entity already exists exception - CNOP version"""
     pass
 
 
@@ -119,18 +69,8 @@ class CNOPUserNotFoundException(CNOPClientException):
     pass
 
 
-class OrderNotFoundException(SharedException):
-    """Order not found exception"""
-    pass
-
-
 class CNOPOrderNotFoundException(CNOPClientException):
     """Order not found exception - CNOP version"""
-    pass
-
-
-class AssetNotFoundException(SharedException):
-    """Asset not found exception"""
     pass
 
 
@@ -139,28 +79,13 @@ class CNOPAssetNotFoundException(CNOPClientException):
     pass
 
 
-class BalanceNotFoundException(SharedException):
-    """Balance not found exception"""
-    pass
-
-
 class CNOPBalanceNotFoundException(CNOPClientException):
     """Balance not found exception - CNOP version"""
     pass
 
 
-class AssetBalanceNotFoundException(SharedException):
-    """Asset balance not found exception"""
-    pass
-
-
 class CNOPAssetBalanceNotFoundException(CNOPClientException):
     """Asset balance not found exception - CNOP version"""
-    pass
-
-
-class TransactionNotFoundException(SharedException):
-    """Transaction not found exception"""
     pass
 
 
@@ -170,63 +95,47 @@ class CNOPTransactionNotFoundException(CNOPClientException):
 
 
 # ========================================
-# VALIDATION EXCEPTIONS (422 scenarios)
+# BUSINESS LOGIC EXCEPTIONS (400 scenarios)
 # ========================================
-
-class EntityValidationException(SharedException):
-    """Generic entity validation exception"""
-    pass
-
-
-class CNOPEntityValidationException(CNOPClientException):
-    """Generic entity validation exception - CNOP version"""
-    pass
-
-
-class UserValidationException(SharedException):
-    """User-specific validation exception"""
-    pass
-
-
-class CNOPUserValidationException(CNOPClientException):
-    """User-specific validation exception - CNOP version"""
-    pass
-
-
-class OrderValidationException(SharedException):
-    """Order-specific validation exception"""
-    pass
-
-
-class CNOPOrderValidationException(CNOPClientException):
-    """Order-specific validation exception - CNOP version"""
-    pass
-
-
-class AssetValidationException(SharedException):
-    """Asset-specific validation exception"""
-    pass
-
-
-class CNOPAssetValidationException(CNOPClientException):
-    """Asset-specific validation exception - CNOP version"""
-    pass
-
 
 class CNOPInsufficientBalanceException(CNOPClientException):
-    """Insufficient balance/funds exception - business logic validation - CNOP version"""
+    """Insufficient balance exception - CNOP version"""
     pass
 
 
 # ========================================
-# INTERNAL SERVER EXCEPTION (500 scenarios)
+# INTERNAL SERVER EXCEPTIONS (500 scenarios)
 # ========================================
-
-class InternalServerException(SharedException):
-    """Generic internal server exception for general use by services"""
-    pass
-
 
 class CNOPInternalServerException(CNOPClientException):
-    """Generic internal server exception for general use by services - CNOP version"""
+    """Internal server exception - CNOP version"""
     pass
+
+
+__all__ = [
+    # Authentication exceptions (401)
+    "CNOPInvalidCredentialsException",
+    "CNOPTokenExpiredException",
+    "CNOPTokenInvalidException",
+
+    # Authorization exceptions (403)
+    "CNOPAuthorizationException",
+    "CNOPAccessDeniedException",
+    "CNOPInsufficientPermissionsException",
+
+    # Resource exceptions (404, 409)
+    "CNOPEntityNotFoundException",
+    "CNOPEntityAlreadyExistsException",
+    "CNOPUserNotFoundException",
+    "CNOPOrderNotFoundException",
+    "CNOPAssetNotFoundException",
+    "CNOPBalanceNotFoundException",
+    "CNOPAssetBalanceNotFoundException",
+    "CNOPTransactionNotFoundException",
+
+    # Business logic exceptions (400)
+    "CNOPInsufficientBalanceException",
+
+    # Internal server exceptions (500)
+    "CNOPInternalServerException",
+]
