@@ -10,16 +10,17 @@ from decimal import Decimal
 from typing import Optional
 
 # Import proper enums from common package
-from common.entities.order.enums import OrderType, OrderStatus
+from common.data.entities.order.enums import OrderType, OrderStatus
 
 # Import custom exceptions
-from common.exceptions import OrderValidationException, AssetNotFoundException, OrderNotFoundException
+from common.exceptions import CNOPAssetNotFoundException, CNOPOrderNotFoundException
+from order_exceptions import CNOPOrderValidationException
 
 # Import DAOs from common package
-from common.dao.inventory import AssetDAO
-from common.dao.order import OrderDAO
-from common.dao.user import UserDAO, BalanceDAO
-from common.dao.asset import AssetBalanceDAO
+from common.data.dao.inventory import AssetDAO
+from common.data.dao.order import OrderDAO
+from common.data.dao.user import UserDAO, BalanceDAO
+from common.data.dao.asset import AssetBalanceDAO
 
 
 def _validate_username_exists_and_active(username: str, user_dao: UserDAO) -> None:
@@ -38,7 +39,7 @@ def _validate_username_exists_and_active(username: str, user_dao: UserDAO) -> No
         # User exists, consider them active (no is_active field in current User entity)
         # TODO: Add is_active field to User entity if needed for account suspension
     except Exception as e:
-        raise OrderValidationException(f"User '{username}' not found or invalid")
+        raise CNOPOrderValidationException(f"User '{username}' not found or invalid")
 
 
 def _validate_asset_exists_and_tradeable(asset_id: str, asset_dao: AssetDAO) -> None:
@@ -55,9 +56,9 @@ def _validate_asset_exists_and_tradeable(asset_id: str, asset_dao: AssetDAO) -> 
     try:
         asset = asset_dao.get_asset_by_id(asset_id)
         if not asset.is_active:
-            raise OrderValidationException(f"Asset {asset_id} is not tradeable")
-    except AssetNotFoundException:
-        raise OrderValidationException(f"Asset {asset_id} not found")
+            raise CNOPOrderValidationException(f"Asset {asset_id} is not tradeable")
+    except CNOPAssetNotFoundException:
+        raise CNOPOrderValidationException(f"Asset {asset_id} not found")
 
 
 def _validate_asset_exists(asset_id: str, asset_dao: AssetDAO) -> None:
@@ -73,8 +74,8 @@ def _validate_asset_exists(asset_id: str, asset_dao: AssetDAO) -> None:
         """
         try:
             asset_dao.get_asset_by_id(asset_id)
-        except AssetNotFoundException:
-            raise OrderValidationException(f"Asset {asset_id} not found")
+        except CNOPAssetNotFoundException:
+            raise CNOPOrderValidationException(f"Asset {asset_id} not found")
 
 
 def _validate_user_balance_for_buy_order(
@@ -112,14 +113,14 @@ def _validate_user_balance_for_buy_order(
                 required_amount = quantity * market_price
             except Exception as e:
                 # No fallback - if we can't get market price, we can't validate the order
-                raise OrderValidationException(f"Unable to validate market order for {asset_id}: {str(e)}")
+                raise CNOPOrderValidationException(f"Unable to validate market order for {asset_id}: {str(e)}")
         else:
             required_amount = quantity * order_price
 
         if user_balance.current_balance < required_amount:
-            raise OrderValidationException(f"Insufficient balance for this order. Required: ${required_amount}, Available: ${user_balance.current_balance}")
+            raise CNOPOrderValidationException(f"Insufficient balance for this order. Required: ${required_amount}, Available: ${user_balance.current_balance}")
     except Exception as e:
-        raise OrderValidationException(f"Unable to verify user balance: {str(e)}")
+        raise CNOPOrderValidationException(f"Unable to verify user balance: {str(e)}")
 
 
 def _validate_user_asset_quantity_for_sell_order(
@@ -143,9 +144,9 @@ def _validate_user_asset_quantity_for_sell_order(
     try:
         asset_balance = asset_balance_dao.get_asset_balance(username, asset_id)
         if asset_balance.quantity < quantity:
-            raise OrderValidationException(f"Insufficient {asset_id} quantity for this sell order. Required: {quantity}, Available: {asset_balance.quantity}")
+            raise CNOPOrderValidationException(f"Insufficient {asset_id} quantity for this sell order. Required: {quantity}, Available: {asset_balance.quantity}")
     except Exception as e:
-        raise OrderValidationException(f"Insufficient {asset_id} quantity for this sell order")
+        raise CNOPOrderValidationException(f"Insufficient {asset_id} quantity for this sell order")
 
 
 def validate_order_creation_business_rules(
@@ -181,18 +182,18 @@ def validate_order_creation_business_rules(
     # Business rule: order_price required for limit orders
     if order_type in [OrderType.LIMIT_BUY, OrderType.LIMIT_SELL]:
         if order_price is None:
-            raise OrderValidationException(f"order_price is required for {order_type.value} orders")
+            raise CNOPOrderValidationException(f"order_price is required for {order_type.value} orders")
         if expires_at is None:
-            raise OrderValidationException("expires_at is required for limit orders")
+            raise CNOPOrderValidationException("expires_at is required for limit orders")
     # For market orders, price is ignored and will be set to current market price
 
     # Business rule: Check minimum order size
     if quantity < Decimal("0.001"):
-        raise OrderValidationException("Order quantity below minimum threshold (0.001)")
+        raise CNOPOrderValidationException("Order quantity below minimum threshold (0.001)")
 
     # Business rule: Check maximum order size
     if quantity > Decimal("1000"):
-        raise OrderValidationException("Order quantity exceeds maximum threshold (1000)")
+        raise CNOPOrderValidationException("Order quantity exceeds maximum threshold (1000)")
 
     # Business rule: Check user balance for buy orders
     if order_type in [OrderType.MARKET_BUY, OrderType.LIMIT_BUY]:
@@ -226,18 +227,18 @@ def validate_order_cancellation_business_rules(
     try:
         order = order_dao.get_order(order_id)
         if order.username != username:
-            raise OrderValidationException("You can only cancel your own orders")
+            raise CNOPOrderValidationException("You can only cancel your own orders")
 
         # Business rule: Only limit orders can be cancelled
         if order.order_type in [OrderType.MARKET_BUY, OrderType.MARKET_SELL]:
-            raise OrderValidationException("Market orders cannot be cancelled")
+            raise CNOPOrderValidationException("Market orders cannot be cancelled")
 
         # Business rule: Only pending orders can be cancelled
         if order.status not in [OrderStatus.PENDING, OrderStatus.QUEUED]:
-            raise OrderValidationException(f"Order in {order.status.value} state cannot be cancelled")
+            raise CNOPOrderValidationException(f"Order in {order.status.value} state cannot be cancelled")
 
-    except OrderNotFoundException:
-        raise OrderValidationException(f"Order {order_id} not found")
+    except CNOPOrderNotFoundException:
+        raise CNOPOrderValidationException(f"Order {order_id} not found")
 
 
 def validate_order_retrieval_business_rules(
@@ -262,9 +263,9 @@ def validate_order_retrieval_business_rules(
     try:
         order = order_dao.get_order(order_id)
         if order.username != username:
-            raise OrderValidationException("You can only view your own orders")
-    except OrderNotFoundException:
-        raise OrderValidationException(f"Order {order_id} not found")
+            raise CNOPOrderValidationException("You can only view your own orders")
+    except CNOPOrderNotFoundException:
+        raise CNOPOrderValidationException(f"Order {order_id} not found")
 
 
 def validate_order_listing_business_rules(

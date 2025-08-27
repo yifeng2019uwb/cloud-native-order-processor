@@ -9,24 +9,29 @@ This is the API layer entry point. It handles:
 - Environment variables loaded from services/.env
 - CloudWatch logging for Lambda deployment
 """
-import sys
 import os
 import logging
-import json
-import time
-import uuid
+import uvicorn
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from common.exceptions.shared_exceptions import UserValidationException, OrderValidationException
+from order_exceptions import CNOPOrderValidationException
+from common.aws.sts_client import STSClient
+
+from controllers.create_order import router as create_order_router
+from controllers.get_order import router as get_order_router
+from controllers.list_orders import router as list_orders_router
+from controllers.portfolio import router as portfolio_router
+from controllers.asset_balance import router as asset_balance_router
+from controllers.asset_transaction import router as asset_transaction_router
+from controllers.health import router as health_router
 
 # Load environment variables from services/.env
 try:
-    from dotenv import load_dotenv
-
     # Find the services root directory (go up from order-service/src to services/)
     services_root = Path(__file__).parent.parent.parent
     env_file = services_root / ".env"
@@ -50,7 +55,6 @@ logger = logging.getLogger(__name__)
 
 # Initialize STS client for AWS role assumption
 try:
-    from common.aws.sts_client import STSClient
     sts_client = STSClient()
     logger.info("✅ STS client initialized for role assumption")
 except ImportError:
@@ -104,16 +108,8 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         content={"detail": exc.detail}
     )
 
-@app.exception_handler(UserValidationException)
-async def user_validation_exception_handler(request: Request, exc: UserValidationException):
-    """Handle user validation exceptions"""
-    return JSONResponse(
-        status_code=422,
-        content={"detail": str(exc)}
-    )
-
-@app.exception_handler(OrderValidationException)
-async def order_validation_exception_handler(request: Request, exc: OrderValidationException):
+@app.exception_handler(CNOPOrderValidationException)
+async def order_validation_exception_handler(request: Request, exc: CNOPOrderValidationException):
     """Handle order validation exceptions"""
     return JSONResponse(
         status_code=422,
@@ -134,20 +130,12 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Import and include API routers
 try:
-    from controllers.health import router as health_router
     app.include_router(health_router, tags=["health"])
     logger.info("✅ Health routes loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Health routes not available: {e}")
 
 try:
-    from controllers.create_order import router as create_order_router
-    from controllers.get_order import router as get_order_router
-    from controllers.list_orders import router as list_orders_router
-    from controllers.portfolio import router as portfolio_router
-    from controllers.asset_balance import router as asset_balance_router
-    from controllers.asset_transaction import router as asset_transaction_router
-
     # Include all order controllers
     app.include_router(create_order_router, prefix="/orders", tags=["orders"])
     app.include_router(get_order_router, prefix="/orders", tags=["orders"])
@@ -236,7 +224,6 @@ async def shutdown_event():
 
 # For local development
 if __name__ == "__main__":
-    import uvicorn
 
     port = int(os.getenv("PORT", 8000))
     host = os.getenv("HOST", "0.0.0.0")

@@ -10,11 +10,9 @@ from fastapi.testclient import TestClient
 
 from src.controllers.get_order import get_order, router
 from src.api_models.order import GetOrderResponse, OrderData
-from common.entities.order.enums import OrderType, OrderStatus
-from common.exceptions import (
-    OrderNotFoundException,
-    InternalServerException
-)
+from common.data.entities.order.enums import OrderType, OrderStatus
+from common.exceptions.shared_exceptions import CNOPOrderNotFoundException, CNOPInternalServerException
+from order_exceptions import CNOPOrderValidationException
 
 
 class TestGetOrder:
@@ -114,7 +112,7 @@ class TestGetOrder:
             mock_order_dao.get_order.return_value = mock_order
 
             # Test that the exception is raised
-            with pytest.raises(OrderNotFoundException, match="Order 'order123' not found"):
+            with pytest.raises(CNOPOrderNotFoundException, match="Order 'order123' not found"):
                 get_order(
                     order_id="order123",
                     current_user=mock_current_user,
@@ -135,10 +133,10 @@ class TestGetOrder:
         with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
 
             # Setup mock to raise OrderNotFoundException
-            mock_validate.side_effect = OrderNotFoundException("Order not found")
+            mock_validate.side_effect = CNOPOrderNotFoundException("Order not found")
 
             # Test that the exception is raised
-            with pytest.raises(OrderNotFoundException, match="Order not found"):
+            with pytest.raises(CNOPOrderNotFoundException, match="Order not found"):
                 get_order(
                     order_id="nonexistent",
                     current_user=mock_current_user,
@@ -161,7 +159,7 @@ class TestGetOrder:
             mock_validate.side_effect = Exception("Unexpected error")
 
             # Test that the exception is raised
-            with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+            with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
                 get_order(
                     order_id="order123",
                     current_user=mock_current_user,
@@ -191,7 +189,7 @@ class TestGetOrder:
             mock_order_dao.get_order.return_value = mock_order
 
             # Test that the exception is raised
-            with pytest.raises(OrderNotFoundException, match="Order 'order123' not found"):
+            with pytest.raises(CNOPOrderNotFoundException, match="Order 'order123' not found"):
                 get_order(
                     order_id="order123",
                     current_user=mock_current_user,

@@ -19,7 +19,7 @@ from validation.field_validators import (
 )
 
 # Import proper enums from common package
-from common.entities.asset.enums import AssetTransactionType, AssetTransactionStatus
+from common.data.entities.asset.enums import AssetTransactionType, AssetTransactionStatus
 
 
 # ============================================================================

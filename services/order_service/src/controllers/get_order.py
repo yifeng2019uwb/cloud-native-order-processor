@@ -19,13 +19,13 @@ from controllers.dependencies import (
     get_current_user, get_order_dao_dependency,
     get_user_dao_dependency
 )
-from common.dao.order.order_dao import OrderDAO
-from common.dao.user import UserDAO
+from common.data.dao.order.order_dao import OrderDAO
+from common.data.dao.user import UserDAO
 
 # Import exceptions
-from common.exceptions import (
-    OrderNotFoundException,
-    InternalServerException
+from common.exceptions.shared_exceptions import (
+    CNOPOrderNotFoundException,
+    CNOPInternalServerException
 )
 
 # Import business validators
@@ -81,7 +81,7 @@ def get_order(
         # Check if order belongs to user
         if order.username != current_user["username"]:
             logger.warning(f"Unauthorized access attempt: username={current_user['username']}, order_id={order_id}")
-            raise OrderNotFoundException(f"Order '{order_id}' not found")
+            raise CNOPOrderNotFoundException(f"Order '{order_id}' not found")
 
         logger.info(f"Order retrieved: user={current_user['username']}, order_id={order_id}")
 
@@ -102,8 +102,8 @@ def get_order(
             timestamp=datetime.utcnow()
         )
 
-    except OrderNotFoundException:
+    except CNOPOrderNotFoundException:
         raise
     except Exception as e:
         logger.error(f"Unexpected error retrieving order: user={current_user['username']}, order_id={order_id}, error={str(e)}", exc_info=True)
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")

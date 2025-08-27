@@ -10,7 +10,8 @@ from decimal import Decimal
 from datetime import datetime
 
 # Import proper exceptions
-from common.exceptions.shared_exceptions import OrderValidationException
+from order_exceptions import CNOPOrderValidationException
+from common.data.entities.order.enums import OrderType, OrderStatus
 
 
 def sanitize_string(value: str, max_length: int = None) -> str:
@@ -59,22 +60,22 @@ def validate_order_id(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise OrderValidationException("Order ID cannot be empty")
+        raise CNOPOrderValidationException("Order ID cannot be empty")
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
-        raise OrderValidationException("Order ID contains potentially malicious content")
+        raise CNOPOrderValidationException("Order ID contains potentially malicious content")
 
     # 2. Basic sanitization (remove HTML tags, trim whitespace)
     v = sanitize_string(v)
 
     # 3. Check for empty after sanitization
     if not v:
-        raise OrderValidationException("Order ID cannot be empty")
+        raise CNOPOrderValidationException("Order ID cannot be empty")
 
     # 4. Format validation - order IDs should be alphanumeric with underscores, 10-50 chars
     if not re.match(r'^[a-zA-Z0-9_]{10,50}$', v):
-        raise OrderValidationException("Order ID must be 10-50 alphanumeric characters and underscores")
+        raise CNOPOrderValidationException("Order ID must be 10-50 alphanumeric characters and underscores")
 
     return v
 
@@ -85,22 +86,22 @@ def validate_username(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise OrderValidationException("Username cannot be empty")
+        raise CNOPOrderValidationException("Username cannot be empty")
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
-        raise OrderValidationException("Username contains potentially malicious content")
+        raise CNOPOrderValidationException("Username contains potentially malicious content")
 
     # 2. Basic sanitization (remove HTML tags, trim whitespace)
     v = sanitize_string(v)
 
     # 3. Check for empty after sanitization
     if not v:
-        raise OrderValidationException("Username cannot be empty")
+        raise CNOPOrderValidationException("Username cannot be empty")
 
     # 4. Format validation - usernames should be alphanumeric with underscores, 3-30 chars
     if not re.match(r'^[a-zA-Z0-9_]{3,30}$', v):
-        raise OrderValidationException("Username must be 3-30 alphanumeric characters and underscores")
+        raise CNOPOrderValidationException("Username must be 3-30 alphanumeric characters and underscores")
 
     # 5. Convert to lowercase for consistency
     return v.lower()
@@ -112,22 +113,22 @@ def validate_asset_id(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise OrderValidationException("Asset ID cannot be empty")
+        raise CNOPOrderValidationException("Asset ID cannot be empty")
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
-        raise OrderValidationException("Asset ID contains potentially malicious content")
+        raise CNOPOrderValidationException("Asset ID contains potentially malicious content")
 
     # 2. Basic sanitization (remove HTML tags, trim whitespace)
     v = sanitize_string(v)
 
     # 3. Check for empty after sanitization
     if not v:
-        raise OrderValidationException("Asset ID cannot be empty")
+        raise CNOPOrderValidationException("Asset ID cannot be empty")
 
     # 4. Format validation - asset IDs should be alphanumeric, 1-10 chars
     if not re.match(r'^[a-zA-Z0-9]{1,10}$', v):
-        raise OrderValidationException("Asset ID must be 1-10 alphanumeric characters")
+        raise CNOPOrderValidationException("Asset ID must be 1-10 alphanumeric characters")
 
     # 5. Convert to uppercase for consistency
     return v.upper()
@@ -139,23 +140,23 @@ def validate_order_type(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise OrderValidationException("Order type cannot be empty")
+        raise CNOPOrderValidationException("Order type cannot be empty")
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
-        raise OrderValidationException("Order type contains potentially malicious content")
+        raise CNOPOrderValidationException("Order type contains potentially malicious content")
 
     # 2. Basic sanitization (remove HTML tags, trim whitespace)
     v = sanitize_string(v)
 
     # 3. Check for empty after sanitization
     if not v:
-        raise OrderValidationException("Order type cannot be empty")
+        raise CNOPOrderValidationException("Order type cannot be empty")
 
     # 4. Format validation - check against valid order types
     valid_types = ['market_buy', 'market_sell', 'limit_buy', 'limit_sell']
     if v.lower() not in valid_types:
-        raise OrderValidationException(f"Invalid order type. Must be one of: {valid_types}")
+        raise CNOPOrderValidationException(f"Invalid order type. Must be one of: {valid_types}")
 
     # 5. Convert to lowercase for consistency
     return v.lower()
@@ -167,23 +168,23 @@ def validate_order_status(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise OrderValidationException("Order status cannot be empty")
+        raise CNOPOrderValidationException("Order status cannot be empty")
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
-        raise OrderValidationException("Order status contains potentially malicious content")
+        raise CNOPOrderValidationException("Order status contains potentially malicious content")
 
     # 2. Basic sanitization (remove HTML tags, trim whitespace)
     v = sanitize_string(v)
 
     # 3. Check for empty after sanitization
     if not v:
-        raise OrderValidationException("Order status cannot be empty")
+        raise CNOPOrderValidationException("Order status cannot be empty")
 
     # 4. Format validation - check against valid order statuses
     valid_statuses = ['pending', 'completed', 'cancelled', 'failed']
     if v.lower() not in valid_statuses:
-        raise OrderValidationException(f"Invalid order status. Must be one of: {valid_statuses}")
+        raise CNOPOrderValidationException(f"Invalid order status. Must be one of: {valid_statuses}")
 
     # 5. Convert to lowercase for consistency
     return v.lower()
@@ -197,17 +198,17 @@ def validate_quantity(v: Decimal) -> Decimal:
         try:
             v = Decimal(str(v))
         except (ValueError, TypeError):
-            raise OrderValidationException("Quantity must be a valid number")
+            raise  CNOPOrderValidationException("Quantity must be a valid number")
 
     if v <= 0:
-        raise OrderValidationException("Quantity must be greater than zero")
+        raise CNOPOrderValidationException("Quantity must be greater than zero")
 
     if v < Decimal("0.001"):
-        raise OrderValidationException("Order quantity below minimum threshold (0.001)")
+        raise CNOPOrderValidationException("Order quantity below minimum threshold (0.001)")
 
     # Check for reasonable maximum (prevent excessive orders)
     if v > Decimal("1000000"):
-        raise OrderValidationException("Order quantity exceeds maximum threshold (1,000,000)")
+        raise CNOPOrderValidationException("Order quantity exceeds maximum threshold (1,000,000)")
 
     return v
 
@@ -220,14 +221,14 @@ def validate_price(v: Decimal) -> Decimal:
         try:
             v = Decimal(str(v))
         except (ValueError, TypeError):
-            raise OrderValidationException("Price must be a valid number")
+            raise CNOPOrderValidationException("Price must be a valid number")
 
     if v <= 0:
-        raise OrderValidationException("Price must be greater than zero")
+        raise CNOPOrderValidationException("Price must be greater than zero")
 
     # Check for reasonable maximum (prevent excessive prices)
     if v > Decimal("1000000"):
-        raise OrderValidationException("Price exceeds maximum threshold (1,000,000)")
+        raise CNOPOrderValidationException("Price exceeds maximum threshold (1,000,000)")
 
     return v
 
@@ -237,15 +238,15 @@ def validate_expires_at(v: datetime) -> datetime:
     Order service: expiration time validation
     """
     if not isinstance(v, datetime):
-        raise OrderValidationException("Expiration time must be a valid datetime")
+        raise CNOPOrderValidationException("Expiration time must be a valid datetime")
 
     if v <= datetime.utcnow():
-        raise OrderValidationException("Expiration time must be in the future")
+        raise CNOPOrderValidationException("Expiration time must be in the future")
 
     # Check if expiration is too far in the future (e.g., more than 1 year)
     max_expiry = datetime.utcnow().replace(year=datetime.utcnow().year + 1)
     if v > max_expiry:
-        raise OrderValidationException("Expiration time cannot be more than 1 year in the future")
+        raise CNOPOrderValidationException("Expiration time cannot be more than 1 year in the future")
 
     return v
 
@@ -258,13 +259,13 @@ def validate_limit(v: int) -> int:
         try:
             v = int(v)
         except (ValueError, TypeError):
-            raise OrderValidationException("Limit must be a valid integer")
+            raise CNOPOrderValidationException("Limit must be a valid integer")
 
     if v < 1:
-        raise OrderValidationException("Limit must be at least 1")
+        raise CNOPOrderValidationException("Limit must be at least 1")
 
     if v > 1000:
-        raise OrderValidationException("Limit cannot exceed 1000")
+        raise CNOPOrderValidationException("Limit cannot exceed 1000")
 
     return v
 
@@ -277,12 +278,12 @@ def validate_offset(v: int) -> int:
         try:
             v = int(v)
         except (ValueError, TypeError):
-            raise OrderValidationException("Offset must be a valid integer")
+            raise CNOPOrderValidationException("Offset must be a valid integer")
 
     if v < 0:
-        raise OrderValidationException("Offset cannot be negative")
+        raise CNOPOrderValidationException("Offset cannot be negative")
 
     if v > 100000:
-        raise OrderValidationException("Offset cannot exceed 100,000")
+        raise CNOPOrderValidationException("Offset cannot exceed 100,000")
 
     return v

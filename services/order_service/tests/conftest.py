@@ -117,7 +117,7 @@ def mock_environment_variables():
 @pytest.fixture(autouse=True)
 def mock_database_connection():
     """Mock database connection to prevent actual database calls during tests."""
-    with patch('common.database.dynamodb_connection.dynamodb_manager') as mock_manager:
+    with patch('common.data.database.dynamodb_connection.dynamodb_manager') as mock_manager:
         # Mock the database manager
         mock_connection = AsyncMock()
         mock_users_table = MagicMock()

@@ -12,7 +12,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 # Import proper enums from common package
-from common.entities.order.enums import OrderType, OrderStatus
+from common.data.entities.order.enums import OrderType, OrderStatus
 
 # Import centralized field validation functions
 from validation.field_validators import (
@@ -20,10 +20,6 @@ from validation.field_validators import (
     validate_order_id, validate_order_type, validate_order_status,
     validate_limit, validate_offset
 )
-
-# Import custom exceptions
-from common.exceptions import OrderValidationException
-
 
 # ============================================================================
 # REQUEST MODELS

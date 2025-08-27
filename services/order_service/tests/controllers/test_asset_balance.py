@@ -9,6 +9,14 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
+from common.exceptions import (
+    CNOPDatabaseOperationException
+)
+from common.exceptions.shared_exceptions import (
+    CNOPAssetNotFoundException,
+    CNOPEntityNotFoundException,
+    CNOPInternalServerException
+)
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
@@ -48,10 +56,10 @@ with patch('src.controllers.asset_balance.get_current_user', create=True), \
      patch('src.controllers.asset_balance.AssetBalanceDAO', create=True), \
      patch('src.controllers.asset_balance.UserDAO', create=True), \
      patch('src.controllers.asset_balance.AssetDAO', create=True), \
-     patch('src.controllers.asset_balance.DatabaseOperationException', create=True), \
-     patch('src.controllers.asset_balance.EntityNotFoundException', create=True), \
-     patch('src.controllers.asset_balance.InternalServerException', create=True), \
-     patch('src.controllers.asset_balance.AssetNotFoundException', create=True):
+    patch('src.controllers.asset_balance.CNOPDatabaseOperationException', create=True), \
+    patch('src.controllers.asset_balance.CNOPEntityNotFoundException', create=True), \
+    patch('src.controllers.asset_balance.CNOPInternalServerException', create=True), \
+    patch('src.controllers.asset_balance.CNOPAssetNotFoundException', create=True):
 
     from src.controllers.asset_balance import (
         get_real_market_data, get_user_asset_balances, get_user_asset_balance
@@ -188,11 +196,10 @@ class TestAssetBalanceController:
                                                          mock_asset_balance_dao, mock_user_dao,
                                                          mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balances with database operation exception"""
-        from src.controllers.asset_balance import DatabaseOperationException, InternalServerException
 
-        mock_asset_balance_dao.get_all_asset_balances.side_effect = DatabaseOperationException("DB error")
+        mock_asset_balance_dao.get_all_asset_balances.side_effect = CNOPDatabaseOperationException("DB error")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             get_user_asset_balances(
                 request=mock_request,
                 current_user=mock_current_user,
@@ -206,11 +213,9 @@ class TestAssetBalanceController:
                                                            mock_asset_balance_dao, mock_user_dao,
                                                            mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balances with unexpected exception"""
-        from src.controllers.asset_balance import InternalServerException
-
         mock_asset_balance_dao.get_all_asset_balances.side_effect = Exception("Unexpected error")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             get_user_asset_balances(
                 request=mock_request,
                 current_user=mock_current_user,
@@ -258,11 +263,10 @@ class TestAssetBalanceController:
                                                    mock_asset_balance_dao, mock_user_dao,
                                                    mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balance with entity not found exception"""
-        from src.controllers.asset_balance import EntityNotFoundException, AssetNotFoundException
 
-        mock_asset_balance_dao.get_asset_balance.side_effect = EntityNotFoundException("Not found")
+        mock_asset_balance_dao.get_asset_balance.side_effect = CNOPEntityNotFoundException("Not found")
 
-        with pytest.raises(AssetNotFoundException, match="Asset balance for BTC not found"):
+        with pytest.raises(CNOPAssetNotFoundException, match="Asset balance for BTC not found"):
             get_user_asset_balance(
                 asset_id="BTC",
                 request=mock_request,
@@ -277,11 +281,10 @@ class TestAssetBalanceController:
                                                         mock_asset_balance_dao, mock_user_dao,
                                                         mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balance with database operation exception"""
-        from src.controllers.asset_balance import DatabaseOperationException, InternalServerException
 
-        mock_asset_balance_dao.get_asset_balance.side_effect = DatabaseOperationException("DB error")
+        mock_asset_balance_dao.get_asset_balance.side_effect = CNOPDatabaseOperationException("DB error")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             get_user_asset_balance(
                 asset_id="BTC",
                 request=mock_request,
@@ -296,11 +299,10 @@ class TestAssetBalanceController:
                                                           mock_asset_balance_dao, mock_user_dao,
                                                           mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balance with unexpected exception"""
-        from src.controllers.asset_balance import InternalServerException
 
         mock_asset_balance_dao.get_asset_balance.side_effect = Exception("Unexpected error")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             get_user_asset_balance(
                 asset_id="BTC",
                 request=mock_request,
@@ -502,9 +504,8 @@ class TestAssetBalanceController:
                                                        mock_asset_balance_dao, mock_user_dao,
                                                        mock_asset_dao, mock_validate_user_permissions):
         """Test that error logging is performed correctly in get_user_asset_balance"""
-        from src.controllers.asset_balance import EntityNotFoundException
 
-        mock_asset_balance_dao.get_asset_balance.side_effect = EntityNotFoundException("Not found")
+        mock_asset_balance_dao.get_asset_balance.side_effect = CNOPEntityNotFoundException("Not found")
 
         with patch('src.controllers.asset_balance.logger') as mock_logger:
             try:

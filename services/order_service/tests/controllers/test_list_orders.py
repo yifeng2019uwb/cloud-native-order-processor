@@ -10,8 +10,8 @@ from fastapi.testclient import TestClient
 
 from src.controllers.list_orders import list_orders, router
 from src.api_models.order import OrderListResponse, OrderSummary
-from common.entities.order.enums import OrderType, OrderStatus
-from common.exceptions import InternalServerException
+from common.data.entities.order.enums import OrderType, OrderStatus
+from common.exceptions import CNOPInternalServerException
 
 
 class TestListOrders:
@@ -370,7 +370,7 @@ class TestListOrders:
             mock_validate.side_effect = Exception("Unexpected error")
 
             # Test that the exception is raised
-            with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+            with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
                 list_orders(
                     asset_id=None,
                     order_type=None,

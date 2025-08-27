@@ -14,8 +14,8 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 # Import exceptions and enums
-from common.exceptions import OrderValidationException
-from common.entities.order.enums import OrderType, OrderStatus
+from order_exceptions import CNOPOrderValidationException
+from common.data.entities.order.enums import OrderType, OrderStatus
 
 # Import the actual validation functions
 from validation.field_validators import (
@@ -113,19 +113,19 @@ class TestFieldValidators:
         assert result == "order_12345"
 
         # Test with empty order ID
-        with pytest.raises(OrderValidationException, match="Order ID cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Order ID cannot be empty"):
             validate_order_id("")
 
         # Test with whitespace-only order ID
-        with pytest.raises(OrderValidationException, match="Order ID cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Order ID cannot be empty"):
             validate_order_id("   ")
 
         # Test with suspicious content
-        with pytest.raises(OrderValidationException, match="Order ID contains potentially malicious content"):
+        with pytest.raises(CNOPOrderValidationException, match="Order ID contains potentially malicious content"):
             validate_order_id("<script>alert('xss')</script>")
 
         # Test with too short order ID
-        with pytest.raises(OrderValidationException, match="Order ID must be 10-50 alphanumeric characters and underscores"):
+        with pytest.raises(CNOPOrderValidationException, match="Order ID must be 10-50 alphanumeric characters and underscores"):
             validate_order_id("order_123")
 
     def test_validate_username_basic(self):
@@ -135,19 +135,19 @@ class TestFieldValidators:
         assert result == "testuser123"  # Should be converted to lowercase
 
         # Test with empty username
-        with pytest.raises(OrderValidationException, match="Username cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Username cannot be empty"):
             validate_username("")
 
         # Test with whitespace-only username
-        with pytest.raises(OrderValidationException, match="Username cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Username cannot be empty"):
             validate_username("   ")
 
         # Test with suspicious content
-        with pytest.raises(OrderValidationException, match="Username contains potentially malicious content"):
+        with pytest.raises(CNOPOrderValidationException, match="Username contains potentially malicious content"):
             validate_username("<script>alert('xss')</script>")
 
         # Test with invalid characters
-        with pytest.raises(OrderValidationException, match="Username must be 3-30 alphanumeric characters and underscores"):
+        with pytest.raises(CNOPOrderValidationException, match="Username must be 3-30 alphanumeric characters and underscores"):
             validate_username("user-name")
 
     def test_validate_asset_id_basic(self):
@@ -157,19 +157,19 @@ class TestFieldValidators:
         assert result == "BTC"
 
         # Test with empty asset ID
-        with pytest.raises(OrderValidationException, match="Asset ID cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Asset ID cannot be empty"):
             validate_asset_id("")
 
         # Test with whitespace-only asset ID
-        with pytest.raises(OrderValidationException, match="Asset ID cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Asset ID cannot be empty"):
             validate_asset_id("   ")
 
         # Test with suspicious content
-        with pytest.raises(OrderValidationException, match="Asset ID contains potentially malicious content"):
+        with pytest.raises(CNOPOrderValidationException, match="Asset ID contains potentially malicious content"):
             validate_asset_id("<script>alert('xss')</script>")
 
         # Test with invalid format
-        with pytest.raises(OrderValidationException, match="Asset ID must be 1-10 alphanumeric characters"):
+        with pytest.raises(CNOPOrderValidationException, match="Asset ID must be 1-10 alphanumeric characters"):
             validate_asset_id("a" * 11)
 
     def test_validate_quantity_basic(self):
@@ -179,19 +179,19 @@ class TestFieldValidators:
         assert result == Decimal("1.0")
 
         # Test with zero quantity
-        with pytest.raises(OrderValidationException, match="Quantity must be greater than zero"):
+        with pytest.raises(CNOPOrderValidationException, match="Quantity must be greater than zero"):
             validate_quantity(Decimal("0.0"))
 
         # Test with negative quantity
-        with pytest.raises(OrderValidationException, match="Quantity must be greater than zero"):
+        with pytest.raises(CNOPOrderValidationException, match="Quantity must be greater than zero"):
             validate_quantity(Decimal("-1.0"))
 
         # Test with very small quantity
-        with pytest.raises(OrderValidationException, match="Order quantity below minimum threshold"):
+        with pytest.raises(CNOPOrderValidationException, match="Order quantity below minimum threshold"):
             validate_quantity(Decimal("0.0001"))
 
         # Test with very large quantity
-        with pytest.raises(OrderValidationException, match="Order quantity exceeds maximum threshold"):
+        with pytest.raises(CNOPOrderValidationException, match="Order quantity exceeds maximum threshold"):
             validate_quantity(Decimal("2000000.0"))
 
     def test_validate_quantity_non_decimal_input(self):
@@ -211,7 +211,7 @@ class TestFieldValidators:
             def __str__(self):
                 raise TypeError("Cannot convert to string")
 
-        with pytest.raises(OrderValidationException, match="Quantity must be a valid number"):
+        with pytest.raises(CNOPOrderValidationException, match="Quantity must be a valid number"):
             validate_quantity(UnconvertibleObject())
 
         # Test with an object that raises ValueError when converted to string
@@ -219,7 +219,7 @@ class TestFieldValidators:
             def __str__(self):
                 raise ValueError("Cannot convert to string")
 
-        with pytest.raises(OrderValidationException, match="Quantity must be a valid number"):
+        with pytest.raises(CNOPOrderValidationException, match="Quantity must be a valid number"):
             validate_quantity(ValueErrorObject())
 
     def test_validate_price_non_decimal_input(self):
@@ -239,7 +239,7 @@ class TestFieldValidators:
             def __str__(self):
                 raise TypeError("Cannot convert to string")
 
-        with pytest.raises(OrderValidationException, match="Price must be a valid number"):
+        with pytest.raises(CNOPOrderValidationException, match="Price must be a valid number"):
             validate_price(UnconvertibleObject())
 
         # Test with an object that raises ValueError when converted to string
@@ -247,7 +247,7 @@ class TestFieldValidators:
             def __str__(self):
                 raise ValueError("Cannot convert to string")
 
-        with pytest.raises(OrderValidationException, match="Price must be a valid number"):
+        with pytest.raises(CNOPOrderValidationException, match="Price must be a valid number"):
             validate_price(ValueErrorObject())
 
     def test_validate_price_basic(self):
@@ -257,11 +257,11 @@ class TestFieldValidators:
         assert result == Decimal("100.00")
 
         # Test with zero price
-        with pytest.raises(OrderValidationException, match="Price must be greater than zero"):
+        with pytest.raises(CNOPOrderValidationException, match="Price must be greater than zero"):
             validate_price(Decimal("0.0"))
 
         # Test with negative price
-        with pytest.raises(OrderValidationException, match="Price must be greater than zero"):
+        with pytest.raises(CNOPOrderValidationException, match="Price must be greater than zero"):
             validate_price(Decimal("-100.00"))
 
         # Test with very small price (no minimum threshold for price)
@@ -269,7 +269,7 @@ class TestFieldValidators:
         assert result == Decimal("0.01")
 
         # Test with very large price
-        with pytest.raises(OrderValidationException, match="Price exceeds maximum threshold"):
+        with pytest.raises(CNOPOrderValidationException, match="Price exceeds maximum threshold"):
             validate_price(Decimal("2000000.00"))
 
     def test_validate_order_type_basic(self):
@@ -279,39 +279,39 @@ class TestFieldValidators:
         assert result == OrderType.LIMIT_BUY
 
         # Test with invalid order type
-        with pytest.raises(OrderValidationException, match="Invalid order type"):
+        with pytest.raises(CNOPOrderValidationException, match="Invalid order type"):
             validate_order_type("INVALID_TYPE")
 
         # Test with None order type
-        with pytest.raises(OrderValidationException, match="Order type cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Order type cannot be empty"):
             validate_order_type(None)
 
     def test_validate_order_type_suspicious_content(self):
         """Test validate_order_type with suspicious content"""
         # Test with script tag (should be detected as suspicious)
-        with pytest.raises(OrderValidationException, match="Order type contains potentially malicious content"):
+        with pytest.raises(CNOPOrderValidationException, match="Order type contains potentially malicious content"):
             validate_order_type("<script>alert('xss')</script>market_buy")
 
         # Test with javascript protocol (should be detected as suspicious)
-        with pytest.raises(OrderValidationException, match="Order type contains potentially malicious content"):
+        with pytest.raises(CNOPOrderValidationException, match="Order type contains potentially malicious content"):
             validate_order_type("javascript:alert('xss')")
 
         # Test with data protocol (should be detected as suspicious)
-        with pytest.raises(OrderValidationException, match="Order type contains potentially malicious content"):
+        with pytest.raises(CNOPOrderValidationException, match="Order type contains potentially malicious content"):
             validate_order_type("data:text/html,<script>alert('xss')</script>")
 
     def test_validate_order_type_empty_after_sanitization(self):
         """Test validate_order_type with input that becomes empty after sanitization"""
         # Test with only HTML tags (should become empty after sanitization)
-        with pytest.raises(OrderValidationException, match="Order type cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Order type cannot be empty"):
             validate_order_type("<div></div>")
 
         # Test with only whitespace (should become empty after sanitization)
-        with pytest.raises(OrderValidationException, match="Order type cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Order type cannot be empty"):
             validate_order_type("   ")
 
         # Test with only HTML tags and whitespace
-        with pytest.raises(OrderValidationException, match="Order type cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Order type cannot be empty"):
             validate_order_type("  <span></span>  ")
 
     def test_validate_order_status_basic(self):
@@ -321,39 +321,39 @@ class TestFieldValidators:
         assert result == OrderStatus.PENDING
 
         # Test with invalid order status
-        with pytest.raises(OrderValidationException, match="Invalid order status"):
+        with pytest.raises(CNOPOrderValidationException, match="Invalid order status"):
             validate_order_status("INVALID_STATUS")
 
         # Test with None order status
-        with pytest.raises(OrderValidationException, match="Order status cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Order status cannot be empty"):
             validate_order_status(None)
 
     def test_validate_order_status_suspicious_content(self):
         """Test validate_order_status with suspicious content"""
         # Test with script tag (should be detected as suspicious)
-        with pytest.raises(OrderValidationException, match="Order status contains potentially malicious content"):
+        with pytest.raises(CNOPOrderValidationException, match="Order status contains potentially malicious content"):
             validate_order_status("<script>alert('xss')</script>pending")
 
         # Test with javascript protocol (should be detected as suspicious)
-        with pytest.raises(OrderValidationException, match="Order status contains potentially malicious content"):
+        with pytest.raises(CNOPOrderValidationException, match="Order status contains potentially malicious content"):
             validate_order_status("javascript:alert('xss')")
 
         # Test with data protocol (should be detected as suspicious)
-        with pytest.raises(OrderValidationException, match="Order status contains potentially malicious content"):
+        with pytest.raises(CNOPOrderValidationException, match="Order status contains potentially malicious content"):
             validate_order_status("data:text/html,<script>alert('xss')</script>")
 
     def test_validate_order_status_empty_after_sanitization(self):
         """Test validate_order_status with input that becomes empty after sanitization"""
         # Test with only HTML tags (should become empty after sanitization)
-        with pytest.raises(OrderValidationException, match="Order status cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Order status cannot be empty"):
             validate_order_status("<div></div>")
 
         # Test with only whitespace (should become empty after sanitization)
-        with pytest.raises(OrderValidationException, match="Order status cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Order status cannot be empty"):
             validate_order_status("   ")
 
         # Test with only HTML tags and whitespace
-        with pytest.raises(OrderValidationException, match="Order status cannot be empty"):
+        with pytest.raises(CNOPOrderValidationException, match="Order status cannot be empty"):
             validate_order_status("  <span></span>  ")
 
     def test_validate_expires_at_basic(self):
@@ -365,28 +365,28 @@ class TestFieldValidators:
 
         # Test with past date
         past_date = datetime.now() - timedelta(days=1)
-        with pytest.raises(OrderValidationException, match="Expiration time must be in the future"):
+        with pytest.raises(CNOPOrderValidationException, match="Expiration time must be in the future"):
             validate_expires_at(past_date)
 
         # Test with current date
         current_date = datetime.now()
-        with pytest.raises(OrderValidationException, match="Expiration time must be in the future"):
+        with pytest.raises(CNOPOrderValidationException, match="Expiration time must be in the future"):
             validate_expires_at(current_date)
 
         # Test with None date (should not be allowed)
-        with pytest.raises(OrderValidationException, match="Expiration time must be a valid datetime"):
+        with pytest.raises(CNOPOrderValidationException, match="Expiration time must be a valid datetime"):
             validate_expires_at(None)
 
     def test_validate_expires_at_too_far_future(self):
         """Test validate_expires_at with date too far in the future"""
         # Test with date more than 1 year in the future
         too_far_future = datetime.now() + timedelta(days=400)  # More than 1 year
-        with pytest.raises(OrderValidationException, match="Expiration time cannot be more than 1 year in the future"):
+        with pytest.raises(CNOPOrderValidationException, match="Expiration time cannot be more than 1 year in the future"):
             validate_expires_at(too_far_future)
 
         # Test with date exactly 1 year + 1 day in the future
         one_year_one_day = datetime.now() + timedelta(days=366)  # 1 year + 1 day
-        with pytest.raises(OrderValidationException, match="Expiration time cannot be more than 1 year in the future"):
+        with pytest.raises(CNOPOrderValidationException, match="Expiration time cannot be more than 1 year in the future"):
             validate_expires_at(one_year_one_day)
 
     def test_validate_limit_basic(self):
@@ -396,15 +396,15 @@ class TestFieldValidators:
         assert result == 10
 
         # Test with zero limit
-        with pytest.raises(OrderValidationException, match="Limit must be at least 1"):
+        with pytest.raises(CNOPOrderValidationException, match="Limit must be at least 1"):
             validate_limit(0)
 
         # Test with negative limit
-        with pytest.raises(OrderValidationException, match="Limit must be at least 1"):
+        with pytest.raises(CNOPOrderValidationException, match="Limit must be at least 1"):
             validate_limit(-10)
 
         # Test with very large limit
-        with pytest.raises(OrderValidationException, match="Limit cannot exceed 1000"):
+        with pytest.raises(CNOPOrderValidationException, match="Limit cannot exceed 1000"):
             validate_limit(1001)
 
     def test_validate_limit_non_integer_input(self):
@@ -424,7 +424,7 @@ class TestFieldValidators:
             def __int__(self):
                 raise TypeError("Cannot convert to int")
 
-        with pytest.raises(OrderValidationException, match="Limit must be a valid integer"):
+        with pytest.raises(CNOPOrderValidationException, match="Limit must be a valid integer"):
             validate_limit(UnconvertibleObject())
 
         # Test with an object that raises ValueError when converted to int
@@ -432,7 +432,7 @@ class TestFieldValidators:
             def __int__(self):
                 raise ValueError("Cannot convert to int")
 
-        with pytest.raises(OrderValidationException, match="Limit must be a valid integer"):
+        with pytest.raises(CNOPOrderValidationException, match="Limit must be a valid integer"):
             validate_limit(ValueErrorObject())
 
     def test_validate_offset_basic(self):
@@ -446,11 +446,11 @@ class TestFieldValidators:
         assert result == 0
 
         # Test with negative offset
-        with pytest.raises(OrderValidationException, match="Offset cannot be negative"):
+        with pytest.raises(CNOPOrderValidationException, match="Offset cannot be negative"):
             validate_offset(-10)
 
         # Test with None offset (should not be allowed)
-        with pytest.raises(OrderValidationException, match="Offset must be a valid integer"):
+        with pytest.raises(CNOPOrderValidationException, match="Offset must be a valid integer"):
             validate_offset(None)
 
     def test_validate_offset_maximum_value(self):
@@ -460,9 +460,9 @@ class TestFieldValidators:
         assert result == 100000
 
         # Test with offset exceeding the limit (should fail)
-        with pytest.raises(OrderValidationException, match="Offset cannot exceed 100,000"):
+        with pytest.raises(CNOPOrderValidationException, match="Offset cannot exceed 100,000"):
             validate_offset(100001)
 
         # Test with offset well above the limit
-        with pytest.raises(OrderValidationException, match="Offset cannot exceed 100,000"):
+        with pytest.raises(CNOPOrderValidationException, match="Offset cannot exceed 100,000"):
             validate_offset(200000)

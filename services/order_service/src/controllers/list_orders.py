@@ -15,19 +15,19 @@ from api_models.order import OrderListResponse, OrderSummary
 from api_models.shared.common import ErrorResponse
 
 # Import common entities
-from common.entities.order.enums import OrderType
+from common.data.entities.order.enums import OrderType
 
 # Import dependencies
 from controllers.dependencies import (
     get_current_user, get_order_dao_dependency,
     get_asset_dao_dependency, get_user_dao_dependency
 )
-from common.dao.order.order_dao import OrderDAO
-from common.dao.inventory import AssetDAO
-from common.dao.user import UserDAO
+from common.data.dao.order.order_dao import OrderDAO
+from common.data.dao.inventory import AssetDAO
+from common.data.dao.user import UserDAO
 
 # Import exceptions
-from common.exceptions import InternalServerException
+from common.exceptions.shared_exceptions import CNOPInternalServerException
 
 # Import business validators
 from validation.business_validators import validate_order_listing_business_rules
@@ -124,4 +124,4 @@ def list_orders(
 
     except Exception as e:
         logger.error(f"Unexpected error listing orders: user={current_user['username']}, error={str(e)}", exc_info=True)
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")

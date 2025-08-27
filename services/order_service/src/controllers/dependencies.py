@@ -13,13 +13,13 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status, Request, Header
 
 # Import common package dependencies
-from common.database import get_order_dao, get_balance_dao, get_asset_dao, get_user_dao
-from common.database.dynamodb_connection import dynamodb_manager
-from common.dao.order.order_dao import OrderDAO
-from common.dao.user import UserDAO, BalanceDAO
-from common.dao.inventory import AssetDAO
-from common.dao.asset import AssetBalanceDAO, AssetTransactionDAO
-from common.utils.transaction_manager import TransactionManager
+from common.data.database import get_order_dao, get_balance_dao, get_asset_dao, get_user_dao
+from common.data.database.dynamodb_connection import dynamodb_manager
+from common.data.dao.order.order_dao import OrderDAO
+from common.data.dao.user import UserDAO, BalanceDAO
+from common.data.dao.inventory import AssetDAO
+from common.data.dao.asset import AssetBalanceDAO, AssetTransactionDAO
+from common.core.utils.transaction_manager import TransactionManager
 from decimal import Decimal
 
 logger = logging.getLogger(__name__)

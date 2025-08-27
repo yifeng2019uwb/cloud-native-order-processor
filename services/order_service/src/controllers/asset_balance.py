@@ -24,9 +24,9 @@ from controllers.dependencies import (
     get_current_user, get_asset_balance_dao_dependency,
     get_user_dao_dependency, get_asset_dao_dependency
 )
-from common.dao.asset import AssetBalanceDAO
-from common.dao.user import UserDAO
-from common.dao.inventory import AssetDAO
+from common.data.dao.asset import AssetBalanceDAO
+from common.data.dao.user import UserDAO
+from common.data.dao.inventory import AssetDAO
 
 
 # Import business validators
@@ -34,10 +34,10 @@ from validation.business_validators import validate_user_permissions
 
 # Import exceptions
 from common.exceptions import (
-    DatabaseOperationException,
-    EntityNotFoundException,
-    InternalServerException,
-    AssetNotFoundException
+    CNOPDatabaseOperationException,
+    CNOPEntityNotFoundException,
+    CNOPInternalServerException,
+    CNOPAssetNotFoundException
 )
 
 logger = logging.getLogger(__name__)
@@ -151,12 +151,12 @@ def get_user_asset_balances(
             timestamp=datetime.utcnow()
         )
 
-    except DatabaseOperationException as e:
+    except CNOPDatabaseOperationException as e:
         logger.error(f"Database operation failed for asset balances: user={current_user['username']}, error={str(e)}")
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(f"Unexpected error during asset balances retrieval: user={current_user['username']}, error={str(e)}", exc_info=True)
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")
 
 
 @router.get(
@@ -245,14 +245,14 @@ def get_user_asset_balance(
             timestamp=datetime.utcnow()
         )
 
-    except EntityNotFoundException:
+    except CNOPEntityNotFoundException:
         logger.info(f"Asset balance not found: user={current_user['username']}, asset={asset_id}")
-        raise AssetNotFoundException(f"Asset balance for {asset_id} not found")
-    except DatabaseOperationException as e:
+        raise CNOPAssetNotFoundException(f"Asset balance for {asset_id} not found")
+    except CNOPDatabaseOperationException as e:
         logger.error(f"Database operation failed for asset balance: user={current_user['username']}, "
                     f"asset={asset_id}, error={str(e)}")
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(f"Unexpected error during asset balance retrieval: user={current_user['username']}, "
                     f"asset={asset_id}, error={str(e)}", exc_info=True)
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")

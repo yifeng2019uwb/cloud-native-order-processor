@@ -9,8 +9,31 @@ from decimal import Decimal
 from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
 
+from common.data.entities.order.enums import OrderType, OrderStatus
+from src.validation.business_validators import (
+    _validate_username_exists_and_active,
+    _validate_asset_exists_and_tradeable,
+    _validate_asset_exists,
+    _validate_user_balance_for_buy_order,
+    _validate_user_asset_quantity_for_sell_order,
+    validate_order_creation_business_rules,
+    validate_order_cancellation_business_rules,
+    validate_order_retrieval_business_rules
+)
+
+from src.validation import validate_order_retrieval_business_rules
+from src.validation.business_validators import (
+    validate_order_listing_business_rules,
+    validate_user_permissions,
+    validate_order_creation_business_rules,
+    validate_market_conditions,
+    validate_order_history_business_rules
+)
+
+
 # Import exceptions
-from common.exceptions import OrderValidationException, AssetNotFoundException, OrderNotFoundException
+from common.exceptions import CNOPAssetNotFoundException, CNOPOrderNotFoundException
+from order_exceptions import CNOPOrderValidationException
 
 # Define the interface as a list of method names
 USER_DAO_SPEC = [
@@ -42,9 +65,6 @@ class TestBusinessValidators:
         mock_user = Mock()
         mock_user_dao.get_user_by_username.return_value = mock_user
 
-        # Import and test the function
-        from src.validation.business_validators import _validate_username_exists_and_active
-
         # Should not raise exception when user exists
         _validate_username_exists_and_active("testuser", mock_user_dao)
 
@@ -54,7 +74,7 @@ class TestBusinessValidators:
         # Test case where user doesn't exist (DAO raises exception)
         mock_user_dao.get_user_by_username.side_effect = Exception("User not found")
 
-        with pytest.raises(OrderValidationException, match="User 'testuser' not found or invalid"):
+        with pytest.raises(CNOPOrderValidationException, match="User 'testuser' not found or invalid"):
             _validate_username_exists_and_active("testuser", mock_user_dao)
 
     def test_validate_asset_exists_and_tradeable(self):
@@ -68,7 +88,6 @@ class TestBusinessValidators:
         mock_asset_dao.get_asset_by_id.return_value = mock_asset
 
         # Import and test the function
-        from src.validation.business_validators import _validate_asset_exists_and_tradeable
 
         # Should not raise exception when asset exists and is active
         _validate_asset_exists_and_tradeable("BTC", mock_asset_dao)
@@ -78,12 +97,12 @@ class TestBusinessValidators:
 
         # Test case where asset is not active
         mock_asset.is_active = False
-        with pytest.raises(OrderValidationException, match="Asset BTC is not tradeable"):
+        with pytest.raises(CNOPOrderValidationException, match="Asset BTC is not tradeable"):
             _validate_asset_exists_and_tradeable("BTC", mock_asset_dao)
 
         # Test case where asset is not found
-        mock_asset_dao.get_asset_by_id.side_effect = AssetNotFoundException("Asset not found")
-        with pytest.raises(OrderValidationException, match="Asset BTC not found"):
+        mock_asset_dao.get_asset_by_id.side_effect = CNOPAssetNotFoundException("Asset not found")
+        with pytest.raises(CNOPOrderValidationException, match="Asset BTC not found"):
             _validate_asset_exists_and_tradeable("BTC", mock_asset_dao)
 
     def test_validate_asset_exists(self):
@@ -94,9 +113,6 @@ class TestBusinessValidators:
         # Test successful case - asset exists
         mock_asset_dao.get_asset_by_id.return_value = Mock()
 
-        # Import and test the function
-        from src.validation.business_validators import _validate_asset_exists
-
         # Should not raise exception when asset exists
         _validate_asset_exists("ETH", mock_asset_dao)
 
@@ -104,8 +120,8 @@ class TestBusinessValidators:
         mock_asset_dao.get_asset_by_id.assert_called_once_with("ETH")
 
         # Test case where asset is not found
-        mock_asset_dao.get_asset_by_id.side_effect = AssetNotFoundException("Asset not found")
-        with pytest.raises(OrderValidationException, match="Asset ETH not found"):
+        mock_asset_dao.get_asset_by_id.side_effect = CNOPAssetNotFoundException("Asset not found")
+        with pytest.raises(CNOPOrderValidationException, match="Asset ETH not found"):
             _validate_asset_exists("ETH", mock_asset_dao)
 
     def test_validate_user_balance_for_buy_order(self):
@@ -125,9 +141,6 @@ class TestBusinessValidators:
         mock_balance = Mock()
         mock_balance.current_balance = Decimal("1000.00")
         mock_balance_dao.get_balance.return_value = mock_balance
-
-        # Import and test the function
-        from src.validation.business_validators import _validate_user_balance_for_buy_order
 
         # Should not raise exception when user has sufficient balance
         _validate_user_balance_for_buy_order(
@@ -167,7 +180,7 @@ class TestBusinessValidators:
             mock_get_price.side_effect = Exception("Market price service unavailable")
 
             # Test market order with market price failure
-            with pytest.raises(OrderValidationException, match="Unable to validate market order for BTC: Market price service unavailable"):
+            with pytest.raises(CNOPOrderValidationException, match="Unable to validate market order for BTC: Market price service unavailable"):
                 _validate_user_balance_for_buy_order(
                     "testuser",
                     Decimal("1.0"),
@@ -194,9 +207,6 @@ class TestBusinessValidators:
         mock_asset_balance.quantity = Decimal("10.0")
         mock_asset_balance_dao.get_asset_balance.return_value = mock_asset_balance
 
-        # Import and test the function
-        from src.validation.business_validators import _validate_user_asset_quantity_for_sell_order
-
         # Should not raise exception when user has sufficient asset quantity
         _validate_user_asset_quantity_for_sell_order("testuser", "BTC", Decimal("5.0"), mock_asset_balance_dao)
 
@@ -205,14 +215,11 @@ class TestBusinessValidators:
 
         # Test case where asset balance lookup fails
         mock_asset_balance_dao.get_asset_balance.side_effect = Exception("Database connection failed")
-        with pytest.raises(OrderValidationException, match="Insufficient BTC quantity for this sell order"):
+        with pytest.raises(CNOPOrderValidationException, match="Insufficient BTC quantity for this sell order"):
             _validate_user_asset_quantity_for_sell_order("testuser", "BTC", Decimal("5.0"), mock_asset_balance_dao)
 
     def test_validate_order_creation_business_rules(self):
         """Test validate_order_creation_business_rules function"""
-        # Import enums
-        from common.entities.order.enums import OrderType, OrderStatus
-
         # Create mock DAOs with specs
         mock_user_dao = Mock(spec=USER_DAO_SPEC)
         mock_asset_dao = Mock(spec=ASSET_DAO_SPEC)
@@ -223,9 +230,6 @@ class TestBusinessValidators:
         mock_user_dao.get_user_by_username.return_value = Mock()
         mock_asset_dao.get_asset_by_id.return_value = Mock(is_active=True)
         mock_balance_dao.get_balance.return_value = Mock(current_balance=Decimal("100000.00"))  # Sufficient for 1.0 * 50000.00
-
-        # Import and test the function
-        from src.validation.business_validators import validate_order_creation_business_rules
 
         # Test successful case - limit buy order with all required fields
         validate_order_creation_business_rules(
@@ -242,7 +246,7 @@ class TestBusinessValidators:
         )
 
         # Test limit order without order_price
-        with pytest.raises(OrderValidationException, match="order_price is required for limit_buy orders"):
+        with pytest.raises(CNOPOrderValidationException, match="order_price is required for limit_buy orders"):
             validate_order_creation_business_rules(
                 OrderType.LIMIT_BUY,
                 "BTC",
@@ -257,7 +261,7 @@ class TestBusinessValidators:
             )
 
         # Test limit order without expires_at
-        with pytest.raises(OrderValidationException, match="expires_at is required for limit orders"):
+        with pytest.raises(CNOPOrderValidationException, match="expires_at is required for limit orders"):
             validate_order_creation_business_rules(
                 OrderType.LIMIT_BUY,
                 "BTC",
@@ -272,7 +276,7 @@ class TestBusinessValidators:
             )
 
         # Test quantity below minimum threshold
-        with pytest.raises(OrderValidationException, match="Order quantity below minimum threshold"):
+        with pytest.raises(CNOPOrderValidationException, match="Order quantity below minimum threshold"):
             validate_order_creation_business_rules(
                 OrderType.MARKET_BUY,
                 "BTC",
@@ -287,7 +291,7 @@ class TestBusinessValidators:
             )
 
         # Test quantity above maximum threshold
-        with pytest.raises(OrderValidationException, match="Order quantity exceeds maximum threshold"):
+        with pytest.raises(CNOPOrderValidationException, match="Order quantity exceeds maximum threshold"):
             validate_order_creation_business_rules(
                 OrderType.MARKET_BUY,
                 "BTC",
@@ -303,9 +307,6 @@ class TestBusinessValidators:
 
     def test_validate_order_cancellation_business_rules(self):
         """Test validate_order_cancellation_business_rules function"""
-        # Import enums
-        from common.entities.order.enums import OrderType, OrderStatus
-
         # Define OrderDAO interface
         ORDER_DAO_SPEC = [
             'get_order',
@@ -321,9 +322,6 @@ class TestBusinessValidators:
         # Mock successful validations
         mock_user_dao.get_user_by_username.return_value = Mock()
 
-        # Import and test the function
-        from src.validation.business_validators import validate_order_cancellation_business_rules
-
         # Test successful case - limit order in pending state
         mock_order = Mock()
         mock_order.username = "testuser"
@@ -338,24 +336,24 @@ class TestBusinessValidators:
 
         # Test case where order belongs to different user
         mock_order.username = "otheruser"
-        with pytest.raises(OrderValidationException, match="You can only cancel your own orders"):
+        with pytest.raises(CNOPOrderValidationException, match="You can only cancel your own orders"):
             validate_order_cancellation_business_rules("order123", "testuser", mock_order_dao, mock_user_dao)
 
         # Test case where order is market order (cannot be cancelled)
         mock_order.username = "testuser"
         mock_order.order_type = OrderType.MARKET_BUY
-        with pytest.raises(OrderValidationException, match="Market orders cannot be cancelled"):
+        with pytest.raises(CNOPOrderValidationException, match="Market orders cannot be cancelled"):
             validate_order_cancellation_business_rules("order123", "testuser", mock_order_dao, mock_user_dao)
 
         # Test case where order is in non-cancellable state
         mock_order.order_type = OrderType.LIMIT_BUY
         mock_order.status = OrderStatus.COMPLETED
-        with pytest.raises(OrderValidationException, match="Order in completed state cannot be cancelled"):
+        with pytest.raises(CNOPOrderValidationException, match="Order in completed state cannot be cancelled"):
             validate_order_cancellation_business_rules("order123", "testuser", mock_order_dao, mock_user_dao)
 
         # Test case where order is not found
-        mock_order_dao.get_order.side_effect = OrderNotFoundException("Order not found")
-        with pytest.raises(OrderValidationException, match="Order order123 not found"):
+        mock_order_dao.get_order.side_effect = CNOPOrderNotFoundException("Order not found")
+        with pytest.raises(CNOPOrderValidationException, match="Order order123 not found"):
             validate_order_cancellation_business_rules("order123", "testuser", mock_order_dao, mock_user_dao)
 
     def test_validate_order_retrieval_business_rules(self):
@@ -368,7 +366,6 @@ class TestBusinessValidators:
         mock_user_dao.get_user_by_username.return_value = Mock()
 
         # Import and test the function
-        from src.validation.business_validators import validate_order_retrieval_business_rules
 
         # Test successful case - order exists and belongs to user
         mock_order = Mock()
@@ -382,12 +379,12 @@ class TestBusinessValidators:
 
         # Test case where order belongs to different user
         mock_order.username = "otheruser"
-        with pytest.raises(OrderValidationException, match="You can only view your own orders"):
+        with pytest.raises(CNOPOrderValidationException, match="You can only view your own orders"):
             validate_order_retrieval_business_rules("order123", "testuser", mock_order_dao, mock_user_dao)
 
         # Test case where order is not found
-        mock_order_dao.get_order.side_effect = OrderNotFoundException("Order not found")
-        with pytest.raises(OrderValidationException, match="Order order123 not found"):
+        mock_order_dao.get_order.side_effect = CNOPOrderNotFoundException("Order not found")
+        with pytest.raises(CNOPOrderValidationException, match="Order order123 not found"):
             validate_order_retrieval_business_rules("order123", "testuser", mock_order_dao, mock_user_dao)
 
     def test_validate_order_listing_business_rules(self):
@@ -400,7 +397,6 @@ class TestBusinessValidators:
         mock_user_dao.get_user_by_username.return_value = Mock()
 
         # Import and test the function
-        from src.validation.business_validators import validate_order_listing_business_rules
 
         # Test successful case - no asset filtering
         validate_order_listing_business_rules("testuser", None, None, mock_asset_dao, mock_user_dao)
@@ -413,8 +409,8 @@ class TestBusinessValidators:
         mock_asset_dao.get_asset_by_id.assert_called_once_with("BTC")
 
         # Test case where asset filtering fails (asset not found)
-        mock_asset_dao.get_asset_by_id.side_effect = AssetNotFoundException("Asset not found")
-        with pytest.raises(OrderValidationException, match="Asset BTC not found"):
+        mock_asset_dao.get_asset_by_id.side_effect = CNOPAssetNotFoundException("Asset not found")
+        with pytest.raises(CNOPOrderValidationException, match="Asset BTC not found"):
             validate_order_listing_business_rules("testuser", None, "BTC", mock_asset_dao, mock_user_dao)
 
     def test_validate_order_history_business_rules(self):
@@ -427,9 +423,6 @@ class TestBusinessValidators:
         mock_user_dao.get_user_by_username.return_value = Mock()
         mock_asset_dao.get_asset_by_id.return_value = Mock()
 
-        # Import and test the function
-        from src.validation.business_validators import validate_order_history_business_rules
-
         # Test successful case - user exists and asset exists
         validate_order_history_business_rules("BTC", "testuser", mock_asset_dao, mock_user_dao)
 
@@ -438,17 +431,12 @@ class TestBusinessValidators:
         mock_asset_dao.get_asset_by_id.assert_called_once_with("BTC")
 
         # Test case where asset validation fails
-        mock_asset_dao.get_asset_by_id.side_effect = AssetNotFoundException("Asset not found")
-        with pytest.raises(OrderValidationException, match="Asset BTC not found"):
+        mock_asset_dao.get_asset_by_id.side_effect = CNOPAssetNotFoundException("Asset not found")
+        with pytest.raises(CNOPOrderValidationException, match="Asset BTC not found"):
             validate_order_history_business_rules("BTC", "testuser", mock_asset_dao, mock_user_dao)
 
     def test_validate_market_conditions(self):
         """Test validate_market_conditions function"""
-        # Import enums
-        from common.entities.order.enums import OrderType
-
-        # Import and test the function
-        from src.validation.business_validators import validate_market_conditions
 
         # Test successful case - small order quantity (below threshold)
         validate_market_conditions("BTC", OrderType.MARKET_BUY, Decimal("50.0"))
@@ -472,9 +460,6 @@ class TestBusinessValidators:
         # Mock successful validations
         mock_user_dao.get_user_by_username.return_value = Mock()
 
-        # Import and test the function
-        from src.validation.business_validators import validate_user_permissions
-
         # Test successful case - user exists and is active
         validate_user_permissions("testuser", "create_order", mock_user_dao)
 
@@ -493,7 +478,6 @@ class TestBusinessValidators:
     def test_validate_order_creation_business_rules_sell_order_validation(self):
         """Test line 203: sell order validation call in validate_order_creation_business_rules"""
         # Import enums
-        from common.entities.order.enums import OrderType, OrderStatus
 
         # Create mock DAOs with specs
         mock_user_dao = Mock(spec=USER_DAO_SPEC)
@@ -505,10 +489,6 @@ class TestBusinessValidators:
         mock_user_dao.get_user_by_username.return_value = Mock()
         mock_asset_dao.get_asset_by_id.return_value = Mock(is_active=True)
         mock_asset_balance_dao.get_asset_balance.return_value = Mock(quantity=Decimal("10.0"))
-
-        # Import and test the function
-        from src.validation.business_validators import validate_order_creation_business_rules
-
         # Test sell order case - should trigger line 203
         validate_order_creation_business_rules(
             OrderType.MARKET_SELL,

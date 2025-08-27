@@ -6,7 +6,7 @@ from fastapi import APIRouter, status
 import logging
 from typing import Dict, Any
 
-from common.health import HealthChecker, HealthCheckResponse
+from common.shared.health import HealthChecker, HealthCheckResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["health"])

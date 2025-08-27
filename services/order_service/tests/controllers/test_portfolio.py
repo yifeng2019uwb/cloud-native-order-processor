@@ -9,6 +9,14 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
+from common.exceptions import (
+    CNOPDatabaseOperationException
+)
+from common.exceptions.shared_exceptions import (
+    CNOPAssetNotFoundException,
+    CNOPEntityNotFoundException,
+    CNOPInternalServerException
+)
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
@@ -57,9 +65,9 @@ with patch('src.controllers.portfolio.get_current_user', create=True), \
      patch('src.controllers.portfolio.AssetBalanceDAO', create=True), \
      patch('src.controllers.portfolio.UserDAO', create=True), \
      patch('src.controllers.portfolio.AssetDAO', create=True), \
-     patch('src.controllers.portfolio.DatabaseOperationException', create=True), \
-     patch('src.controllers.portfolio.InternalServerException', create=True), \
-     patch('src.controllers.portfolio.UserValidationException', create=True):
+     patch('src.controllers.portfolio.CNOPDatabaseOperationException', create=True), \
+     patch('src.controllers.portfolio.CNOPInternalServerException', create=True), \
+     patch('src.controllers.portfolio.CNOPOrderValidationException', create=True):
 
     from src.controllers.portfolio import get_user_portfolio
 
@@ -218,9 +226,9 @@ class TestPortfolioController:
                                                         mock_balance_dao, mock_asset_balance_dao,
                                                         mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_portfolio with unauthorized access attempt"""
-        from src.controllers.portfolio import UserValidationException
+        from src.controllers.portfolio import CNOPOrderValidationException
 
-        with pytest.raises(UserValidationException, match="You can only view your own portfolio"):
+        with pytest.raises(CNOPOrderValidationException, match="You can only view your own portfolio"):
             get_user_portfolio(
                 username="otheruser",  # Different username
                 request=mock_request,
@@ -314,11 +322,10 @@ class TestPortfolioController:
                                                     mock_balance_dao, mock_asset_balance_dao,
                                                     mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_portfolio with database operation exception"""
-        from src.controllers.portfolio import DatabaseOperationException, InternalServerException
 
-        mock_balance_dao.get_balance.side_effect = DatabaseOperationException("DB error")
+        mock_balance_dao.get_balance.side_effect = CNOPDatabaseOperationException("DB error")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             get_user_portfolio(
                 username="testuser",
                 request=mock_request,
@@ -334,11 +341,10 @@ class TestPortfolioController:
                                                      mock_balance_dao, mock_asset_balance_dao,
                                                      mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_portfolio with unexpected exception"""
-        from src.controllers.portfolio import InternalServerException
 
         mock_balance_dao.get_balance.side_effect = Exception("Unexpected error")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             get_user_portfolio(
                 username="testuser",
                 request=mock_request,
@@ -452,9 +458,8 @@ class TestPortfolioController:
                                                   mock_balance_dao, mock_asset_balance_dao,
                                                   mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
         """Test that error logging is performed correctly in get_user_portfolio"""
-        from src.controllers.portfolio import DatabaseOperationException
 
-        mock_balance_dao.get_balance.side_effect = DatabaseOperationException("DB error")
+        mock_balance_dao.get_balance.side_effect = CNOPDatabaseOperationException("DB error")
 
         with patch('src.controllers.portfolio.logger') as mock_logger:
             try:

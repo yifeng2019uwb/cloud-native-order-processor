@@ -21,19 +21,21 @@ from controllers.dependencies import (
     get_asset_balance_dao_dependency, get_user_dao_dependency,
     get_asset_dao_dependency
 )
-from common.dao.user import BalanceDAO, UserDAO
-from common.dao.asset import AssetBalanceDAO
-from common.dao.inventory import AssetDAO
+from common.data.dao.user import BalanceDAO, UserDAO
+from common.data.dao.asset import AssetBalanceDAO
+from common.data.dao.inventory import AssetDAO
 
 # Import business validators
 from validation.business_validators import validate_user_permissions
 
 # Import exceptions
-from common.exceptions import (
-    DatabaseOperationException,
-    InternalServerException,
-    UserValidationException
+from common.exceptions import CNOPDatabaseOperationException
+from common.exceptions.shared_exceptions import (
+    CNOPInternalServerException,
+    CNOPUserNotFoundException
 )
+from order_exceptions import CNOPOrderValidationException
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["portfolio"])
@@ -104,7 +106,7 @@ def get_user_portfolio(
         # Validate user access (users can only view their own portfolio)
         if current_user["username"] != username:
             logger.warning(f"Unauthorized portfolio access attempt: {current_user['username']} tried to access {username}'s portfolio")
-            raise UserValidationException("You can only view your own portfolio")
+            raise CNOPOrderValidationException("You can only view your own portfolio")
 
         # Get USD balance
         usd_balance = balance_dao.get_balance(username)
@@ -165,12 +167,12 @@ def get_user_portfolio(
             timestamp=datetime.utcnow()
         )
 
-    except UserValidationException:
+    except CNOPOrderValidationException:
         # Re-raise validation exceptions
         raise
-    except DatabaseOperationException as e:
+    except CNOPDatabaseOperationException as e:
         logger.error(f"Database operation failed for portfolio: user={username}, error={str(e)}")
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(f"Unexpected error during portfolio retrieval: user={username}, error={str(e)}", exc_info=True)
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")

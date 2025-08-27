@@ -7,6 +7,15 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
+from common.exceptions import (
+    CNOPDatabaseOperationException
+)
+from common.exceptions.shared_exceptions import (
+    CNOPAssetNotFoundException,
+    CNOPEntityNotFoundException,
+    CNOPInternalServerException
+)
+
 
 # Mock dependencies before importing
 with patch('src.controllers.asset_transaction.get_current_user', create=True), \
@@ -17,11 +26,11 @@ with patch('src.controllers.asset_transaction.get_current_user', create=True), \
      patch('src.controllers.asset_transaction.AssetTransactionDAO', create=True), \
      patch('src.controllers.asset_transaction.AssetDAO', create=True), \
      patch('src.controllers.asset_transaction.UserDAO', create=True), \
-     patch('src.controllers.asset_transaction.DatabaseOperationException', create=True), \
-     patch('src.controllers.asset_transaction.EntityNotFoundException', create=True), \
-     patch('src.controllers.asset_transaction.InternalServerException', create=True), \
-     patch('src.controllers.asset_transaction.AssetNotFoundException', create=True), \
-     patch('src.controllers.asset_transaction.UserValidationException', create=True):
+     patch('src.controllers.asset_transaction.CNOPDatabaseOperationException', create=True), \
+     patch('src.controllers.asset_transaction.CNOPEntityNotFoundException', create=True), \
+     patch('src.controllers.asset_transaction.CNOPInternalServerException', create=True), \
+     patch('src.controllers.asset_transaction.CNOPAssetNotFoundException', create=True), \
+     patch('src.controllers.asset_transaction.CNOPOrderValidationException', create=True):
 
     from src.controllers.asset_transaction import get_asset_transactions
 
@@ -202,9 +211,8 @@ class TestAssetTransactionController:
                                                          mock_asset_transaction_dao, mock_asset_dao,
                                                          mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions with entity not found exception"""
-        from src.controllers.asset_transaction import EntityNotFoundException
 
-        mock_asset_transaction_dao.get_user_asset_transactions.side_effect = EntityNotFoundException("Not found")
+        mock_asset_transaction_dao.get_user_asset_transactions.side_effect = CNOPEntityNotFoundException("Not found")
 
         result = get_asset_transactions(
             asset_id="BTC",
@@ -228,11 +236,10 @@ class TestAssetTransactionController:
                                                        mock_asset_transaction_dao, mock_asset_dao,
                                                        mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions with database operation exception"""
-        from src.controllers.asset_transaction import DatabaseOperationException, InternalServerException
 
-        mock_asset_transaction_dao.get_user_asset_transactions.side_effect = DatabaseOperationException("DB error")
+        mock_asset_transaction_dao.get_user_asset_transactions.side_effect = CNOPDatabaseOperationException("DB error")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
              get_asset_transactions(
                 asset_id="BTC",
                 limit=50,
@@ -249,11 +256,10 @@ class TestAssetTransactionController:
                                                          mock_asset_transaction_dao, mock_asset_dao,
                                                          mock_user_dao, mock_validate_order_history_business_rules):
         """Test get_asset_transactions with unexpected exception"""
-        from src.controllers.asset_transaction import InternalServerException
 
         mock_asset_transaction_dao.get_user_asset_transactions.side_effect = Exception("Unexpected error")
 
-        with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             get_asset_transactions(
                 asset_id="BTC",
                 limit=50,
@@ -352,9 +358,8 @@ class TestAssetTransactionController:
                                                       mock_asset_transaction_dao, mock_asset_dao,
                                                       mock_user_dao, mock_validate_order_history_business_rules):
         """Test that error logging is performed correctly in get_asset_transactions"""
-        from src.controllers.asset_transaction import DatabaseOperationException
 
-        mock_asset_transaction_dao.get_user_asset_transactions.side_effect = DatabaseOperationException("DB error")
+        mock_asset_transaction_dao.get_user_asset_transactions.side_effect = CNOPDatabaseOperationException("DB error")
 
         with patch('src.controllers.asset_transaction.logger') as mock_logger:
             try:

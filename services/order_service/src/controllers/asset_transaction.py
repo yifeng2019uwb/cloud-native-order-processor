@@ -22,21 +22,20 @@ from controllers.dependencies import (
     get_current_user, get_asset_transaction_dao_dependency,
     get_asset_dao_dependency, get_user_dao_dependency
 )
-from common.dao.asset import AssetTransactionDAO
-from common.dao.inventory import AssetDAO
-from common.dao.user import UserDAO
+from common.data.dao.asset import AssetTransactionDAO
+from common.data.dao.inventory import AssetDAO
+from common.data.dao.user import UserDAO
 
 # Import business validators
 from validation.business_validators import validate_order_history_business_rules
 
 # Import exceptions
 from common.exceptions import (
-    DatabaseOperationException,
-    EntityNotFoundException,
-    InternalServerException,
-    AssetNotFoundException,
-    UserValidationException
+    CNOPDatabaseOperationException,
+    CNOPEntityNotFoundException
 )
+from common.exceptions.shared_exceptions import CNOPInternalServerException
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["asset-transactions"])
@@ -137,7 +136,7 @@ def get_asset_transactions(
             timestamp=datetime.utcnow()
         )
 
-    except EntityNotFoundException:
+    except CNOPEntityNotFoundException:
         logger.info(f"No asset transactions found: user={current_user['username']}, asset={asset_id}")
         # Return empty list instead of error for no transactions
         return GetAssetTransactionsResponse(
@@ -147,11 +146,11 @@ def get_asset_transactions(
             has_more=False,
             timestamp=datetime.utcnow()
         )
-    except DatabaseOperationException as e:
+    except CNOPDatabaseOperationException as e:
         logger.error(f"Database operation failed for asset transactions: user={current_user['username']}, "
                     f"asset={asset_id}, error={str(e)}")
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(f"Unexpected error during asset transactions retrieval: user={current_user['username']}, "
                     f"asset={asset_id}, error={str(e)}", exc_info=True)
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")

@@ -55,16 +55,18 @@ TRANSACTION_MANAGER_SPEC = [
 
 from src.controllers.create_order import create_order, router
 from src.api_models.order import OrderCreateRequest, OrderCreateResponse, OrderData
-from common.entities.order.enums import OrderType, OrderStatus
+from common.data.entities.order.enums import OrderType, OrderStatus
 from common.exceptions import (
-    InsufficientBalanceException,
-    DatabaseOperationException,
-    LockAcquisitionException,
-    OrderValidationException,
-    InternalServerException,
-    UserValidationException
+    CNOPInsufficientBalanceException,
+    CNOPDatabaseOperationException,
+    CNOPLockAcquisitionException
 )
-
+from common.exceptions.shared_exceptions import (
+    CNOPAssetNotFoundException,
+    CNOPUserNotFoundException,
+    CNOPInternalServerException
+)
+from order_exceptions import CNOPOrderValidationException
 
 class TestCreateOrder:
     """Test create_order function"""
@@ -287,10 +289,10 @@ class TestCreateOrder:
              patch('src.controllers.create_order.logger') as mock_logger:
 
             # Setup mock to raise InsufficientBalanceException
-            mock_validate.side_effect = InsufficientBalanceException("Insufficient balance")
+            mock_validate.side_effect = CNOPInsufficientBalanceException("Insufficient balance")
 
             # Test that the exception is raised
-            with pytest.raises(UserValidationException, match="Insufficient balance"):
+            with pytest.raises(CNOPOrderValidationException, match="Insufficient balance"):
                 await create_order(
                     order_data=mock_order_create_request,
                     request=mock_request,
@@ -322,10 +324,10 @@ class TestCreateOrder:
              patch('src.controllers.create_order.logger') as mock_logger:
 
             # Setup mock to raise LockAcquisitionException
-            mock_validate.side_effect = LockAcquisitionException("Lock acquisition failed")
+            mock_validate.side_effect = CNOPLockAcquisitionException("Lock acquisition failed")
 
             # Test that the exception is raised
-            with pytest.raises(InternalServerException, match="Service temporarily unavailable - please try again"):
+            with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable - please try again"):
                 await create_order(
                     order_data=mock_order_create_request,
                     request=mock_request,
@@ -357,10 +359,10 @@ class TestCreateOrder:
              patch('src.controllers.create_order.logger') as mock_logger:
 
             # Setup mock to raise DatabaseOperationException
-            mock_validate.side_effect = DatabaseOperationException("Database error")
+            mock_validate.side_effect = CNOPDatabaseOperationException("Database error")
 
             # Test that the exception is raised
-            with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+            with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
                 await create_order(
                     order_data=mock_order_create_request,
                     request=mock_request,
@@ -392,10 +394,10 @@ class TestCreateOrder:
              patch('src.controllers.create_order.logger') as mock_logger:
 
             # Setup mock to raise OrderValidationException
-            mock_validate.side_effect = OrderValidationException("Invalid order data")
+            mock_validate.side_effect = CNOPOrderValidationException("Invalid order data")
 
             # Test that the exception is raised
-            with pytest.raises(UserValidationException, match="Invalid order data"):
+            with pytest.raises(CNOPOrderValidationException, match="Invalid order data"):
                 await create_order(
                     order_data=mock_order_create_request,
                     request=mock_request,
@@ -430,7 +432,7 @@ class TestCreateOrder:
             mock_validate.side_effect = Exception("Unexpected error")
 
             # Test that the exception is raised
-            with pytest.raises(InternalServerException, match="Service temporarily unavailable"):
+            with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
                 await create_order(
                     order_data=mock_order_create_request,
                     request=mock_request,
@@ -479,10 +481,10 @@ class TestCreateOrder:
 
             # Mock the transaction manager to raise an exception for unsupported types
             mock_transaction_manager.create_buy_order_with_balance_update.side_effect = \
-                OrderValidationException("Unsupported order type: invalid_type")
+                CNOPOrderValidationException("Unsupported order type: invalid_type")
 
             # Test that the exception is raised
-            with pytest.raises(UserValidationException, match="Unsupported order type"):
+            with pytest.raises(CNOPOrderValidationException, match="Unsupported order type"):
                 await create_order(
                     order_data=unsupported_request,
                     request=mock_request,

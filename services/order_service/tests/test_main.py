@@ -14,7 +14,17 @@ from fastapi.testclient import TestClient
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from main import app, root, startup_event, shutdown_event, logging_middleware, validation_exception_handler, http_exception_handler, user_validation_exception_handler, order_validation_exception_handler, global_exception_handler
+from main import (
+    app,
+    root,
+    startup_event,
+    shutdown_event,
+    logging_middleware,
+    validation_exception_handler,
+    http_exception_handler,
+    order_validation_exception_handler,
+    global_exception_handler
+)
 
 
 class TestMainApplication:
@@ -125,20 +135,6 @@ class TestMainApplication:
         content = response.body.decode()
         assert "Not found" in content
 
-    @pytest.mark.asyncio
-    async def test_user_validation_exception_handler(self, mock_request):
-        """Test user validation exception handler"""
-        # Create a mock user validation exception
-        mock_user_exception = Mock()
-        # Use side_effect for __str__ method
-        mock_user_exception.__str__ = Mock(side_effect=lambda: "User validation failed")
-
-        response = await user_validation_exception_handler(mock_request, mock_user_exception)
-        assert isinstance(response, JSONResponse)
-        assert response.status_code == 422
-
-        content = response.body.decode()
-        assert "User validation failed" in content
 
     @pytest.mark.asyncio
     async def test_order_validation_exception_handler(self, mock_request):

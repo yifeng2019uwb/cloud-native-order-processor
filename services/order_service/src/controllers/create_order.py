@@ -16,7 +16,7 @@ from api_models.order import OrderCreateRequest, OrderCreateResponse, OrderData
 from api_models.shared.common import ErrorResponse
 
 # Import common entities
-from common.entities.order.enums import OrderType, OrderStatus
+from common.data.entities.order.enums import OrderType, OrderStatus
 
 # Import dependencies
 from controllers.dependencies import (
@@ -24,22 +24,22 @@ from controllers.dependencies import (
     get_asset_dao_dependency, get_user_dao_dependency,
     get_balance_dao_dependency, get_asset_balance_dao_dependency
 )
-from common.utils.transaction_manager import TransactionManager
+from common.core.utils.transaction_manager import TransactionManager
 
 # Import DAOs
-from common.dao.inventory import AssetDAO
-from common.dao.user import UserDAO, BalanceDAO
-from common.dao.asset import AssetBalanceDAO
+from common.data.dao.inventory import AssetDAO
+from common.data.dao.user import UserDAO, BalanceDAO
+from common.data.dao.asset import AssetBalanceDAO
 
 # Import exceptions
 from common.exceptions import (
-    InsufficientBalanceException,
-    DatabaseOperationException,
-    LockAcquisitionException,
-    OrderValidationException,
-    InternalServerException,
-    UserValidationException
+    CNOPInsufficientBalanceException,
+    CNOPDatabaseOperationException,
+    CNOPLockAcquisitionException
 )
+from common.exceptions.shared_exceptions import CNOPInternalServerException
+
+from order_exceptions import CNOPOrderValidationException
 
 # Import business validators
 from validation.business_validators import validate_order_creation_business_rules
@@ -164,7 +164,7 @@ async def create_order(
                        f"asset_amount={total_amount}, lock_duration={result.lock_duration}s")
 
         else:
-            raise OrderValidationException(f"Unsupported order type: {order_data.order_type.value}")
+            raise CNOPOrderValidationException(f"Unsupported order type: {order_data.order_type.value}")
 
         # Extract order from transaction result
         created_order = result.data["order"]
@@ -186,26 +186,26 @@ async def create_order(
             timestamp=datetime.utcnow()
         )
 
-    except InsufficientBalanceException as e:
+    except CNOPInsufficientBalanceException as e:
         logger.warning(f"Insufficient balance for order: user={current_user['username']}, "
                       f"order_type={order_data.order_type.value}, asset={order_data.asset_id}, "
                       f"quantity={order_data.quantity}, error={str(e)}")
-        raise UserValidationException(str(e))
+        raise CNOPOrderValidationException(str(e))
 
-    except LockAcquisitionException as e:
+    except CNOPLockAcquisitionException as e:
         logger.warning(f"Lock acquisition failed for order: user={current_user['username']}, error={str(e)}")
-        raise InternalServerException("Service temporarily unavailable - please try again")
+        raise CNOPInternalServerException("Service temporarily unavailable - please try again")
 
-    except DatabaseOperationException as e:
+    except CNOPDatabaseOperationException as e:
         logger.error(f"Database operation failed for order: user={current_user['username']}, error={str(e)}")
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")
 
-    except OrderValidationException as e:
+    except CNOPOrderValidationException as e:
         logger.warning(f"Order validation failed: user={current_user['username']}, error={str(e)}")
-        raise UserValidationException(str(e))
+        raise CNOPOrderValidationException(str(e))
 
     except Exception as e:
         logger.error(f"Unexpected error during order creation: user={current_user['username']}, "
                     f"order_type={order_data.order_type.value}, asset={order_data.asset_id}, "
                     f"quantity={order_data.quantity}, error={str(e)}", exc_info=True)
-        raise InternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException("Service temporarily unavailable")
