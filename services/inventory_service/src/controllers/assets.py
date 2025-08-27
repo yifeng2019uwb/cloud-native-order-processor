@@ -33,6 +33,8 @@ from common.exceptions import CNOPAssetNotFoundException
 # Import business validation functions (Layer 2)
 from validation.business_validators import validate_asset_exists
 
+# No authentication required for inventory service (public APIs)
+
 # Import metrics
 try:
     from metrics import record_asset_retrieval, record_asset_detail_view, update_asset_counts

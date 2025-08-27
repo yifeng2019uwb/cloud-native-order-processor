@@ -13,8 +13,7 @@ os.environ.setdefault('ORDERS_TABLE', 'test-orders-table')
 os.environ.setdefault('INVENTORY_TABLE', 'test-inventory-table')
 os.environ.setdefault('ASSETS_TABLE', 'test-assets-table')
 os.environ.setdefault('ENVIRONMENT', 'test')
-os.environ.setdefault('JWT_SECRET_KEY', 'test-jwt-secret-key')
-os.environ.setdefault('JWT_ALGORITHM', 'HS256')
+# JWT_SECRET_KEY and JWT_ALGORITHM removed - no longer needed for order service
 os.environ.setdefault('LOG_LEVEL', 'INFO')
 os.environ.setdefault('PYTHONUNBUFFERED', '1')
 os.environ.setdefault('TESTING', 'true')
@@ -81,8 +80,7 @@ def mock_environment_variables():
         'INVENTORY_TABLE': 'test-inventory-table',
         'ASSETS_TABLE': 'test-assets-table',
         'ENVIRONMENT': 'test',
-        'JWT_SECRET_KEY': 'test-jwt-secret-key',
-        'JWT_ALGORITHM': 'HS256',
+        # JWT_SECRET_KEY and JWT_ALGORITHM removed - no longer needed for order service
         'LOG_LEVEL': 'INFO',
         'PYTHONUNBUFFERED': '1',
         'TESTING': 'true',

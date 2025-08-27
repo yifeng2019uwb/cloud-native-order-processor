@@ -349,7 +349,7 @@ async def startup_event():
     logger.info("📊 API Service Configuration:")
     logger.info(f"  Environment: {os.getenv('ENVIRONMENT', 'development')}")
     logger.info(f"  Services Root: {Path(__file__).parent.parent.parent}")
-    logger.info(f"  JWT Secret configured: {'Yes' if os.getenv('JWT_SECRET_KEY') else 'No'}")
+    logger.info(f"  Authentication: Gateway header-based (no JWT validation)")
     logger.info(f"  Service: user-authentication")
     logger.info(f"  Database: Accessed via DAO layer in common package")
 
@@ -358,7 +358,7 @@ async def startup_event():
         "USERS_TABLE": os.getenv("USERS_TABLE"),
         "ORDERS_TABLE": os.getenv("ORDERS_TABLE"),
         "INVENTORY_TABLE": os.getenv("INVENTORY_TABLE"),
-        "JWT_SECRET_KEY": os.getenv("JWT_SECRET_KEY")
+        # "JWT_SECRET_KEY": os.getenv("JWT_SECRET_KEY")  # Removed - no longer needed
     }
 
     logger.info("🔧 Environment Variables:")

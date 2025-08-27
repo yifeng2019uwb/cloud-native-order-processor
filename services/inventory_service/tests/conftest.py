@@ -13,7 +13,7 @@ os.environ.setdefault('ORDERS_TABLE', 'test-orders-table')
 os.environ.setdefault('INVENTORY_TABLE', 'test-inventory-table')
 os.environ.setdefault('ASSETS_TABLE', 'test-assets-table')
 os.environ.setdefault('ENVIRONMENT', 'test')
-os.environ.setdefault('JWT_SECRET', 'test-jwt-secret')
+# JWT_SECRET removed - no longer needed for inventory service
 os.environ.setdefault('LOG_LEVEL', 'INFO')
 os.environ.setdefault('PYTHONUNBUFFERED', '1')
 os.environ.setdefault('TESTING', 'true')
