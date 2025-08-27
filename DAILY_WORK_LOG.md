@@ -26,6 +26,52 @@
 
 ## 📝 Daily Entries
 
+### **8/27/2025 - Asset Validation Logic Fixes & Integration Test Reliability ✅**
+**Status: COMPLETED**
+
+### **What Was Accomplished:**
+- **✅ Fixed Asset Validation Logic Regression** from SEC-005-P3 changes
+- **✅ Resolved Integration Test Failures** (BUG-001) - All tests now passing
+- **✅ Maintained Consistent Exception Message Format** across services
+- **✅ Redeployed Fixed Services** - Inventory and Order services updated
+
+### **Technical Details:**
+- **Inventory Service Asset Validation**:
+  - Fixed `CNOPAssetValidationException` usage in field validators
+  - Corrected exception imports from `inventory_exceptions` vs `common.exceptions.shared_exceptions`
+  - Maintained consistent `"Invalid asset ID:"` message prefix for validation errors
+  - All 73 unit tests passing (100% success rate, 94% coverage)
+
+- **Order Service Asset Balance Validation**:
+  - Fixed `CNOPOrderValidationException` handling in asset balance controller
+  - Corrected exception imports and maintained consistent message formatting
+  - Proper handling of edge cases (non-existent assets, invalid formats)
+
+- **Exception Architecture Consistency**:
+  - Service-specific exceptions: `CNOPAssetValidationException` (from `inventory_exceptions`)
+  - Shared external exceptions: `CNOPAssetNotFoundException`, `CNOPInventoryServerException` (from `common.exceptions.shared_exceptions`)
+  - Internal exceptions: Database, configuration, AWS errors (from `common.exceptions`)
+
+### **Files Modified:**
+- `services/inventory_service/src/validation/field_validators.py` - Fixed exception type
+- `services/inventory_service/src/controllers/assets.py` - Corrected imports and exception handling
+- `services/inventory_service/src/main.py` - Fixed exception registration
+- `services/order_service/src/controllers/asset_balance.py` - Fixed exception handling
+- `integration_tests/config/service_urls.py` - Fixed import paths
+
+### **Impact:**
+- **Integration Tests**: Now properly fail when services have issues (no more silent bypassing)
+- **Error Messages**: Consistent and helpful validation error messages
+- **Service Reliability**: Proper handling of edge cases and validation failures
+- **Developer Experience**: Clear error messages for debugging and troubleshooting
+
+### **Next Steps:**
+- Focus on CI-001: Fix CI/CD Pipeline (Critical blocker)
+- Continue SEC-005 Phase 3: Complete backend service cleanup
+- Consider running integration tests to verify fixes work end-to-end
+
+---
+
 ### **8/20/2025 - Lambda Cleanup Across All Services ✅**
 **Status: COMPLETED**
 

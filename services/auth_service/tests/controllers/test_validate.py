@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from fastapi import FastAPI
 
 from src.controllers.validate import router, validate_jwt_token
-from src.api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
+from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 
 
