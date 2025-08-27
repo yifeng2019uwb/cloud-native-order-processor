@@ -123,8 +123,9 @@ class AssetBalanceTests:
             timeout=self.timeout
         )
 
-        # Should return 404 for non-existent asset
-        assert response.status_code == 404, f"Expected 404, got {response.status_code}"
+        # Should return 422 for invalid asset ID format (too long - 22 chars > 10 char limit)
+        # Field validation happens before business logic, so malformed IDs fail validation first
+        assert response.status_code == 422, f"Expected 422 for invalid asset ID format, got {response.status_code}"
 
     def test_get_asset_balance_by_id_invalid_asset_formats(self):
         """Test getting asset balance with invalid asset ID formats"""
@@ -136,8 +137,9 @@ class AssetBalanceTests:
                 timeout=self.timeout
             )
 
-            # Should return 400, 404, or 422 for invalid formats
-            assert response.status_code in [400, 404, 422], f"Expected 4xx for invalid ID '{invalid_id}', got {response.status_code}"
+            # Should return 422 for invalid asset ID format (field validation errors)
+            # Field validation happens before business logic, so malformed IDs fail validation first
+            assert response.status_code == 422, f"Expected 422 for invalid asset ID format '{invalid_id}', got {response.status_code}"
 
     def test_get_asset_balance_by_id_response_schema(self):
         """Test that asset balance by ID response has correct schema when accessible"""

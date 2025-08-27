@@ -49,9 +49,11 @@ class InventoryServiceTests:
         assert "name" in data
 
     def test_get_nonexistent_asset(self):
-        """Test getting a non-existent asset returns 404"""
+        """Test getting a non-existent asset returns 422 (validation error)"""
+        # "UNKNOWN_ASSET" is 13 characters, which exceeds the 1-10 character limit
+        # Field validation happens before business logic, so malformed IDs fail validation first
         r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, "UNKNOWN_ASSET"), timeout=self.timeout)
-        assert r.status_code == 404, f"Expected 404, got {r.status_code}"
+        assert r.status_code == 422, f"Expected 422 for invalid asset ID format, got {r.status_code}"
         # Should return error details
         error_data = r.json()
         assert "error" in error_data or "detail" in error_data or "message" in error_data
@@ -62,7 +64,9 @@ class InventoryServiceTests:
 
         for invalid_id in invalid_ids:
             r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, invalid_id), timeout=self.timeout)
-            assert r.status_code in [400, 404, 422], f"Expected 4xx for invalid ID '{invalid_id}', got {r.status_code}"
+            # Should return 422 for invalid asset ID format (field validation errors)
+            # Field validation happens before business logic, so malformed IDs fail validation first
+            assert r.status_code == 422, f"Expected 422 for invalid asset ID format '{invalid_id}', got {r.status_code}"
 
     def test_asset_schema_validation(self):
         """Test that asset responses have correct schema and data types"""

@@ -12,7 +12,7 @@ from typing import Optional
 from fastapi import Depends
 
 # Import common package dependencies
-from common.data.database import get_asset_dao
+from common.data.database.dependencies import get_asset_dao
 from common.data.dao.inventory import AssetDAO
 
 logger = logging.getLogger(__name__)

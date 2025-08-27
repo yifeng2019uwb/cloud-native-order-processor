@@ -22,13 +22,7 @@ from fastapi.exceptions import RequestValidationError
 from order_exceptions import CNOPOrderValidationException
 from common.aws.sts_client import STSClient
 
-from controllers.create_order import router as create_order_router
-from controllers.get_order import router as get_order_router
-from controllers.list_orders import router as list_orders_router
-from controllers.portfolio import router as portfolio_router
-from controllers.asset_balance import router as asset_balance_router
-from controllers.asset_transaction import router as asset_transaction_router
-from controllers.health import router as health_router
+# Controller imports will be moved to after logger setup to avoid JWT import issues
 
 # Load environment variables from services/.env
 try:
@@ -53,8 +47,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Import controllers from the controllers package
+from controllers import (
+    create_order_router,
+    get_order_router,
+    list_orders_router,
+    portfolio_router,
+    asset_balance_router,
+    asset_transaction_router,
+    health_router
+)
+
 # Initialize STS client for AWS role assumption
 try:
+    from common.aws.sts_client import STSClient
     sts_client = STSClient()
     logger.info("✅ STS client initialized for role assumption")
 except ImportError:
@@ -129,27 +135,70 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 # Import and include API routers
-try:
-    app.include_router(health_router, tags=["health"])
-    logger.info("✅ Health routes loaded successfully")
-except ImportError as e:
-    logger.warning(f"⚠️ Health routes not available: {e}")
+if health_router:
+    try:
+        app.include_router(health_router, tags=["health"])
+        logger.info("✅ Health routes loaded successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Health routes not available: {e}")
+else:
+    logger.warning("⚠️ Health controller not available - skipping health routes")
 
-try:
-    # Include all order controllers
-    app.include_router(create_order_router, prefix="/orders", tags=["orders"])
-    app.include_router(get_order_router, prefix="/orders", tags=["orders"])
-    app.include_router(list_orders_router, prefix="/orders", tags=["orders"])
+# Include order controllers if available
+if create_order_router:
+    try:
+        app.include_router(create_order_router, prefix="/orders", tags=["orders"])
+        logger.info("✅ Create order routes loaded successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Create order routes not available: {e}")
+else:
+    logger.warning("⚠️ Create order controller not available - skipping routes")
 
-    # Include portfolio and asset management controllers
-    app.include_router(portfolio_router, tags=["portfolio"])
-    app.include_router(asset_balance_router, tags=["asset-balances"])
-    app.include_router(asset_transaction_router, tags=["asset-transactions"])
+if get_order_router:
+    try:
+        app.include_router(get_order_router, prefix="/orders", tags=["orders"])
+        logger.info("✅ Get order routes loaded successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Get order routes not available: {e}")
+else:
+    logger.warning("⚠️ Get order controller not available - skipping routes")
 
-    logger.info("✅ Order controllers loaded successfully")
-    logger.info("✅ Portfolio and asset management controllers loaded successfully")
-except ImportError as e:
-    logger.warning(f"⚠️ Controllers not available: {e}")
+if list_orders_router:
+    try:
+        app.include_router(list_orders_router, prefix="/orders", tags=["orders"])
+        logger.info("✅ List orders routes loaded successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ List orders routes not available: {e}")
+else:
+    logger.warning("⚠️ List orders controller not available - skipping routes")
+
+# Include portfolio and asset management controllers if available
+if portfolio_router:
+    try:
+        app.include_router(portfolio_router, tags=["portfolio"])
+        logger.info("✅ Portfolio routes loaded successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Portfolio routes not available: {e}")
+else:
+    logger.warning("⚠️ Portfolio controller not available - skipping routes")
+
+if asset_balance_router:
+    try:
+        app.include_router(asset_balance_router, tags=["asset-balances"])
+        logger.info("✅ Asset balance routes loaded successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Asset balance routes not available: {e}")
+else:
+    logger.warning("⚠️ Asset balance controller not available - skipping routes")
+
+if asset_transaction_router:
+    try:
+        app.include_router(asset_transaction_router, tags=["asset-transactions"])
+        logger.info("✅ Asset transaction routes loaded successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Asset transaction routes not available: {e}")
+else:
+    logger.warning("⚠️ Asset transaction controller not available - skipping routes")
 
 # Root endpoint
 @app.get("/")

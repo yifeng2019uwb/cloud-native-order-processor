@@ -63,35 +63,17 @@ from .exceptions import (
 )
 
 # =============================================================================
-# BACKWARD COMPATIBILITY ALIASES - DEPRECATED - USE NEW AUTH PACKAGE INSTEAD
+# JWT EXCEPTIONS REMOVED - NO LONGER NEEDED IN BACKEND SERVICES
 # =============================================================================
 #
-# IMPORTANT: These aliases are provided for backward compatibility during migration.
-# DO NOT use these in new code. Import from the appropriate package instead:
+# These JWT-related exceptions have been removed to complete SEC-005 Phase 3.
+# Backend services no longer need JWT validation and should use appropriate
+# non-JWT exceptions instead.
 #
-# ✅ CORRECT (new code):
+# If JWT exceptions are needed, import directly from common.auth.exceptions:
 #   from common.auth.exceptions import CNOPAuthTokenExpiredException
 #   from common.auth.exceptions import CNOPAuthTokenInvalidException
-#
-# ❌ DEPRECATED (old code - will be removed):
-#   from common.exceptions import CNOPTokenExpiredException
-#   from common.exceptions import CNOPTokenInvalidException
-#
-# Migration Plan:
-# 1. Update all services to use new package paths (common.auth.exceptions.*)
-# 2. Remove these aliases once all services are migrated
-# 3. Keep only the new auth package exceptions going forward
 # =============================================================================
-
-# Authentication exceptions - DEPRECATED ALIASES
-from ..auth.exceptions import (
-    CNOPAuthTokenExpiredException as CNOPTokenExpiredException,
-    CNOPAuthTokenInvalidException as CNOPTokenInvalidException,
-    CNOPAuthInvalidCredentialsException as CNOPInvalidCredentialsException,
-    CNOPAuthAuthorizationException as CNOPAuthorizationException,
-    CNOPAuthAccessDeniedException as CNOPAccessDeniedException,
-    CNOPAuthInsufficientPermissionsException as CNOPInsufficientPermissionsException,
-)
 
 __all__ = [
     # Base exceptions
@@ -123,17 +105,10 @@ __all__ = [
     "CNOPCommonServerException",
 
     # =============================================================================
-    # BACKWARD COMPATIBILITY ALIASES - DEPRECATED - USE NEW AUTH PACKAGE INSTEAD
+    # JWT EXCEPTIONS REMOVED - NO LONGER NEEDED IN BACKEND SERVICES
     # =============================================================================
-    # These aliases are provided for backward compatibility during migration.
-    # DO NOT use these in new code. Import from common.auth.exceptions instead.
+    # These JWT-related exceptions have been removed to complete SEC-005 Phase 3.
+    # Backend services no longer need JWT validation and should use appropriate
+    # non-JWT exceptions instead.
     # =============================================================================
-
-    # Authentication exceptions - DEPRECATED ALIASES
-    "CNOPInvalidCredentialsException",      # Use CNOPAuthInvalidCredentialsException instead
-    "CNOPTokenExpiredException",           # Use CNOPAuthTokenExpiredException instead
-    "CNOPTokenInvalidException",           # Use CNOPAuthTokenInvalidException instead
-    "CNOPAuthorizationException",          # Use CNOPAuthAuthorizationException instead
-    "CNOPAccessDeniedException",           # Use CNOPAuthAccessDeniedException instead
-    "CNOPInsufficientPermissionsException", # Use CNOPAuthInsufficientPermissionsException instead
 ]

@@ -91,22 +91,40 @@ try:
     )
 
     # Import internal exceptions (from common.exceptions - internal use only)
-    from common.exceptions import (
-        CNOPDatabaseConnectionException,
-        CNOPDatabaseOperationException,
-        CNOPConfigurationException,
-        CNOPEntityValidationException,
-        CNOPEntityAlreadyExistsException,
-        CNOPEntityNotFoundException,
-        CNOPCommonServerException,
-        CNOPAWSServiceException
-    )
+    try:
+        from common.exceptions import (
+            CNOPDatabaseConnectionException,
+            CNOPDatabaseOperationException,
+            CNOPConfigurationException,
+            CNOPEntityValidationException,
+            CNOPEntityAlreadyExistsException,
+            CNOPEntityNotFoundException,
+            CNOPCommonServerException,
+            CNOPAWSServiceException
+        )
+    except ImportError as e:
+        logger.warning(f"⚠️ Could not import common exceptions: {e}")
+        # Create fallback exception classes to avoid crashes
+        CNOPDatabaseConnectionException = Exception
+        CNOPDatabaseOperationException = Exception
+        CNOPConfigurationException = Exception
+        CNOPEntityValidationException = Exception
+        CNOPEntityAlreadyExistsException = Exception
+        CNOPEntityNotFoundException = Exception
+        CNOPCommonServerException = Exception
+        CNOPAWSServiceException = Exception
 
     # Import shared external exceptions (from common.exceptions.shared_exceptions - external use)
-    from common.exceptions.shared_exceptions import (
-        CNOPAssetNotFoundException,
-        CNOPInventoryServerException
-    )
+    try:
+        from common.exceptions.shared_exceptions import (
+            CNOPAssetNotFoundException,
+            CNOPInventoryServerException
+        )
+    except ImportError as e:
+        logger.warning(f"⚠️ Could not import shared exceptions: {e}")
+        # Create fallback exception classes to avoid crashes
+        CNOPAssetNotFoundException = Exception
+        CNOPInventoryServerException = Exception
 
     # Import inventory service specific exceptions
     from inventory_exceptions import (

@@ -75,17 +75,15 @@ EOF
 check_prerequisites() {
     log_step "Checking prerequisites..."
 
-    if ! command -v python3 &> /dev/null; then
-        log_error "Python 3 is not installed"
-        exit 1
-    fi
+            # Get Python version from centralized config
+    python_cmd=$(python3 -c "import sys; sys.path.insert(0, '../dev-tools'); from dev_tools import validate_python_version; print(validate_python_version())")
 
     if ! command -v pip3 &> /dev/null; then
         log_error "pip3 is not installed"
         exit 1
     fi
 
-    local python_version=$(python3 --version | cut -d' ' -f2)
+    local python_version=$("$python_cmd" --version | cut -d' ' -f2)
     log_info "Python version: $python_version"
 
     # Check if we're in the right directory
@@ -110,7 +108,7 @@ setup_venv() {
     # Create virtual environment if it doesn't exist
     if [[ ! -d ".venv-${SERVICE_NAME}" ]]; then
         log_info "Creating virtual environment..."
-        python3 -m venv ".venv-${SERVICE_NAME}"
+        "$python_cmd" -m venv ".venv-${SERVICE_NAME}"
     fi
 
     # Activate virtual environment
@@ -122,49 +120,33 @@ setup_venv() {
 # Install dependencies with validation
 install_dependencies() {
     local no_cache="$1"
-    local pip_flags=""
-
-    if [[ "$no_cache" == "true" ]]; then
-        pip_flags="--no-cache-dir --force-reinstall"
-        log_info "Using --no-cache-dir --force-reinstall"
-    fi
 
     log_step "Installing dependencies..."
 
-    # Install common package first (critical for imports)
-    log_info "Installing common package..."
-    if pip install -e "../common" $pip_flags ; then
-        log_success "Common package installed"
+    # Use centralized dependency installation
+    if [[ "$no_cache" == "true" ]]; then
+        python3 -c "import sys; sys.path.insert(0, '../dev-tools'); from dev_tools import install_dependencies; install_dependencies('.', True)"
     else
-        log_error "Failed to install common package"
-        exit 1
+        python3 -c "import sys; sys.path.insert(0, '../dev-tools'); from dev_tools import install_dependencies; install_dependencies('.', False)"
     fi
 
-    # Install service dependencies
-    log_info "Installing service dependencies..."
-    if pip install -r requirements.txt $pip_flags ; then
-        log_success "Service dependencies installed"
-    else
-        log_error "Failed to install service dependencies"
-        exit 1
-    fi
-
-    # Install development dependencies for testing
-    if [[ -f "requirements-dev.txt" ]]; then
-        log_info "Installing development dependencies..."
-        pip install -r requirements-dev.txt $pip_flags
-    fi
+    log_success "Dependencies installed"
 }
 
 # Validate syntax and imports (always runs during build)
 validate_build() {
     log_step "Validating syntax and imports..."
 
+    # Ensure Python command is set
+    if [[ -z "$python_cmd" ]]; then
+        python_cmd=$(python3 -c "import sys; sys.path.insert(0, '../dev-tools'); from dev_tools import validate_python_version; print(validate_python_version())")
+    fi
+
     # Use centralized validation functions
-    if python3 -c "
+    if "$python_cmd" -c "
 import sys
 sys.path.insert(0, '../dev-tools')
-from common_validation import check_python_syntax, validate_service_imports
+from dev_tools import check_python_syntax, validate_service_imports
 
 # Check syntax
 success, file_count, errors = check_python_syntax('src')
