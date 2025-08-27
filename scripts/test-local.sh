@@ -330,10 +330,21 @@ run_frontend_tests() {
         return 0
     fi
 
-    log_info "Calling: ./frontend/dev.sh build"
+    log_info "Using frontend/dev.sh script for build and test"
 
-    if ! ./frontend/dev.sh build; then
-        log_error "Frontend build and test failed"
+    # Build frontend
+    if ./frontend/dev.sh build; then
+        log_success "Frontend build completed successfully"
+
+        # Test frontend
+        if ./frontend/dev.sh test; then
+            log_success "Frontend tests passed"
+        else
+            log_error "Frontend tests failed"
+            return 1
+        fi
+    else
+        log_error "Frontend build failed"
         return 1
     fi
 
@@ -350,10 +361,21 @@ run_gateway_tests() {
         return 0
     fi
 
-    log_info "Calling: ./gateway/dev.sh build"
+    log_info "Using gateway/dev.sh script for build and test"
 
-    if ! ./gateway/dev.sh build; then
-        log_error "Gateway build and test failed"
+    # Build gateway
+    if ./gateway/dev.sh build; then
+        log_success "Gateway build completed successfully"
+
+        # Test gateway
+        if ./gateway/dev.sh test; then
+            log_success "Gateway tests passed"
+        else
+            log_error "Gateway tests failed"
+            return 1
+        fi
+    else
+        log_error "Gateway build failed"
         return 1
     fi
 
@@ -370,18 +392,28 @@ run_services_tests() {
         return 0
     fi
 
+    log_info "Using optimized dev.sh scripts with centralized validation"
 
-
-    log_info "Calling: Individual service dev.sh scripts"
-
-    # Loop through each service and run dev.sh build
+    # Loop through each service and run dev.sh build and test
     local failed_services=()
     for service_dir in services/*/; do
         if [[ -d "$service_dir" ]] && [[ -f "${service_dir}dev.sh" ]]; then
             local service_name=$(basename "$service_dir")
-            log_info "Building service: $service_name"
+            log_substep "Building and testing service: $service_name"
 
-            if ! (cd "$service_dir" && ./dev.sh build); then
+            # Run build (includes validation)
+            if (cd "$service_dir" && ./dev.sh build); then
+                log_success "$service_name build completed successfully"
+
+                # Run tests
+                if (cd "$service_dir" && ./dev.sh test); then
+                    log_success "$service_name tests passed"
+                else
+                    log_error "$service_name tests failed"
+                    failed_services+=("$service_name")
+                fi
+            else
+                log_error "$service_name build failed"
                 failed_services+=("$service_name")
             fi
         fi

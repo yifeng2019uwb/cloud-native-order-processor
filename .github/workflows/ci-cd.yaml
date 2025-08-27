@@ -53,7 +53,26 @@ jobs:
 
     # Main frontend build step for CI/CD
     - name: Build and Test Frontend
-      run: ./frontend/dev.sh build
+      run: |
+        echo "🔧 Building and testing frontend..."
+
+        # Build frontend
+        if ./frontend/dev.sh build; then
+          echo "✅ Frontend build completed successfully"
+
+          # Test frontend
+          if ./frontend/dev.sh test; then
+            echo "✅ Frontend tests passed"
+          else
+            echo "❌ Frontend tests failed"
+            exit 1
+          fi
+        else
+          echo "❌ Frontend build failed"
+          exit 1
+        fi
+
+        echo "🎉 Frontend build and test completed successfully!"
 
     # Setup Go for gateway
     - name: Setup Go
@@ -82,19 +101,62 @@ jobs:
 
     # Build and test gateway
     - name: Build and Test Gateway
-      run: ./gateway/dev.sh build
+      run: |
+        echo "🔧 Building and testing gateway..."
+
+        # Build gateway
+        if ./gateway/dev.sh build; then
+          echo "✅ Gateway build completed successfully"
+
+          # Test gateway
+          if ./gateway/dev.sh test; then
+            echo "✅ Gateway tests passed"
+          else
+            echo "❌ Gateway tests failed"
+            exit 1
+          fi
+        else
+          echo "❌ Gateway build failed"
+          exit 1
+        fi
+
+        echo "🎉 Gateway build and test completed successfully!"
 
     # Build and test backend services
     - name: Build and Test Backend Services
       run: |
-        # Loop through each service and run dev.sh build
+        # Loop through each service and run dev.sh build and test
+        failed_services=()
         for service_dir in services/*/; do
           if [[ -d "$service_dir" ]] && [[ -f "${service_dir}dev.sh" ]]; then
             service_name=$(basename "$service_dir")
-            echo "Building service: $service_name"
-            (cd "$service_dir" && ./dev.sh build)
+            echo "🔧 Building and testing service: $service_name"
+
+            # Run build (includes validation)
+            if (cd "$service_dir" && ./dev.sh build); then
+              echo "✅ $service_name build completed successfully"
+
+              # Run tests
+              if (cd "$service_dir" && ./dev.sh test); then
+                echo "✅ $service_name tests passed"
+              else
+                echo "❌ $service_name tests failed"
+                failed_services+=("$service_name")
+              fi
+            else
+              echo "❌ $service_name build failed"
+              failed_services+=("$service_name")
+            fi
           fi
         done
+
+        # Check if any services failed
+        if [[ ${#failed_services[@]} -gt 0 ]]; then
+          echo "❌ Failed services: ${failed_services[*]}"
+          exit 1
+        fi
+
+        echo "🎉 All backend services built and tested successfully!"
 
     - name: Upload test coverage
       uses: actions/upload-artifact@v4
@@ -110,13 +172,19 @@ jobs:
       run: |
         echo "=== 🧪 CI Pipeline Summary ==="
         echo ""
-        echo "✅ Frontend: Built and tested"
-        echo "✅ Gateway: Built and tested"
-        echo "✅ Backend Services: Built and tested"
+        echo "✅ Frontend: Built, validated, and tested"
+        echo "✅ Gateway: Built, validated, and tested"
+        echo "✅ Backend Services: Built, validated, and tested"
         echo "✅ Coverage: Reports uploaded"
         echo ""
         echo "🎉 CI pipeline completed successfully!"
         echo "💰 Cost: $0 (no AWS resources used)"
+        echo ""
+        echo "📋 What was tested:"
+        echo "  • Frontend: Build validation and unit tests"
+        echo "  • Gateway: Build validation and unit tests"
+        echo "  • Backend Services: Syntax validation, import validation, unit tests"
+        echo "  • All services use optimized dev.sh scripts with centralized validation"
 
   # Job 2: Terraform Plan - Validates infrastructure changes
   terraform-plan:
