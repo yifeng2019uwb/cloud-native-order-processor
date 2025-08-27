@@ -33,8 +33,6 @@ class AssetBalanceTests:
 
     def test_get_asset_balances_unauthorized(self):
         """Test getting asset balances without authentication"""
-        print("  🚫 Testing get asset balances without authentication")
-
         response = self.session.get(
             self.asset_balance_api(OrderAPI.ASSET_BALANCES),
             timeout=self.timeout
@@ -42,12 +40,9 @@ class AssetBalanceTests:
 
         # Should return 401 or 403 for unauthorized
         assert response.status_code in [401, 403], f"Expected 401/403, got {response.status_code}"
-        print("  ✅ Unauthorized asset balances access correctly rejected")
 
     def test_get_asset_balances_invalid_token(self):
         """Test getting asset balances with invalid authentication token"""
-        print("  🚫 Testing get asset balances with invalid token")
-
         headers = {'Authorization': 'Bearer invalid_token_12345'}
         response = self.session.get(
             self.asset_balance_api(OrderAPI.ASSET_BALANCES),
@@ -57,12 +52,9 @@ class AssetBalanceTests:
 
         # Should return 401 for invalid token
         assert response.status_code == 401, f"Expected 401, got {response.status_code}"
-        print("  ✅ Invalid token correctly rejected")
 
     def test_get_asset_balances_malformed_token(self):
         """Test getting asset balances with malformed authentication header"""
-        print("  🚫 Testing get asset balances with malformed token header")
-
         headers = {'Authorization': 'Bearer'}  # Missing token value
         response = self.session.get(
             self.asset_balance_api(OrderAPI.ASSET_BALANCES),
@@ -72,53 +64,38 @@ class AssetBalanceTests:
 
         # Should return 401 or 403 for malformed token
         assert response.status_code in [401, 403], f"Expected 401/403, got {response.status_code}"
-        print("  ✅ Malformed token correctly rejected")
 
     def test_get_asset_balances_response_schema(self):
         """Test that asset balances response has correct schema when accessible"""
-        print("  🔍 Testing asset balances response schema")
+        response = self.session.get(
+            self.asset_balance_api(OrderAPI.ASSET_BALANCES),
+            timeout=self.timeout
+        )
 
-        try:
-            response = self.session.get(
-                self.asset_balance_api(OrderAPI.ASSET_BALANCES),
-                timeout=self.timeout
-            )
+        if response.status_code == 200:
+            data = response.json()
 
-            if response.status_code == 200:
-                data = response.json()
+            # Check if response has expected structure
+            if "asset_balances" in data:
+                balances = data["asset_balances"]
+                assert isinstance(balances, list), "Asset balances should be a list"
 
-                # Check if response has expected structure
-                if "asset_balances" in data:
-                    balances = data["asset_balances"]
-                    assert isinstance(balances, list), "Asset balances should be a list"
-
-                    if balances:
-                        balance = balances[0]
-                        # Check for common balance fields
-                        expected_fields = ["asset_id", "quantity", "current_value", "last_updated"]
-                        for field in expected_fields:
-                            if field in balance:
-                                print(f"    ✅ Found field: {field}")
-                            else:
-                                print(f"    ⚠️  Missing field: {field}")
-
-                elif "data" in data:
-                    print("    ✅ Response contains 'data' field")
-                else:
-                    print("    ⚠️  Response structure unexpected")
-
-            elif response.status_code in [401, 403]:
-                print("    ✅ Endpoint correctly requires authentication")
+                if balances:
+                    balance = balances[0]
+                    # Check for common balance fields
+                    expected_fields = ["asset_id", "quantity", "current_value", "last_updated"]
+                    for field in expected_fields:
+                        if field in balance:
+                            assert balance[field] is not None, f"Field {field} should not be None"
             else:
-                print(f"    ⚠️  Unexpected status code: {response.status_code}")
-
-        except Exception as e:
-            print(f"    ⚠️  Schema validation error: {e}")
+                # Alternative response structure
+                assert "balances" in data or "data" in data, "Response should contain asset balances data"
+        else:
+            # For non-200 responses, ensure they're proper error responses
+            assert response.status_code in [401, 403, 500], f"Unexpected status code: {response.status_code}"
 
     def test_get_asset_balance_by_id_unauthorized(self):
-        """Test getting specific asset balance without authentication"""
-        print("  🚫 Testing get asset balance by ID without authentication")
-
+        """Test getting asset balance by ID without authentication"""
         response = self.session.get(
             self.asset_balance_by_id_api("BTC"),
             timeout=self.timeout
@@ -126,12 +103,9 @@ class AssetBalanceTests:
 
         # Should return 401 or 403 for unauthorized
         assert response.status_code in [401, 403], f"Expected 401/403, got {response.status_code}"
-        print("  ✅ Unauthorized asset balance by ID access correctly rejected")
 
     def test_get_asset_balance_by_id_invalid_token(self):
-        """Test getting specific asset balance with invalid authentication token"""
-        print("  🚫 Testing get asset balance by ID with invalid token")
-
+        """Test getting asset balance by ID with invalid authentication token"""
         headers = {'Authorization': 'Bearer invalid_token_12345'}
         response = self.session.get(
             self.asset_balance_by_id_api("BTC"),
@@ -141,208 +115,171 @@ class AssetBalanceTests:
 
         # Should return 401 for invalid token
         assert response.status_code == 401, f"Expected 401, got {response.status_code}"
-        print("  ✅ Invalid token correctly rejected")
 
     def test_get_asset_balance_by_id_nonexistent_asset(self):
-        """Test getting balance for non-existent asset"""
-        print("  🔍 Testing get balance for non-existent asset")
+        """Test getting asset balance for non-existent asset"""
+        response = self.session.get(
+            self.asset_balance_by_id_api("NONEXISTENT_ASSET_12345"),
+            timeout=self.timeout
+        )
 
-        try:
+        # Should return 404 for non-existent asset
+        assert response.status_code == 404, f"Expected 404, got {response.status_code}"
+
+    def test_get_asset_balance_by_id_invalid_asset_formats(self):
+        """Test getting asset balance with invalid asset ID formats"""
+        invalid_asset_ids = ["", "   ", "BTC!", "BTC@123", "A" * 100]
+
+        for invalid_id in invalid_asset_ids:
             response = self.session.get(
-                self.asset_balance_by_id_api("NONEXISTENT_ASSET"),
+                self.asset_balance_by_id_api(invalid_id),
                 timeout=self.timeout
             )
 
-            # Should return 404 for non-existent asset or 401/403 for auth
-            assert response.status_code in [401, 403, 404], f"Expected 401/403/404, got {response.status_code}"
-
-            if response.status_code == 404:
-                print("    ✅ Non-existent asset correctly returns 404")
-            else:
-                print("    ✅ Non-existent asset correctly requires authentication")
-
-        except Exception as e:
-            print(f"    ⚠️  Non-existent asset test error: {e}")
-
-    def test_get_asset_balance_by_id_invalid_asset_formats(self):
-        """Test various invalid asset ID formats"""
-        print("  🔍 Testing get balance with invalid asset ID formats")
-
-        invalid_asset_ids = ["", "   ", "ASSET!", "ASSET@123", "A" * 100]  # Empty, whitespace, special chars, too long
-
-        for invalid_asset_id in invalid_asset_ids:
-            try:
-                response = self.session.get(
-                    self.asset_balance_by_id_api(invalid_asset_id),
-                    timeout=self.timeout
-                )
-
-                # Should return 4xx (400, 401, 403, 404, 422) but not 500
-                assert response.status_code in [400, 401, 403, 404, 422], f"Expected 4xx for invalid asset ID '{invalid_asset_id}', got {response.status_code}"
-
-            except requests.exceptions.ConnectionError as e:
-                # TODO: Backend has connection issues with some invalid asset IDs. Log and continue.
-                print(f"    ⚠️  Connection aborted for invalid asset ID '{invalid_asset_id}': {e}")
-                continue
-            except Exception as e:
-                print(f"    ⚠️  Invalid asset ID '{invalid_asset_id}' test error: {e}")
-
-        print("    ✅ Invalid asset ID formats handled correctly")
+            # Should return 400, 404, or 422 for invalid formats
+            assert response.status_code in [400, 404, 422], f"Expected 4xx for invalid ID '{invalid_id}', got {response.status_code}"
 
     def test_get_asset_balance_by_id_response_schema(self):
         """Test that asset balance by ID response has correct schema when accessible"""
-        print("  🔍 Testing asset balance by ID response schema")
+        response = self.session.get(
+            self.asset_balance_by_id_api("BTC"),
+            timeout=self.timeout
+        )
 
-        try:
-            response = self.session.get(
-                self.asset_balance_by_id_api("BTC"),
-                timeout=self.timeout
-            )
+        if response.status_code == 200:
+            data = response.json()
 
-            if response.status_code == 200:
-                data = response.json()
-
-                # Check if response has expected structure
-                expected_fields = ["asset_id", "quantity", "current_value", "last_updated", "asset_name", "current_price"]
-                for field in expected_fields:
-                    if field in data:
-                        print(f"    ✅ Found field: {field}")
-                    else:
-                        print(f"    ⚠️  Missing field: {field}")
-
-            elif response.status_code in [401, 403]:
-                print("    ✅ Endpoint correctly requires authentication")
-            elif response.status_code == 404:
-                print("    ✅ Endpoint correctly handles non-existent assets")
+            # Check if response has expected structure
+            if "asset_balance" in data:
+                balance = data["asset_balance"]
+                assert "asset_id" in balance, "Asset balance should contain asset_id"
+                assert "quantity" in balance, "Asset balance should contain quantity"
+                assert "current_value" in balance, "Asset balance should contain current_value"
             else:
-                print(f"    ⚠️  Unexpected status code: {response.status_code}")
-
-        except Exception as e:
-            print(f"    ⚠️  Schema validation error: {e}")
+                # Alternative response structure
+                assert "asset_id" in data, "Response should contain asset_id"
+                assert "quantity" in data, "Response should contain quantity"
+        else:
+            # For non-200 responses, ensure they're proper error responses
+            assert response.status_code in [401, 403, 404, 500], f"Unexpected status code: {response.status_code}"
 
     def test_asset_balance_performance(self):
-        """Test that asset balance endpoints respond within reasonable time"""
-        print("  ⏱️  Testing asset balance performance")
-
+        """Test that asset balance endpoints respond within performance thresholds"""
         # Test asset balances list
         start_time = time.time()
-        try:
-            response = self.session.get(
-                self.asset_balance_api(OrderAPI.ASSET_BALANCES),
-                timeout=self.timeout
-            )
-            end_time = time.time()
+        response = self.session.get(
+            self.asset_balance_api(OrderAPI.ASSET_BALANCES),
+            timeout=self.timeout
+        )
+        end_time = time.time()
 
-            response_time = (end_time - start_time) * 1000  # Convert to milliseconds
-            assert response_time < 2000, f"Asset balances response time {response_time:.2f}ms exceeds 2000ms threshold"
-
-            print(f"    ✅ Asset balances response time: {response_time:.2f}ms")
-
-        except Exception as e:
-            print(f"    ⚠️  Asset balances performance test error: {e}")
+        response_time = (end_time - start_time) * 1000  # Convert to milliseconds
+        assert response_time < 2000, f"Asset balances response time {response_time:.2f}ms exceeds 2000ms threshold"
 
         # Test asset balance by ID
         start_time = time.time()
-        try:
-            response = self.session.get(
-                self.asset_balance_by_id_api("BTC"),
-                timeout=self.timeout
-            )
-            end_time = time.time()
+        response = self.session.get(
+            self.asset_balance_by_id_api("BTC"),
+            timeout=self.timeout
+        )
+        end_time = time.time()
 
-            response_time = (end_time - start_time) * 1000  # Convert to milliseconds
-            assert response_time < 2000, f"Asset balance by ID response time {response_time:.2f}ms exceeds 2000ms threshold"
-
-            print(f"    ✅ Asset balance by ID response time: {response_time:.2f}ms")
-
-        except Exception as e:
-            print(f"    ⚠️  Asset balance by ID performance test error: {e}")
+        response_time = (end_time - start_time) * 1000  # Convert to milliseconds
+        assert response_time < 2000, f"Asset balance by ID response time {response_time:.2f}ms exceeds 2000ms threshold"
 
     def test_asset_balance_query_parameters(self):
         """Test that asset balance endpoints handle query parameters gracefully"""
-        print("  🔍 Testing asset balance query parameters")
-
         # Test common filtering params for asset balances list
         params = {"include_zero": "true", "currency": "USD", "format": "detailed"}
 
-        try:
-            response = self.session.get(
-                self.asset_balance_api(OrderAPI.ASSET_BALANCES),
-                params=params,
-                timeout=self.timeout
-            )
+        response = self.session.get(
+            self.asset_balance_api(OrderAPI.ASSET_BALANCES),
+            params=params,
+            timeout=self.timeout
+        )
 
-            # Should either accept params (200) or reject them gracefully (400/422), but not crash (500)
-            assert response.status_code in [200, 400, 401, 403, 422], f"Unexpected status code {response.status_code} for query params"
-
-            if response.status_code == 200:
-                print("    ✅ Asset balances query parameters accepted")
-            else:
-                print(f"    ✅ Asset balances query parameters handled gracefully (status: {response.status_code})")
-
-        except Exception as e:
-            print(f"    ⚠️  Asset balances query parameter test error: {e}")
+        # Should either accept params (200) or reject them gracefully (400/422), but not crash (500)
+        assert response.status_code in [200, 400, 401, 403, 422], f"Unexpected status code {response.status_code} for query params"
 
     def cleanup_test_orders(self):
         """Clean up test orders (placeholder for future implementation)"""
-        print(f"🧹 Cleanup: {len(self.created_orders)} test orders marked for cleanup")
         # TODO: Implement actual cleanup when order service supports order deletion
         self.created_orders = []
 
     def run_all_asset_balance_tests(self):
         """Run all asset balance tests"""
-        print("💰 Running asset balance integration tests...")
-        print(f"🎯 Service URLs:")
-        print(f"   - Asset Balances: {APIEndpoints.get_order_endpoint(OrderAPI.ASSET_BALANCES)}")
-        print(f"   - Asset Balance by ID: {APIEndpoints.get_order_endpoint(OrderAPI.ASSET_BALANCE_BY_ID, asset_id='{asset_id}')}")
+        failed_tests = []
+
+        # GET Asset Balances Tests
+        try:
+            self.test_get_asset_balances_unauthorized()
+        except Exception as e:
+            failed_tests.append("Asset Balances (Unauthorized)")
 
         try:
-            # GET Asset Balances Tests
-            print("\n💰 === GET ASSET BALANCES TESTS ===")
-            self.test_get_asset_balances_unauthorized()
-            print("  ✅ Asset Balances (Unauthorized) - PASS")
-
             self.test_get_asset_balances_invalid_token()
-            print("  ✅ Asset Balances (Invalid Token) - PASS")
-
-            self.test_get_asset_balances_malformed_token()
-            print("  ✅ Asset Balances (Malformed Token) - PASS")
-
-            self.test_get_asset_balances_response_schema()
-            print("  ✅ Asset Balances Response Schema - PASS")
-
-            # GET Asset Balance by ID Tests
-            print("\n💰 === GET ASSET BALANCE BY ID TESTS ===")
-            self.test_get_asset_balance_by_id_unauthorized()
-            print("  ✅ Asset Balance by ID (Unauthorized) - PASS")
-
-            self.test_get_asset_balance_by_id_invalid_token()
-            print("  ✅ Asset Balance by ID (Invalid Token) - PASS")
-
-            self.test_get_asset_balance_by_id_nonexistent_asset()
-            print("  ✅ Asset Balance by ID (Non-existent Asset) - PASS")
-
-            self.test_get_asset_balance_by_id_invalid_asset_formats()
-            print("  ✅ Asset Balance by ID (Invalid Asset Formats) - PASS")
-
-            self.test_get_asset_balance_by_id_response_schema()
-            print("  ✅ Asset Balance by ID Response Schema - PASS")
-
-            # Performance and Query Parameter Tests
-            print("\n💰 === PERFORMANCE & QUERY PARAMETER TESTS ===")
-            self.test_asset_balance_performance()
-            print("  ✅ Asset Balance Performance - PASS")
-
-            self.test_asset_balance_query_parameters()
-            print("  ✅ Asset Balance Query Parameters - PASS")
-
         except Exception as e:
-            print(f"  ❌ Unexpected error in asset balance tests: {e}")
+            failed_tests.append("Asset Balances (Invalid Token)")
+
+        try:
+            self.test_get_asset_balances_malformed_token()
+        except Exception as e:
+            failed_tests.append("Asset Balances (Malformed Token)")
+
+        try:
+            self.test_get_asset_balances_response_schema()
+        except Exception as e:
+            failed_tests.append("Asset Balances Response Schema")
+
+        # GET Asset Balance by ID Tests
+        try:
+            self.test_get_asset_balance_by_id_unauthorized()
+        except Exception as e:
+            failed_tests.append("Asset Balance by ID (Unauthorized)")
+
+        try:
+            self.test_get_asset_balance_by_id_invalid_token()
+        except Exception as e:
+            failed_tests.append("Asset Balance by ID (Invalid Token)")
+
+        try:
+            self.test_get_asset_balance_by_id_nonexistent_asset()
+        except Exception as e:
+            failed_tests.append("Asset Balance by ID (Non-existent Asset)")
+
+        try:
+            self.test_get_asset_balance_by_id_invalid_asset_formats()
+        except Exception as e:
+            failed_tests.append("Asset Balance by ID (Invalid Asset Formats)")
+
+        try:
+            self.test_get_asset_balance_by_id_response_schema()
+        except Exception as e:
+            failed_tests.append("Asset Balance by ID Response Schema")
+
+        # Performance and Query Parameter Tests
+        try:
+            self.test_asset_balance_performance()
+        except Exception as e:
+            failed_tests.append("Asset Balance Performance")
+
+        try:
+            self.test_asset_balance_query_parameters()
+        except Exception as e:
+            failed_tests.append("Asset Balance Query Parameters")
 
         self.cleanup_test_orders()
-        print("\n==================================================")
-        print("🎉 Asset balance tests completed!")
+
+        # Check if any tests failed
+        if failed_tests:
+            raise AssertionError(f"Asset balance tests failed: {', '.join(failed_tests)}")
 
 if __name__ == "__main__":
     tests = AssetBalanceTests()
-    tests.run_all_asset_balance_tests()
+    try:
+        tests.run_all_asset_balance_tests()
+        print("🎉 All asset balance tests passed!")
+        sys.exit(0)
+    except Exception as e:
+        print(f"❌ Asset balance tests failed: {e}")
+        sys.exit(1)

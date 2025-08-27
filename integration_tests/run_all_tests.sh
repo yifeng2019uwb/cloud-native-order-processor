@@ -3,6 +3,9 @@
 # Simple script to run test cases with options
 # Usage: ./run_all_tests.sh [all|smoke|inventory|user|order]
 
+# Global exit code tracking
+OVERALL_EXIT_CODE=0
+
 # Install prerequisites
 install_prerequisites() {
     echo "Installing prerequisites..."
@@ -36,44 +39,68 @@ show_usage() {
     echo "  $0 order    # Run only order service tests"
 }
 
+# Helper function to run tests and track exit codes
+run_test_suite() {
+    local test_name="$1"
+    local test_command="$2"
+
+    echo "Running $test_name..."
+    eval "$test_command"
+    local exit_code=$?
+
+    if [ $exit_code -ne 0 ]; then
+        echo "❌ $test_name failed with exit code $exit_code"
+        OVERALL_EXIT_CODE=$exit_code
+        return $exit_code
+    else
+        echo "✅ $test_name completed successfully"
+        return 0
+    fi
+}
+
 run_smoke_tests() {
-    echo "Running smoke tests..."
-    python3 smoke/health_tests.py
+    run_test_suite "smoke tests" "python3 smoke/health_tests.py"
 }
 
 run_inventory_tests() {
-    echo "Running inventory service tests..."
-    python3 inventory_service/inventory_tests.py
+    run_test_suite "inventory service tests" "python3 inventory_service/inventory_tests.py"
 }
 
 run_user_tests() {
-    echo "Running user service tests..."
+    echo "=== Running User Service Tests ==="
+
     echo "=== Running User Service Auth Tests ==="
-    python3 user_services/auth/registration_tests.py
-    python3 user_services/auth/login_tests.py
-    python3 user_services/auth/profile_tests.py
-    python3 user_services/auth/logout_tests.py
+    run_test_suite "user registration tests" "python3 user_services/auth/registration_tests.py"
+    run_test_suite "user login tests" "python3 user_services/auth/login_tests.py"
+    run_test_suite "user profile tests" "python3 user_services/auth/profile_tests.py"
+    run_test_suite "user logout tests" "python3 user_services/auth/logout_tests.py"
+
     echo "=== Running User Service Balance Tests ==="
-    python3 user_services/balance/balance_tests.py
-    python3 user_services/balance/deposit_tests.py
-    python3 user_services/balance/withdraw_tests.py
-    python3 user_services/balance/transaction_history_tests.py
+    run_test_suite "user balance tests" "python3 user_services/balance/balance_tests.py"
+    run_test_suite "user deposit tests" "python3 user_services/balance/deposit_tests.py"
+    run_test_suite "user withdraw tests" "python3 user_services/balance/withdraw_tests.py"
+    run_test_suite "user transaction history tests" "python3 user_services/balance/transaction_history_tests.py"
 }
 
 run_order_tests() {
-    echo "Running order service tests..."
+    echo "=== Running Order Service Tests ==="
+
     echo "=== Running Order Service Health Tests ==="
-    python3 order_service/health/health_tests.py
+    run_test_suite "order health tests" "python3 order_service/health/health_tests.py"
+
     echo "=== Running Order Service Orders Tests ==="
-    python3 order_service/orders/list_order_tests.py
-    python3 order_service/orders/create_order_tests.py
-    python3 order_service/orders/get_order_tests.py
+    run_test_suite "order list tests" "python3 order_service/orders/list_order_tests.py"
+    run_test_suite "order create tests" "python3 order_service/orders/create_order_tests.py"
+    run_test_suite "order get tests" "python3 order_service/orders/get_order_tests.py"
+
     echo "=== Running Order Service Portfolio Tests ==="
-    python3 order_service/portfolio_tests.py
+    run_test_suite "order portfolio tests" "python3 order_service/portfolio_tests.py"
+
     echo "=== Running Order Service Asset Balance Tests ==="
-    python3 order_service/asset_balance_tests.py
+    run_test_suite "order asset balance tests" "python3 order_service/asset_balance_tests.py"
+
     echo "=== Running Order Service Asset Transaction Tests ==="
-    python3 order_service/asset_transaction_tests.py
+    run_test_suite "order asset transaction tests" "python3 order_service/asset_transaction_tests.py"
 }
 
 # Default to all tests if no argument provided
@@ -121,3 +148,12 @@ case $ARG in
         exit 1
         ;;
 esac
+
+# Final exit code check
+if [ $OVERALL_EXIT_CODE -ne 0 ]; then
+    echo "❌ Some tests failed. Overall exit code: $OVERALL_EXIT_CODE"
+    exit $OVERALL_EXIT_CODE
+else
+    echo "🎉 All tests passed successfully!"
+    exit 0
+fi

@@ -32,15 +32,18 @@ class HealthTests:
             response = simple_retry(health_check)
             duration = time.time() - start_time
 
-            success = response.status_code == 200
-            data = response.json() if success else {}
+            # Assert the response is successful
+            assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+
+            data = response.json()
+            success = True
 
             return {
                 'test_name': 'User Service Health Check',
                 'success': success,
                 'duration': duration,
                 'status_code': response.status_code,
-                'error': None if success else f"Expected 200, got {response.status_code}",
+                'error': None,
                 'service': 'user-service',
                 'data': data
             }
@@ -68,15 +71,18 @@ class HealthTests:
             response = simple_retry(health_check)
             duration = time.time() - start_time
 
-            success = response.status_code == 200
-            data = response.json() if success else {}
+            # Assert the response is successful
+            assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+
+            data = response.json()
+            success = True
 
             return {
                 'test_name': 'Inventory Service Health Check',
                 'success': success,
                 'duration': duration,
                 'status_code': response.status_code,
-                'error': None if success else f"Expected 200, got {response.status_code}",
+                'error': None,
                 'service': 'inventory-service',
                 'data': data
             }
@@ -105,15 +111,18 @@ class HealthTests:
             duration = time.time() - start_time
 
             # For protected endpoints, 403 (Forbidden) means gateway is working correctly
-            success = response.status_code in [200, 403]
-            data = response.json() if success and response.status_code == 200 else {}
+            # Assert we get either 200 (if somehow authenticated) or 403 (expected for unauthorized)
+            assert response.status_code in [200, 403], f"Expected 200 or 403, got {response.status_code}"
+
+            data = response.json() if response.status_code == 200 else {}
+            success = True
 
             return {
                 'test_name': 'User Service Root Endpoint',
                 'success': success,
                 'duration': duration,
                 'status_code': response.status_code,
-                'error': None if success else f"Expected 200 or 403, got {response.status_code}",
+                'error': None,
                 'service': 'user-service',
                 'data': data
             }
@@ -141,15 +150,18 @@ class HealthTests:
             response = simple_retry(root_check)
             duration = time.time() - start_time
 
-            success = response.status_code == 200
-            data = response.json() if success else {}
+            # Assert the response is successful (inventory is public)
+            assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+
+            data = response.json()
+            success = True
 
             return {
                 'test_name': 'Inventory Service Root Endpoint',
                 'success': success,
                 'duration': duration,
                 'status_code': response.status_code,
-                'error': None if success else f"Expected 200, got {response.status_code}",
+                'error': None,
                 'service': 'inventory-service',
                 'data': data
             }
@@ -193,12 +205,14 @@ if __name__ == "__main__":
     health_tests = HealthTests()
     results = health_tests.run_all_health_tests()
 
-    # Summary
-    passed = sum(1 for test in results if test['success'])
-    total = len(results)
-    print(f"\n📊 Smoke Test Summary: {passed}/{total} tests passed")
+    # Check if any tests failed
+    failed_tests = [test for test in results if not test['success']]
 
-    if passed == total:
-        print("🎉 All smoke tests passed!")
+    if failed_tests:
+        print(f"\n❌ {len(failed_tests)} smoke tests failed:")
+        for test in failed_tests:
+            print(f"  - {test['test_name']}: {test['error']}")
+        sys.exit(1)
     else:
-        print("⚠️  Some smoke tests failed. Check service connectivity.")
+        print("\n🎉 All smoke tests passed!")
+        sys.exit(0)

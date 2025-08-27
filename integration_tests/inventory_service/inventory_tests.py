@@ -61,41 +61,31 @@ class InventoryServiceTests:
         invalid_ids = ["", "   ", "BTC!", "BTC@123", "A" * 100]  # Empty, whitespace, special chars, too long
 
         for invalid_id in invalid_ids:
-            try:
-                r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, invalid_id), timeout=self.timeout)
-                assert r.status_code in [400, 404, 422], f"Expected 4xx for invalid ID '{invalid_id}', got {r.status_code}"
-            except requests.exceptions.ConnectionError as e:
-                # TODO: Backend has connection issues with some invalid IDs. Log and continue.
-                print(f"    ⚠️  Connection aborted for invalid ID '{invalid_id}': {e}")
-                continue
+            r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, invalid_id), timeout=self.timeout)
+            assert r.status_code in [400, 404, 422], f"Expected 4xx for invalid ID '{invalid_id}', got {r.status_code}"
 
     def test_asset_schema_validation(self):
         """Test that asset responses have correct schema and data types"""
-        try:
-            # Test list schema
-            r = self.session.get(self.inventory_api(InventoryAPI.ASSETS), timeout=self.timeout)
-            assert r.status_code == 200
-            data = r.json()
-            assert "assets" in data
-            assert isinstance(data["assets"], list)
+        # Test list schema
+        r = self.session.get(self.inventory_api(InventoryAPI.ASSETS), timeout=self.timeout)
+        assert r.status_code == 200
+        data = r.json()
+        assert "assets" in data
+        assert isinstance(data["assets"], list)
 
-            if data["assets"]:
-                asset = data["assets"][0]
-                # Updated required fields based on actual API response
-                required_fields = ["asset_id", "name", "description", "category", "price_usd", "is_active"]
-                for field in required_fields:
-                    assert field in asset, f"Missing required field: {field}"
+        if data["assets"]:
+            asset = data["assets"][0]
+            # Updated required fields based on actual API response
+            required_fields = ["asset_id", "name", "description", "category", "price_usd", "is_active"]
+            for field in required_fields:
+                assert field in asset, f"Missing required field: {field}"
 
-                # Check data types
-                assert isinstance(asset["asset_id"], str)
-                assert isinstance(asset["name"], str)
-                assert isinstance(asset["price_usd"], (int, float))
-                assert asset["price_usd"] >= 0, "Price should be non-negative"
-                assert isinstance(asset["is_active"], bool)
-        except requests.exceptions.ConnectionError as e:
-            # TODO: Backend has intermittent connection issues. Log and skip this test for now.
-            print(f"    ⚠️  Connection aborted during schema validation: {e}")
-            raise AssertionError("Schema validation skipped due to connection issues")
+            # Check data types
+            assert isinstance(asset["asset_id"], str)
+            assert isinstance(asset["name"], str)
+            assert isinstance(asset["price_usd"], (int, float))
+            assert asset["price_usd"] >= 0, "Price should be non-negative"
+            assert isinstance(asset["is_active"], bool)
 
     def test_asset_consistency(self):
         """Test that two sequential requests return consistent data"""
@@ -137,12 +127,10 @@ class InventoryServiceTests:
 
     def cleanup_test_assets(self):
         """Clean up test assets (placeholder for future implementation)"""
-        print(f"🧹 Cleanup: {len(self.created_assets)} test assets marked for cleanup")
         # TODO: Implement actual cleanup when inventory service supports asset deletion
         self.created_assets = []
 
     def run_all_inventory_tests(self):
-        print("📦 Running inventory service tests...")
         tests = [
             ("Get All Assets", self.test_get_assets),
             ("Get Asset by ID", self.test_get_asset_by_id),
@@ -153,32 +141,26 @@ class InventoryServiceTests:
             ("Performance Guard", self.test_performance_guard),
             ("Unsupported Query Params", self.test_unsupported_query_params),
         ]
-        passed = 0
-        failed = 0
+
+        failed_tests = []
+
         for name, test_func in tests:
             try:
                 test_func()
-                print(f"  ✅ PASS {name}")
-                passed += 1
-            except AssertionError as e:
-                print(f"  ❌ FAIL {name}")
-                print(f"    Error: {e}")
-                failed += 1
             except Exception as e:
-                print(f"  ❌ FAIL {name}")
-                print(f"    Unexpected error: {e}")
-                failed += 1
+                failed_tests.append(name)
+
         self.cleanup_test_assets()
-        print("\n==================================================")
-        print(f"✅ Passed: {passed}/{len(tests)}")
-        print(f"❌ Failed: {failed}/{len(tests)}")
-        if failed == 0:
-            print("🎉 All inventory tests passed!")
-        else:
-            print("⚠️  Some tests failed")
+
+        if failed_tests:
+            raise AssertionError(f"Inventory tests failed: {', '.join(failed_tests)}")
 
 if __name__ == "__main__":
     tests = InventoryServiceTests(APIEndpoints.get_inventory_endpoint(InventoryAPI.ASSETS).replace("/assets", ""))
-    tests.test_get_assets()
-    tests.test_get_asset_by_id()
-    print("All direct assertions passed.")
+    try:
+        tests.run_all_inventory_tests()
+        print("🎉 All inventory tests passed!")
+        sys.exit(0)
+    except Exception as e:
+        print(f"❌ Inventory tests failed: {e}")
+        sys.exit(1)

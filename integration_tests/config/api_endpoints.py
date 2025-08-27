@@ -9,38 +9,39 @@ import os
 # Add config directory to path for imports
 sys.path.append(os.path.dirname(__file__))
 from service_urls import USER_SERVICE_URL, INVENTORY_SERVICE_URL, ORDER_SERVICE_URL
+from constants import APIEndpoints as APIConstants
 
 # User Service API Enum (Gateway Routes)
 class UserAPI(Enum):
-    ROOT = '/auth/profile'  # Gateway redirects to profile for authenticated users
-    REGISTER = '/auth/register'
-    LOGIN = '/auth/login'
-    PROFILE = '/auth/profile'
-    LOGOUT = '/auth/logout'
-    HEALTH = '/health'  # Gateway health endpoint (direct, not via /api/v1)
-    BALANCE = '/balance'
-    BALANCE_DEPOSIT = '/balance/deposit'
-    BALANCE_WITHDRAW = '/balance/withdraw'
-    BALANCE_TRANSACTIONS = '/balance/transactions'
+    ROOT = APIConstants.AUTH_PROFILE  # Gateway redirects to profile for authenticated users
+    REGISTER = APIConstants.AUTH_REGISTER
+    LOGIN = APIConstants.AUTH_LOGIN
+    PROFILE = APIConstants.AUTH_PROFILE
+    LOGOUT = APIConstants.AUTH_LOGOUT
+    HEALTH = APIConstants.GATEWAY_HEALTH  # Gateway health endpoint (direct, not via /api/v1)
+    BALANCE = APIConstants.BALANCE_GET
+    BALANCE_DEPOSIT = APIConstants.BALANCE_DEPOSIT
+    BALANCE_WITHDRAW = APIConstants.BALANCE_WITHDRAW
+    BALANCE_TRANSACTIONS = APIConstants.BALANCE_TRANSACTIONS
 
 # Inventory Service API Enum (Gateway Routes)
 class InventoryAPI(Enum):
-    ROOT = '/inventory/assets'  # Gateway redirects to assets list
-    ASSETS = '/inventory/assets'
-    ASSET_BY_ID = '/inventory/assets/{id}'
-    HEALTH = '/health'  # Gateway health endpoint (direct, not via /api/v1)
+    ROOT = APIConstants.INVENTORY_ASSETS  # Gateway redirects to assets list
+    ASSETS = APIConstants.INVENTORY_ASSETS
+    ASSET_BY_ID = APIConstants.INVENTORY_ASSET_BY_ID
+    HEALTH = APIConstants.GATEWAY_HEALTH  # Gateway health endpoint (direct, not via /api/v1)
 
 # Order Service API Enum (Gateway Routes)
 class OrderAPI(Enum):
-    ROOT = '/orders'  # Gateway redirects to orders list
-    ORDERS = '/orders'
-    ORDER_BY_ID = '/orders/{id}'
-    CREATE_ORDER = '/orders'
-    PORTFOLIO = '/portfolio/{username}'
-    ASSET_BALANCES = '/assets/balances'
-    ASSET_BALANCE_BY_ID = '/assets/{asset_id}/balance'
-    ASSET_TRANSACTIONS = '/assets/{asset_id}/transactions'
-    HEALTH = '/health'  # Gateway health endpoint (direct, not via /api/v1)
+    ROOT = APIConstants.ORDERS_LIST  # Gateway redirects to orders list
+    ORDERS = APIConstants.ORDERS_LIST
+    ORDER_BY_ID = APIConstants.ORDERS_GET_BY_ID
+    CREATE_ORDER = APIConstants.ORDERS_CREATE
+    PORTFOLIO = APIConstants.PORTFOLIO_GET
+    ASSET_BALANCES = APIConstants.ASSETS_BALANCES
+    ASSET_BALANCE_BY_ID = APIConstants.ASSET_BALANCE_BY_ID
+    ASSET_TRANSACTIONS = APIConstants.ASSET_TRANSACTIONS_BY_ID
+    HEALTH = APIConstants.GATEWAY_HEALTH  # Gateway health endpoint (direct, not via /api/v1)
 
 class APIEndpoints:
     """Centralized API endpoints configuration"""
