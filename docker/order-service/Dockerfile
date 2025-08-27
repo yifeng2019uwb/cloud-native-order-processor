@@ -7,6 +7,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     curl \
     gcc \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (for better caching)
@@ -23,10 +24,10 @@ COPY services/common/src ./common
 # Copy order service source code
 COPY services/order_service/src ./order_service/src
 
-# Set Python path to include the common directory for imports
-ENV PYTHONPATH="/app:/app/order_service/src"
+# Set Python path to include the app directory for imports
+ENV PYTHONPATH="/app"
 
-# Set working directory to order service
+# Set working directory to service src for proper imports
 WORKDIR /app/order_service/src
 
 # Expose port
