@@ -11,16 +11,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from controllers.assets import list_assets, get_asset_by_id
 
 # Import exception classes for testing
-from exceptions import (
-    AssetNotFoundException,
-    AssetValidationException,
-    InternalServerException
+from inventory_exceptions import (
+    CNOPAssetValidationException,
+    CNOPInventoryServerException
 )
 from common.exceptions import (
-    DatabaseOperationException,
-    ConfigurationException
+    CNOPDatabaseOperationException,
+    CNOPAssetNotFoundException
 )
-
 
 def test_list_assets_success():
     """Test list_assets with mocked AssetDAO"""
@@ -181,7 +179,7 @@ def test_get_asset_by_id_not_found():
         mock_dao.get_asset_by_id.return_value = None
 
         # Test that the function raises the correct exception
-        with pytest.raises(InternalServerException) as exc_info:
+        with pytest.raises(CNOPInventoryServerException) as exc_info:
             get_asset_by_id("INVALID", asset_dao=mock_dao)
 
         error = exc_info.value
@@ -231,7 +229,7 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao = MagicMock()
         mock_asset_dao.get_all_assets.side_effect = Exception("Database connection failed")
 
-        with pytest.raises(InternalServerException) as exc_info:
+        with pytest.raises(CNOPInventoryServerException) as exc_info:
             list_assets(active_only=True, limit=10, asset_dao=mock_asset_dao)
 
         error = exc_info.value
@@ -244,7 +242,7 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao = MagicMock()
         mock_asset_dao.get_asset_by_id.side_effect = Exception("Database query failed")
 
-        with pytest.raises(InternalServerException) as exc_info:
+        with pytest.raises(CNOPInventoryServerException) as exc_info:
             get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
@@ -255,11 +253,11 @@ class TestAssetsControllerExceptionHandling:
         """Test handling of common package exceptions in list_assets"""
         # Mock the asset DAO to raise a common package exception
         mock_asset_dao = MagicMock()
-        mock_asset_dao.get_all_assets.side_effect = DatabaseOperationException(
+        mock_asset_dao.get_all_assets.side_effect = CNOPDatabaseOperationException(
             "Connection failed", service="dynamodb"
         )
 
-        with pytest.raises(InternalServerException) as exc_info:
+        with pytest.raises(CNOPInventoryServerException) as exc_info:
             list_assets(active_only=True, limit=10, asset_dao=mock_asset_dao)
 
         error = exc_info.value
@@ -270,11 +268,11 @@ class TestAssetsControllerExceptionHandling:
         """Test handling of common package exceptions in get_asset_by_id"""
         # Mock the asset DAO to raise a common package exception
         mock_asset_dao = MagicMock()
-        mock_asset_dao.get_asset_by_id.side_effect = DatabaseOperationException(
+        mock_asset_dao.get_asset_by_id.side_effect = CNOPDatabaseOperationException(
             "Operation failed", operation="get_item"
         )
 
-        with pytest.raises(InternalServerException) as exc_info:
+        with pytest.raises(CNOPInventoryServerException) as exc_info:
             get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
@@ -287,7 +285,7 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao = MagicMock()
         mock_asset_dao.get_asset_by_id.side_effect = Exception("Test database error")
 
-        with pytest.raises(InternalServerException) as exc_info:
+        with pytest.raises(CNOPInventoryServerException) as exc_info:
             get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
@@ -299,16 +297,16 @@ class TestAssetsControllerExceptionHandling:
         """Test the complete exception flow in assets controller"""
         # Mock the asset DAO to raise a common package exception
         mock_asset_dao = MagicMock()
-        mock_asset_dao.get_all_assets.side_effect = DatabaseOperationException(
+        mock_asset_dao.get_all_assets.side_effect = CNOPDatabaseOperationException(
             "Connection failed", service="dynamodb", region="us-east-1"
         )
 
-        with pytest.raises(InternalServerException) as exc_info:
+        with pytest.raises(CNOPInventoryServerException) as exc_info:
             list_assets(active_only=True, limit=5, asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Verify the error is properly wrapped
-        assert isinstance(error, InternalServerException)
+        assert isinstance(error, CNOPInventoryServerException)
         assert "failed to list assets" in str(error).lower()
 
     def test_assets_controller_with_complex_exception(self):
@@ -326,7 +324,7 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao = MagicMock()
         mock_asset_dao.get_asset_by_id.side_effect = complex_error
 
-        with pytest.raises(InternalServerException) as exc_info:
+        with pytest.raises(CNOPInventoryServerException) as exc_info:
             get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
@@ -337,10 +335,10 @@ class TestAssetsControllerExceptionHandling:
         """Test assets controller handling multiple types of exceptions"""
         # Test with different exception types
         exceptions_to_test = [
-            (Exception("Generic exception"), InternalServerException),
-            (RuntimeError("Runtime error"), InternalServerException),
-            (DatabaseOperationException("Connection error", service="dynamodb"), InternalServerException),
-            (DatabaseOperationException("Operation error", operation="scan"), InternalServerException)
+            (Exception("Generic exception"), CNOPInventoryServerException),
+            (RuntimeError("Runtime error"), CNOPInventoryServerException),
+            (CNOPDatabaseOperationException("Connection error", service="dynamodb"), CNOPInventoryServerException),
+            (CNOPDatabaseOperationException("Operation error", operation="scan"), CNOPInventoryServerException)
         ]
 
         for exc, expected_exception_type in exceptions_to_test:
@@ -352,27 +350,27 @@ class TestAssetsControllerExceptionHandling:
 
             error = exc_info.value
             assert isinstance(error, expected_exception_type)
-            if expected_exception_type == InternalServerException:
+            if expected_exception_type == CNOPInventoryServerException:
                 assert "failed to get asset btc" in str(error).lower()
 
     def test_assets_controller_validation_error_handling(self):
         """Test assets controller handling validation errors"""
         # Test with validation errors that should be converted to AssetValidationException
         validation_errors = [
-            AssetValidationException("Asset ID cannot be empty"),
-            AssetValidationException("Asset ID contains potentially malicious content"),
-            AssetValidationException("Asset ID must be 1-10 alphanumeric characters")
+            CNOPAssetValidationException("Asset ID cannot be empty"),
+            CNOPAssetValidationException("Asset ID contains potentially malicious content"),
+            CNOPAssetValidationException("Asset ID must be 1-10 alphanumeric characters")
         ]
 
         for validation_error in validation_errors:
             mock_asset_dao = MagicMock()
             mock_asset_dao.get_asset_by_id.side_effect = validation_error
 
-            with pytest.raises(AssetValidationException) as exc_info:
+            with pytest.raises(CNOPAssetValidationException) as exc_info:
                 get_asset_by_id("BTC", asset_dao=mock_asset_dao)
 
             error = exc_info.value
-            assert isinstance(error, AssetValidationException)
+            assert isinstance(error, CNOPAssetValidationException)
             assert "Invalid asset ID" in str(error)
 
 
@@ -465,9 +463,9 @@ def test_get_asset_by_id_validation_error_handling():
         mock_record_view.assert_called_once_with(asset_id="BTC")
 
         # Now test with AssetValidationException
-        mock_validate.side_effect = AssetValidationException("Asset ID cannot be empty")
+        mock_validate.side_effect = CNOPAssetValidationException("Asset ID cannot be empty")
 
-        with pytest.raises(AssetValidationException) as exc_info:
+        with pytest.raises(CNOPAssetValidationException) as exc_info:
             get_asset_by_id("INVALID", asset_dao=mock_dao)
 
         # Verify the exception message is properly formatted

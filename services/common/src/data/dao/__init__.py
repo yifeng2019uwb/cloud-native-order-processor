@@ -1,19 +1,19 @@
 """
-DAO package for database access objects.
+DAO package - Import individual DAOs only when needed
 """
 
+# ❌ DON'T do this - causes circular imports
+# from .user import UserDAO, BalanceDAO
+# from .inventory import AssetDAO
+# from .order import OrderDAO
+
+# ✅ DO this - let services import what they need
 from .base_dao import BaseDAO
-from .user import UserDAO, BalanceDAO
-from .inventory import AssetDAO
-from .order import OrderDAO
-from .asset import AssetBalanceDAO, AssetTransactionDAO
 
 __all__ = [
-    "BaseDAO",
-    "UserDAO",
-    "BalanceDAO",
-    "AssetDAO",
-    "OrderDAO",
-    "AssetBalanceDAO",
-    "AssetTransactionDAO"
+    "BaseDAO"
 ]
+
+# Services should import directly:
+# from common.data.dao.user import UserDAO
+# from common.data.dao.inventory import AssetDAO

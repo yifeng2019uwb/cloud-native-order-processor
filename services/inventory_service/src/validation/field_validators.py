@@ -8,7 +8,7 @@ Combines sanitization + format validation in each function.
 import re
 
 # Import proper exceptions
-from common.exceptions.shared_exceptions import AssetValidationException
+from inventory_exceptions import CNOPAssetValidationException
 
 
 def sanitize_string(value: str, max_length: int = None) -> str:
@@ -57,22 +57,22 @@ def validate_asset_id(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise AssetValidationException("Asset ID cannot be empty")
+        raise CNOPAssetValidationException("Asset ID cannot be empty")
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
-        raise AssetValidationException("Asset ID contains potentially malicious content")
+        raise CNOPAssetValidationException("Asset ID contains potentially malicious content")
 
     # 2. Basic sanitization (remove HTML tags, trim whitespace)
     v = sanitize_string(v)
 
     # 3. Check for empty after sanitization
     if not v:
-        raise AssetValidationException("Asset ID cannot be empty")
+        raise CNOPAssetValidationException("Asset ID cannot be empty")
 
     # 4. Format validation - asset IDs should be alphanumeric, 1-10 chars
     if not re.match(r'^[a-zA-Z0-9]{1,10}$', v):
-        raise AssetValidationException("Asset ID must be 1-10 alphanumeric characters")
+        raise CNOPAssetValidationException("Asset ID must be 1-10 alphanumeric characters")
 
     # 5. Convert to uppercase for consistency
     return v.upper()

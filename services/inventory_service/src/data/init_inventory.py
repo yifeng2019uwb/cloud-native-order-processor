@@ -8,10 +8,10 @@ from decimal import Decimal
 import httpx
 import asyncio
 
-from common.dao.inventory.asset_dao import AssetDAO
-from common.entities.inventory import AssetCreate
-from common.database.dynamodb_connection import dynamodb_manager
-from common.exceptions import EntityNotFoundException
+from common.data.dao.inventory.asset_dao import AssetDAO
+from common.data.entities.inventory import AssetCreate
+from common.data.database.dynamodb_connection import dynamodb_manager
+from common.exceptions import CNOPEntityNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +83,8 @@ async def upsert_coins_to_inventory(coins: List[dict]) -> int:
                 logger.info(f"Updated asset: {asset_id} - {name}")
                 updated_count += 1
             except Exception as e:
-                # Check if it's EntityNotFoundException (asset doesn't exist)
-                if isinstance(e, EntityNotFoundException):
+                # Check if it's CNOPEntityNotFoundException (asset doesn't exist)
+                if isinstance(e, CNOPEntityNotFoundException):
                     # Asset doesn't exist, create it
                     asset_dao.create_asset(asset_create)
                     logger.info(f"Created asset: {asset_id} - {name}")

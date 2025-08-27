@@ -5,10 +5,9 @@ import pytest
 from unittest.mock import Mock, MagicMock
 from src.validation.field_validators import validate_asset_id
 from src.validation.business_validators import validate_asset_exists, validate_asset_is_active
-from common.exceptions.shared_exceptions import AssetValidationException, AssetNotFoundException
-from common.exceptions.shared_exceptions import EntityNotFoundException
-from common.exceptions import DatabaseOperationException, ConfigurationException, AWSServiceException
-from exceptions import AssetNotFoundException as InventoryAssetNotFoundException
+from common.exceptions import CNOPEntityNotFoundException, CNOPDatabaseOperationException, CNOPConfigurationException, CNOPAWSServiceException
+from inventory_exceptions import CNOPAssetValidationException
+from common.exceptions import CNOPAssetNotFoundException
 
 
 class TestAssetIDValidation:
@@ -35,12 +34,12 @@ class TestAssetIDValidation:
 
     def test_empty_asset_id(self):
         """Test empty asset ID"""
-        with pytest.raises(AssetValidationException, match="Asset ID cannot be empty"):
+        with pytest.raises(CNOPAssetValidationException, match="Asset ID cannot be empty"):
             validate_asset_id("")
 
     def test_whitespace_only_asset_id(self):
         """Test whitespace-only asset ID"""
-        with pytest.raises(AssetValidationException, match="Asset ID cannot be empty"):
+        with pytest.raises(CNOPAssetValidationException, match="Asset ID cannot be empty"):
             validate_asset_id("   ")
 
     def test_invalid_characters(self):
@@ -56,7 +55,7 @@ class TestAssetIDValidation:
         ]
 
         for asset_id in invalid_ids:
-            with pytest.raises(AssetValidationException, match="Asset ID must be 1-10 alphanumeric characters"):
+            with pytest.raises(CNOPAssetValidationException, match="Asset ID must be 1-10 alphanumeric characters"):
                 validate_asset_id(asset_id)
 
         # This should pass because sanitize_string trims whitespace
@@ -65,7 +64,7 @@ class TestAssetIDValidation:
 
     def test_too_long_asset_id(self):
         """Test asset ID that's too long"""
-        with pytest.raises(AssetValidationException, match="Asset ID must be 1-10 alphanumeric characters"):
+        with pytest.raises(CNOPAssetValidationException, match="Asset ID must be 1-10 alphanumeric characters"):
             validate_asset_id("VERYLONGASSETID")
 
     def test_suspicious_content(self):
@@ -77,7 +76,7 @@ class TestAssetIDValidation:
         ]
 
         for asset_id in suspicious_ids:
-            with pytest.raises(AssetValidationException, match="Asset ID contains potentially malicious content"):
+            with pytest.raises(CNOPAssetValidationException, match="Asset ID contains potentially malicious content"):
                 validate_asset_id(asset_id)
 
     def test_case_conversion(self):
@@ -216,9 +215,9 @@ class TestBusinessValidators:
 
     def test_validate_asset_exists_entity_not_found(self, mock_asset_dao):
         """Test asset existence validation when asset is not found"""
-        mock_asset_dao.get_asset_by_id.side_effect = EntityNotFoundException("Asset not found")
+        mock_asset_dao.get_asset_by_id.side_effect = CNOPEntityNotFoundException("Asset not found")
 
-        with pytest.raises(InventoryAssetNotFoundException):
+        with pytest.raises(CNOPAssetNotFoundException):
             validate_asset_exists("BTC", mock_asset_dao)
 
         # Verify DAO was called correctly
@@ -226,10 +225,10 @@ class TestBusinessValidators:
 
     def test_validate_asset_exists_database_error(self, mock_asset_dao):
         """Test asset existence validation when database error occurs (line 32)"""
-        mock_asset_dao.get_asset_by_id.side_effect = DatabaseOperationException("Connection timeout")
+        mock_asset_dao.get_asset_by_id.side_effect = CNOPDatabaseOperationException("Connection timeout")
 
         # Should re-raise the database exception
-        with pytest.raises(DatabaseOperationException):
+        with pytest.raises(CNOPDatabaseOperationException):
             validate_asset_exists("BTC", mock_asset_dao)
 
         # Verify DAO was called correctly
@@ -262,7 +261,7 @@ class TestBusinessValidators:
         mock_asset.is_active = False
         mock_asset_dao.get_asset_by_id.return_value = mock_asset
 
-        with pytest.raises(InventoryAssetNotFoundException):
+        with pytest.raises(CNOPAssetNotFoundException):
             validate_asset_is_active("BTC", mock_asset_dao)
 
         # Verify DAO was called correctly
@@ -270,9 +269,9 @@ class TestBusinessValidators:
 
     def test_validate_asset_is_active_entity_not_found(self, mock_asset_dao):
         """Test asset active validation when asset is not found"""
-        mock_asset_dao.get_asset_by_id.side_effect = EntityNotFoundException("Asset not found")
+        mock_asset_dao.get_asset_by_id.side_effect = CNOPEntityNotFoundException("Asset not found")
 
-        with pytest.raises(InventoryAssetNotFoundException):
+        with pytest.raises(CNOPAssetNotFoundException):
             validate_asset_is_active("BTC", mock_asset_dao)
 
         # Verify DAO was called correctly
@@ -280,10 +279,10 @@ class TestBusinessValidators:
 
     def test_validate_asset_is_active_database_error(self, mock_asset_dao):
         """Test asset active validation when database error occurs (lines 49-60)"""
-        mock_asset_dao.get_asset_by_id.side_effect = DatabaseOperationException("Connection timeout")
+        mock_asset_dao.get_asset_by_id.side_effect = CNOPDatabaseOperationException("Connection timeout")
 
         # Should re-raise the database exception
-        with pytest.raises(DatabaseOperationException):
+        with pytest.raises(CNOPDatabaseOperationException):
             validate_asset_is_active("BTC", mock_asset_dao)
 
         # Verify DAO was called correctly
@@ -302,10 +301,10 @@ class TestBusinessValidators:
 
     def test_validate_asset_is_active_configuration_error(self, mock_asset_dao):
         """Test asset active validation when configuration error occurs (lines 49-60)"""
-        mock_asset_dao.get_asset_by_id.side_effect = ConfigurationException("Invalid configuration")
+        mock_asset_dao.get_asset_by_id.side_effect = CNOPConfigurationException("Invalid configuration")
 
         # Should re-raise the configuration exception
-        with pytest.raises(ConfigurationException):
+        with pytest.raises(CNOPConfigurationException):
             validate_asset_is_active("BTC", mock_asset_dao)
 
         # Verify DAO was called correctly
@@ -313,10 +312,10 @@ class TestBusinessValidators:
 
     def test_validate_asset_is_active_aws_service_error(self, mock_asset_dao):
         """Test asset active validation when AWS service error occurs (lines 49-60)"""
-        mock_asset_dao.get_asset_by_id.side_effect = AWSServiceException("AWS service unavailable")
+        mock_asset_dao.get_asset_by_id.side_effect = CNOPAWSServiceException("AWS service unavailable")
 
         # Should re-raise the AWS service exception
-        with pytest.raises(AWSServiceException):
+        with pytest.raises(CNOPAWSServiceException):
             validate_asset_is_active("BTC", mock_asset_dao)
 
         # Verify DAO was called correctly

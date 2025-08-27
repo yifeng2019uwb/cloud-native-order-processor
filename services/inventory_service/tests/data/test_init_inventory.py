@@ -5,7 +5,7 @@ from decimal import Decimal
 import httpx
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from common.exceptions import EntityNotFoundException
+from common.exceptions import CNOPEntityNotFoundException
 
 # Import the module to test
 from data.init_inventory import (
@@ -176,7 +176,7 @@ class TestUpsertCoinsToInventory:
 
             mock_asset_dao = MagicMock()
             # Mock DAO to raise EntityNotFoundException when asset doesn't exist
-            mock_asset_dao.get_asset_by_id.side_effect = EntityNotFoundException("Asset not found")
+            mock_asset_dao.get_asset_by_id.side_effect = CNOPEntityNotFoundException("Asset not found")
             mock_asset_dao.create_asset.return_value = None
 
             with patch('data.init_inventory.AssetDAO', return_value=mock_asset_dao):
@@ -238,7 +238,7 @@ class TestUpsertCoinsToInventory:
 
             mock_asset_dao = MagicMock()
             # First asset exists, second doesn't
-            mock_asset_dao.get_asset_by_id.side_effect = [MagicMock(), EntityNotFoundException("Asset not found")]
+            mock_asset_dao.get_asset_by_id.side_effect = [MagicMock(), CNOPEntityNotFoundException("Asset not found")]
             mock_asset_dao.update_asset.return_value = None
             mock_asset_dao.create_asset.return_value = None
 
@@ -272,7 +272,7 @@ class TestUpsertCoinsToInventory:
             mock_db_manager.get_connection.return_value.__aenter__.return_value = mock_connection
 
             mock_asset_dao = MagicMock()
-            mock_asset_dao.get_asset_by_id.side_effect = [EntityNotFoundException("Asset not found"), Exception("Database error")]
+            mock_asset_dao.get_asset_by_id.side_effect = [CNOPEntityNotFoundException("Asset not found"), Exception("Database error")]
             mock_asset_dao.create_asset.return_value = None
 
             with patch('data.init_inventory.AssetDAO', return_value=mock_asset_dao):
@@ -299,7 +299,7 @@ class TestUpsertCoinsToInventory:
             mock_db_manager.get_connection.return_value.__aenter__.return_value = mock_connection
 
             mock_asset_dao = MagicMock()
-            mock_asset_dao.get_asset_by_id.side_effect = EntityNotFoundException("Asset not found")
+            mock_asset_dao.get_asset_by_id.side_effect = CNOPEntityNotFoundException("Asset not found")
             mock_asset_dao.create_asset.return_value = None
 
             with patch('data.init_inventory.AssetDAO', return_value=mock_asset_dao):
@@ -437,7 +437,7 @@ class TestIntegrationScenarios:
             mock_db_manager.get_connection.return_value.__aenter__.return_value = mock_connection
 
             mock_asset_dao = MagicMock()
-            mock_asset_dao.get_asset_by_id.side_effect = EntityNotFoundException("Asset not found")
+            mock_asset_dao.get_asset_by_id.side_effect = CNOPEntityNotFoundException("Asset not found")
             mock_asset_dao.create_asset.return_value = None
 
             with patch('data.init_inventory.AssetDAO', return_value=mock_asset_dao):

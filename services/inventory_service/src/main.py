@@ -92,14 +92,14 @@ try:
 
     # Import common package exceptions
     from common.exceptions import (
-        DatabaseConnectionError,
-        DatabaseOperationError,
-        ConfigurationError,
-        EntityValidationError,
-        EntityAlreadyExistsError,
-        EntityNotFoundError,
-        BusinessRuleError,
-        AWSError
+        CNOPDatabaseConnectionException,
+        CNOPDatabaseOperationException,
+        CNOPConfigurationException,
+        CNOPEntityValidationException,
+        CNOPEntityAlreadyExistsException,
+        CNOPEntityNotFoundException,
+        CNOPCommonServerException,
+        CNOPAWSServiceException
     )
 
     # Register secure exception handlers
@@ -108,14 +108,14 @@ try:
     app.add_exception_handler(Exception, secure_general_exception_handler)
 
     # Register single generic handler for all common package exceptions
-    app.add_exception_handler(DatabaseConnectionError, secure_common_exception_handler)
-    app.add_exception_handler(DatabaseOperationError, secure_common_exception_handler)
-    app.add_exception_handler(EntityAlreadyExistsError, secure_common_exception_handler)
-    app.add_exception_handler(EntityValidationError, secure_common_exception_handler)
-    app.add_exception_handler(EntityNotFoundError, secure_common_exception_handler)
-    app.add_exception_handler(BusinessRuleError, secure_common_exception_handler)
-    app.add_exception_handler(ConfigurationError, secure_common_exception_handler)
-    app.add_exception_handler(AWSError, secure_common_exception_handler)
+    app.add_exception_handler(CNOPDatabaseConnectionException, secure_common_exception_handler)
+    app.add_exception_handler(CNOPDatabaseOperationException, secure_common_exception_handler)
+    app.add_exception_handler(CNOPEntityAlreadyExistsException, secure_common_exception_handler)
+    app.add_exception_handler(CNOPEntityValidationException, secure_common_exception_handler)
+    app.add_exception_handler(CNOPEntityNotFoundException, secure_common_exception_handler)
+    app.add_exception_handler(CNOPCommonServerException, secure_common_exception_handler)
+    app.add_exception_handler(CNOPConfigurationException, secure_common_exception_handler)
+    app.add_exception_handler(CNOPAWSServiceException, secure_common_exception_handler)
 
     logger.info("✅ Secure exception handlers registered successfully")
     logger.info("✅ Common package exception handlers registered successfully")
@@ -223,26 +223,26 @@ def main_health_check():
 
 # Additional health check endpoints using common health checker
 try:
-    from common.health import HealthChecker
-    
+    from common.shared.health import HealthChecker
+
     # Create inventory service health checker instance
     health_checker = HealthChecker("inventory-service", "1.0.0")
-    
+
     @app.get("/health/ready", status_code=200)
     def readiness_check():
         """Readiness check endpoint for Kubernetes readiness probe."""
         return health_checker.readiness_check()
-    
+
     @app.get("/health/live", status_code=200)
     def liveness_check():
         """Liveness check endpoint for Kubernetes liveness probe."""
         return health_checker.liveness_check()
-    
+
     @app.get("/health/db", status_code=200)
     def database_health_check():
         """Database health check endpoint."""
         return health_checker.database_health_check()
-        
+
     logger.info("✅ Common health check endpoints loaded successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Common health check endpoints not available: {e}")

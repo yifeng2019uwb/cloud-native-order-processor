@@ -20,15 +20,15 @@ from api_models.inventory.asset_list import (
 from api_models.inventory.asset_requests import AssetIdRequest
 
 # Import common DAO
-from common.dao.inventory.asset_dao import AssetDAO
-from common.database import get_asset_dao
+from common.data.dao.inventory.asset_dao import AssetDAO
+from common.data.database import get_asset_dao
 
 # Import internal exceptions
-from exceptions import (
-    AssetNotFoundException,
-    AssetValidationException,
-    InternalServerException
+from inventory_exceptions import (
+    CNOPAssetValidationException,
+    CNOPInventoryServerException
 )
+from common.exceptions import CNOPAssetNotFoundException
 
 # Import business validation functions (Layer 2)
 from validation.business_validators import validate_asset_exists
@@ -125,7 +125,7 @@ def list_assets(
     except Exception as e:
         logger.error(f"Failed to list assets: {str(e)}", exc_info=True)
         # Convert to internal server exception for proper handling
-        raise InternalServerException(f"Failed to list assets: {str(e)}")
+        raise CNOPInventoryServerException(f"Failed to list assets: {str(e)}")
 
 
 @router.get(
@@ -175,11 +175,11 @@ def get_asset_by_id(
         # Convert to detailed response model
         return asset_to_detail_response(asset)
 
-    except AssetValidationException as e:
+    except CNOPAssetValidationException as e:
         # Handle validation errors (from API model)
         logger.warning(f"Validation error for asset_id '{asset_id}': {str(e)}")
-        raise AssetValidationException(f"Invalid asset ID: {str(e)}")
+        raise CNOPAssetValidationException(f"Invalid asset ID: {str(e)}")
     except Exception as e:
         logger.error(f"Failed to get asset {asset_id}: {str(e)}", exc_info=True)
         # Convert to internal server exception for proper handling
-        raise InternalServerException(f"Failed to get asset {asset_id}: {str(e)}")
+        raise CNOPInventoryServerException(f"Failed to get asset {asset_id}: {str(e)}")
