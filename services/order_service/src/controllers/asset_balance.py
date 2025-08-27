@@ -33,10 +33,17 @@ from common.data.dao.inventory import AssetDAO
 from validation.business_validators import validate_user_permissions
 
 # Import exceptions
+from order_exceptions import (
+    CNOPOrderValidationException,
+)
+# Import internal exceptions (from common.exceptions - internal use only)
 from common.exceptions import (
-    CNOPDatabaseOperationException,
     CNOPEntityNotFoundException,
-    CNOPInternalServerException,
+    CNOPDatabaseOperationException,
+    CNOPInternalServerException
+)
+# Import shared external exceptions (from common.exceptions.shared_exceptions - external use)
+from common.exceptions.shared_exceptions import (
     CNOPAssetNotFoundException
 )
 
@@ -191,7 +198,7 @@ def get_user_asset_balance(
     current_user: dict = Depends(get_current_user),
     asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency),
     user_dao: UserDAO = Depends(get_user_dao_dependency),
-    asset_dao: AssetDAO = Depends(get_asset_dao_dependency)
+    asset_dao: AssetDAO = Depends(get_asset_balance_dao_dependency)
 ) -> GetAssetBalanceResponse:
     """
     Get specific asset balance for the authenticated user
@@ -208,6 +215,15 @@ def get_user_asset_balance(
     )
 
     try:
+        # Layer 1: Field validation using GetAssetBalanceRequest model
+        try:
+            validated_request = GetAssetBalanceRequest(asset_id=asset_id)
+            validated_asset_id = validated_request.asset_id
+        except Exception as validation_error:
+            logger.warning(f"Field validation failed for asset_id '{asset_id}': {str(validation_error)}")
+            # Re-raise the original validation error without wrapping
+            raise
+
         # Business validation (Layer 2)
         validate_user_permissions(
             username=current_user["username"],
@@ -216,7 +232,7 @@ def get_user_asset_balance(
         )
 
         # Get specific asset balance for user
-        asset_balance = asset_balance_dao.get_asset_balance(current_user["username"], asset_id)
+        asset_balance = asset_balance_dao.get_asset_balance(current_user["username"], validated_asset_id)
 
         # Convert to API response format with real market data
         # Get real market data from database
@@ -236,7 +252,7 @@ def get_user_asset_balance(
         )
 
         logger.info(f"Asset balance retrieved successfully: user={current_user['username']}, "
-                   f"asset={asset_id}, quantity={asset_balance.quantity}")
+                   f"asset={validated_asset_id}, quantity={asset_balance.quantity}")
 
         return GetAssetBalanceResponse(
             success=True,
@@ -245,6 +261,10 @@ def get_user_asset_balance(
             timestamp=datetime.utcnow()
         )
 
+    except CNOPOrderValidationException as e:
+        # Handle field validation errors - maintain consistent message format
+        logger.warning(f"Validation error for asset_id '{asset_id}': {str(e)}")
+        raise CNOPOrderValidationException(f"Invalid asset ID: {str(e)}")
     except CNOPEntityNotFoundException:
         logger.info(f"Asset balance not found: user={current_user['username']}, asset={asset_id}")
         raise CNOPAssetNotFoundException(f"Asset balance for {asset_id} not found")

@@ -31,7 +31,7 @@ class InventoryServiceTests:
 
     def inventory_api_with_id(self, endpoint: str, asset_id: str) -> str:
         """Helper method to build inventory service API URLs with asset ID"""
-        return APIEndpoints.get_inventory_endpoint(InventoryAPI.ASSET_BY_ID, id=asset_id)
+        return APIEndpoints.get_inventory_endpoint(InventoryAPI.ASSET_BY_ID, asset_id=asset_id)
 
     def test_get_assets(self):
         """Test getting all assets"""

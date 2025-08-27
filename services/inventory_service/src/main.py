@@ -90,7 +90,7 @@ try:
         secure_common_exception_handler
     )
 
-    # Import common package exceptions
+    # Import internal exceptions (from common.exceptions - internal use only)
     from common.exceptions import (
         CNOPDatabaseConnectionException,
         CNOPDatabaseOperationException,
@@ -100,6 +100,17 @@ try:
         CNOPEntityNotFoundException,
         CNOPCommonServerException,
         CNOPAWSServiceException
+    )
+
+    # Import shared external exceptions (from common.exceptions.shared_exceptions - external use)
+    from common.exceptions.shared_exceptions import (
+        CNOPAssetNotFoundException,
+        CNOPInventoryServerException
+    )
+
+    # Import inventory service specific exceptions
+    from inventory_exceptions import (
+        CNOPAssetValidationException
     )
 
     # Register secure exception handlers
@@ -117,8 +128,14 @@ try:
     app.add_exception_handler(CNOPConfigurationException, secure_common_exception_handler)
     app.add_exception_handler(CNOPAWSServiceException, secure_common_exception_handler)
 
+    # Register inventory service specific exception handlers
+    app.add_exception_handler(CNOPAssetValidationException, secure_validation_exception_handler)
+    app.add_exception_handler(CNOPAssetNotFoundException, secure_common_exception_handler)
+    app.add_exception_handler(CNOPInventoryServerException, secure_common_exception_handler)
+
     logger.info("✅ Secure exception handlers registered successfully")
     logger.info("✅ Common package exception handlers registered successfully")
+    logger.info("✅ Inventory service exception handlers registered successfully")
 except ImportError as e:
     logger.warning(f"⚠️ Could not import secure exception handlers: {e}")
     logger.info("Using fallback global exception handler")

@@ -330,10 +330,10 @@ Refactor all service Dockerfiles to use production-ready patterns, eliminating u
 ### **🧪 Testing & Quality Assurance**
 
 #### **TEST-001: Integration Test Suite Enhancement**
-- **Component**: Testing
+- **Component**: Testing & Quality Assurance
 - **Type**: Epic
-- **Priority**: High
-- **Status**: 📋 To Do
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 🚧 **IN PROGRESS - Test Infrastructure Refactored, Bugs Found**
 
 **Description:**
 Enhance integration test suite to cover all services and provide comprehensive testing coverage for the complete system.
@@ -344,6 +344,59 @@ Enhance integration test suite to cover all services and provide comprehensive t
 **Estimated Effort**: 1-2 weeks
 **Risk Level**: Low
 **Success Criteria**: Comprehensive integration test coverage for all services
+
+---
+
+#### **🐛 BUG-001: Integration Test Failures - Service Validation Issues**
+- **Component**: Integration Tests & Backend Services
+- **Type**: Bug Fix
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 🚨 **NEWLY DISCOVERED**
+
+**Description:**
+Integration tests are now properly failing (instead of silently bypassing) and have revealed several service validation issues that need fixing.
+
+**Bugs Discovered:**
+1. **Inventory Service Asset Validation Failures**
+   - ❌ Get Asset by ID tests failing
+   - ❌ Get Non-existent Asset tests failing
+   - ❌ Invalid Asset ID Format tests failing
+   - **Impact**: Asset validation logic may have regressed during SEC-005-P3 changes
+
+2. **Order Service Asset Balance Edge Cases**
+   - ❌ Asset Balance by ID (Non-existent Asset) failing
+   - ❌ Asset Balance by ID (Invalid Asset Formats) failing
+   - **Impact**: Service not handling edge cases properly
+
+3. **Order Service Parameter Mapping Issue**
+   - ❌ KeyError: 'order_id' in get order tests
+   - **Impact**: Parameter mapping mismatch between test and service
+
+**Files Affected:**
+- `services/inventory_service/src/validation/` - Asset validation logic
+- `services/order_service/src/controllers/` - Asset balance and order handling
+- `integration_tests/` - Test parameter mapping
+
+**Acceptance Criteria:**
+- [ ] Fix inventory service asset ID validation
+- [ ] Fix asset balance edge case handling (non-existent, invalid formats)
+- [ ] Fix order ID parameter mapping issue
+- [ ] All integration tests passing
+- [ ] Edge cases properly handled with appropriate error responses
+
+**Dependencies:**
+- ✅ **TEST-001**: Integration test infrastructure now working properly
+- ✅ **SEC-005-P3**: Authentication changes completed
+- 🔄 **Backend Services**: Need investigation and fixes
+
+**Estimated Effort**: 1-2 days
+**Risk Level**: Medium (service validation issues)
+**Success Criteria**: All integration tests passing, services handling edge cases properly
+
+**Notes**:
+- These bugs were discovered because integration tests now properly fail instead of silently bypassing issues
+- 95% of core functionality is working correctly
+- Issues appear to be in validation logic and edge case handling
 
 ---
 
@@ -395,10 +448,11 @@ Implement essential monitoring for the new Auth Service architecture with basic 
 
 ### **🔄 Current Focus**
 - **CI-001**: Fix CI/CD Pipeline - Add Missing Unit Tests (🔥 **CRITICAL PRIORITY**)
+- **🐛 BUG-001**: Integration Test Failures - Service Validation Issues (🔶 **MEDIUM PRIORITY**)
 - **SEC-005 Phase 3**: Backend Service Cleanup - Remove JWT validation from backend services (🔥 HIGH PRIORITY)
 - **MON-001**: Essential Authentication Monitoring (🔥 HIGH PRIORITY)
 - **FRONTEND-007**: Frontend Authentication Retesting After Auth Service (🔥 HIGH PRIORITY)
-- **TEST-001**: Integration Test Suite Enhancement (**High**)
+- **TEST-001**: Integration Test Suite Enhancement (🔶 **MEDIUM PRIORITY - Infrastructure Complete, Bugs Found**)
 
 ### **📋 Next Milestones**
 - **Q4 2025**: Backend Service Cleanup - Remove JWT validation from backend services (Phase 3)

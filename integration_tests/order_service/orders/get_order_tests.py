@@ -198,7 +198,7 @@ class GetOrderTests:
     def run_all_get_order_tests(self):
         """Run all get order by ID tests"""
         print("📋 Running get order by ID integration tests...")
-        print(f"🎯 Service URL: {APIEndpoints.get_order_endpoint(OrderAPI.ORDER_BY_ID, id='{order_id}')}")
+        print(f"🎯 Service URL: {APIEndpoints.get_order_endpoint(OrderAPI.ORDER_BY_ID, order_id='test_order_123')}")
 
         try:
             # GET Order by ID Tests

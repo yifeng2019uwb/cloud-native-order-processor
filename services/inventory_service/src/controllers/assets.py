@@ -28,7 +28,7 @@ from inventory_exceptions import (
     CNOPAssetValidationException,
     CNOPInventoryServerException
 )
-from common.exceptions import CNOPAssetNotFoundException
+from common.exceptions.shared_exceptions import CNOPAssetNotFoundException
 
 # Import business validation functions (Layer 2)
 from validation.business_validators import validate_asset_exists
@@ -44,10 +44,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/inventory", tags=["inventory"])
-
-
-
-
 
 @router.get(
     "/assets",
@@ -141,6 +137,9 @@ def list_assets(
         404: {
             "description": "Asset not found"
         },
+        422: {
+            "description": "Validation error"
+        },
         500: {
             "description": "Internal server error"
         }
@@ -153,7 +152,7 @@ def get_asset_by_id(
     """
     Get detailed information about a specific asset
 
-    Layer 1: Field validation already handled in API models
+    Layer 1: Field validation handled by AssetIdRequest model
     Layer 2: Business validation (existence checks, etc.)
 
     - **asset_id**: The asset symbol/identifier (e.g., "BTC", "ETH")
@@ -161,26 +160,38 @@ def get_asset_by_id(
     try:
         logger.info(f"Asset details requested for: {asset_id}")
 
-        # Layer 1: Field validation already handled by API model
+        # Layer 1: Field validation using AssetIdRequest model
+        try:
+            validated_request = AssetIdRequest(asset_id=asset_id)
+            validated_asset_id = validated_request.asset_id
+        except Exception as validation_error:
+            logger.warning(f"Field validation failed for asset_id '{asset_id}': {str(validation_error)}")
+            # Re-raise the original validation error without wrapping
+            raise
+
         # Layer 2: Business validation - check if asset exists
-        validate_asset_exists(asset_id, asset_dao)
+        validate_asset_exists(validated_asset_id, asset_dao)
 
         # Get asset from database (already validated to exist)
-        asset = asset_dao.get_asset_by_id(asset_id)
+        asset = asset_dao.get_asset_by_id(validated_asset_id)
 
         logger.info(f"Asset found: {asset.name} ({asset.asset_id})")
 
         # Record metrics if available
         if METRICS_AVAILABLE:
-            record_asset_detail_view(asset_id=asset_id)
+            record_asset_detail_view(asset_id=validated_asset_id)
 
         # Convert to detailed response model
         return asset_to_detail_response(asset)
 
     except CNOPAssetValidationException as e:
-        # Handle validation errors (from API model)
+        # Handle validation errors (from API model) - maintain consistent message format
         logger.warning(f"Validation error for asset_id '{asset_id}': {str(e)}")
         raise CNOPAssetValidationException(f"Invalid asset ID: {str(e)}")
+    except CNOPAssetNotFoundException as e:
+        # Handle business validation errors (asset not found) - re-raise as-is
+        logger.warning(f"Asset not found: {asset_id}")
+        raise
     except Exception as e:
         logger.error(f"Failed to get asset {asset_id}: {str(e)}", exc_info=True)
         # Convert to internal server exception for proper handling
