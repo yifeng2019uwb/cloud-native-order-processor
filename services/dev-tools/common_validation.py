@@ -81,9 +81,12 @@ def validate_service_imports(service_name, service_dir="."):
 
         # Generic import tests that work for all services
         import_tests = [
-            ("main", "Main application"),
-            ("common.auth.security", "Common package auth")
+            ("main", "Main application")
         ]
+
+        # Only test common.auth.security for services that actually need it
+        if service_name == "auth_service":
+            import_tests.append(("common.auth.security", "Common package auth"))
 
         # Add service-specific exceptions if they exist
         try:
