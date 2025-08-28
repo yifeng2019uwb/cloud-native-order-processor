@@ -5,7 +5,6 @@ Path: services/order_service/src/controllers/list_orders.py
 Handles order listing endpoint with business logic directly in controller
 - GET /orders - List user orders with filters
 """
-import logging
 from datetime import datetime
 from typing import Union, Optional
 from fastapi import APIRouter, Depends, status, Query
@@ -32,7 +31,11 @@ from common.exceptions.shared_exceptions import CNOPInternalServerException
 # Import business validators
 from validation.business_validators import validate_order_listing_business_rules
 
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.ORDER)
 router = APIRouter(tags=["orders"])
 
 
@@ -96,7 +99,11 @@ def list_orders(
         # Apply pagination
         paginated_orders = filtered_orders[offset:offset + limit]
 
-        logger.info(f"Orders listed: user={current_user['username']}, count={len(paginated_orders)}")
+        logger.info(
+            action=LogActions.REQUEST_END,
+            message=f"Orders listed: count={len(paginated_orders)}",
+            user=current_user['username']
+        )
 
         # Convert to response format
         order_summaries = []
@@ -123,5 +130,9 @@ def list_orders(
         )
 
     except Exception as e:
-        logger.error(f"Unexpected error listing orders: user={current_user['username']}, error={str(e)}", exc_info=True)
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Unexpected error listing orders: error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")

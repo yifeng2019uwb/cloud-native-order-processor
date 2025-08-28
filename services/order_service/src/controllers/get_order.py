@@ -5,7 +5,6 @@ Path: services/order_service/src/controllers/get_order.py
 Handles order retrieval endpoint with business logic directly in controller
 - GET /orders/{order_id} - Get order by ID
 """
-import logging
 from datetime import datetime
 from typing import Union
 from fastapi import APIRouter, Depends, status
@@ -31,7 +30,11 @@ from common.exceptions.shared_exceptions import (
 # Import business validators
 from validation.business_validators import validate_order_retrieval_business_rules
 
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.ORDER)
 router = APIRouter(tags=["orders"])
 
 
@@ -80,10 +83,18 @@ def get_order(
 
         # Check if order belongs to user
         if order.username != current_user["username"]:
-            logger.warning(f"Unauthorized access attempt: username={current_user['username']}, order_id={order_id}")
+            logger.warning(
+                action=LogActions.ACCESS_DENIED,
+                message=f"Unauthorized access attempt: order_id={order_id}",
+                user=current_user['username']
+            )
             raise CNOPOrderNotFoundException(f"Order '{order_id}' not found")
 
-        logger.info(f"Order retrieved: user={current_user['username']}, order_id={order_id}")
+        logger.info(
+            action=LogActions.REQUEST_END,
+            message=f"Order retrieved: order_id={order_id}",
+            user=current_user['username']
+        )
 
         # Create response
         order_data_response = OrderData(
@@ -105,5 +116,9 @@ def get_order(
     except CNOPOrderNotFoundException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error retrieving order: user={current_user['username']}, order_id={order_id}, error={str(e)}", exc_info=True)
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Unexpected error retrieving order: order_id={order_id}, error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")

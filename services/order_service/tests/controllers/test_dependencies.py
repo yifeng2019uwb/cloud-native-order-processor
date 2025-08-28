@@ -432,7 +432,10 @@ class TestDependencies:
             )
 
             # Verify logging was called
-            mock_logger.info.assert_called_once_with("User authenticated via Gateway: testuser")
+            mock_logger.info.assert_called_once_with(
+                action='auth_success',
+                message='User authenticated via Gateway: testuser'
+            )
 
 
     def test_get_current_user_logging_failure(self):
@@ -450,4 +453,7 @@ class TestDependencies:
                 )
 
             # Verify warning logging was called
-            mock_logger.warning.assert_called_once_with("Invalid source header: invalid-source")
+            mock_logger.warning.assert_called_once_with(
+                action='access_denied',
+                message='Invalid source header: invalid-source'
+            )

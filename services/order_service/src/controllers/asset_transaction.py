@@ -5,7 +5,6 @@ Path: services/order_service/src/controllers/asset_transaction.py
 Handles asset transaction history endpoints
 - GET /assets/{asset_id}/transactions - Get asset transaction history
 """
-import logging
 from datetime import datetime, timezone
 from typing import Union
 from fastapi import APIRouter, Depends, status, Request
@@ -36,8 +35,11 @@ from common.exceptions import (
 )
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
 
-logger = logging.getLogger(__name__)
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.ORDER)
 router = APIRouter(tags=["asset-transactions"])
 
 
@@ -82,9 +84,10 @@ def get_asset_transactions(
     """
     # Log request
     logger.info(
-        f"Asset transactions request from {request.client.host if request.client else 'unknown'}",
+        action=LogActions.REQUEST_START,
+        message=f"Asset transactions request from {request.client.host if request.client else 'unknown'}",
+        user=current_user["username"],
         extra={
-            "username": current_user["username"],
             "asset_id": asset_id,
             "limit": limit,
             "offset": offset,
@@ -125,8 +128,11 @@ def get_asset_transactions(
         # Determine if there are more transactions
         has_more = len(transaction_data_list) == limit
 
-        logger.info(f"Asset transactions retrieved successfully: user={current_user['username']}, "
-                   f"asset={asset_id}, count={len(transaction_data_list)}, has_more={has_more}")
+        logger.info(
+            action=LogActions.REQUEST_END,
+            message=f"Asset transactions retrieved successfully: asset={asset_id}, count={len(transaction_data_list)}, has_more={has_more}",
+            user=current_user['username']
+        )
 
         return GetAssetTransactionsResponse(
             success=True,
@@ -137,7 +143,11 @@ def get_asset_transactions(
         )
 
     except CNOPEntityNotFoundException:
-        logger.info(f"No asset transactions found: user={current_user['username']}, asset={asset_id}")
+        logger.info(
+            action=LogActions.REQUEST_END,
+            message=f"No asset transactions found: asset={asset_id}",
+            user=current_user['username']
+        )
         # Return empty list instead of error for no transactions
         return GetAssetTransactionsResponse(
             success=True,
@@ -147,10 +157,16 @@ def get_asset_transactions(
             timestamp=datetime.utcnow()
         )
     except CNOPDatabaseOperationException as e:
-        logger.error(f"Database operation failed for asset transactions: user={current_user['username']}, "
-                    f"asset={asset_id}, error={str(e)}")
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Database operation failed for asset transactions: asset={asset_id}, error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
-        logger.error(f"Unexpected error during asset transactions retrieval: user={current_user['username']}, "
-                    f"asset={asset_id}, error={str(e)}", exc_info=True)
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Unexpected error during asset transactions retrieval: asset={asset_id}, error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")

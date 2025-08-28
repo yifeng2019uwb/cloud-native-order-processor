@@ -424,7 +424,7 @@ class TestPortfolioController:
             mock_logger.info.assert_called()
 
             # Check that the success log was called
-            success_calls = [call[0][0] for call in mock_logger.info.call_args_list]
+            success_calls = [call[1]["message"] for call in mock_logger.info.call_args_list]
             assert any("Portfolio retrieved successfully" in call for call in success_calls)
 
 
@@ -450,7 +450,7 @@ class TestPortfolioController:
             mock_logger.warning.assert_called()
 
             # Check that the unauthorized access log was called
-            warning_calls = [call[0][0] for call in mock_logger.warning.call_args_list]
+            warning_calls = [call[1]["message"] for call in mock_logger.warning.call_args_list]
             assert any("Unauthorized portfolio access attempt" in call for call in warning_calls)
 
 
@@ -479,7 +479,7 @@ class TestPortfolioController:
             mock_logger.error.assert_called()
 
             # Check that the database error log was called
-            error_calls = [call[0][0] for call in mock_logger.error.call_args_list]
+            error_calls = [call[1]["message"] for call in mock_logger.error.call_args_list]
             assert any("Database operation failed for portfolio" in call for call in error_calls)
 
 

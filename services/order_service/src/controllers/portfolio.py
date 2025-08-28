@@ -5,7 +5,6 @@ Path: services/order_service/src/controllers/portfolio.py
 Handles portfolio management endpoints with calculated market values
 - GET /portfolio/{username} - Get user's complete portfolio
 """
-import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Union
@@ -36,8 +35,11 @@ from common.exceptions.shared_exceptions import (
 )
 from order_exceptions import CNOPOrderValidationException
 
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
 
-logger = logging.getLogger(__name__)
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.ORDER)
 router = APIRouter(tags=["portfolio"])
 
 
@@ -86,10 +88,11 @@ def get_user_portfolio(
     """
     # Log portfolio request
     logger.info(
-        f"Portfolio request from {request.client.host if request.client else 'unknown'}",
+        action=LogActions.REQUEST_START,
+        message=f"Portfolio request from {request.client.host if request.client else 'unknown'}",
+        user=current_user["username"],
         extra={
             "requested_username": username,
-            "authenticated_user": current_user["username"],
             "user_agent": request.headers.get("user-agent", "unknown"),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
@@ -105,7 +108,11 @@ def get_user_portfolio(
 
         # Validate user access (users can only view their own portfolio)
         if current_user["username"] != username:
-            logger.warning(f"Unauthorized portfolio access attempt: {current_user['username']} tried to access {username}'s portfolio")
+            logger.warning(
+                action=LogActions.ACCESS_DENIED,
+                message=f"Unauthorized portfolio access attempt: tried to access {username}'s portfolio",
+                user=current_user['username']
+            )
             raise CNOPOrderValidationException("You can only view your own portfolio")
 
         # Get USD balance
@@ -157,8 +164,11 @@ def get_user_portfolio(
             "assets": portfolio_assets
         }
 
-        logger.info(f"Portfolio retrieved successfully: user={username}, "
-                   f"total_value={total_portfolio_value}, asset_count={len(portfolio_assets)}")
+        logger.info(
+            action=LogActions.REQUEST_END,
+            message=f"Portfolio retrieved successfully: total_value={total_portfolio_value}, asset_count={len(portfolio_assets)}",
+            user=username
+        )
 
         return GetPortfolioResponse(
             success=True,
@@ -171,8 +181,16 @@ def get_user_portfolio(
         # Re-raise validation exceptions
         raise
     except CNOPDatabaseOperationException as e:
-        logger.error(f"Database operation failed for portfolio: user={username}, error={str(e)}")
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Database operation failed for portfolio: error={str(e)}",
+            user=username
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
-        logger.error(f"Unexpected error during portfolio retrieval: user={username}, error={str(e)}", exc_info=True)
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Unexpected error during portfolio retrieval: error={str(e)}",
+            user=username
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")

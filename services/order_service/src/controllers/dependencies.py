@@ -8,9 +8,9 @@ Provides dependency injection for:
 - Gateway Authentication
 - Authorization
 """
-import logging
 from typing import Optional
 from fastapi import Depends, HTTPException, status, Request, Header
+from decimal import Decimal
 
 # Import common package dependencies
 from common.data.database import get_order_dao, get_balance_dao, get_asset_dao, get_user_dao
@@ -20,9 +20,12 @@ from common.data.dao.user import UserDAO, BalanceDAO
 from common.data.dao.inventory import AssetDAO
 from common.data.dao.asset import AssetBalanceDAO, AssetTransactionDAO
 from common.core.utils.transaction_manager import TransactionManager
-from decimal import Decimal
 
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.ORDER)
 
 
 def get_order_dao_dependency() -> OrderDAO:
@@ -86,14 +89,14 @@ def get_current_user(
     """
     # Validate source headers
     if not x_source or x_source != "gateway":
-        logger.warning(f"Invalid source header: {x_source}")
+        logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid source header: {x_source}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid request source"
         )
 
     if not x_auth_service or x_auth_service != "auth-service":
-        logger.warning(f"Invalid auth service header: {x_auth_service}")
+        logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid auth service header: {x_auth_service}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid authentication service"
@@ -101,7 +104,7 @@ def get_current_user(
 
     # Extract user information from headers
     if not x_user_id:
-        logger.warning("Missing user ID header")
+        logger.warning(action=LogActions.ACCESS_DENIED, message="Missing user ID header")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User authentication required"
@@ -113,7 +116,7 @@ def get_current_user(
         "role": x_user_role or "customer"  # Default role if not provided
     }
 
-    logger.info(f"User authenticated via Gateway: {x_user_id}")
+    logger.info(action=LogActions.AUTH_SUCCESS, message=f"User authenticated via Gateway: {x_user_id}")
     return user_info
 
 

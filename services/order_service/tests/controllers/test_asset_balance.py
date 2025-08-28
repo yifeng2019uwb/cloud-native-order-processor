@@ -474,7 +474,7 @@ class TestAssetBalanceController:
             mock_logger.info.assert_called()
 
             # Check that the success log was called
-            success_calls = [call[0][0] for call in mock_logger.info.call_args_list]
+            success_calls = [call[1]["message"] for call in mock_logger.info.call_args_list]
             assert any("Asset balances retrieved successfully" in call for call in success_calls)
 
 
@@ -496,7 +496,7 @@ class TestAssetBalanceController:
             mock_logger.info.assert_called()
 
             # Check that the success log was called
-            success_calls = [call[0][0] for call in mock_logger.info.call_args_list]
+            success_calls = [call[1]["message"] for call in mock_logger.info.call_args_list]
             assert any("Asset balance retrieved successfully" in call for call in success_calls)
 
 
@@ -524,5 +524,5 @@ class TestAssetBalanceController:
             mock_logger.info.assert_called()
 
             # Check that the not found log was called
-            info_calls = [call[0][0] for call in mock_logger.info.call_args_list]
+            info_calls = [call[1]["message"] for call in mock_logger.info.call_args_list]
             assert any("Asset balance not found" in call for call in info_calls)

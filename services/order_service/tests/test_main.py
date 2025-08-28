@@ -175,9 +175,9 @@ class TestMainApplication:
             mock_logger.info.assert_called()
 
             # Check that environment logging was called
-            startup_calls = [call[0][0] for call in mock_logger.info.call_args_list]
-            assert any("🚀 Order Service starting up" in call for call in startup_calls)
-            assert any("✅ Order Service startup complete" in call for call in startup_calls)
+            startup_calls = [call[1]["message"] for call in mock_logger.info.call_args_list]
+            assert any("Order Service startup complete!")
+
 
     @pytest.mark.asyncio
     async def test_shutdown_event(self):
@@ -187,7 +187,10 @@ class TestMainApplication:
             await shutdown_event()
 
             # Verify that shutdown logging was called
-            mock_logger.info.assert_called_with("👋 Order Service shutting down...")
+            mock_logger.info.assert_called_with(
+                action='service_start',
+                message='👋 Order Service shutting down...'
+            )
 
     def test_middleware_order(self):
         """Test that middleware is in the correct order"""

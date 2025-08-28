@@ -10,7 +10,6 @@ This is the API layer entry point. It handles:
 - CloudWatch logging for Lambda deployment
 """
 import os
-import logging
 import uvicorn
 from datetime import datetime
 from pathlib import Path
@@ -19,33 +18,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from order_exceptions import CNOPOrderValidationException
-from common.aws.sts_client import STSClient
 
-# Controller imports will be moved to after logger setup to avoid JWT import issues
-
-# Load environment variables from services/.env
-try:
-    # Find the services root directory (go up from order-service/src to services/)
-    services_root = Path(__file__).parent.parent.parent
-    env_file = services_root / ".env"
-
-    if env_file.exists():
-        load_dotenv(env_file)
-        print(f"✅ Environment loaded from: {env_file}")
-    else:
-        print(f"⚠️ Environment file not found at: {env_file}")
-        print("Continuing with system environment variables...")
-
-except ImportError:
-    print("⚠️ python-dotenv not installed. Using system environment variables only.")
-
-# Configure logging for CloudWatch
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
 
 # Import controllers from the controllers package
 from controllers import (
@@ -58,14 +33,27 @@ from controllers import (
     health_router
 )
 
+# Import exceptions and AWS client
+from order_exceptions import CNOPOrderValidationException
+from common.aws.sts_client import STSClient
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.ORDER)
+
+# Load environment variables from services/.env
+services_root = Path(__file__).parent.parent.parent
+env_file = services_root / ".env"
+
+if env_file.exists():
+    load_dotenv(env_file)
+    logger.info(action=LogActions.SERVICE_START, message=f"Environment loaded from: {env_file}")
+else:
+    logger.warning(action=LogActions.ERROR, message=f"Environment file not found at: {env_file}")
+    logger.info(action=LogActions.SERVICE_START, message="Continuing with system environment variables...")
+
 # Initialize STS client for AWS role assumption
-try:
-    from common.aws.sts_client import STSClient
-    sts_client = STSClient()
-    logger.info("✅ STS client initialized for role assumption")
-except ImportError:
-    sts_client = None
-    logger.info("⚠️ STS client not available, using local credentials")
+sts_client = STSClient()
+logger.info(action=LogActions.SERVICE_START, message="STS client initialized for role assumption")
 
 # Create FastAPI app
 app = FastAPI(
@@ -128,77 +116,35 @@ async def global_exception_handler(request: Request, exc: Exception):
     # TODO: Implement global exception handler tomorrow
     # from exceptions.secure_exceptions import secure_general_exception_handler
     # return await secure_general_exception_handler(request, exc)
-    logger.error(f"Unhandled exception: {exc}")
+    logger.error(action=LogActions.ERROR, message=f"Unhandled exception: {exc}")
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}
     )
 
-# Import and include API routers
-if health_router:
-    try:
-        app.include_router(health_router, tags=["health"])
-        logger.info("✅ Health routes loaded successfully")
-    except Exception as e:
-        logger.warning(f"⚠️ Health routes not available: {e}")
-else:
-    logger.warning("⚠️ Health controller not available - skipping health routes")
+# Include API routers
+app.include_router(health_router, tags=["health"])
+logger.info(action=LogActions.SERVICE_START, message="Health routes loaded successfully")
 
-# Include order controllers if available
-if create_order_router:
-    try:
-        app.include_router(create_order_router, prefix="/orders", tags=["orders"])
-        logger.info("✅ Create order routes loaded successfully")
-    except Exception as e:
-        logger.warning(f"⚠️ Create order routes not available: {e}")
-else:
-    logger.warning("⚠️ Create order controller not available - skipping routes")
+# Include order controllers
+app.include_router(create_order_router, prefix="/orders", tags=["orders"])
+logger.info(action=LogActions.SERVICE_START, message="Create order routes loaded successfully")
 
-if get_order_router:
-    try:
-        app.include_router(get_order_router, prefix="/orders", tags=["orders"])
-        logger.info("✅ Get order routes loaded successfully")
-    except Exception as e:
-        logger.warning(f"⚠️ Get order routes not available: {e}")
-else:
-    logger.warning("⚠️ Get order controller not available - skipping routes")
+app.include_router(get_order_router, prefix="/orders", tags=["orders"])
+logger.info(action=LogActions.SERVICE_START, message="Get order routes loaded successfully")
 
-if list_orders_router:
-    try:
-        app.include_router(list_orders_router, prefix="/orders", tags=["orders"])
-        logger.info("✅ List orders routes loaded successfully")
-    except Exception as e:
-        logger.warning(f"⚠️ List orders routes not available: {e}")
-else:
-    logger.warning("⚠️ List orders controller not available - skipping routes")
+app.include_router(list_orders_router, prefix="/orders", tags=["orders"])
+logger.info(action=LogActions.SERVICE_START, message="List orders routes loaded successfully")
 
-# Include portfolio and asset management controllers if available
-if portfolio_router:
-    try:
-        app.include_router(portfolio_router, tags=["portfolio"])
-        logger.info("✅ Portfolio routes loaded successfully")
-    except Exception as e:
-        logger.warning(f"⚠️ Portfolio routes not available: {e}")
-else:
-    logger.warning("⚠️ Portfolio controller not available - skipping routes")
+# Include portfolio and asset management controllers
+app.include_router(portfolio_router, tags=["portfolio"])
+logger.info(action=LogActions.SERVICE_START, message="Portfolio routes loaded successfully")
 
-if asset_balance_router:
-    try:
-        app.include_router(asset_balance_router, tags=["asset-balances"])
-        logger.info("✅ Asset balance routes loaded successfully")
-    except Exception as e:
-        logger.warning(f"⚠️ Asset balance routes not available: {e}")
-else:
-    logger.warning("⚠️ Asset balance controller not available - skipping routes")
+app.include_router(asset_balance_router, tags=["asset-balances"])
+logger.info(action=LogActions.SERVICE_START, message="Asset balance routes loaded successfully")
 
-if asset_transaction_router:
-    try:
-        app.include_router(asset_transaction_router, tags=["asset-transactions"])
-        logger.info("✅ Asset transaction routes loaded successfully")
-    except Exception as e:
-        logger.warning(f"⚠️ Asset transaction routes not available: {e}")
-else:
-    logger.warning("⚠️ Asset transaction controller not available - skipping routes")
+app.include_router(asset_transaction_router, tags=["asset-transactions"])
+logger.info(action=LogActions.SERVICE_START, message="Asset transaction routes loaded successfully")
 
 # Root endpoint
 @app.get("/")
@@ -224,15 +170,15 @@ async def root():
 @app.on_event("startup")
 async def startup_event():
     """Startup event handler - API service initialization"""
-    logger.info("🚀 Order Service starting up...")
-    logger.info(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    logger.info(action=LogActions.SERVICE_START, message="Order Service starting up...")
+    logger.info(action=LogActions.SERVICE_START, message=f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
 
     # Log environment configuration
-    logger.info("📊 API Service Configuration:")
-    logger.info(f"  Environment: {os.getenv('ENVIRONMENT', 'development')}")
-    logger.info(f"  Services Root: {Path(__file__).parent.parent.parent}")
-    logger.info(f"  Service: order-processing")
-    logger.info(f"  Database: Accessed via DAO layer in common package")
+    logger.info(action=LogActions.SERVICE_START, message="API Service Configuration:")
+    logger.info(action=LogActions.SERVICE_START, message=f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    logger.info(action=LogActions.SERVICE_START, message=f"Services Root: {Path(__file__).parent.parent.parent}")
+    logger.info(action=LogActions.SERVICE_START, message="Service: order-processing")
+    logger.info(action=LogActions.SERVICE_START, message="Database: Accessed via DAO layer in common package")
 
     # Check required environment variables
     required_env_vars = {
@@ -241,35 +187,35 @@ async def startup_event():
         "INVENTORY_TABLE": os.getenv("INVENTORY_TABLE")
     }
 
-    logger.info("🔧 Environment Variables:")
+    logger.info(action=LogActions.SERVICE_START, message="Environment Variables:")
     for var_name, var_value in required_env_vars.items():
         if var_value:
-            logger.info(f"  {var_name}: ✅ Configured")
+            logger.info(action=LogActions.SERVICE_START, message=f"{var_name}: Configured")
         else:
-            logger.warning(f"  {var_name}: ❌ Missing")
+            logger.warning(action=LogActions.ERROR, message=f"{var_name}: Missing")
 
     # Log available endpoints
-    logger.info("🎯 Available endpoints:")
-    logger.info("  GET  /health - Basic health check (liveness probe)")
-    logger.info("  GET  /health/ready - Readiness probe")
-    logger.info("  GET  /health/db - Database health check")
-    logger.info("  POST /orders - Create new order")
-    logger.info("  GET  /orders/{order_id} - Get order by ID")
-    logger.info("  GET  /orders - List user orders")
-    logger.info("  GET  /portfolio/{username} - Get user portfolio")
-    logger.info("  GET  /assets/balances - Get all asset balances")
-    logger.info("  GET  /assets/{asset_id}/balance - Get specific asset balance")
-    logger.info("  GET  /assets/{asset_id}/transactions - Get asset transaction history")
+    logger.info(action=LogActions.SERVICE_START, message="Available endpoints:")
+    logger.info(action=LogActions.SERVICE_START, message="GET  /health - Basic health check (liveness probe)")
+    logger.info(action=LogActions.SERVICE_START, message="GET  /health/ready - Readiness probe")
+    logger.info(action=LogActions.SERVICE_START, message="GET  /health/db - Database health check")
+    logger.info(action=LogActions.SERVICE_START, message="POST /orders - Create new order")
+    logger.info(action=LogActions.SERVICE_START, message="GET  /orders/{order_id} - Get order by ID")
+    logger.info(action=LogActions.SERVICE_START, message="GET  /orders - List user orders")
+    logger.info(action=LogActions.SERVICE_START, message="GET  /portfolio/{username} - Get user portfolio")
+    logger.info(action=LogActions.SERVICE_START, message="GET  /assets/balances - Get all asset balances")
+    logger.info(action=LogActions.SERVICE_START, message="GET  /assets/{asset_id}/balance - Get specific asset balance")
+    logger.info(action=LogActions.SERVICE_START, message="GET  /assets/{asset_id}/transactions - Get asset transaction history")
 
-    logger.info("  GET  /docs - API documentation")
+    logger.info(action=LogActions.SERVICE_START, message="GET  /docs - API documentation")
 
-    logger.info("✅ Order Service startup complete!")
+    logger.info(action=LogActions.SERVICE_START, message="Order Service startup complete!")
 
 # Shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
     """Shutdown event handler"""
-    logger.info("👋 Order Service shutting down...")
+    logger.info(action=LogActions.SERVICE_START, message="👋 Order Service shutting down...")
 
 # For local development
 if __name__ == "__main__":
@@ -277,12 +223,12 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     host = os.getenv("HOST", "0.0.0.0")
 
-    logger.info(f"Starting server on {host}:{port}")
-    logger.info("🔧 Development Mode:")
-    logger.info("  - Auto-reload enabled")
-    logger.info("  - CORS configured for development")
-    logger.info("  - Detailed logging enabled")
-    logger.info("  - CloudWatch logging middleware active")
+    logger.info(action=LogActions.SERVICE_START, message=f"Starting server on {host}:{port}")
+    logger.info(action=LogActions.SERVICE_START, message="🔧 Development Mode:")
+    logger.info(action=LogActions.SERVICE_START, message="  - Auto-reload enabled")
+    logger.info(action=LogActions.SERVICE_START, message="  - CORS configured for development")
+    logger.info(action=LogActions.SERVICE_START, message="  - Detailed logging enabled")
+    logger.info(action=LogActions.SERVICE_START, message="  - CloudWatch logging middleware active")
 
     uvicorn.run(
         "main:app",

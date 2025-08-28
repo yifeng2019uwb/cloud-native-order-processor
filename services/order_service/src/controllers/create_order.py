@@ -5,7 +5,6 @@ Path: services/order_service/src/controllers/create_order.py
 Handles order creation endpoint with atomic operations using TransactionManager
 - POST /orders - Create new order with balance validation and asset updates
 """
-import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Union
@@ -44,7 +43,11 @@ from order_exceptions import CNOPOrderValidationException
 # Import business validators
 from validation.business_validators import validate_order_creation_business_rules
 
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.ORDER)
 router = APIRouter(tags=["orders"])
 
 
@@ -99,9 +102,10 @@ async def create_order(
     """
     # Log order creation attempt
     logger.info(
-        f"Order creation attempt from {request.client.host if request.client else 'unknown'}",
+        action=LogActions.REQUEST_START,
+        message=f"Order creation attempt from {request.client.host if request.client else 'unknown'}",
+        user=current_user["username"],
         extra={
-            "username": current_user["username"],
             "order_type": order_data.order_type.value,
             "asset_id": order_data.asset_id,
             "quantity": str(order_data.quantity),
@@ -142,10 +146,13 @@ async def create_order(
                 total_cost=total_amount
             )
 
-            logger.info(f"Buy order executed successfully: user={current_user['username']}, "
-                       f"order_id={result.data['order'].order_id}, "
+            logger.info(
+                action=LogActions.REQUEST_END,
+                message=f"Buy order executed successfully: order_id={result.data['order'].order_id}, "
                        f"asset={order_data.asset_id}, quantity={order_data.quantity}, "
-                       f"total_cost={total_amount}, lock_duration={result.lock_duration}s")
+                       f"total_cost={total_amount}, lock_duration={result.lock_duration}s",
+                user=current_user['username']
+            )
 
         elif order_data.order_type in [OrderType.MARKET_SELL, OrderType.LIMIT_SELL]:
             # Sell order - validate asset balance and update USD balance
@@ -158,10 +165,13 @@ async def create_order(
                 asset_amount=total_amount
             )
 
-            logger.info(f"Sell order executed successfully: user={current_user['username']}, "
-                       f"order_id={result.data['order'].order_id}, "
+            logger.info(
+                action=LogActions.REQUEST_END,
+                message=f"Sell order executed successfully: order_id={result.data['order'].order_id}, "
                        f"asset={order_data.asset_id}, quantity={order_data.quantity}, "
-                       f"asset_amount={total_amount}, lock_duration={result.lock_duration}s")
+                       f"asset_amount={total_amount}, lock_duration={result.lock_duration}s",
+                user=current_user['username']
+            )
 
         else:
             raise CNOPOrderValidationException(f"Unsupported order type: {order_data.order_type.value}")
@@ -187,25 +197,43 @@ async def create_order(
         )
 
     except CNOPInsufficientBalanceException as e:
-        logger.warning(f"Insufficient balance for order: user={current_user['username']}, "
-                      f"order_type={order_data.order_type.value}, asset={order_data.asset_id}, "
-                      f"quantity={order_data.quantity}, error={str(e)}")
+        logger.warning(
+            action=LogActions.VALIDATION_ERROR,
+            message=f"Insufficient balance for order: order_type={order_data.order_type.value}, "
+                   f"asset={order_data.asset_id}, quantity={order_data.quantity}, error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPOrderValidationException(str(e))
 
     except CNOPLockAcquisitionException as e:
-        logger.warning(f"Lock acquisition failed for order: user={current_user['username']}, error={str(e)}")
+        logger.warning(
+            action=LogActions.ERROR,
+            message=f"Lock acquisition failed for order: error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPInternalServerException("Service temporarily unavailable - please try again")
 
     except CNOPDatabaseOperationException as e:
-        logger.error(f"Database operation failed for order: user={current_user['username']}, error={str(e)}")
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Database operation failed for order: error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")
 
     except CNOPOrderValidationException as e:
-        logger.warning(f"Order validation failed: user={current_user['username']}, error={str(e)}")
+        logger.warning(
+            action=LogActions.VALIDATION_ERROR,
+            message=f"Order validation failed: error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPOrderValidationException(str(e))
 
     except Exception as e:
-        logger.error(f"Unexpected error during order creation: user={current_user['username']}, "
-                    f"order_type={order_data.order_type.value}, asset={order_data.asset_id}, "
-                    f"quantity={order_data.quantity}, error={str(e)}", exc_info=True)
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Unexpected error during order creation: order_type={order_data.order_type.value}, "
+                   f"asset={order_data.asset_id}, quantity={order_data.quantity}, error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")

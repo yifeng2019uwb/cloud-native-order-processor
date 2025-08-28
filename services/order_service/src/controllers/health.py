@@ -3,12 +3,13 @@ Health check endpoints for Order Service
 Path: services/order-service/src/controllers/health.py
 """
 from fastapi import APIRouter, status
-import logging
 from typing import Dict, Any
 
 from common.shared.health import HealthChecker, HealthCheckResponse
+from common.shared.logging import BaseLogger, Loggers, LogActions
 
-logger = logging.getLogger(__name__)
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.ORDER)
 router = APIRouter(tags=["health"])
 
 # Create order service specific health checker (no database dependencies)

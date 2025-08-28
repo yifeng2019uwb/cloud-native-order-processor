@@ -6,7 +6,6 @@ Handles asset balance management endpoints
 - GET /assets/balances - Get all asset balances for user
 - GET /assets/{asset_id}/balance - Get specific asset balance
 """
-import logging
 from datetime import datetime, timezone
 from typing import Union
 from fastapi import APIRouter, Depends, status, Request
@@ -28,7 +27,6 @@ from common.data.dao.asset import AssetBalanceDAO
 from common.data.dao.user import UserDAO
 from common.data.dao.inventory import AssetDAO
 
-
 # Import business validators
 from validation.business_validators import validate_user_permissions
 
@@ -47,7 +45,11 @@ from common.exceptions.shared_exceptions import (
     CNOPAssetNotFoundException
 )
 
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.ORDER)
 router = APIRouter(tags=["asset-balances"])
 
 
@@ -67,7 +69,10 @@ def get_real_market_data(asset_dao: AssetDAO, asset_id: str) -> dict:
                 "current_price": 0.0
             }
     except Exception as e:
-        logger.warning(f"Failed to fetch market data for {asset_id}: {str(e)}")
+        logger.warning(
+            action=LogActions.ERROR,
+            message=f"Failed to fetch market data for {asset_id}: {str(e)}"
+        )
         # Fallback to asset_id if database query fails
         return {
             "asset_name": asset_id,
@@ -109,9 +114,10 @@ def get_user_asset_balances(
     """
     # Log request
     logger.info(
-        f"Asset balances request from {request.client.host if request.client else 'unknown'}",
+        action=LogActions.REQUEST_START,
+        message=f"Asset balances request from {request.client.host if request.client else 'unknown'}",
+        user=current_user["username"],
         extra={
-            "username": current_user["username"],
             "user_agent": request.headers.get("user-agent", "unknown"),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
@@ -148,8 +154,11 @@ def get_user_asset_balances(
             )
             balance_data_list.append(balance_data)
 
-        logger.info(f"Asset balances retrieved successfully: user={current_user['username']}, "
-                   f"asset_count={len(balance_data_list)}")
+        logger.info(
+            action=LogActions.REQUEST_END,
+            message=f"Asset balances retrieved successfully: asset_count={len(balance_data_list)}",
+            user=current_user['username']
+        )
 
         return GetAssetBalancesResponse(
             success=True,
@@ -159,10 +168,18 @@ def get_user_asset_balances(
         )
 
     except CNOPDatabaseOperationException as e:
-        logger.error(f"Database operation failed for asset balances: user={current_user['username']}, error={str(e)}")
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Database operation failed for asset balances: error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
-        logger.error(f"Unexpected error during asset balances retrieval: user={current_user['username']}, error={str(e)}", exc_info=True)
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Unexpected error during asset balances retrieval: error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")
 
 
@@ -205,9 +222,10 @@ def get_user_asset_balance(
     """
     # Log request
     logger.info(
-        f"Asset balance request from {request.client.host if request.client else 'unknown'}",
+        action=LogActions.REQUEST_START,
+        message=f"Asset balance request from {request.client.host if request.client else 'unknown'}",
+        user=current_user["username"],
         extra={
-            "username": current_user["username"],
             "asset_id": asset_id,
             "user_agent": request.headers.get("user-agent", "unknown"),
             "timestamp": datetime.now(timezone.utc).isoformat()
@@ -220,7 +238,11 @@ def get_user_asset_balance(
             validated_request = GetAssetBalanceRequest(asset_id=asset_id)
             validated_asset_id = validated_request.asset_id
         except Exception as validation_error:
-            logger.warning(f"Field validation failed for asset_id '{asset_id}': {str(validation_error)}")
+            logger.warning(
+                action=LogActions.VALIDATION_ERROR,
+                message=f"Field validation failed for asset_id '{asset_id}': {str(validation_error)}",
+                user=current_user['username']
+            )
             # Re-raise the original validation error without wrapping
             raise
 
@@ -251,8 +273,11 @@ def get_user_asset_balance(
             updated_at=asset_balance.updated_at
         )
 
-        logger.info(f"Asset balance retrieved successfully: user={current_user['username']}, "
-                   f"asset={validated_asset_id}, quantity={asset_balance.quantity}")
+        logger.info(
+            action=LogActions.REQUEST_END,
+            message=f"Asset balance retrieved successfully: asset={validated_asset_id}, quantity={asset_balance.quantity}",
+            user=current_user['username']
+        )
 
         return GetAssetBalanceResponse(
             success=True,
@@ -263,16 +288,30 @@ def get_user_asset_balance(
 
     except CNOPOrderValidationException as e:
         # Handle field validation errors - maintain consistent message format
-        logger.warning(f"Validation error for asset_id '{asset_id}': {str(e)}")
+        logger.warning(
+            action=LogActions.VALIDATION_ERROR,
+            message=f"Validation error for asset_id '{asset_id}': {str(e)}",
+            user=current_user['username']
+        )
         raise CNOPOrderValidationException(f"Invalid asset ID: {str(e)}")
     except CNOPEntityNotFoundException:
-        logger.info(f"Asset balance not found: user={current_user['username']}, asset={asset_id}")
+        logger.info(
+            action=LogActions.REQUEST_END,
+            message=f"Asset balance not found: asset={asset_id}",
+            user=current_user['username']
+        )
         raise CNOPAssetNotFoundException(f"Asset balance for {asset_id} not found")
     except CNOPDatabaseOperationException as e:
-        logger.error(f"Database operation failed for asset balance: user={current_user['username']}, "
-                    f"asset={asset_id}, error={str(e)}")
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Database operation failed for asset balance: asset={asset_id}, error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
-        logger.error(f"Unexpected error during asset balance retrieval: user={current_user['username']}, "
-                    f"asset={asset_id}, error={str(e)}", exc_info=True)
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Unexpected error during asset balance retrieval: asset={asset_id}, error={str(e)}",
+            user=current_user['username']
+        )
         raise CNOPInternalServerException("Service temporarily unavailable")
