@@ -2,7 +2,6 @@
 Initialize sample inventory data on service startup
 Path: services/inventory-service/src/data/init_inventory.py
 """
-import logging
 from typing import List
 from decimal import Decimal
 import httpx
@@ -13,7 +12,11 @@ from common.data.entities.inventory import AssetCreate
 from common.data.database.dynamodb_connection import dynamodb_manager
 from common.exceptions import CNOPEntityNotFoundException
 
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.INVENTORY)
 
 class Constants:
     COINGECKO_API = "https://api.coingecko.com/api/v3/coins/markets"
@@ -48,10 +51,10 @@ async def fetch_top_coins() -> List[dict]:
             response = await client.get(Constants.COINGECKO_API, params=Constants.PARAMS)
             response.raise_for_status()
             coins = response.json()
-            logger.info(f"Fetched {len(coins)} coins from CoinGecko.")
+            logger.info(action=LogActions.DB_OPERATION, message=f"Fetched {len(coins)} coins from CoinGecko.")
             return coins
     except Exception as e:
-        logger.error(f"Failed to fetch coins from CoinGecko: {e}")
+        logger.error(action=LogActions.ERROR, message=f"Failed to fetch coins from CoinGecko: {e}")
         return []
 
 async def upsert_coins_to_inventory(coins: List[dict]) -> int:
@@ -80,37 +83,37 @@ async def upsert_coins_to_inventory(coins: List[dict]) -> int:
             try:
                 existing_asset = asset_dao.get_asset_by_id(asset_id)
                 asset_dao.update_asset(asset_id, asset_create)
-                logger.info(f"Updated asset: {asset_id} - {name}")
+                logger.info(action=LogActions.DB_OPERATION, message=f"Updated asset: {asset_id} - {name}")
                 updated_count += 1
             except Exception as e:
                 # Check if it's CNOPEntityNotFoundException (asset doesn't exist)
                 if isinstance(e, CNOPEntityNotFoundException):
                     # Asset doesn't exist, create it
                     asset_dao.create_asset(asset_create)
-                    logger.info(f"Created asset: {asset_id} - {name}")
+                    logger.info(action=LogActions.DB_OPERATION, message=f"Created asset: {asset_id} - {name}")
                     updated_count += 1
                 else:
                     # Other exception, re-raise to be caught by outer try-catch
                     raise e
         except Exception as e:
-            logger.error(f"Failed to upsert asset {coin.get('symbol', '')}: {e}")
+            logger.error(action=LogActions.ERROR, message=f"Failed to upsert asset {coin.get('symbol', '')}: {e}")
             continue
     return updated_count
 
 async def initialize_inventory_data(force_recreate: bool = False) -> dict:
     """Initialize inventory data on service startup by fetching from CoinGecko"""
-    logger.info("🚀 Starting inventory data initialization from CoinGecko...")
+    logger.info(action=LogActions.SERVICE_START, message="Starting inventory data initialization from CoinGecko...")
     try:
         coins = await fetch_top_coins()
         count = await upsert_coins_to_inventory(coins)
-        logger.info(f"✅ Successfully upserted {count} assets from CoinGecko")
+        logger.info(action=LogActions.SERVICE_START, message=f"Successfully upserted {count} assets from CoinGecko")
         return {
             "status": "success",
             "assets_upserted": count,
             "message": f"Successfully upserted {count} assets from CoinGecko"
         }
     except Exception as e:
-        logger.error(f"❌ Failed to initialize inventory data: {e}")
+        logger.error(action=LogActions.ERROR, message=f"Failed to initialize inventory data: {e}")
         return {
             "status": "error",
             "error": str(e),

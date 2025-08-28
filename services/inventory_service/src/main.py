@@ -11,48 +11,48 @@ This is the API layer entry point. It handles:
 """
 import sys
 import os
+import uvicorn
+import controllers.assets
+import controllers.health
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.exceptions import RequestValidationError
-import logging
 from datetime import datetime
 from pathlib import Path
+from common.aws.sts_client import STSClient
+from common.shared.health import HealthChecker
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Exception handlers will be defined inline
+from inventory_exceptions.exceptions import (
+    CNOPAssetValidationException,
+    CNOPInventoryServerException
+)
+from controllers.assets import router as assets_router
+from controllers.health import router as health_router
+from data.init_inventory import startup_inventory_initialization
+from metrics import metrics_middleware, get_metrics
+
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.INVENTORY)
 
 # Load environment variables from services/.env
-try:
-    from dotenv import load_dotenv
+# Find the services root directory (go up from inventory-service/src to services/)
+services_root = Path(__file__).parent.parent.parent
+env_file = services_root / ".env"
 
-    # Find the services root directory (go up from inventory-service/src to services/)
-    services_root = Path(__file__).parent.parent.parent
-    env_file = services_root / ".env"
-
-    if env_file.exists():
-        load_dotenv(env_file)
-        logger = logging.getLogger(__name__)
-        logger.info(f"✅ Environment loaded from: {env_file}")
-    else:
-        print(f"⚠️ Environment file not found at: {env_file}")
-        print("Continuing with system environment variables...")
-
-except ImportError:
-    print("⚠️ python-dotenv not installed. Using system environment variables only.")
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+if env_file.exists():
+    load_dotenv(env_file)
+    logger.info(action=LogActions.SERVICE_START, message=f"Environment loaded from: {env_file}")
+else:
+    logger.info(action=LogActions.SERVICE_START, message=f"Environment file not found at: {env_file}, continuing with system environment variables")
 
 # Initialize STS client for AWS role assumption
-try:
-    from common.aws.sts_client import STSClient
-    sts_client = STSClient()
-    logger.info("✅ STS client initialized for role assumption")
-except ImportError:
-    sts_client = None
-    logger.info("⚠️ STS client not available, using local credentials")
+sts_client = STSClient()
+logger.info(action=LogActions.SERVICE_START, message="STS client initialized for role assumption")
 
 # Create FastAPI app
 app = FastAPI(
@@ -73,132 +73,56 @@ app.add_middleware(
 )
 
 # Add metrics middleware
-try:
-    from metrics import metrics_middleware
-    app.middleware("http")(metrics_middleware)
-    logger.info("✅ Metrics middleware loaded successfully")
-except ImportError as e:
-    logger.warning(f"⚠️ Metrics middleware not available: {e}")
+app.middleware("http")(metrics_middleware)
+logger.info(action=LogActions.SERVICE_START, message="Metrics middleware loaded successfully")
 
-# Import and register secure exception handlers
-try:
-    from exceptions.secure_exceptions import (
-        secure_validation_exception_handler,
-        secure_general_exception_handler,
-        secure_http_exception_handler,
-        # Single generic handler for all common package exceptions
-        secure_common_exception_handler
+# Define simple exception handlers inline
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    """Handle validation errors"""
+    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Validation error: {exc}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Validation error", "errors": exc.errors()}
     )
 
-    # Import internal exceptions (from common.exceptions - internal use only)
-    try:
-        from common.exceptions import (
-            CNOPDatabaseConnectionException,
-            CNOPDatabaseOperationException,
-            CNOPConfigurationException,
-            CNOPEntityValidationException,
-            CNOPEntityAlreadyExistsException,
-            CNOPEntityNotFoundException,
-            CNOPCommonServerException,
-            CNOPAWSServiceException
-        )
-    except ImportError as e:
-        logger.warning(f"⚠️ Could not import common exceptions: {e}")
-        # Create fallback exception classes to avoid crashes
-        CNOPDatabaseConnectionException = Exception
-        CNOPDatabaseOperationException = Exception
-        CNOPConfigurationException = Exception
-        CNOPEntityValidationException = Exception
-        CNOPEntityAlreadyExistsException = Exception
-        CNOPEntityNotFoundException = Exception
-        CNOPCommonServerException = Exception
-        CNOPAWSServiceException = Exception
-
-    # Import shared external exceptions (from common.exceptions.shared_exceptions - external use)
-    try:
-        from common.exceptions.shared_exceptions import (
-            CNOPAssetNotFoundException,
-            CNOPInventoryServerException
-        )
-    except ImportError as e:
-        logger.warning(f"⚠️ Could not import shared exceptions: {e}")
-        # Create fallback exception classes to avoid crashes
-        CNOPAssetNotFoundException = Exception
-        CNOPInventoryServerException = Exception
-
-    # Import inventory service specific exceptions
-    from inventory_exceptions import (
-        CNOPAssetValidationException
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    """Handle HTTP exceptions"""
+    logger.warning(action=LogActions.ERROR, message=f"HTTP error: {exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
     )
 
-    # Register secure exception handlers
-    app.add_exception_handler(RequestValidationError, secure_validation_exception_handler)
-    app.add_exception_handler(HTTPException, secure_http_exception_handler)
-    app.add_exception_handler(Exception, secure_general_exception_handler)
+@app.exception_handler(Exception)
+async def general_exception_handler(request, exc):
+    """Handle general exceptions"""
+    logger.error(action=LogActions.ERROR, message=f"General error: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
 
-    # Register single generic handler for all common package exceptions
-    app.add_exception_handler(CNOPDatabaseConnectionException, secure_common_exception_handler)
-    app.add_exception_handler(CNOPDatabaseOperationException, secure_common_exception_handler)
-    app.add_exception_handler(CNOPEntityAlreadyExistsException, secure_common_exception_handler)
-    app.add_exception_handler(CNOPEntityValidationException, secure_common_exception_handler)
-    app.add_exception_handler(CNOPEntityNotFoundException, secure_common_exception_handler)
-    app.add_exception_handler(CNOPCommonServerException, secure_common_exception_handler)
-    app.add_exception_handler(CNOPConfigurationException, secure_common_exception_handler)
-    app.add_exception_handler(CNOPAWSServiceException, secure_common_exception_handler)
+logger.info(action=LogActions.SERVICE_START, message="Exception handlers registered successfully")
 
-    # Register inventory service specific exception handlers
-    app.add_exception_handler(CNOPAssetValidationException, secure_validation_exception_handler)
-    app.add_exception_handler(CNOPAssetNotFoundException, secure_common_exception_handler)
-    app.add_exception_handler(CNOPInventoryServerException, secure_common_exception_handler)
+# Include API routers
+app.include_router(assets_router, tags=["inventory"])
+logger.info(action=LogActions.SERVICE_START, message="Assets routes loaded successfully")
 
-    logger.info("✅ Secure exception handlers registered successfully")
-    logger.info("✅ Common package exception handlers registered successfully")
-    logger.info("✅ Inventory service exception handlers registered successfully")
-except ImportError as e:
-    logger.warning(f"⚠️ Could not import secure exception handlers: {e}")
-    logger.info("Using fallback global exception handler")
-
-    # Fallback global exception handler
-    @app.exception_handler(Exception)
-    async def global_exception_handler(request, exc):
-        logger.error(f"Global exception: {exc}")
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error"}
-        )
-
-# Import and include API routers
-try:
-    from controllers.assets import router as assets_router
-    app.include_router(assets_router, tags=["inventory"])
-    logger.info("✅ Assets routes loaded successfully")
-except ImportError as e:
-    logger.error(f"❌ Failed to import assets routes: {e}")
-    logger.info("Continuing without assets endpoint...")
-
-try:
-    from controllers.health import router as health_router
-    app.include_router(health_router, tags=["health"])
-    logger.info("✅ Health routes loaded successfully")
-except ImportError as e:
-    logger.warning(f"⚠️ Health routes not available: {e}")
+app.include_router(health_router, tags=["health"])
+logger.info(action=LogActions.SERVICE_START, message="Health routes loaded successfully")
 
 # Add metrics endpoint
-try:
-    from metrics import get_metrics
-    from fastapi.responses import Response
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint"""
+    return Response(
+        content=get_metrics(),
+        media_type="text/plain"
+    )
 
-    @app.get("/metrics")
-    async def metrics():
-        """Prometheus metrics endpoint"""
-        return Response(
-            content=get_metrics(),
-            media_type="text/plain"
-        )
-
-    logger.info("✅ Metrics endpoint loaded successfully")
-except ImportError as e:
-    logger.warning(f"⚠️ Metrics endpoint not available: {e}")
+logger.info(action=LogActions.SERVICE_START, message="Metrics endpoint loaded successfully")
 
 # Root endpoint
 @app.get("/")
@@ -252,13 +176,12 @@ def main_health_check():
         return health_status
 
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        logger.error(action=LogActions.ERROR, message=f"Health check failed: {e}")
         raise HTTPException(status_code=503, detail="Service unhealthy")
 
 
 # Additional health check endpoints using common health checker
 try:
-    from common.shared.health import HealthChecker
 
     # Create inventory service health checker instance
     health_checker = HealthChecker("inventory-service", "1.0.0")
@@ -278,24 +201,24 @@ try:
         """Database health check endpoint."""
         return health_checker.database_health_check()
 
-    logger.info("✅ Common health check endpoints loaded successfully")
+    logger.info(action=LogActions.SERVICE_START, message="Common health check endpoints loaded successfully")
 except ImportError as e:
-    logger.warning(f"⚠️ Common health check endpoints not available: {e}")
+    logger.warning(action=LogActions.ERROR, message=f"Common health check endpoints not available: {e}")
 
 
 # Enhanced startup event
 @app.on_event("startup")
 async def startup_event():
     """Startup event handler - API service initialization"""
-    logger.info("🚀 Inventory Service starting up...")
-    logger.info(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    logger.info(action=LogActions.SERVICE_START, message="Inventory Service starting up...")
+    logger.info(action=LogActions.SERVICE_START, message=f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
 
     # Log environment configuration
-    logger.info("📊 API Service Configuration:")
-    logger.info(f"  Environment: {os.getenv('ENVIRONMENT', 'development')}")
-    logger.info(f"  Services Root: {Path(__file__).parent.parent.parent}")
-    logger.info(f"  Service: inventory-service")
-    logger.info(f"  Database Region: {os.getenv('AWS_REGION', 'Not Set')}")
+    logger.info(action=LogActions.SERVICE_START, message="API Service Configuration:")
+    logger.info(action=LogActions.SERVICE_START, message=f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    logger.info(action=LogActions.SERVICE_START, message=f"Services Root: {Path(__file__).parent.parent.parent}")
+    logger.info(action=LogActions.SERVICE_START, message=f"Service: inventory-service")
+    logger.info(action=LogActions.SERVICE_START, message=f"Database Region: {os.getenv('AWS_REGION', 'Not Set')}")
 
     # Check required environment variables
     required_env_vars = {
@@ -304,66 +227,64 @@ async def startup_event():
         "INVENTORY_TABLE": os.getenv("INVENTORY_TABLE")
     }
 
-    logger.info("🔧 Environment Variables:")
+    logger.info(action=LogActions.SERVICE_START, message="Environment Variables:")
     for var_name, var_value in required_env_vars.items():
         if var_value:
-            logger.info(f"  {var_name}: ✅ Configured")
+            logger.info(action=LogActions.SERVICE_START, message=f"{var_name}: Configured")
         else:
-            logger.warning(f"  {var_name}: ❌ Missing")
+            logger.warning(action=LogActions.ERROR, message=f"{var_name}: Missing")
 
     # Test API router availability
     try:
-        import controllers.assets
-        import controllers.health
-        logger.info("✅ API routes loaded successfully")
+
+        logger.info(action=LogActions.SERVICE_START, message="API routes loaded successfully")
     except ImportError as e:
-        logger.warning(f"⚠️ Some API routes not available: {e}")
+        logger.warning(action=LogActions.ERROR, message=f"Some API routes not available: {e}")
 
     # Initialize inventory data
     try:
-        from data.init_inventory import startup_inventory_initialization
-        logger.info("🎯 Initializing inventory data...")
+
+        logger.info(action=LogActions.SERVICE_START, message="Initializing inventory data...")
         init_result = await startup_inventory_initialization()
-        logger.info(f"📦 Data initialization: {init_result['status']}")
+        logger.info(action=LogActions.SERVICE_START, message=f"Data initialization: {init_result['status']}")
     except ImportError as e:
-        logger.warning(f"⚠️ Could not import data initialization: {e}")
+        logger.warning(action=LogActions.ERROR, message=f"Could not import data initialization: {e}")
     except Exception as e:
-        logger.error(f"❌ Data initialization failed: {e}")
+        logger.error(action=LogActions.ERROR, message=f"Data initialization failed: {e}")
         # Don't fail startup if data init fails - service can still run
 
-    logger.info("🎯 Available endpoints:")
-    logger.info("  GET  / - Service information")
-    logger.info("  GET  /health - Main health check")
-    logger.info("  GET  /health/ready - Readiness probe")
-    logger.info("  GET  /health/live - Liveness probe")
-    logger.info("  GET  /health/db - Database health")
-    logger.info("  GET  /inventory/assets - List assets")
-    logger.info("  GET  /inventory/assets/{id} - Get asset details")
-    logger.info("  GET  /docs - API documentation")
+    logger.info(action=LogActions.SERVICE_START, message="Available endpoints:")
+    logger.info(action=LogActions.SERVICE_START, message="  GET  / - Service information")
+    logger.info(action=LogActions.SERVICE_START, message="  GET  /health - Main health check")
+    logger.info(action=LogActions.SERVICE_START, message="  GET  /health/ready - Readiness probe")
+    logger.info(action=LogActions.SERVICE_START, message="  GET  /health/live - Liveness probe")
+    logger.info(action=LogActions.SERVICE_START, message="  GET  /health/db - Database health")
+    logger.info(action=LogActions.SERVICE_START, message="  GET  /inventory/assets - List assets")
+    logger.info(action=LogActions.SERVICE_START, message="  GET  /inventory/assets/{id} - Get asset details")
+    logger.info(action=LogActions.SERVICE_START, message="  GET  /docs - API documentation")
 
-    logger.info("✅ Inventory Service startup complete!")
+    logger.info(action=LogActions.SERVICE_START, message="Inventory Service startup complete!")
 
 
 # Shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
     """Shutdown event handler"""
-    logger.info("👋 Inventory Service shutting down...")
+    logger.info(action=LogActions.SERVICE_START, message="Inventory Service shutting down...")
 
 
 # For local development
 if __name__ == "__main__":
-    import uvicorn
 
     port = int(os.getenv("PORT", 8001))  # Different port from user-service (8000)
     host = os.getenv("HOST", "0.0.0.0")
 
-    logger.info(f"Starting server on {host}:{port}")
-    logger.info("🔧 Development Mode:")
-    logger.info("  - Auto-reload enabled")
-    logger.info("  - CORS configured for development")
-    logger.info("  - Detailed logging enabled")
-    logger.info("  - Sample data initialization on startup")
+    logger.info(action=LogActions.SERVICE_START, message=f"Starting server on {host}:{port}")
+    logger.info(action=LogActions.SERVICE_START, message="Development Mode:")
+    logger.info(action=LogActions.SERVICE_START, message="  - Auto-reload enabled")
+    logger.info(action=LogActions.SERVICE_START, message="  - CORS configured for development")
+    logger.info(action=LogActions.SERVICE_START, message="  - Detailed logging enabled")
+    logger.info(action=LogActions.SERVICE_START, message="  - Sample data initialization on startup")
 
     uvicorn.run(
         "main:app",

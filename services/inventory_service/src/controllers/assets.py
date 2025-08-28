@@ -4,7 +4,6 @@ Path: services/inventory-service/src/controllers/assets.py
 """
 from fastapi import APIRouter, Depends, Query, status
 from typing import Optional
-import logging
 from datetime import datetime, timezone
 
 # Import API models
@@ -33,8 +32,6 @@ from common.exceptions.shared_exceptions import CNOPAssetNotFoundException
 # Import business validation functions (Layer 2)
 from validation.business_validators import validate_asset_exists
 
-# No authentication required for inventory service (public APIs)
-
 # Import metrics
 try:
     from metrics import record_asset_retrieval, record_asset_detail_view, update_asset_counts
@@ -42,7 +39,11 @@ try:
 except ImportError:
     METRICS_AVAILABLE = False
 
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.INVENTORY)
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
 @router.get(
@@ -81,7 +82,7 @@ def list_assets(
     - **limit**: Maximum number of results to return (1-100)
     """
     try:
-        logger.info(f"Assets list requested - active_only: {active_only}, limit: {limit}")
+        logger.info(action=LogActions.REQUEST_START, message=f"Assets list requested - active_only: {active_only}, limit: {limit}")
 
         # Create request object for validation
         request_params = AssetListRequest(
@@ -105,7 +106,7 @@ def list_assets(
         else:
             total_count = len(all_assets)
 
-        logger.info(f"Retrieved {len(assets)} assets (total: {total_count})")
+        logger.info(action=LogActions.REQUEST_END, message=f"Retrieved {len(assets)} assets (total: {total_count})")
 
         # Record metrics if available
         if METRICS_AVAILABLE:
@@ -121,7 +122,7 @@ def list_assets(
         )
 
     except Exception as e:
-        logger.error(f"Failed to list assets: {str(e)}", exc_info=True)
+        logger.error(action=LogActions.ERROR, message=f"Failed to list assets: {str(e)}")
         # Convert to internal server exception for proper handling
         raise CNOPInventoryServerException(f"Failed to list assets: {str(e)}")
 
@@ -158,14 +159,14 @@ def get_asset_by_id(
     - **asset_id**: The asset symbol/identifier (e.g., "BTC", "ETH")
     """
     try:
-        logger.info(f"Asset details requested for: {asset_id}")
+        logger.info(action=LogActions.REQUEST_START, message=f"Asset details requested for: {asset_id}")
 
         # Layer 1: Field validation using AssetIdRequest model
         try:
             validated_request = AssetIdRequest(asset_id=asset_id)
             validated_asset_id = validated_request.asset_id
         except Exception as validation_error:
-            logger.warning(f"Field validation failed for asset_id '{asset_id}': {str(validation_error)}")
+            logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Field validation failed for asset_id '{asset_id}': {str(validation_error)}")
             # Re-raise the original validation error without wrapping
             raise
 
@@ -175,7 +176,7 @@ def get_asset_by_id(
         # Get asset from database (already validated to exist)
         asset = asset_dao.get_asset_by_id(validated_asset_id)
 
-        logger.info(f"Asset found: {asset.name} ({asset.asset_id})")
+        logger.info(action=LogActions.REQUEST_END, message=f"Asset found: {asset.name} ({asset.asset_id})")
 
         # Record metrics if available
         if METRICS_AVAILABLE:
@@ -186,13 +187,13 @@ def get_asset_by_id(
 
     except CNOPAssetValidationException as e:
         # Handle validation errors (from API model) - maintain consistent message format
-        logger.warning(f"Validation error for asset_id '{asset_id}': {str(e)}")
+        logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Validation error for asset_id '{asset_id}': {str(e)}")
         raise CNOPAssetValidationException(f"Invalid asset ID: {str(e)}")
     except CNOPAssetNotFoundException as e:
         # Handle business validation errors (asset not found) - re-raise as-is
-        logger.warning(f"Asset not found: {asset_id}")
+        logger.warning(action=LogActions.ERROR, message=f"Asset not found: {asset_id}")
         raise
     except Exception as e:
-        logger.error(f"Failed to get asset {asset_id}: {str(e)}", exc_info=True)
+        logger.error(action=LogActions.ERROR, message=f"Failed to get asset {asset_id}: {str(e)}")
         # Convert to internal server exception for proper handling
         raise CNOPInventoryServerException(f"Failed to get asset {asset_id}: {str(e)}")

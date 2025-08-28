@@ -11,6 +11,9 @@ pydantic==2.5.0
 # AWS SDK for DynamoDB
 boto3==1.29.7
 
+# Redis client (needed for common package)
+redis==5.0.1
+
 # JWT and authentication (needed for common package imports)
 python-jose[cryptography]==3.5.0
 PyJWT==2.8.0

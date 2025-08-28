@@ -7,7 +7,6 @@ Provides dependency injection for:
 - Service instances
 - No authentication required (public APIs)
 """
-import logging
 from typing import Optional
 from fastapi import Depends
 
@@ -15,7 +14,11 @@ from fastapi import Depends
 from common.data.database.dependencies import get_asset_dao
 from common.data.dao.inventory import AssetDAO
 
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.INVENTORY)
 
 
 def get_asset_dao_dependency() -> AssetDAO:

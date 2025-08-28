@@ -3,38 +3,16 @@ Health check controller for inventory service
 Path: services/inventory-service/src/controllers/health.py
 """
 from fastapi import APIRouter, status
-import logging
 from typing import Dict, Any
 
-# Import health components with error handling to avoid JWT import issues during test collection
-try:
-    from common.shared.health import HealthChecker, HealthCheckResponse
-except ImportError as e:
-    # Create fallback classes for testing when common package imports fail
-    class HealthChecker:
-        def __init__(self, service_name: str, version: str):
-            self.service_name = service_name
-            self.version = version
-            self.response = HealthCheckResponse(service_name, version)
+# Import health components
+from common.shared.health import HealthChecker, HealthCheckResponse
 
-        def basic_health_check(self):
-            return {"status": "ok", "service": self.service_name, "version": self.version}
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
 
-        def readiness_check(self):
-            return {"status": "ready", "service": self.service_name, "version": self.version}
-
-        def liveness_check(self):
-            return {"status": "alive", "service": self.service_name, "version": self.version}
-
-    class HealthCheckResponse:
-        def __init__(self, service_name: str, version: str):
-            self.service_name = service_name
-            self.version = version
-
-        def to_dict(self):
-            return {"service": self.service_name, "version": self.version}
-
-logger = logging.getLogger(__name__)
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.INVENTORY)
 router = APIRouter(tags=["health"])
 
 # Create inventory service specific health checker
