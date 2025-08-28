@@ -5,16 +5,13 @@ Provides common health check functionality for all microservices
 to ensure consistent health monitoring and Kubernetes probe support.
 """
 
-import logging
+from ...shared.logging import BaseLogger, Loggers, LogActions
 import os
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from fastapi import HTTPException, status
 
-from ...data.database.dynamodb_connection import dynamodb_manager
-from ...exceptions import CNOPDatabaseOperationException
-
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
 class HealthCheckResponse:
@@ -101,7 +98,10 @@ class HealthChecker:
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Readiness check failed: {str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Readiness check failed: {str(e)}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Service not ready"
@@ -153,7 +153,10 @@ class HealthChecker:
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Database health check failed: {str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Database health check failed: {str(e)}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Database health check failed"
@@ -183,8 +186,12 @@ def get_database_health() -> bool:
     """
     try:
         # Test DynamoDB connection
+        from ...data.database.dynamodb_connection import dynamodb_manager
         health_ok = dynamodb_manager.health_check()
         return health_ok
     except Exception as e:
-        logger.warning(f"Database health check failed: {e}")
+        logger.warning(
+            action=LogActions.ERROR,
+            message=f"Database health check failed: {e}"
+        )
         return False

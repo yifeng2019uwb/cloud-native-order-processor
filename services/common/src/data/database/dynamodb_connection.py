@@ -1,13 +1,18 @@
-# services/common/database/dynamodb_connection.py
+"""
+DynamoDB connection manager for microservices.
+
+Provides centralized DynamoDB connection management with connection pooling,
+retry logic, and health monitoring for all services.
+"""
+
+from ...shared.logging import BaseLogger, Loggers, LogActions
 import os
 import boto3
-import logging
-from typing import Optional
 from botocore.exceptions import ClientError, NoCredentialsError
 from ...exceptions.shared_exceptions import CNOPInternalServerException
 
 
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 # Universal session pattern for IRSA and AssumeRole
 
@@ -60,14 +65,20 @@ class DynamoDBManager:
         session = get_boto3_session()
         self.dynamodb = session.resource('dynamodb', region_name=self.region)
         self.client = session.client('dynamodb', region_name=self.region)
-        logger.info("DynamoDB connection initialized using universal session pattern (IRSA/AssumeRole/local)")
+        logger.info(
+            action=LogActions.DB_CONNECT,
+            message="DynamoDB connection initialized using universal session pattern (IRSA/AssumeRole/local)"
+        )
 
         # ✅ Get table references
         self.users_table = self.dynamodb.Table(self.users_table_name)
         self.orders_table = self.dynamodb.Table(self.orders_table_name)
         self.inventory_table = self.dynamodb.Table(self.inventory_table_name)
 
-        logger.info(f"DynamoDB initialized - Users: {self.users_table_name}, Orders: {self.orders_table_name}, Inventory: {self.inventory_table_name}")
+        logger.info(
+            action=LogActions.DB_CONNECT,
+            message=f"DynamoDB initialized - Users: {self.users_table_name}, Orders: {self.orders_table_name}, Inventory: {self.inventory_table_name}"
+        )
 
     def health_check(self) -> bool:
         """Check if all DynamoDB tables are accessible"""
@@ -78,7 +89,10 @@ class DynamoDBManager:
             self.inventory_table.meta.client.describe_table(TableName=self.inventory_table_name)
             return True
         except Exception as e:
-            logger.error(f"DynamoDB health check failed: {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"DynamoDB health check failed: {e}"
+            )
             return False
 
     def get_connection(self) -> 'DynamoDBConnection':

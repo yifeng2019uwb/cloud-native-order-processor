@@ -4,14 +4,14 @@ Redis health check for services
 Provides health status and connection monitoring
 """
 
-import logging
+from ...shared.logging import BaseLogger, Loggers, LogActions
 import time
 from typing import Dict, Any, Optional
 from datetime import datetime
 
 from ...data.database.redis_connection import get_redis_manager, test_redis_connection
 
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.CACHE, log_to_file=True)
 
 class RedisHealthChecker:
     """Redis health checker for service monitoring"""
@@ -37,14 +37,23 @@ class RedisHealthChecker:
             self._last_check = now
 
             if status:
-                logger.debug("Redis health check: OK")
+                logger.info(
+                    action=LogActions.HEALTH_CHECK,
+                    message="Redis health check: OK"
+                )
             else:
-                logger.warning("Redis health check: FAILED")
+                logger.warning(
+                    action=LogActions.ERROR,
+                    message="Redis health check: FAILED"
+                )
 
             return status
 
         except Exception as e:
-            logger.error(f"Redis health check error: {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Redis health check error: {e}"
+            )
             self._last_status = False
             self._last_check = now
             return False
@@ -71,7 +80,10 @@ class RedisHealthChecker:
                 "connection_pool_size": getattr(manager._pool, 'max_connections', 'unknown') if manager._pool else 'unknown'
             })
         except Exception as e:
-            logger.warning(f"Could not get Redis connection details: {e}")
+            logger.warning(
+                action=LogActions.ERROR,
+                message=f"Could not get Redis connection details: {e}"
+            )
 
         return status
 

@@ -2,12 +2,13 @@
 Base exception class with auto-logging for all services
 Path: services/common/src/exceptions/base_exception.py
 """
-import logging
+from ..shared.logging import BaseLogger, LogActions, Loggers
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
-logger = logging.getLogger(__name__)
+# Create logger instance for exceptions
+logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
 
 
 class BaseInternalException(Exception):
@@ -33,7 +34,8 @@ class BaseInternalException(Exception):
 
         # Auto-logging: Automatically logs when exception is created
         logger.error(
-            f"{self.__class__.__name__}: {self.message}",
+            action=LogActions.ERROR,
+            message=f"{self.__class__.__name__}: {self.message}",
             extra={
                 "error_id": self.error_id,
                 "context": self.context,
@@ -90,7 +92,8 @@ class CNOPException(Exception):
 
         # Auto-logging: Automatically logs when exception is created
         logger.error(
-            f"{self.__class__.__name__}: {self.message}",
+            action=LogActions.ERROR,
+            message=f"{self.__class__.__name__}: {self.message}",
             extra={
                 "error_id": self.error_id,
                 "context": self.context,

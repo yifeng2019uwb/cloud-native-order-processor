@@ -1,6 +1,8 @@
 """
-Transaction Manager for Atomic Operations
-Orchestrates complex transactions with proper locking for order and balance operations.
+Transaction Manager for database operations.
+
+Provides centralized transaction management with rollback support
+and proper error handling for all database operations.
 """
 
 import logging
@@ -19,8 +21,11 @@ from ...data.entities.order import Order, OrderStatus, OrderType
 from ...data.entities.asset import AssetTransactionCreate, AssetTransactionType
 from ...data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException
 from ...exceptions.shared_exceptions import CNOPInsufficientBalanceException
+from ...shared.logging import BaseLogger, Loggers, LogActions
+from typing import Optional, Dict, Any, Callable
+from contextlib import contextmanager
 
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
 class TransactionResult:
@@ -92,7 +97,10 @@ class TransactionManager:
                     self.balance_dao._update_balance_from_transaction(created_transaction)
                 except Exception as e:
                     # If balance update fails, clean up the transaction record to maintain consistency
-                    logger.error(f"Balance update failed, cleaning up transaction: user={username}, error={str(e)}")
+                    logger.error(
+                action=LogActions.ERROR,
+                message=f"Balance update failed, cleaning up transaction: user={username}, error={str(e)}"
+            )
                     # TODO: Implement transaction cleanup method in balance_dao
                     raise CNOPDatabaseOperationException(f"Transaction failed: {str(e)}")
 
@@ -101,7 +109,10 @@ class TransactionManager:
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
-                logger.info(f"Deposit successful: user={username}, amount={amount}, lock_duration={lock_duration}s")
+                logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Deposit successful: user={username}, amount={amount}, lock_duration={lock_duration}s"
+            )
 
                 return TransactionResult(
                     success=True,
@@ -114,10 +125,16 @@ class TransactionManager:
                 )
 
         except CNOPLockAcquisitionException as e:
-            logger.warning(f"Lock acquisition failed for deposit: user={username}, error={str(e)}")
+            logger.warning(
+                action=LogActions.ERROR,
+                message=f"Lock acquisition failed for deposit: user={username}, error={str(e)}"
+            )
             raise CNOPDatabaseOperationException("Service temporarily unavailable")
         except Exception as e:
-            logger.error(f"Deposit failed: user={username}, amount={amount}, error={str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Deposit failed: user={username}, amount={amount}, error={str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Deposit failed: {str(e)}")
 
     async def withdraw_funds(self, username: str, amount: Decimal) -> TransactionResult:
@@ -178,7 +195,10 @@ class TransactionManager:
                     self.balance_dao._update_balance_from_transaction(created_transaction)
                 except Exception as e:
                     # If balance update fails, clean up the transaction record to maintain consistency
-                    logger.error(f"Balance update failed, cleaning up transaction: user={username}, error={str(e)}")
+                    logger.error(
+                action=LogActions.ERROR,
+                message=f"Balance update failed, cleaning up transaction: user={username}, error={str(e)}"
+            )
                     # TODO: Implement transaction cleanup method in balance_dao
                     raise CNOPDatabaseOperationException(f"Transaction failed: {str(e)}")
 
@@ -187,7 +207,10 @@ class TransactionManager:
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
-                logger.info(f"Withdrawal successful: user={username}, amount={amount}, lock_duration={lock_duration}s")
+                logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Withdrawal successful: user={username}, amount={amount}, lock_duration={lock_duration}s"
+            )
 
                 return TransactionResult(
                     success=True,
@@ -200,13 +223,19 @@ class TransactionManager:
                 )
 
         except CNOPLockAcquisitionException as e:
-            logger.warning(f"Lock acquisition failed for withdrawal: user={username}, error={str(e)}")
+            logger.warning(
+                action=LogActions.ERROR,
+                message=f"Lock acquisition failed for withdrawal: user={username}, error={str(e)}"
+            )
             raise CNOPDatabaseOperationException("Service temporarily unavailable")
         except CNOPInsufficientBalanceException:
             # Re-raise CNOPInsufficientBalanceException directly
             raise
         except Exception as e:
-            logger.error(f"Withdrawal failed: user={username}, amount={amount}, error={str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Withdrawal failed: user={username}, amount={amount}, error={str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Withdrawal failed: {str(e)}")
 
     async def create_buy_order_with_balance_update(
@@ -302,7 +331,10 @@ class TransactionManager:
                         username, created_order.asset_id, asset_quantity
                     )
                 except Exception as e:
-                    logger.error(f"Error in Phase 4: {str(e)}")
+                    logger.error(
+                action=LogActions.ERROR,
+                message=f"Error in Phase 4: {str(e)}"
+            )
                     raise
 
                 # Phase 5: Create asset transaction record
@@ -321,7 +353,9 @@ class TransactionManager:
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
-                logger.info(f"Buy order executed successfully: user={username}, order_id={created_order.order_id}, "
+                logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Buy order executed successfully: user={username}, order_id={created_order.order_id}, "
                            f"asset={created_order.asset_id}, quantity={asset_quantity}, "
                            f"total_cost={total_cost}, lock_duration={lock_duration}s")
 
@@ -339,13 +373,19 @@ class TransactionManager:
                 )
 
         except CNOPLockAcquisitionException as e:
-            logger.warning(f"Lock acquisition failed for buy order: user={username}, error={str(e)}")
+            logger.warning(
+                action=LogActions.ERROR,
+                message=f"Lock acquisition failed for buy order: user={username}, error={str(e)}"
+            )
             raise CNOPDatabaseOperationException("Service temporarily unavailable")
         except CNOPInsufficientBalanceException:
             # Re-raise CNOPInsufficientBalanceException directly
             raise
         except Exception as e:
-            logger.error(f"Buy order creation failed: user={username}, error={str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Buy order creation failed: user={username}, error={str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Order creation failed: {str(e)}")
 
     async def create_sell_order_with_balance_update(
@@ -418,7 +458,10 @@ class TransactionManager:
                         username, created_order.asset_id, -asset_quantity
                     )
                 except Exception as e:
-                    logger.error(f"Error in Phase 4 (asset balance update): {str(e)}")
+                    logger.error(
+                action=LogActions.ERROR,
+                message=f"Error in Phase 4 (asset balance update): {str(e)}"
+            )
                     raise
 
                 # Phase 5: Create asset transaction record
@@ -437,7 +480,9 @@ class TransactionManager:
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
-                logger.info(f"Sell order created successfully: user={username}, order_id={created_order.order_id}, "
+                logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Sell order created successfully: user={username}, order_id={created_order.order_id}, "
                            f"asset_amount={asset_amount}, lock_duration={lock_duration}s")
 
                 return TransactionResult(
@@ -453,8 +498,14 @@ class TransactionManager:
                 )
 
         except CNOPLockAcquisitionException as e:
-            logger.warning(f"Lock acquisition failed for sell order: user={username}, error={str(e)}")
+            logger.warning(
+                action=LogActions.ERROR,
+                message=f"Lock acquisition failed for sell order: user={username}, error={str(e)}"
+            )
             raise CNOPDatabaseOperationException("Service temporarily unavailable")
         except Exception as e:
-            logger.error(f"Sell order creation failed: user={username}, error={str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Sell order creation failed: user={username}, error={str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Order creation failed: {str(e)}")

@@ -157,7 +157,7 @@ class TestGetDatabaseHealth:
 
     def test_get_database_health_success(self):
         """Test successful database health check"""
-        with patch('src.shared.health.health_checks.dynamodb_manager') as mock_db_manager:
+        with patch('src.data.database.dynamodb_connection.dynamodb_manager') as mock_db_manager:
             mock_db_manager.health_check.return_value = True
 
             result = get_database_health()
@@ -166,7 +166,7 @@ class TestGetDatabaseHealth:
 
     def test_get_database_health_failure(self):
         """Test database health check when database is unhealthy"""
-        with patch('src.shared.health.health_checks.dynamodb_manager') as mock_db_manager:
+        with patch('src.data.database.dynamodb_connection.dynamodb_manager') as mock_db_manager:
             mock_db_manager.health_check.return_value = False
 
             result = get_database_health()
@@ -175,7 +175,7 @@ class TestGetDatabaseHealth:
 
     def test_get_database_health_exception(self):
         """Test database health check when exception occurs"""
-        with patch('src.shared.health.health_checks.dynamodb_manager') as mock_db_manager:
+        with patch('src.data.database.dynamodb_connection.dynamodb_manager') as mock_db_manager:
             mock_db_manager.health_check.side_effect = Exception("Connection failed")
 
             result = get_database_health()

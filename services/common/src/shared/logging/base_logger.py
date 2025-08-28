@@ -131,7 +131,7 @@ class BaseLogger:
         """Log info level message."""
         self.log("INFO", action, message, **kwargs)
 
-    def warn(self, action: str, message: str, **kwargs) -> None:
+    def warning(self, action: str, message: str, **kwargs) -> None:
         """Log warning level message."""
         self.log("WARN", action, message, **kwargs)
 

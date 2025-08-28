@@ -12,7 +12,7 @@ Responsibilities:
 """
 
 import os
-import logging
+from ...shared.logging import BaseLogger, LogActions, Loggers
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
@@ -20,7 +20,8 @@ from jose import jwt, JWTError
 from ...exceptions.shared_exceptions import CNOPTokenExpiredException, CNOPTokenInvalidException
 from ...data.entities.user import DEFAULT_USER_ROLE
 
-logger = logging.getLogger(__name__)
+# Create logger instance for token management
+logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
 
 
 class TokenManager:
@@ -68,7 +69,12 @@ class TokenManager:
 
         try:
             token = jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_algorithm)
-            logger.info(f"Access token created for user: {username} with role: {role}")
+            logger.info(
+                action=LogActions.SECURITY_EVENT,
+                message=f"Access token created for user {username} with role {role}",
+                user=username,
+                extra={"role": role, "expires_in_hours": self.jwt_expiration_hours}
+            )
 
             return {
                 "access_token": token,
@@ -77,7 +83,12 @@ class TokenManager:
                 "expires_at": expire.isoformat()
             }
         except Exception as e:
-            logger.error(f"Error creating access token: {username}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Error creating access token for user {username}",
+                user=username,
+                extra={"error": str(e), "error_type": type(e).__name__}
+            )
             raise CNOPTokenInvalidException("Token creation failed")
 
     def verify_access_token(self, token: str) -> Optional[str]:
@@ -99,29 +110,50 @@ class TokenManager:
 
             # Check token type
             if payload.get("type") != "access_token":
-                logger.warning("Invalid token type")
+                logger.warning(
+                    action=LogActions.ERROR,
+                    message="Invalid token type",
+                    extra={"token_type": payload.get("type")}
+                )
                 raise CNOPTokenInvalidException("Invalid token type")
 
             # Extract username
             username: str = payload.get("sub")
             if username is None:
-                logger.warning("Token missing subject (username)")
+                logger.warning(
+                    action=LogActions.ERROR,
+                    message="Token missing subject (username)"
+                )
                 raise CNOPTokenInvalidException("Token missing subject")
 
-            logger.debug(f"Token verified for user: {username}")
+            logger.debug(
+                action=LogActions.SECURITY_EVENT,
+                message=f"Token verified for user: {username}",
+                user=username
+            )
             return username
 
         except jwt.ExpiredSignatureError:
-            logger.warning("Token has expired")
+            logger.warning(
+                action=LogActions.ERROR,
+                message="Token has expired"
+            )
             raise CNOPTokenExpiredException("Token has expired")
         except JWTError:
-            logger.warning("Invalid token provided")
+            logger.warning(
+                action=LogActions.ERROR,
+                message="Invalid token provided"
+            )
             raise CNOPTokenInvalidException("Invalid token")
         except CNOPTokenInvalidException:
             # Re-raise CNOPTokenInvalidException without wrapping
             raise
         except Exception as e:
-            logger.error(f"Unexpected error verifying token: {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Unexpected error verifying token: {e}",
+                extra={"error": str(e), "error_type": type(e).__name__}
+            )
             raise CNOPTokenInvalidException("Token verification failed")
 
     def validate_token_comprehensive(self, token: str) -> Dict[str, Any]:
@@ -139,75 +171,83 @@ class TokenManager:
             CNOPTokenInvalidException: If token is invalid
         """
         try:
-            logger.debug("Starting comprehensive token validation")
+            logger.info(
+                action=LogActions.LogActions.SECURITY_EVENT,
+                message="Starting comprehensive token validation"
+            )
 
             # Parse and validate token
             payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
 
             # Check token type
             if payload.get("type") != "access_token":
-                logger.warning("Invalid token type: %s (expected: access_token)", payload.get("type"))
+                logger.warning(
+                    action=LogActions.ERROR,
+                    message="Invalid token type: %s (expected: access_token)",
+                    extra={"token_type": payload.get("type")}
+                )
                 raise CNOPTokenInvalidException("Invalid token type")
 
             # Extract username
             username: str = payload.get("sub")
             if username is None:
-                logger.warning("Token missing subject (username)")
+                logger.warning(
+                    action=LogActions.ERROR,
+                    message="Token missing subject (username)"
+                )
                 raise CNOPTokenInvalidException("Token missing subject")
 
             # Check if token is expired
             exp_timestamp = payload.get("exp")
             if exp_timestamp is None:
-                logger.warning("Token missing expiration")
-                raise CNOPTokenInvalidException("Token missing expiration")
+                logger.warning(
+                    action=LogActions.ERROR,
+                    message="Token missing expiration timestamp"
+                )
+                raise CNOPTokenInvalidException("Token missing expiration timestamp")
 
-            current_timestamp = datetime.now(timezone.utc).timestamp()
-            if current_timestamp > exp_timestamp:
-                logger.warning("Token has expired for user: %s, expired_at: %s",
-                             username,
-                             datetime.fromtimestamp(exp_timestamp, tz=timezone.utc).isoformat())
+            # Check if token is expired
+            if self.is_token_expired(token):
+                logger.warning(
+                    action=LogActions.ERROR,
+                    message="Token has expired"
+                )
                 raise CNOPTokenExpiredException("Token has expired")
 
-            # Extract additional claims
-            role = payload.get("role", "customer")  # Default role
-            iat_timestamp = payload.get("iat")
-            issuer = payload.get("iss", "auth_service")
-            audience = payload.get("aud", "trading_platform")
-
-            # Create comprehensive user context
-            user_context = {
+            # Extract additional context
+            context = {
                 "username": username,
-                "role": role,
-                "is_authenticated": True,
-                "expires_at": datetime.fromtimestamp(exp_timestamp, tz=timezone.utc).isoformat(),
-                "created_at": datetime.fromtimestamp(iat_timestamp, tz=timezone.utc).isoformat() if iat_timestamp else None,
-                "metadata": {
-                    "algorithm": self.jwt_algorithm,
-                    "issuer": issuer,
-                    "audience": audience
-                }
+                "exp": exp_timestamp,
+                "iat": payload.get("iat"),
+                "iss": payload.get("iss"),
+                "aud": payload.get("aud"),
+                "token_type": payload.get("type")
             }
 
-            logger.info("Token validated successfully for user: %s, role: %s, expires_at: %s",
-                       username, role, user_context["expires_at"])
-
-            return user_context
+            return context
 
         except jwt.ExpiredSignatureError:
-            logger.warning("Token has expired (JWT library)")
+            logger.warning(
+                action=LogActions.ERROR,
+                message="Token has expired"
+            )
             raise CNOPTokenExpiredException("Token has expired")
-        except JWTError as e:
-            logger.warning("Invalid JWT token: %s", str(e))
+        except JWTError:
+            logger.warning(
+                action=LogActions.ERROR,
+                message="Invalid token provided"
+            )
             raise CNOPTokenInvalidException("Invalid token")
-        except CNOPTokenExpiredException:
-            # Re-raise CNOPTokenExpiredException without wrapping
-            raise
         except CNOPTokenInvalidException:
             # Re-raise CNOPTokenInvalidException without wrapping
             raise
         except Exception as e:
-            logger.error("Unexpected error verifying token: %s (type: %s)", str(e), type(e).__name__)
-            raise CNOPTokenInvalidException("Token verification failed")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Unexpected error during comprehensive token validation: {e}",
+                extra={"error": str(e), "error_type": type(e).__name__}
+            )
+            raise CNOPTokenInvalidException("Token validation failed")
 
     def decode_token_payload(self, token: str) -> Dict[str, Any]:
         """
@@ -227,29 +267,77 @@ class TokenManager:
             payload = jwt.decode(token, self.jwt_secret, options={"verify_signature": False}, algorithms=[self.jwt_algorithm])
             return payload
         except Exception as e:
-            logger.error(f"Error decoding token payload: {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Error decoding token payload: {e}",
+                extra={"error": str(e), "error_type": type(e).__name__}
+            )
             raise CNOPTokenInvalidException("Token decode failed")
 
     def is_token_expired(self, token: str) -> bool:
         """
-        Check if token is expired without verification.
+        Check if a token is expired.
 
         Args:
-            token: Token to check
+            token: JWT token string
 
         Returns:
-            True if token is expired, False otherwise
+            bool: True if token is expired, False otherwise
         """
         try:
-            payload = self.decode_token_payload(token)
+            # Decode without verification to check expiration
+            payload = jwt.decode(token, self.jwt_secret, options={"verify_signature": False}, algorithms=[self.jwt_algorithm])
             exp_timestamp = payload.get("exp")
 
             if exp_timestamp is None:
+                logger.warning(
+                    action=LogActions.ERROR,
+                    message="Token missing expiration timestamp"
+                )
                 return True
 
-            current_timestamp = datetime.now(timezone.utc).timestamp()
-            return current_timestamp > exp_timestamp
+            # Check if current time is past expiration
+            current_time = datetime.now(timezone.utc).timestamp()
+            return current_time > exp_timestamp
 
         except Exception as e:
-            logger.error(f"Error checking token expiration: {e}")
+            logger.warning(
+                action=LogActions.ERROR,
+                message=f"Error checking token expiration: {e}"
+            )
             return True
+
+    def refresh_token(self, token: str) -> str:
+        """
+        Refresh an expired token.
+
+        Args:
+            token: JWT token string
+
+        Returns:
+            str: New JWT token
+
+        Raises:
+            CNOPTokenInvalidException: If token cannot be refreshed
+        """
+        try:
+            # Decode the old token to extract user info
+            payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
+            username = payload.get("sub")
+
+            if not username:
+                logger.error(
+                    action=LogActions.ERROR,
+                    message="Cannot refresh token: missing username"
+                )
+                raise CNOPTokenInvalidException("Cannot refresh token: missing username")
+
+            # Create new token with extended expiration
+            return self.create_access_token(username)
+
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to refresh token: {e}"
+            )
+            raise CNOPTokenInvalidException("Failed to refresh token")

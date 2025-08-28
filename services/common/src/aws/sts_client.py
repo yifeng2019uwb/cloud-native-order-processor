@@ -4,13 +4,13 @@ Handles both local development and Kubernetes environments
 """
 import os
 import boto3
-import logging
 from typing import Optional, Dict, Any
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from ..exceptions import CNOPInternalServerException
+from ..shared.logging import BaseLogger, Loggers, LogActions
 
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
 
 class STSClient:
     """AWS STS client for role assumption"""
@@ -33,10 +33,16 @@ class STSClient:
             response = self.sts_client.get_caller_identity()
             return response
         except NoCredentialsError:
-            logger.error("No AWS credentials found")
+            logger.error(
+                action=LogActions.ERROR,
+                message="No AWS credentials found"
+            )
             raise CNOPInternalServerException("AWS credentials not configured")
         except ClientError as e:
-            logger.error(f"AWS STS error: {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"AWS STS error: {e}"
+            )
             raise CNOPInternalServerException(f"AWS STS error: {e}")
 
     def assume_role(self, role_arn: str, role_session_name: str,
@@ -53,10 +59,16 @@ class STSClient:
             )
             return response
         except NoCredentialsError:
-            logger.error("No AWS credentials found")
+            logger.error(
+                action=LogActions.ERROR,
+                message="No AWS credentials found"
+            )
             raise CNOPInternalServerException("AWS credentials not configured")
         except ClientError as e:
-            logger.error(f"AWS STS assume role error: {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"AWS STS assume role error: {e}"
+            )
             raise CNOPInternalServerException(f"AWS STS assume role error: {e}")
 
     def get_session_token(self, duration_seconds: int = 3600) -> Dict[str, Any]:
@@ -70,10 +82,16 @@ class STSClient:
             )
             return response
         except NoCredentialsError:
-            logger.error("No AWS credentials found")
+            logger.error(
+                action=LogActions.ERROR,
+                message="No AWS credentials found"
+            )
             raise CNOPInternalServerException("AWS credentials not configured")
         except ClientError as e:
-            logger.error(f"AWS STS get session token error: {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"AWS STS get session token error: {e}"
+            )
             raise CNOPInternalServerException(f"AWS STS get session token error: {e}")
 
     def get_client(self, service_name: str):

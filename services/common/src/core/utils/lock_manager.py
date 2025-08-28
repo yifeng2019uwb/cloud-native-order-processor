@@ -11,8 +11,9 @@ from contextlib import asynccontextmanager
 
 from ...data.database.dynamodb_connection import dynamodb_manager
 from ...data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException, CNOPLockTimeoutException
+from ...shared.logging import BaseLogger, Loggers, LogActions
 
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
 class UserLock:
@@ -37,7 +38,10 @@ class UserLock:
                 self.timeout_seconds
             )
             self.acquired = True
-            logger.info(f"Lock acquired: user={self.username}, operation={self.operation}, lock_id={self.lock_id}")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Lock acquired: user={self.username}, operation={self.operation}, lock_id={self.lock_id}"
+            )
             return self
         except CNOPLockAcquisitionException as e:
             raise e
@@ -46,7 +50,10 @@ class UserLock:
         """Release lock when exiting context"""
         if self.acquired and self.lock_id:
             release_lock(self.username, self.lock_id)
-            logger.info(f"Lock released: user={self.username}, operation={self.operation}, lock_id={self.lock_id}")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Lock released: user={self.username}, operation={self.operation}, lock_id={self.lock_id}"
+            )
             self.acquired = False
 
 
@@ -89,15 +96,24 @@ def acquire_lock(username: str, operation: str, timeout_seconds: int = 15) -> Op
             }
         )
 
-        logger.debug(f"Lock acquired successfully: user={username}, operation={operation}, lock_id={lock_id}")
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Lock acquired successfully: user={username}, operation={operation}, lock_id={lock_id}"
+        )
         return lock_id
 
     except Exception as e:
         if "ConditionalCheckFailedException" in str(e):
-            logger.debug(f"Lock acquisition failed - lock exists: user={username}, operation={operation}")
+            logger.info(
+                action=LogActions.ERROR,
+                message=f"Lock acquisition failed - lock exists: user={username}, operation={operation}"
+            )
             raise CNOPLockAcquisitionException(f"Lock acquisition failed for user {username}, operation {operation}")
         else:
-            logger.error(f"Lock acquisition error: user={username}, operation={operation}, error={str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Lock acquisition error: user={username}, operation={operation}, error={str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Failed to acquire lock: {str(e)}")
 
 
@@ -128,15 +144,24 @@ def release_lock(username: str, lock_id: str) -> bool:
             }
         )
 
-        logger.debug(f"Lock released successfully: user={username}, lock_id={lock_id}")
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Lock released successfully: user={username}, lock_id={lock_id}"
+        )
         return True
 
     except Exception as e:
         if "ConditionalCheckFailedException" in str(e):
-            logger.debug(f"Lock release failed - lock was already released or changed: user={username}, lock_id={lock_id}")
+            logger.info(
+                action=LogActions.ERROR,
+                message=f"Lock release failed - lock was already released or changed: user={username}, lock_id={lock_id}"
+            )
             return False
         else:
-            logger.error(f"Lock release error: user={username}, lock_id={lock_id}, error={str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Lock release error: user={username}, lock_id={lock_id}, error={str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Failed to release lock: {str(e)}")
 
 

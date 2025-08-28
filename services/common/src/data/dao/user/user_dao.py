@@ -1,6 +1,5 @@
 from typing import Optional
 from datetime import datetime
-import logging
 from boto3.dynamodb.conditions import Key
 import sys
 import os
@@ -13,9 +12,9 @@ from ...entities.user import User, UserCreate, UserLogin
 from ...entities.user import DEFAULT_USER_ROLE
 from ....exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
 from ....auth.security import PasswordManager
+from ....shared.logging import BaseLogger, Loggers, LogActions
 
-
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
 class UserDAO(BaseDAO):
@@ -53,6 +52,11 @@ class UserDAO(BaseDAO):
         # Save to users table
         created_item = self._safe_put_item(self.table, user_item)
 
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"User created successfully: username={user_create.username}, email={user_create.email}"
+        )
+
         return User(
             Pk=user_create.username,
             Sk='USER',
@@ -69,17 +73,26 @@ class UserDAO(BaseDAO):
     def get_user_by_username(self, username: str) -> User:
         """Get user by username (Primary Key lookup)"""
         # Simplified: base_dao._safe_get_item handles all exception cases
-        logger.info(f"🔍 DEBUG: Looking up user by username: '{username}'")
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Looking up user by username: '{username}'"
+        )
 
         key = {
             'Pk': username,  # Primary key
             'Sk': 'USER'  # Sort key for user records
         }
 
-        logger.info(f"🔍 DEBUG: Using key: {key}")
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Using key: {key}"
+        )
 
         item = self._safe_get_item(self.table, key)
-        logger.info(f"🔍 DEBUG: Database returned item: {item}")
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Database returned item: {item}"
+        )
 
         if not item:
             raise CNOPUserNotFoundException(f"User with username '{username}' not found")
@@ -136,7 +149,10 @@ class UserDAO(BaseDAO):
 
         stored_hash = item.get('password_hash')
         if not stored_hash:
-            logger.error(f"No password hash found for user {username}")
+            logger.error(
+            action=LogActions.ERROR,
+            message=f"No password hash found for user {username}"
+        )
             raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{username}'")
 
         # Verify password
@@ -184,7 +200,10 @@ class UserDAO(BaseDAO):
         expression_names["#updated_at"] = "updated_at"
 
         if not update_parts:
-            logger.warning(f"No fields to update for user {username}")
+            logger.warning(
+            action=LogActions.ERROR,
+            message=f"No fields to update for user {username}"
+        )
             return existing_user
 
         update_expression = "SET " + ", ".join(update_parts)
@@ -197,6 +216,11 @@ class UserDAO(BaseDAO):
             update_expression,
             expression_values,
             expression_names
+        )
+
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"User updated successfully: username={username}, fields_updated={[k for k, v in locals().items() if v is not None and k in ['email', 'first_name', 'last_name', 'phone']]}"
         )
 
         # Return updated user
@@ -217,4 +241,12 @@ class UserDAO(BaseDAO):
         """Delete a user by username"""
         # Simplified: base_dao._safe_delete_item handles database exceptions
         key = {'Pk': username, 'Sk': 'USER'}
-        return self._safe_delete_item(self.table, key)
+        success = self._safe_delete_item(self.table, key)
+
+        if success:
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"User deleted successfully: username={username}"
+            )
+
+        return success

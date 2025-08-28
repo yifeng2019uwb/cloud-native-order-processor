@@ -4,7 +4,6 @@ Asset Transaction DAO for managing asset transactions.
 
 from typing import List, Optional
 from datetime import datetime
-import logging
 from boto3.dynamodb.conditions import Key
 from decimal import Decimal
 
@@ -12,8 +11,9 @@ from ..base_dao import BaseDAO
 from ...entities.asset import AssetTransaction, AssetTransactionCreate
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPTransactionNotFoundException
+from ....shared.logging import BaseLogger, Loggers, LogActions
 
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
 class AssetTransactionDAO(BaseDAO):
@@ -27,9 +27,12 @@ class AssetTransactionDAO(BaseDAO):
 
     def create_asset_transaction(self, transaction_create: AssetTransactionCreate) -> AssetTransaction:
         """Create a new asset transaction"""
-        logger.info(f"Creating asset transaction: user={transaction_create.username}, "
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Creating asset transaction: user={transaction_create.username}, "
                    f"asset={transaction_create.asset_id}, type={transaction_create.transaction_type.value}, "
-                   f"quantity={transaction_create.quantity}, price={transaction_create.price}")
+                   f"quantity={transaction_create.quantity}, price={transaction_create.price}"
+        )
 
         now = datetime.utcnow().isoformat()
         timestamp_iso = now.replace('+00:00', 'Z')
@@ -49,9 +52,13 @@ class AssetTransactionDAO(BaseDAO):
         }
 
         self._safe_put_item(self.table, transaction_item)
-        logger.info(f"Asset transaction created: user={transaction_create.username}, "
+
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Asset transaction created successfully: user={transaction_create.username}, "
                    f"asset={transaction_create.asset_id}, type={transaction_create.transaction_type.value}, "
-                   f"quantity={transaction_create.quantity}")
+                   f"quantity={transaction_create.quantity}"
+        )
 
         return AssetTransaction(
             Pk=transaction_item['Pk'],
@@ -123,7 +130,10 @@ class AssetTransactionDAO(BaseDAO):
         # Note: This method requires a GSI on username for efficient querying
         # For now, we'll return empty list and add GSI later when needed
         # TODO: Add GSI on username field for efficient user transaction queries
-        logger.warning("get_user_transactions() requires GSI on username field for efficient querying")
+        logger.warning(
+            action=LogActions.ERROR,
+            message="get_user_transactions() requires GSI on username field for efficient querying"
+        )
         return []
 
     def delete_asset_transaction(self, username: str, asset_id: str, timestamp: str) -> bool:
@@ -133,4 +143,12 @@ class AssetTransactionDAO(BaseDAO):
             'Sk': timestamp
         }
 
-        return self._safe_delete_item(self.table, key)
+        success = self._safe_delete_item(self.table, key)
+
+        if success:
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Asset transaction deleted successfully: user={username}, asset={asset_id}, timestamp={timestamp}"
+            )
+
+        return success

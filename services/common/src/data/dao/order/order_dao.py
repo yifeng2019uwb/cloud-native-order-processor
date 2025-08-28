@@ -3,7 +3,6 @@ Order DAO for database operations.
 Handles CRUD operations for Order entities using DynamoDB.
 """
 
-import logging
 from typing import List
 from datetime import datetime, timezone
 
@@ -15,8 +14,9 @@ from ...entities.order.enums import OrderStatus
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPOrderNotFoundException
 from ....exceptions import CNOPEntityValidationException
+from ....shared.logging import BaseLogger, Loggers, LogActions
 
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
 class OrderDAO(BaseDAO):
@@ -63,15 +63,24 @@ class OrderDAO(BaseDAO):
             item['GSI-SK'] = order.asset_id
 
             # Insert into DynamoDB
-            logger.debug(f"Order item prepared: {item}")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Order item prepared: {item}"
+            )
             self.table.put_item(Item=item)
 
-            logger.info(f"Order created successfully: id={order.order_id}, user={order.username}, "
-                       f"asset={order.asset_id}, type={order.order_type.value}")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Order created successfully: id={order.order_id}, user={order.username}, "
+                       f"asset={order.asset_id}, type={order.order_type.value}"
+            )
             return order
 
         except Exception as e:
-            logger.error(f"Failed to create order '{order.order_id}': {str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to create order '{order.order_id}': {str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while creating order '{order.order_id}': {str(e)}")
 
     def get_order(self, order_id: str) -> Order:
@@ -133,10 +142,19 @@ class OrderDAO(BaseDAO):
             )
 
             updated_item = response['Attributes']
+
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Order updated successfully: id={order_id}, status={updates.status.value if updates.status else 'unchanged'}"
+            )
+
             return Order(**updated_item)
 
         except Exception as e:
-            logger.error(f"Failed to update order '{order_id}': {str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to update order '{order_id}': {str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while updating order '{order_id}': {str(e)}")
 
     def get_orders_by_user(self, username: str, limit: int = 50, offset: int = 0) -> List[Order]:
@@ -171,7 +189,10 @@ class OrderDAO(BaseDAO):
             return orders
 
         except Exception as e:
-            logger.error(f"Failed to get orders for user '{username}': {str(e)}")
+            logger.error(
+            action=LogActions.ERROR,
+            message=f"Failed to get orders for user '{username}': {str(e)}"
+        )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}': {str(e)}")
 
     def get_orders_by_user_and_asset(self, username: str, asset_id: str, limit: int = 50, offset: int = 0) -> List[Order]:
@@ -207,7 +228,10 @@ class OrderDAO(BaseDAO):
             return orders
 
         except Exception as e:
-            logger.error(f"Failed to get orders for user '{username}' and asset '{asset_id}': {str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get orders for user '{username}' and asset '{asset_id}': {str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}' and asset '{asset_id}': {str(e)}")
 
     def get_orders_by_user_and_status(self, username: str, status: OrderStatus, limit: int = 50, offset: int = 0) -> List[Order]:
@@ -238,7 +262,10 @@ class OrderDAO(BaseDAO):
             return filtered_orders[:limit]
 
         except Exception as e:
-            logger.error(f"Failed to get orders for user '{username}' with status '{status.value}': {str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get orders for user '{username}' with status '{status.value}': {str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}' with status '{status.value}': {str(e)}")
 
     def update_order_status(self, order_id: str, new_status: OrderStatus, reason: str = None) -> Order:
@@ -280,10 +307,19 @@ class OrderDAO(BaseDAO):
             )
 
             updated_item = response['Attributes']
+
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Order status updated successfully: id={order_id}, new_status={new_status.value}, reason={reason or 'none'}"
+            )
+
             return Order(**updated_item)
 
         except Exception as e:
-            logger.error(f"Failed to update order status '{order_id}': {str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to update order status '{order_id}': {str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while updating order status for order '{order_id}': {str(e)}")
 
     def order_exists(self, order_id: str) -> bool:
@@ -308,5 +344,8 @@ class OrderDAO(BaseDAO):
             return 'Item' in response
 
         except Exception as e:
-            logger.error(f"Failed to check if order '{order_id}' exists: {str(e)}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to check if order '{order_id}' exists: {str(e)}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while checking existence of order '{order_id}': {str(e)}")

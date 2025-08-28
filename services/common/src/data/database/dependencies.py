@@ -1,21 +1,20 @@
 """
-Common Database Dependencies
+Database dependencies and connection management.
 
-Provides optimized database connection and DAO dependency injection
-for all microservices to ensure consistent database access patterns.
+This module provides centralized database connection management
+and dependency injection for all services.
 """
 
-import logging
-from fastapi import Depends, HTTPException, status
-
+from ...shared.logging import BaseLogger, Loggers
+from typing import Optional
 from .dynamodb_connection import dynamodb_manager
+from .redis_connection import get_redis_manager
 from ..dao.user import UserDAO, BalanceDAO
 from ..dao.inventory import AssetDAO
 from ..dao.order import OrderDAO
 from ..dao.asset import AssetBalanceDAO, AssetTransactionDAO
 
-
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
 def get_user_dao() -> UserDAO:

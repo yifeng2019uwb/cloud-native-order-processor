@@ -2,7 +2,6 @@
 Balance DAO for user service database operations.
 """
 
-import logging
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List
@@ -15,8 +14,9 @@ from ...entities.user import Balance, BalanceTransaction, BalanceCreate, Balance
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPBalanceNotFoundException, CNOPTransactionNotFoundException
 from ..base_dao import BaseDAO
+from ....shared.logging import BaseLogger, Loggers, LogActions
 
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
 class BalanceDAO(BaseDAO):
@@ -27,7 +27,6 @@ class BalanceDAO(BaseDAO):
         self.table_name = "users"  # Using the same user table for balance data
         # Table reference - change here if we need to switch tables
         self.table = self.db.users_table
-
 
 
     def get_balance(self, username: str) -> Balance:
@@ -55,7 +54,10 @@ class BalanceDAO(BaseDAO):
     def update_balance(self, username: str, current_balance: Decimal) -> Balance:
         """Update balance for a user."""
         try:
-            logger.info(f"Updating balance: user={username}, new_balance={current_balance}")
+            logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Updating balance: user={username}, new_balance={current_balance}"
+        )
             updated_at = datetime.utcnow()
 
             response = self.table.update_item(
@@ -70,7 +72,10 @@ class BalanceDAO(BaseDAO):
                 },
                 ReturnValues="ALL_NEW"
             )
-            logger.info(f"Balance updated successfully: user={username}, new_balance={current_balance}")
+            logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Balance updated successfully: user={username}, new_balance={current_balance}"
+        )
 
             item = response["Attributes"]
             return Balance(
@@ -84,7 +89,10 @@ class BalanceDAO(BaseDAO):
             )
 
         except Exception as e:
-            logger.error(f"Failed to update balance for user '{username}': {e}")
+            logger.error(
+            action=LogActions.ERROR,
+            message=f"Failed to update balance for user '{username}': {e}"
+        )
             raise CNOPDatabaseOperationException(f"Database operation failed while updating balance for user '{username}': {str(e)}")
 
     def create_balance(self, balance_create: BalanceCreate) -> Balance:
@@ -103,6 +111,11 @@ class BalanceDAO(BaseDAO):
 
             self.table.put_item(Item=balance_item)
 
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Balance created successfully: user={balance_create.username}, initial_balance={balance_create.initial_balance}"
+            )
+
             return Balance(
                 Pk=balance_item["Pk"],
                 Sk=balance_item["Sk"],
@@ -114,15 +127,21 @@ class BalanceDAO(BaseDAO):
             )
 
         except Exception as e:
-            logger.error(f"Failed to create balance for user '{balance_create.username}': {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to create balance for user '{balance_create.username}': {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while creating balance for user '{balance_create.username}': {str(e)}")
 
     def create_transaction(self, transaction: BalanceTransaction) -> BalanceTransaction:
         """Create a new balance transaction."""
         try:
-            logger.info(f"Creating balance transaction: user={transaction.username}, "
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Creating balance transaction: user={transaction.username}, "
                        f"type={transaction.transaction_type.value}, amount={transaction.amount}, "
-                       f"description={transaction.description}")
+                       f"description={transaction.description}"
+            )
 
             # Create transaction record
             item = {
@@ -139,15 +158,24 @@ class BalanceDAO(BaseDAO):
                 "entity_type": "balance_transaction"
             }
 
-            logger.debug(f"Transaction item prepared: {item}")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Transaction item prepared: {item}"
+            )
             self.table.put_item(Item=item)
-            logger.info(f"Balance transaction created successfully: user={transaction.username}, "
-                       f"amount={transaction.amount}, reference_id={transaction.reference_id}")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Balance transaction created successfully: user={transaction.username}, "
+                       f"amount={transaction.amount}, reference_id={transaction.reference_id}"
+            )
 
             return transaction
 
         except Exception as e:
-            logger.error(f"Failed to create transaction for user '{transaction.username}': {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to create transaction for user '{transaction.username}': {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while creating transaction for user '{transaction.username}': {str(e)}")
 
     def _update_balance_from_transaction(self, transaction: BalanceTransaction):
@@ -158,20 +186,29 @@ class BalanceDAO(BaseDAO):
         All transactions in this simplified system are immediately completed.
         """
         try:
-            logger.info(f"Updating balance from transaction: user={transaction.username}, "
-                       f"transaction_amount={transaction.amount}, type={transaction.transaction_type.value}")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Updating balance from transaction: user={transaction.username}, "
+                       f"transaction_amount={transaction.amount}, type={transaction.transaction_type.value}"
+            )
 
             # Get current balance and update it
             current_balance = self.get_balance(transaction.username)
             # Calculate new balance value
             new_balance = current_balance.current_balance + transaction.amount
-            logger.debug(f"Balance calculation: current={current_balance.current_balance}, "
-                        f"transaction={transaction.amount}, new={new_balance}")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Balance calculation: current={current_balance.current_balance}, "
+                        f"transaction={transaction.amount}, new={new_balance}"
+            )
 
             # Update existing balance
             self.update_balance(transaction.username, new_balance)
-            logger.info(f"Balance updated from transaction: user={transaction.username}, "
-                       f"new_balance={new_balance}")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Balance updated from transaction: user={transaction.username}, "
+                       f"new_balance={new_balance}"
+            )
 
         except Exception as e:
             raise CNOPDatabaseOperationException(f"Database operation failed while updating balance from transaction for user '{transaction.username}': {str(e)}")
@@ -187,11 +224,17 @@ class BalanceDAO(BaseDAO):
                 if transaction.transaction_id == transaction_id:
                     return transaction
 
-            logger.warning(f"Transaction '{transaction_id}' not found for user '{username}'")
+            logger.warning(
+            action=LogActions.ERROR,
+            message=f"Transaction '{transaction_id}' not found for user '{username}'"
+        )
             raise CNOPTransactionNotFoundException(f"Transaction '{transaction_id}' not found for user '{username}'")
 
         except Exception as e:
-            logger.error(f"Failed to get transaction '{transaction_id}' for user '{username}': {e}")
+            logger.error(
+            action=LogActions.ERROR,
+            message=f"Failed to get transaction '{transaction_id}' for user '{username}': {e}"
+        )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving transaction '{transaction_id}' for user '{username}': {str(e)}")
 
     def get_user_transactions(self, username: str, limit: int = 50,
@@ -229,5 +272,8 @@ class BalanceDAO(BaseDAO):
             return transactions, last_evaluated_key
 
         except Exception as e:
-            logger.error(f"Failed to get transactions for user '{username}': {e}")
+            logger.error(
+            action=LogActions.ERROR,
+            message=f"Failed to get transactions for user '{username}': {e}"
+        )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving transactions for user '{username}': {str(e)}")

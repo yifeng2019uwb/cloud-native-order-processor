@@ -4,7 +4,6 @@ Asset Balance DAO for managing user asset balances.
 
 from typing import List, Optional
 from datetime import datetime
-import logging
 from boto3.dynamodb.conditions import Key
 from decimal import Decimal
 
@@ -12,8 +11,9 @@ from ..base_dao import BaseDAO
 from ...entities.asset import AssetBalance
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPAssetBalanceNotFoundException
+from ....shared.logging import BaseLogger, Loggers, LogActions
 
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
 class AssetBalanceDAO(BaseDAO):
@@ -27,7 +27,10 @@ class AssetBalanceDAO(BaseDAO):
 
     def upsert_asset_balance(self, username: str, asset_id: str, quantity: Decimal) -> AssetBalance:
         """Create or update asset balance atomically"""
-        logger.info(f"Upserting asset balance: user={username}, asset={asset_id}, quantity={quantity}")
+        logger.info(
+        action=LogActions.DB_OPERATION,
+        message=f"Upserting asset balance: user={username}, asset={asset_id}, quantity={quantity}"
+    )
         # logger.debug(f"Parameters received: username={username}, asset_id={asset_id}, quantity={quantity}")
         now = datetime.utcnow().isoformat()
 
@@ -36,7 +39,10 @@ class AssetBalanceDAO(BaseDAO):
             existing_balance = self.get_asset_balance(username, asset_id)
             # Asset balance exists - update it
             new_quantity = existing_balance.quantity + quantity
-            logger.info(f"Existing balance found: {existing_balance.quantity}, adding {quantity}, new total: {new_quantity}")
+            logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Existing balance found: {existing_balance.quantity}, adding {quantity}, new total: {new_quantity}"
+        )
 
             # Update existing balance
             key = {
@@ -52,7 +58,10 @@ class AssetBalanceDAO(BaseDAO):
                 '#quantity': 'quantity'
             }
 
-            logger.info(f"Updating existing asset balance: key={key}, new_quantity={new_quantity}")
+            logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Updating existing asset balance: key={key}, new_quantity={new_quantity}"
+        )
             updated_item = self._safe_update_item(
                 self.table,
                 key,
@@ -60,11 +69,17 @@ class AssetBalanceDAO(BaseDAO):
                 expression_values,
                 expression_names
             )
-            logger.info(f"Asset balance updated: user={username}, asset={asset_id}, quantity={existing_balance.quantity} -> {new_quantity}")
+            logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Asset balance updated: user={username}, asset={asset_id}, quantity={existing_balance.quantity} -> {new_quantity}"
+        )
 
             # Extract asset_id from Sk field (format: ASSET#{asset_id})
             asset_id_from_sk = updated_item['Sk'].split('#')[1] if '#' in updated_item['Sk'] else updated_item['Sk']
-            logger.info(f"Extracted asset_id from Sk for update: {asset_id_from_sk}")
+            logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Extracted asset_id from Sk for update: {asset_id_from_sk}"
+        )
 
             return AssetBalance(
                 Pk=updated_item['Pk'],
@@ -79,7 +94,10 @@ class AssetBalanceDAO(BaseDAO):
         except CNOPAssetBalanceNotFoundException:
             # Asset balance doesn't exist - create new one
             new_quantity = quantity
-            logger.info(f"No existing balance found, creating new balance with quantity: {new_quantity}")
+            logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"No existing balance found, creating new balance with quantity: {new_quantity}"
+        )
 
             balance_item = {
                 'Pk': username,
@@ -91,9 +109,15 @@ class AssetBalanceDAO(BaseDAO):
                 'updated_at': now
             }
 
-            logger.info(f"Creating new asset balance: item={balance_item}")
+            logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Creating new asset balance: item={balance_item}"
+        )
             created_item = self._safe_put_item(self.table, balance_item)
-            logger.info(f"Asset balance created: user={username}, asset={asset_id}, quantity={new_quantity}")
+            logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Asset balance created: user={username}, asset={asset_id}, quantity={new_quantity}"
+        )
 
             return AssetBalance(
                 Pk=created_item['Pk'],
@@ -107,7 +131,10 @@ class AssetBalanceDAO(BaseDAO):
 
     def get_asset_balance(self, username: str, asset_id: str) -> AssetBalance:
         """Get specific asset balance for user"""
-        logger.info(f"Getting asset balance: user={username}, asset={asset_id}")
+        logger.info(
+        action=LogActions.DB_OPERATION,
+        message=f"Getting asset balance: user={username}, asset={asset_id}"
+    )
         key = {
             'Pk': username,
             'Sk': f"ASSET#{asset_id}"
@@ -116,10 +143,16 @@ class AssetBalanceDAO(BaseDAO):
         item = self._safe_get_item(self.table, key)
 
         if not item:
-            logger.info(f"Asset balance not found for user '{username}' and asset '{asset_id}'")
+            logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Asset balance not found for user '{username}' and asset '{asset_id}'"
+        )
             raise CNOPAssetBalanceNotFoundException(f"Asset balance not found for user '{username}' and asset '{asset_id}'")
 
-        logger.info(f"Creating AssetBalance object from item: {item}")
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Creating AssetBalance object from item: {item}"
+        )
 
         return AssetBalance(
             Pk=item['Pk'],
@@ -135,14 +168,26 @@ class AssetBalanceDAO(BaseDAO):
         """Get all asset balances for a user"""
         key_condition = Key('Pk').eq(username) & Key('Sk').begins_with('ASSET#')
 
-        logger.info(f"Querying asset balances for user: {username}")
-        logger.info(f"Key condition: {key_condition}")
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Querying asset balances for user: {username}"
+        )
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Key condition: {key_condition}"
+        )
 
         items = self._safe_query(self.table, key_condition)
 
-        logger.info(f"Query returned {len(items)} items")
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Query returned {len(items)} items"
+        )
         if items:
-            logger.info(f"First item structure: {items[0]}")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"First item structure: {items[0]}"
+            )
 
         balances = []
         for item in items:
@@ -158,10 +203,16 @@ class AssetBalanceDAO(BaseDAO):
                 )
                 balances.append(balance)
             except KeyError as e:
-                logger.error(f"Missing field in item: {e}, item: {item}")
+                logger.error(
+                action=LogActions.ERROR,
+                message=f"Missing field in item: {e}, item: {item}"
+            )
                 raise
             except Exception as e:
-                logger.error(f"Error processing item: {e}, item: {item}")
+                logger.error(
+                    action=LogActions.ERROR,
+                    message=f"Error processing item: {e}, item: {item}"
+                )
                 raise
 
         return balances
@@ -173,4 +224,12 @@ class AssetBalanceDAO(BaseDAO):
             'Sk': f"ASSET#{asset_id}"
         }
 
-        return self._safe_delete_item(self.table, key)
+        success = self._safe_delete_item(self.table, key)
+
+        if success:
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Asset balance deleted successfully: user={username}, asset={asset_id}"
+            )
+
+        return success

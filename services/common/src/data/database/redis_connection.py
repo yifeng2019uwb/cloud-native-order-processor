@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
 """
-Redis connection manager for both local K8s and AWS environments
-Handles connection pooling, retries, and environment-specific configurations
+Redis connection manager for microservices.
+
+Provides centralized Redis connection management with connection pooling,
+retry logic, and health monitoring for all services.
 """
 
-import os
-import logging
+from ...shared.logging import BaseLogger, Loggers, LogActions
 import redis
+import os
 from typing import Optional, Dict, Any
+from datetime import datetime
 from contextlib import contextmanager
-from redis.connection import ConnectionPool
-from redis.exceptions import RedisError, ConnectionError, TimeoutError
+from .redis_config import RedisConfig, get_redis_config, get_redis_connection_params
 
-from .redis_config import get_redis_config, get_redis_connection_params
-
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.CACHE, log_to_file=True)
 
 class RedisConnectionManager:
     """Manages Redis connections with proper error handling and pooling"""
 
     def __init__(self):
-        self._pool: Optional[ConnectionPool] = None
+        self._pool: Optional[redis.ConnectionPool] = None
         self._client: Optional[redis.Redis] = None
         self._config = get_redis_config()
         self._is_connected = False
 
-    def _create_pool(self) -> ConnectionPool:
+    def _create_pool(self) -> redis.ConnectionPool:
         """Create Redis connection pool"""
         params = get_redis_connection_params()
 
@@ -62,7 +62,10 @@ class RedisConnectionManager:
                 self._pool = self._create_pool()
 
             self._client = redis.Redis(connection_pool=self._pool)
-            logger.info(f"Created Redis client for {self._config.host}:{self._config.port}")
+            logger.info(
+                action=LogActions.CACHE_OPERATION,
+                message=f"Created Redis client for {self._config.host}:{self._config.port}"
+            )
 
         return self._client
 
@@ -72,11 +75,17 @@ class RedisConnectionManager:
             client = self.get_client()
             client.ping()
             self._is_connected = True
-            logger.info("Redis connection test successful")
+            logger.info(
+                action=LogActions.HEALTH_CHECK,
+                message="Redis connection test successful"
+            )
             return True
-        except (ConnectionError, TimeoutError, RedisError) as e:
+        except (redis.ConnectionError, redis.TimeoutError, redis.RedisError) as e:
             self._is_connected = False
-            logger.error(f"Redis connection test failed: {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Redis connection test failed: {e}"
+            )
             return False
 
     def is_connected(self) -> bool:
@@ -89,12 +98,18 @@ class RedisConnectionManager:
         client = self.get_client()
         try:
             yield client
-        except (ConnectionError, TimeoutError) as e:
-            logger.error(f"Redis connection error: {e}")
+        except (redis.ConnectionError, redis.TimeoutError) as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Redis connection error: {e}"
+            )
             self._is_connected = False
             raise
-        except RedisError as e:
-            logger.error(f"Redis operation error: {e}")
+        except redis.RedisError as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Redis operation error: {e}"
+            )
             raise
 
     def close(self):
@@ -108,7 +123,10 @@ class RedisConnectionManager:
             self._pool = None
 
         self._is_connected = False
-        logger.info("Redis connections closed")
+        logger.info(
+            action=LogActions.CACHE_OPERATION,
+            message="Redis connections closed"
+        )
 
 # Global connection manager instance
 _redis_manager: Optional[RedisConnectionManager] = None
@@ -144,8 +162,11 @@ def redis_set(key: str, value: str, expire: Optional[int] = None) -> bool:
                 return client.setex(key, expire, value)
             else:
                 return client.set(key, value)
-    except RedisError as e:
-        logger.error(f"Failed to set Redis key {key}: {e}")
+    except redis.RedisError as e:
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Failed to set Redis key {key}: {e}"
+        )
         return False
 
 def redis_get(key: str) -> Optional[str]:
@@ -153,8 +174,11 @@ def redis_get(key: str) -> Optional[str]:
     try:
         with get_redis_manager().get_connection() as client:
             return client.get(key)
-    except RedisError as e:
-        logger.error(f"Failed to get Redis key {key}: {e}")
+    except redis.RedisError as e:
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Failed to get Redis key {key}: {e}"
+        )
         return None
 
 def redis_delete(key: str) -> bool:
@@ -162,8 +186,11 @@ def redis_delete(key: str) -> bool:
     try:
         with get_redis_manager().get_connection() as client:
             return bool(client.delete(key))
-    except RedisError as e:
-        logger.error(f"Failed to delete Redis key {key}: {e}")
+    except redis.RedisError as e:
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Failed to delete Redis key {key}: {e}"
+        )
         return False
 
 def redis_exists(key: str) -> bool:
@@ -171,6 +198,9 @@ def redis_exists(key: str) -> bool:
     try:
         with get_redis_manager().get_connection() as client:
             return bool(client.exists(key))
-    except RedisError as e:
-        logger.error(f"Failed to check Redis key {key}: {e}")
+    except redis.RedisError as e:
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Failed to check Redis key {key}: {e}"
+        )
         return False

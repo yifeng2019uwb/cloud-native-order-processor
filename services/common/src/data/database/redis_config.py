@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-Redis configuration for both local K8s and AWS environments
-Supports automatic environment detection and configuration
+Redis configuration and connection management.
+
+Provides centralized Redis configuration and connection management
+for all microservices.
 """
 
 import os
-import logging
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
+from ...shared.logging import BaseLogger, Loggers, LogActions
+import redis
 
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.CACHE, log_to_file=True)
 
 @dataclass
 class RedisConfig:
@@ -68,7 +71,10 @@ def get_redis_config() -> RedisConfig:
             "ssl_cert_reqs": None,
         })
 
-    logger.info(f"Redis configuration for {environment}: {config['host']}:{config['port']}")
+    logger.info(
+        action=LogActions.CACHE_OPERATION,
+        message=f"Redis configuration for {environment}: {config['host']}:{config['port']}"
+    )
     return RedisConfig(**config)
 
 def get_redis_url() -> str:

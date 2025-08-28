@@ -11,13 +11,13 @@ Responsibilities:
 """
 
 import bcrypt
-import logging
+from ...shared.logging import BaseLogger, Loggers
 import re
 from typing import Optional
 
 from ...exceptions import CNOPEntityValidationException
 
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
 
 
 class PasswordManager:

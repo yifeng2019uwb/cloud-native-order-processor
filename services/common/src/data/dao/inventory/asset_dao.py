@@ -1,6 +1,5 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime, UTC
-import logging
 from boto3.dynamodb.conditions import Attr
 import sys
 import os
@@ -12,9 +11,9 @@ from ..base_dao import BaseDAO
 from ...entities.inventory import Asset, AssetCreate, AssetUpdate
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPAssetNotFoundException
+from ....shared.logging import BaseLogger, Loggers, LogActions
 
-
-logger = logging.getLogger(__name__)
+logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
 class AssetDAO(BaseDAO):
@@ -51,6 +50,12 @@ class AssetDAO(BaseDAO):
                 'updated_at': now
             }
             created_item = self._safe_put_item(self.table, asset_item)
+
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Asset created successfully: id={asset_create.asset_id}, name={asset_create.name}, category={asset_create.category}"
+            )
+
             return Asset(
                 asset_id=asset_create.asset_id,
                 name=asset_create.name,
@@ -72,7 +77,10 @@ class AssetDAO(BaseDAO):
                 updated_at=datetime.fromisoformat(created_item['updated_at'])
             )
         except Exception as e:
-            logger.error(f"Failed to create asset '{asset_create.asset_id}': {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to create asset '{asset_create.asset_id}': {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while creating asset '{asset_create.asset_id}': {str(e)}")
 
     def get_asset_by_id(self, asset_id: str) -> Asset:
@@ -80,7 +88,10 @@ class AssetDAO(BaseDAO):
             key = {'product_id': asset_id}
             item = self._safe_get_item(self.table, key)
             if not item:
-                logger.warning(f"Asset '{asset_id}' not found")
+                logger.warning(
+                    action=LogActions.ERROR,
+                    message=f"Asset '{asset_id}' not found"
+                )
                 raise CNOPAssetNotFoundException(f"Asset '{asset_id}' not found")
             return Asset(
                 asset_id=item['asset_id'],
@@ -103,13 +114,19 @@ class AssetDAO(BaseDAO):
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
         except Exception as e:
-            logger.error(f"Failed to get asset '{asset_id}': {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get asset '{asset_id}': {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving asset '{asset_id}': {str(e)}")
 
     def get_all_assets(self, active_only: bool = False) -> List[Asset]:
         """Get all assets, optionally filter by active status"""
         try:
-            logger.info(f"🔍 DEBUG: Getting all assets, active_only: {active_only}")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Getting all assets, active_only: {active_only}"
+            )
 
             # Scan the inventory table
             scan_kwargs = {}
@@ -119,7 +136,10 @@ class AssetDAO(BaseDAO):
             response = self.table.scan(**scan_kwargs)
             items = response.get('Items', [])
 
-            logger.info(f"🔍 DEBUG: Found {len(items)} assets")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Found {len(items)} assets"
+            )
 
             assets = []
             for item in items:
@@ -150,13 +170,19 @@ class AssetDAO(BaseDAO):
             return assets
 
         except Exception as e:
-            logger.error(f"Failed to get all assets: {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get all assets: {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving all assets: {str(e)}")
 
     def get_assets_by_category(self, category: str) -> List[Asset]:
         """Get assets by category"""
         try:
-            logger.info(f"🔍 DEBUG: Getting assets by category: '{category}'")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Getting assets by category: '{category}'"
+            )
 
             # Scan with filter expression
             response = self.table.scan(
@@ -164,7 +190,10 @@ class AssetDAO(BaseDAO):
             )
             items = response.get('Items', [])
 
-            logger.info(f"🔍 DEBUG: Found {len(items)} assets in category '{category}'")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Found {len(items)} assets in category '{category}'"
+            )
 
             assets = []
             for item in items:
@@ -194,7 +223,10 @@ class AssetDAO(BaseDAO):
             return assets
 
         except Exception as e:
-            logger.error(f"Failed to get assets by category '{category}': {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get assets by category '{category}': {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving assets by category '{category}': {str(e)}")
 
     def update_asset(self, asset_id: str, asset_update: AssetUpdate) -> Asset:
@@ -224,6 +256,12 @@ class AssetDAO(BaseDAO):
                 update_expression,
                 expression_values
             )
+
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Asset updated successfully: id={asset_id}, fields_updated={list(asset_update.model_dump(exclude_unset=True).keys())}"
+            )
+
             return Asset(
                 asset_id=item.get('asset_id', asset_id),
                 name=item['name'],
@@ -245,7 +283,10 @@ class AssetDAO(BaseDAO):
                 updated_at=datetime.fromisoformat(item['updated_at'])
             )
         except Exception as e:
-            logger.error(f"Failed to update asset '{asset_id}': {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to update asset '{asset_id}': {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while updating asset '{asset_id}': {str(e)}")
 
     def delete_asset(self, asset_id: str) -> bool:
@@ -258,12 +299,18 @@ class AssetDAO(BaseDAO):
             success = self._safe_delete_item(self.table, key)
 
             if success:
-                logger.info(f"Asset deleted successfully: {asset_id}")
+                logger.info(
+                    action=LogActions.DB_OPERATION,
+                    message=f"Asset deleted successfully: {asset_id}"
+                )
 
             return success
 
         except Exception as e:
-            logger.error(f"Failed to delete asset '{asset_id}': {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to delete asset '{asset_id}': {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while deleting asset '{asset_id}': {str(e)}")
 
     def update_asset_price(self, asset_id: str, new_price: float) -> Asset:
@@ -278,7 +325,10 @@ class AssetDAO(BaseDAO):
             return self.update_asset(asset_id, asset_update)
 
         except Exception as e:
-            logger.error(f"Failed to update price for asset '{asset_id}': {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to update price for asset '{asset_id}': {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while updating price for asset '{asset_id}': {str(e)}")
 
     def update_asset_amount(self, asset_id: str, new_amount: float) -> Asset:
@@ -288,7 +338,10 @@ class AssetDAO(BaseDAO):
             return self.update_asset(asset_id, asset_update)
 
         except Exception as e:
-            logger.error(f"Failed to update amount for asset '{asset_id}': {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to update amount for asset '{asset_id}': {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while updating amount for asset '{asset_id}': {str(e)}")
 
     def deactivate_asset(self, asset_id: str) -> Asset:
@@ -298,7 +351,10 @@ class AssetDAO(BaseDAO):
             return self.update_asset(asset_id, asset_update)
 
         except Exception as e:
-            logger.error(f"Failed to deactivate asset '{asset_id}': {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to deactivate asset '{asset_id}': {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while deactivating asset '{asset_id}': {str(e)}")
 
     def activate_asset(self, asset_id: str) -> Asset:
@@ -308,7 +364,10 @@ class AssetDAO(BaseDAO):
             return self.update_asset(asset_id, asset_update)
 
         except Exception as e:
-            logger.error(f"Failed to activate asset '{asset_id}': {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to activate asset '{asset_id}': {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while activating asset '{asset_id}': {str(e)}")
 
     def get_asset_stats(self) -> Dict[str, Any]:
@@ -333,5 +392,8 @@ class AssetDAO(BaseDAO):
             }
 
         except Exception as e:
-            logger.error(f"Failed to get asset stats: {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get asset stats: {e}"
+            )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving asset statistics: {str(e)}")
