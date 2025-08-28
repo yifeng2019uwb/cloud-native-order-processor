@@ -130,13 +130,15 @@ class TestLoggingMiddleware:
         assert mock_logger.info.call_count == 2  # request_start and request_complete
 
         # Check request_start log
-        start_log = json.loads(mock_logger.info.call_args_list[0][0][0])
-        assert start_log["event"] == "request_start"
-        assert start_log["request_id"] == "test-request-id"
-        assert start_log["method"] == "GET"
-        assert start_log["path"] == "/test"
-        assert start_log["service"] == "user-service"
-        assert start_log["environment"] == "k8s"
+        start_call = mock_logger.info.call_args_list[0]
+        assert start_call[1]["action"] == "request_start"
+        # The message contains JSON, so we need to parse it
+        start_message = json.loads(start_call[1]["message"])
+        assert start_message["request_id"] == "test-request-id"
+        assert start_message["method"] == "GET"
+        assert start_message["path"] == "/test"
+        assert start_message["service"] == "user-service"
+        assert start_message["environment"] == "k8s"
 
     @pytest.mark.asyncio
     @patch('main.time.time')
@@ -167,15 +169,17 @@ class TestLoggingMiddleware:
         assert mock_logger.error.call_count == 1  # request_error
 
         # Check error log
-        error_log = json.loads(mock_logger.error.call_args[0][0])
-        assert error_log["event"] == "request_error"
-        assert error_log["request_id"] == "test-request-id"
-        assert error_log["method"] == "GET"
-        assert error_log["path"] == "/error"
+        error_call = mock_logger.error.call_args
+        assert error_call[1]["action"] == "error"
+        # The message contains JSON, so we need to parse it
+        error_message = json.loads(error_call[1]["message"])
+        assert error_message["request_id"] == "test-request-id"
+        assert error_message["method"] == "GET"
+        assert error_message["path"] == "/error"
         # The error field might be empty or contain different content, just check it exists
-        assert "error" in error_log
-        assert error_log["service"] == "user-service"
-        assert error_log["environment"] == "k8s"
+        assert "error" in error_message
+        assert error_message["service"] == "user-service"
+        assert error_message["environment"] == "k8s"
 
 
 class TestStartupEvent:
@@ -251,7 +255,7 @@ class TestShutdownEvent:
         await shutdown_event()
 
         # Verify logging call
-        mock_logger.info.assert_called_with("👋 User Authentication Service shutting down...")
+        mock_logger.info.assert_called_with(action='service_start', message='User Authentication Service shutting down...')
 
 
 class TestExceptionHandlers:

@@ -7,11 +7,10 @@ Layer 1: Field validation (handled in API models)
 """
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import Union
-import logging
 from datetime import datetime, timezone
 
 # Import user-service API models
-from api_models.balance import TransactionListResponse
+from api_models.balance import TransactionListResponse, TransactionResponse
 from api_models.shared.common import ErrorResponse
 
 # Import common DAO models
@@ -24,8 +23,11 @@ from controllers.auth.dependencies import get_current_user
 # Import exceptions
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
 
-logger = logging.getLogger(__name__)
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.USER)
 router = APIRouter(tags=["balance"])
 
 
@@ -62,7 +64,7 @@ def get_user_transactions(
     Layer 2: Business validation (user authentication, etc.)
     """
     try:
-        logger.info(f"Transaction history request for user: {current_user.username}")
+        logger.info(action=LogActions.REQUEST_START, message=f"Transaction history request for user: {current_user.username}")
 
         # Get transactions from database
         transactions, _ = balance_dao.get_user_transactions(current_user.username)
@@ -70,8 +72,7 @@ def get_user_transactions(
         if transactions is None:
             transactions = []  # Empty list if no transactions
 
-        # Convert to API response format
-        from api_models.balance import TransactionResponse
+
 
         transaction_responses = []
         for transaction in transactions:
@@ -83,7 +84,7 @@ def get_user_transactions(
                 created_at=transaction.created_at
             ))
 
-        logger.info(f"Transaction history retrieved successfully for user: {current_user.username}")
+        logger.info(action=LogActions.REQUEST_END, message=f"Transaction history retrieved successfully for user: {current_user.username}")
 
         return TransactionListResponse(
             transactions=transaction_responses,
@@ -91,5 +92,5 @@ def get_user_transactions(
         )
 
     except Exception as e:
-        logger.error(f"Failed to get transactions for user {current_user.username}: {str(e)}", exc_info=True)
+        logger.error(action=LogActions.ERROR, message=f"Failed to get transactions for user {current_user.username}: {str(e)}")
         raise CNOPInternalServerException(f"Failed to get transactions: {str(e)}")

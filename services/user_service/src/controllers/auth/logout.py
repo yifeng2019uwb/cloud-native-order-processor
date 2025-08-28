@@ -4,7 +4,6 @@ Path: cloud-native-order-processor/services/user-service/src/controllers/auth/lo
 """
 from fastapi import APIRouter, Depends, status
 from typing import Union
-import logging
 from datetime import datetime, timezone
 
 # Import user-service API models
@@ -17,8 +16,13 @@ from api_models.shared.common import ErrorResponse
 
 # Import dependencies
 from .dependencies import get_current_user
+from common.auth.security import AuditLogger
 
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.USER)
 router = APIRouter(tags=["authentication"])
 
 
@@ -46,14 +50,20 @@ def logout_user(
     current_user = Depends(get_current_user)
 ) -> LogoutSuccessResponse:
     """Logout user (stateless JWT approach)"""
+    # Initialize security managers
+    audit_logger = AuditLogger()
+
     try:
-        logger.info(f"Logout request for user: {current_user.email}")
+        logger.info(action=LogActions.REQUEST_START, message=f"Logout request for user: {current_user.email}")
 
         # For stateless JWT, logout is primarily client-side
         # The server just acknowledges the logout request
         # In production, you might want to implement token blacklisting
 
-        logger.info(f"User logged out successfully: {current_user.email}")
+        logger.info(action=LogActions.REQUEST_END, message=f"User logged out successfully: {current_user.email}")
+
+        # Audit log successful logout
+        audit_logger.log_logout(current_user.username)
 
         return LogoutSuccessResponse(
             message="Logged out successfully",
@@ -61,8 +71,16 @@ def logout_user(
         )
 
     except Exception as e:
-        logger.error(f"Logout failed for user: {str(e)}", exc_info=True)
-        raise LogoutErrorResponse(
+        logger.error(action=LogActions.ERROR, message=f"Logout failed for user: {str(e)}")
+
+        # Audit log failed logout
+        audit_logger.log_security_event(
+            LogActions.SECURITY_EVENT,
+            current_user.username,
+            {"error": str(e)}
+        )
+
+        return LogoutErrorResponse(
             success=False,
             error="LOGOUT_FAILED",
             message="Logout failed. Please try again.",

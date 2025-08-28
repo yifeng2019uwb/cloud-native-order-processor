@@ -7,7 +7,6 @@ Layer 1: Field validation (handled in API models)
 """
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import Union
-import logging
 
 # Import user-service API models
 from api_models.auth.profile import (
@@ -26,7 +25,7 @@ from common.exceptions.shared_exceptions import (
     CNOPEntityNotFoundException as CNOPUserNotFoundException,
     CNOPEntityAlreadyExistsException as CNOPUserAlreadyExistsException
 )
-from user_exceptions import CNOPUserValidationException
+from user_exceptions.exceptions import CNOPUserValidationException
 
 # Import business validation functions only (Layer 2)
 from validation.business_validators import (
@@ -34,12 +33,16 @@ from validation.business_validators import (
     validate_age_requirements
 )
 
-logger = logging.getLogger(__name__)
-router = APIRouter(tags=["profile"])
-
 # Import the centralized get_current_user from dependencies
 from .dependencies import get_current_user
 from common.data.entities.user import UserResponse
+
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.USER)
+router = APIRouter(tags=["profile"])
 
 
 @router.get(
@@ -62,7 +65,7 @@ def get_profile(
 ) -> UserProfileResponse:
     """Get current user profile (requires JWT token)"""
     try:
-        logger.info(f"Profile accessed by user: {current_user.username}")
+        logger.info(action=LogActions.REQUEST_START, message=f"Profile accessed by user: {current_user.username}")
 
         return UserProfileResponse(
             username=current_user.username,
@@ -77,7 +80,7 @@ def get_profile(
         )
 
     except Exception as e:
-        logger.error(f"Failed to get profile for user {current_user.username}: {str(e)}")
+        logger.error(action=LogActions.ERROR, message=f"Failed to get profile for user {current_user.username}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve profile"
@@ -118,7 +121,7 @@ def update_profile(
     Layer 2: Business validation (uniqueness, age requirements, etc.)
     """
     try:
-        logger.info(f"Profile update attempt by user: {current_user.username}")
+        logger.info(action=LogActions.REQUEST_START, message=f"Profile update attempt by user: {current_user.username}")
 
         # Layer 2: Business validation only
         if profile_data.email and profile_data.email != current_user.email:
@@ -139,7 +142,7 @@ def update_profile(
         if not updated_user:
             raise CNOPUserNotFoundException(f"User '{current_user.username}' not found")
 
-        logger.info(f"Profile updated successfully for user: {current_user.username}")
+        logger.info(action=LogActions.REQUEST_END, message=f"Profile updated successfully for user: {current_user.username}")
 
         return ProfileUpdateSuccessResponse(
             message="Profile updated successfully",
@@ -158,7 +161,7 @@ def update_profile(
     except (CNOPUserNotFoundException, HTTPException, CNOPUserValidationException, CNOPUserAlreadyExistsException):
         raise
     except Exception as e:
-        logger.error(f"Profile update failed for user {current_user.username}: {str(e)}")
+        logger.error(action=LogActions.ERROR, message=f"Profile update failed for user {current_user.username}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update profile"

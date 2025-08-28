@@ -7,7 +7,6 @@ Layer 1: Field validation (handled in API models)
 """
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import Union
-import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -28,11 +27,12 @@ from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInternalServerException
 )
-from user_exceptions import CNOPUserValidationException
-from user_exceptions import (
-    CNOPUserAlreadyExistsException
+
+from user_exceptions.exceptions import (
+    CNOPUserAlreadyExistsException,
+    CNOPUserValidationException
 )
-from common.auth.security import TokenManager
+from common.auth.security import TokenManager, AuditLogger
 
 # Import business validation functions only (Layer 2)
 from validation.business_validators import (
@@ -41,7 +41,11 @@ from validation.business_validators import (
     validate_age_requirements
 )
 
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.USER)
 router = APIRouter(tags=["register"])
 
 
@@ -80,9 +84,13 @@ def register_user(
     Layer 1: Field validation already handled in API models
     Layer 2: Business validation (uniqueness, age requirements, etc.)
     """
+    # Initialize security managers
+    audit_logger = AuditLogger()
+
     # Log register attempt (without sensitive data)
     logger.info(
-        f"Register attempt from {request.client.host if request.client else 'unknown'}",
+        action=LogActions.REQUEST_START,
+        message=f"Register attempt from {request.client.host if request.client else 'unknown'}",
         extra={
             "username": user_data.username,
             "email": user_data.email,
@@ -91,27 +99,13 @@ def register_user(
         }
     )
 
-    logger.warning(f"🔍 DEBUG: [REGISTER] Starting registration for user: {user_data.username}")
-    logger.warning(f"🔍 DEBUG: [REGISTER] User data received: username={user_data.username}, email={user_data.email}")
-    logger.warning(f"🔍 DEBUG: [REGISTER] user_dao type: {type(user_dao)}")
-    logger.warning(f"🔍 DEBUG: [REGISTER] balance_dao type: {type(balance_dao)}")
-
     try:
         # Layer 2: Business validation only
-        logger.warning(f"🔍 DEBUG: [REGISTER] About to call validate_username_uniqueness for: {user_data.username}")
         validate_username_uniqueness(user_data.username, user_dao)
-        logger.warning(f"🔍 DEBUG: [REGISTER] validate_username_uniqueness completed successfully")
-
-        logger.warning(f"🔍 DEBUG: [REGISTER] About to call validate_email_uniqueness for: {user_data.email}")
         validate_email_uniqueness(user_data.email, user_dao)
-        logger.warning(f"🔍 DEBUG: [REGISTER] validate_email_uniqueness completed successfully")
-
-        logger.warning(f"🔍 DEBUG: [REGISTER] About to call validate_age_requirements")
         validate_age_requirements(user_data.date_of_birth)
-        logger.warning(f"🔍 DEBUG: [REGISTER] validate_age_requirements completed successfully")
 
         # Transform API model to DAO model - proper field mapping
-        logger.warning(f"🔍 DEBUG: [REGISTER] About to create UserCreate object")
         user_create = UserCreate(
             username=user_data.username,
             email=user_data.email,
@@ -120,37 +114,78 @@ def register_user(
             last_name=user_data.last_name,
             phone=user_data.phone
         )
-        logger.warning(f"🔍 DEBUG: [REGISTER] UserCreate object created successfully")
 
         # Create the user via DAO (sync operation)
-        logger.warning(f"🔍 DEBUG: [REGISTER] About to call user_dao.create_user")
         created_user = user_dao.create_user(user_create)
-        logger.warning(f"🔍 DEBUG: [REGISTER] user_dao.create_user completed successfully")
 
         # Create initial balance record with 0 balance (sync operation)
-        logger.warning(f"🔍 DEBUG: [REGISTER] About to create BalanceCreate object")
         balance_create = BalanceCreate(
             username=created_user.username,
             initial_balance=Decimal('0.00')
         )
-        logger.warning(f"🔍 DEBUG: [REGISTER] BalanceCreate object created successfully")
 
-        logger.warning(f"🔍 DEBUG: [REGISTER] About to call balance_dao.create_balance")
         balance_dao.create_balance(balance_create)
-        logger.warning(f"🔍 DEBUG: [REGISTER] balance_dao.create_balance completed successfully")
 
         # Log successful registration
-        logger.info(f"User registered successfully: {user_data.username}")
+        logger.info(action=LogActions.REQUEST_END, message=f"User registered successfully: {user_data.username}")
+
+        # Audit log successful registration
+        audit_logger.log_security_event(
+            "user_registration_success",
+            user_data.username,
+            {
+                "email": user_data.email,
+                "client_ip": request.client.host if request.client else "unknown",
+                "user_agent": request.headers.get("user-agent", "unknown")
+            }
+        )
 
         # Return simple success response - no user data
         return RegistrationSuccessResponse(
             message="User registered successfully"
         )
 
-    except (CNOPUserAlreadyExistsException, CNOPUserValidationException):
-        # Re-raise these exceptions as they should be handled by the exception mapper
+    except CNOPUserAlreadyExistsException as e:
+        # Audit log failed registration due to user already exists
+        audit_logger.log_security_event(
+            "user_registration_failed",
+            user_data.username,
+            {
+                "reason": "user_already_exists",
+                "email": user_data.email,
+                "client_ip": request.client.host if request.client else "unknown",
+                "user_agent": request.headers.get("user-agent", "unknown")
+            }
+        )
+        # Re-raise the exception as it should be handled by the exception mapper
+        raise
+    except CNOPUserValidationException as e:
+        # Audit log failed registration due to validation error
+        audit_logger.log_security_event(
+            "user_registration_failed",
+            user_data.username,
+            {
+                "reason": "validation_error",
+                "email": user_data.email,
+                "client_ip": request.client.host if request.client else "unknown",
+                "user_agent": request.headers.get("user-agent", "unknown")
+            }
+        )
+        # Re-raise the exception as it should be handled by the exception mapper
         raise
     except Exception as e:
+        # Audit log unexpected error during registration
+        audit_logger.log_security_event(
+            "user_registration_failed",
+            user_data.username,
+            {
+                "reason": "unexpected_error",
+                "error": str(e),
+                "email": user_data.email,
+                "client_ip": request.client.host if request.client else "unknown",
+                "user_agent": request.headers.get("user-agent", "unknown")
+            }
+        )
         # Log unexpected errors and convert to internal server exception
-        logger.error(f"Unexpected error during user registration: {str(e)}")
+        logger.error(action=LogActions.ERROR, message=f"Unexpected error during user registration: {str(e)}")
         raise CNOPInternalServerException(f"Registration failed: {str(e)}")

@@ -7,14 +7,14 @@ Layer 1: Field validation (handled in API models)
 """
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import Union
-import logging
 from datetime import datetime, timezone
 
 # Import user-service API models
 from api_models.auth.login import (
     UserLoginRequest,
     LoginSuccessResponse,
-    LoginErrorResponse
+    LoginErrorResponse,
+    UserLoginResponse
 )
 from api_models.shared.common import ErrorResponse
 from api_models.shared.common import UserBaseInfo
@@ -29,7 +29,11 @@ from common.auth.security import TokenManager, AuditLogger
 # Import exceptions
 from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
 
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.USER)
 router = APIRouter(tags=["authentication"])
 
 
@@ -70,17 +74,17 @@ def login_user(
     user_agent = None
 
     try:
-        logger.info(f"Login attempt for: {login_data.username}")
+        logger.info(action=LogActions.REQUEST_START, message=f"Login attempt for: {login_data.username}")
 
         # Layer 2: Business validation only
         # Authenticate user using username
         user = user_dao.authenticate_user(login_data.username, login_data.password)
         if not user:
-            logger.warning(f"Authentication failed for: {login_data.username}")
+            logger.warning(action=LogActions.AUTH_FAILED, message=f"Authentication failed for: {login_data.username}")
             audit_logger.log_login_failure(login_data.username, "Invalid credentials", client_ip, user_agent)
             raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{login_data.username}'")
 
-        logger.info(f"User authenticated successfully: {login_data.username}")
+        logger.info(action=LogActions.AUTH_SUCCESS, message=f"User authenticated successfully: {login_data.username}")
 
         # Create JWT token using centralized TokenManager
         token_data = token_manager.create_access_token(user.username, user.role)
@@ -88,9 +92,6 @@ def login_user(
         # Log successful login and token creation
         audit_logger.log_login_success(user.username, client_ip, user_agent)
         audit_logger.log_token_created(user.username, "access_token", client_ip)
-
-        # Create UserLoginResponse with only token data
-        from api_models.auth.login import UserLoginResponse
 
         login_response = UserLoginResponse(
             access_token=token_data["access_token"],

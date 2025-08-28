@@ -8,6 +8,7 @@ def test_logout_success():
     # Mock user data
     mock_user = MagicMock()
     mock_user.email = "test@example.com"
+    mock_user.username = "testuser"
 
     # Mock logout data (empty request for JWT stateless approach)
     logout_data = LogoutRequest()
@@ -29,6 +30,7 @@ def test_logout_exception_handling():
     # Mock user data
     mock_user = MagicMock()
     mock_user.email = "test@example.com"
+    mock_user.username = "testuser"
 
     # Mock logout data
     logout_data = LogoutRequest()
@@ -47,6 +49,7 @@ def test_logout_debug():
     # Mock user data
     mock_user = MagicMock()
     mock_user.email = "test@example.com"
+    mock_user.username = "testuser"
     mock_user.name = "Test User"
 
     # Mock datetime to return a predictable timestamp
