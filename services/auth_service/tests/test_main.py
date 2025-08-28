@@ -69,7 +69,7 @@ class TestRootEndpoint:
             response = root()
 
             assert response is not None
-            mock_logger.info.assert_called_once_with("Root endpoint accessed")
+            mock_logger.info.assert_called_once_with(action='request_start', message='Root endpoint accessed')
 
     def test_root_endpoint_timestamp_format(self):
         """Test that timestamp is in correct ISO format."""

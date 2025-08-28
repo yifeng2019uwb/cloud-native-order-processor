@@ -5,7 +5,6 @@ FastAPI application entry point.
 """
 
 from datetime import datetime, timezone
-import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,12 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from controllers.health import router as health_router
 from controllers.validate import router as validate_router
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Import our standardized logger
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+# Initialize logger
+logger = BaseLogger(Loggers.AUTH)
 
 # Create FastAPI app
 app = FastAPI(
@@ -46,7 +44,7 @@ app.include_router(validate_router)
 @app.get("/")
 def root():
     """Root endpoint with service information"""
-    logger.info("Root endpoint accessed")
+    logger.info(action=LogActions.REQUEST_START, message="Root endpoint accessed")
 
     return {
         "service": "Auth Service",
