@@ -252,6 +252,8 @@ class TestRedisConnectionManager:
 
             assert result is False
             assert manager._is_connected is False
+            """mock_logger.error.assert_called_once()"""
+            assert mock_logger.error.call_count >= 1
 
     @patch('src.data.database.redis_connection.logger')
     def test_test_connection_redis_error(self, mock_logger):
