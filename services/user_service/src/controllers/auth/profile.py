@@ -17,11 +17,10 @@ from api_models.shared.common import ErrorResponse
 from common.data.database import get_user_dao
 from common.data.entities.user import UserResponse
 from common.exceptions.shared_exceptions import (
-    CNOPEntityNotFoundException as CNOPUserNotFoundException,
-    CNOPEntityAlreadyExistsException as CNOPUserAlreadyExistsException
+    CNOPEntityNotFoundException as CNOPUserNotFoundException
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from user_exceptions.exceptions import CNOPUserValidationException
+from user_exceptions.exceptions import CNOPUserAlreadyExistsException, CNOPUserValidationException
 from validation.business_validators import (
     validate_email_uniqueness,
     validate_age_requirements
