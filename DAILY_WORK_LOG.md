@@ -26,6 +26,43 @@
 
 ## 📝 Daily Entries
 
+### **8/29/2025 - Email Uniqueness Validation Fix for Profile Updates ✅**
+**Status: COMPLETED**
+
+### **What Was Accomplished:**
+- **✅ Completed LOGIC-002: Fix Email Uniqueness Validation for Profile Updates**
+- **✅ Fixed Import Mismatch** between profile controller and validation function
+- **✅ Updated Test Expectations** to match correct exception handling
+- **✅ Removed Duplicate Tests** that were testing the same scenario
+
+### **Technical Details:**
+- **Root Cause**: Profile controller was importing `CNOPEntityAlreadyExistsException` from common package, but validation function raises `CNOPUserAlreadyExistsException` from user service
+- **Files Updated**:
+  - `services/user_service/src/controllers/auth/profile.py` - Fixed import to use correct exception type
+  - `services/user_service/tests/controllers/auth/test_profile.py` - Updated test to expect correct exception
+
+- **Exception Handling Flow**:
+  - Email validation correctly raises `CNOPUserAlreadyExistsException` when email is taken by another user
+  - Profile controller now properly catches and re-raises this exception
+  - Tests expect the correct exception type
+
+- **Test Cleanup**:
+  - Removed duplicate test `test_update_profile_unauthorized`
+  - Updated `test_update_profile_email_in_use` to test the correct scenario
+  - Both tests now properly verify email uniqueness validation
+
+### **Impact:**
+- **Functionality**: Users can now properly update their profile with different emails
+- **Code Quality**: Exception handling is now consistent and correct
+- **Testing**: Tests properly verify the expected behavior
+- **User Experience**: Profile updates work as expected without false conflicts
+
+### **Next Steps:**
+- Continue with other infrastructure improvements
+- Focus on remaining backlog tasks
+
+---
+
 ### **8/29/2025 - TODO Exception Handler Audit Across All Services ✅**
 **Status: COMPLETED**
 
