@@ -113,9 +113,8 @@ def update_profile(
 
         # Layer 2: Business validation only
         if profile_data.email and profile_data.email != current_user.email:
-            # TODO: BACKLOG TASK - validate_email_uniqueness should include exclude_username parameter
-            # to prevent the current user's email from being considered a conflict during updates
-            validate_email_uniqueness(profile_data.email, user_dao)
+            # Pass current username to exclude from uniqueness check
+            validate_email_uniqueness(profile_data.email, user_dao, exclude_username=current_user.username)
         if profile_data.date_of_birth:
             validate_age_requirements(profile_data.date_of_birth)
 

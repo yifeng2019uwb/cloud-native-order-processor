@@ -50,12 +50,48 @@
 - **Summary**: Successfully standardized all Python services to use BaseLogger with structured JSON logging and removed all print statements
 - **Dependencies**: INFRA-001, INFRA-003 ✅
 
+#### **INFRA-015: TODO Exception Handler Audit Across All Services** ✅
+- **Component**: Infrastructure & Code Quality
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: ✅ **COMPLETED**
+- **Summary**: Completed comprehensive audit of all Python services to identify TODO exception handlers and update backlog tasks accordingly
+- **Dependencies**: INFRA-011 ✅, LOG-001 ✅
+
 #### **LOG-002: Implement Structured Logging for Gateway Service**
 - **Component**: Infrastructure & Logging (Gateway Service)
 - **Type**: Task
 - **Priority**: 🔥 **HIGH PRIORITY**
 - **Status**: 📋 **To Do**
 - **Description**: Implement structured logging for the Go-based Gateway service to match our Python services' logging standards
+
+#### **INFRA-014: Standardize Main.py Across All Services**
+- **Component**: Infrastructure & Service Standardization
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Create standardized main.py template for all Python services with proper exception handling hierarchy
+- **Acceptance Criteria**:
+  - All services use identical main.py structure and imports
+  - Controllers handle their specific business exceptions (UserValidationException, OrderValidationException, etc.)
+  - Main.py handles only unhandled exceptions by wrapping them in CNOPInternalServerException
+  - Remove verbose startup logging and environment variable checking (infrastructure should handle this)
+  - Standardized FastAPI lifespan handlers (no more @app.on_event deprecation warnings)
+  - Consistent middleware setup across all services
+  - Clean, minimal main.py focused only on app configuration and global exception handling
+- **Dependencies**: LOG-001 ✅ (Python services completed)
+- **Files to Update**:
+  - `services/auth_service/src/main.py` - Standardize structure and exception handling
+  - `services/user_service/src/main.py` - Standardize structure and exception handling
+  - `services/order_service/src/main.py` - Standardize structure and exception handling
+  - `services/inventory_service/src/main.py` - Standardize structure and exception handling
+- **Technical Approach**:
+  - Create template main.py with standard FastAPI lifespan handlers
+  - Implement global exception handler for unhandled exceptions
+  - Remove verbose startup logging and environment validation (infrastructure responsibility)
+  - Standardize middleware configuration and CORS setup
+  - Ensure consistent import organization and structure
+- **Why Needed**: Currently each service has different main.py structures, verbose logging, and inconsistent exception handling. We need a clean, standardized approach where controllers handle business logic exceptions and main.py only handles infrastructure-level issues.
 
 #### **GATEWAY-001: Implement Circuit Breaker Pattern and JWT Configuration for Gateway**
 - **Component**: Infrastructure & Gateway Service
@@ -235,11 +271,12 @@
 - **Description**: Implement proper exception handlers and logging middleware for Order Service to replace TODO placeholders
 - **Acceptance Criteria**:
   - Implement proper logging middleware for Kubernetes deployment
-  - Implement secure validation error handler
-  - Implement secure HTTP exception handler
-  - Implement secure global exception handler
+  - Implement secure validation error handler (currently TODO: "Implement validation error handler tomorrow")
+  - Implement secure HTTP exception handler (currently TODO: "Implement HTTP exception handler tomorrow")
+  - Implement secure global exception handler (currently TODO: "Implement global exception handler tomorrow")
   - Remove all TODO comments for exception handling
   - Proper error logging and response formatting
+  - Return our defined exceptions instead of generic error messages
 - **Dependencies**: INFRA-011 ✅, LOG-001 ✅
 - **Files to Update**:
   - `services/order_service/src/main.py` - Implement exception handlers and middleware
@@ -247,10 +284,10 @@
 - **Technical Approach**:
   - Implement secure exception handlers with proper logging
   - Add request correlation IDs for tracing
-  - Implement structured error responses
+  - Implement structured error responses using our defined exceptions
   - Add security headers and error sanitization
   - Test exception handling with various error scenarios
-- **Why Needed**: Order Service currently has TODO placeholders for exception handling and middleware, which should be properly implemented for production readiness
+- **Why Needed**: Order Service currently has TODO placeholders for exception handling and middleware, which should be properly implemented for production readiness. These handlers should return our defined exceptions (CNOPInternalServerException, etc.) instead of generic error messages.
 
 ### **🌐 Frontend & User Experience**
 

@@ -8,10 +8,14 @@ Handles uniqueness checks and business rules for registration.
 from datetime import date
 from typing import Optional, Any
 from common.exceptions.shared_exceptions import (
-    CNOPUserNotFoundException
+    CNOPUserNotFoundException,
+    CNOPInternalServerException
 )
+from common.shared.logging import BaseLogger, Loggers, LogActions
 from user_exceptions import CNOPUserAlreadyExistsException, CNOPUserValidationException
 
+# Initialize our standardized logger
+logger = BaseLogger(Loggers.USER)
 
 def validate_username_uniqueness(username: str, user_dao: Any, exclude_username: Optional[str] = None) -> bool:
     """
@@ -28,9 +32,6 @@ def validate_username_uniqueness(username: str, user_dao: Any, exclude_username:
     Raises:
         UserAlreadyExistsException: If username already exists
     """
-    from common.shared.logging import BaseLogger, Loggers, LogActions
-    logger = BaseLogger(Loggers.USER)
-
     logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Starting username uniqueness validation for: '{username}'")
 
     try:
@@ -49,13 +50,13 @@ def validate_username_uniqueness(username: str, user_dao: Any, exclude_username:
         # User doesn't exist, which means username is unique
         logger.info(action=LogActions.REQUEST_END, message=f"User not found! Username '{username}' is unique. Exception: {str(e)}")
         return True
-    except Exception as e:
-        # TODO: BACKLOG TASK - This generic exception handler incorrectly catches CNOPUserAlreadyExistsException
-        # and converts it to a generic Exception, which then gets caught by the profile controller's
-        # generic handler and converted to HTTPException. This breaks the expected exception flow.
-        # Consider removing this generic handler or making it more specific.
-        logger.error(action=LogActions.ERROR, message=f"Unexpected exception in username validation: {str(e)}")
+    except CNOPUserAlreadyExistsException:
+        # Re-raise this specific exception to maintain proper flow
         raise
+    except Exception as e:
+        # Convert unexpected exceptions to internal server exception
+        logger.error(action=LogActions.ERROR, message=f"Unexpected exception in username validation: {str(e)}")
+        raise CNOPInternalServerException(f"Internal error during username validation: {str(e)}")
 
 
 def validate_email_uniqueness(email: str, user_dao: Any, exclude_username: Optional[str] = None) -> bool:
@@ -73,9 +74,6 @@ def validate_email_uniqueness(email: str, user_dao: Any, exclude_username: Optio
     Raises:
         UserAlreadyExistsException: If email already exists
     """
-    from common.shared.logging import BaseLogger, Loggers, LogActions
-    logger = BaseLogger(Loggers.USER)
-
     logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Starting email uniqueness validation for: '{email}'")
 
     try:
@@ -84,11 +82,13 @@ def validate_email_uniqueness(email: str, user_dao: Any, exclude_username: Optio
         existing_user = user_dao.get_user_by_email(email)
 
         if existing_user:
-            # TODO: BACKLOG TASK - The exclude_username parameter is not being used!
-            # This should check if existing_user.username != exclude_username before raising the exception
-            # Currently it raises the exception even when the email belongs to the same user (updating profile)
-            logger.warning(action=LogActions.VALIDATION_ERROR, message=f"User found! Email '{email}' already exists")
-            raise CNOPUserAlreadyExistsException(f"Email '{email}' already exists")
+            # Check if this is the same user updating their profile
+            if exclude_username and existing_user.username == exclude_username:
+                logger.info(action=LogActions.REQUEST_END, message=f"Email '{email}' belongs to same user '{exclude_username}', allowing update")
+                return True
+            else:
+                logger.warning(action=LogActions.VALIDATION_ERROR, message=f"User found! Email '{email}' already exists")
+                raise CNOPUserAlreadyExistsException(f"Email '{email}' already exists")
         else:
             logger.info(action=LogActions.REQUEST_END, message=f"User not found! Email '{email}' is unique")
             return True
@@ -97,13 +97,13 @@ def validate_email_uniqueness(email: str, user_dao: Any, exclude_username: Optio
         # User doesn't exist, which means email is unique
         logger.info(action=LogActions.REQUEST_END, message=f"User not found! Email '{email}' is unique. Exception: {str(e)}")
         return True
-    except Exception as e:
-        # TODO: BACKLOG TASK - This generic exception handler incorrectly catches CNOPUserAlreadyExistsException
-        # and converts it to a generic Exception, which then gets caught by the profile controller's
-        # generic handler and converted to HTTPException. This breaks the expected exception flow.
-        # Consider removing this generic handler or making it more specific.
-        logger.error(action=LogActions.ERROR, message=f"Unexpected exception in email validation: {str(e)}")
+    except CNOPUserAlreadyExistsException:
+        # Re-raise this specific exception to maintain proper flow
         raise
+    except Exception as e:
+        # Convert unexpected exceptions to internal server exception
+        logger.error(action=LogActions.ERROR, message=f"Unexpected exception in email validation: {str(e)}")
+        raise CNOPInternalServerException(f"Internal error during email validation: {str(e)}")
 
 
 def validate_user_exists(username: str, user_dao: Any) -> bool:
