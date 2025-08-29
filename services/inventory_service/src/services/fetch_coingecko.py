@@ -1,5 +1,8 @@
 import httpx
 import asyncio
+from common.shared.logging import BaseLogger, Loggers, LogActions
+
+logger = BaseLogger(Loggers.INVENTORY)
 
 COINGECKO_API = "https://api.coingecko.com/api/v3/coins/markets"
 PARAMS = {
@@ -18,12 +21,12 @@ async def fetch_top_coins():
             response = await client.get(COINGECKO_API, params=PARAMS)
             response.raise_for_status()
             coins = response.json()
-            print(f"Fetched {len(coins)} coins from CoinGecko.")
-            for coin in coins[:5]:  # Print first 5 for brevity
-                print(f"{coin['market_cap_rank']}: {coin['name']} ({coin['symbol']}) - ${coin['current_price']}")
+            logger.info(action=LogActions.REQUEST_START, message=f"Fetched {len(coins)} coins from CoinGecko")
+            for coin in coins[:5]:  # Log first 5 for brevity
+                logger.info(action=LogActions.REQUEST_START, message=f"{coin['market_cap_rank']}: {coin['name']} ({coin['symbol']}) - ${coin['current_price']}")
             return coins
     except Exception as e:
-        print(f"Failed to fetch coins from CoinGecko: {e}")
+        logger.error(action=LogActions.ERROR, message=f"Failed to fetch coins from CoinGecko: {e}")
         return []
 
 if __name__ == "__main__":
