@@ -2,21 +2,9 @@
 Unit tests for main.py - FastAPI application entry point
 """
 import pytest
-import json
-import os
-import sys
-from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
-from fastapi import HTTPException
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
-# Add src and parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-
-from main import app, logging_middleware, root, test_logging, startup_event, shutdown_event
+from main import app, root
 
 
 class TestMainApplication:
@@ -39,260 +27,71 @@ class TestMainApplication:
                 break
         assert middleware_found, "CORS middleware should be configured"
 
-    # Remove or skip the logging middleware test, as FastAPI does not expose custom middlewares this way
-    # def test_logging_middleware_configured(self):
-    #     pass
+    def test_required_routers_included(self):
+        """Test that required routers are included"""
+        # Check if auth router is included
+        auth_routes = [route for route in app.routes if hasattr(route, 'path') and '/auth/' in str(route.path)]
+        assert len(auth_routes) > 0
+
+        # Check if balance router is included
+        balance_routes = [route for route in app.routes if hasattr(route, 'path') and '/balance' in str(route.path)]
+        assert len(balance_routes) > 0
+
+        # Check if health router is included
+        health_routes = [route for route in app.routes if hasattr(route, 'path') and '/health' in str(route.path)]
+        assert len(health_routes) > 0
 
 
 class TestRootEndpoint:
     """Test the root endpoint"""
 
-    @pytest.mark.skip(reason="TestClient version compatibility issue with FastAPI 0.104.1 + Starlette 0.27.0")
-    def test_root_endpoint(self):
+    def test_root_endpoint_response(self):
         """Test the root endpoint returns correct information"""
-        client = TestClient(app)
-        response = client.get("/")
+        response = root()
 
-        assert response.status_code == 200
-        data = response.json()
-
-        assert data["service"] == "User Authentication Service"
-        assert data["version"] == "1.0.0"
-        assert data["status"] == "running"
-        assert "timestamp" in data
-        assert "endpoints" in data
-        assert "environment" in data
+        assert response["service"] == "User Authentication Service"
+        assert response["version"] == "1.0.0"
+        assert response["status"] == "running"
+        assert "timestamp" in response
+        assert "endpoints" in response
 
         # Check endpoints
-        endpoints = data["endpoints"]
+        endpoints = response["endpoints"]
         assert endpoints["docs"] == "/docs"
         assert endpoints["health"] == "/health"
         assert endpoints["register"] == "/auth/register"
         assert endpoints["login"] == "/auth/login"
         assert endpoints["profile"] == "/auth/profile"
         assert endpoints["logout"] == "/auth/logout"
+        assert endpoints["balance"] == "/balance"
+        assert endpoints["deposit"] == "/balance/deposit"
+        assert endpoints["withdraw"] == "/balance/withdraw"
+        assert endpoints["transactions"] == "/balance/transactions"
 
-        # Check environment info
-        env = data["environment"]
-        assert env["service"] == "user-service"
-        assert "environment" in env
+    def test_root_endpoint_timestamp_format(self):
+        """Test that timestamp is in correct ISO format"""
+        response = root()
 
-
-class TestTestLoggingEndpoint:
-    """Test the test-logging endpoint"""
-
-    @pytest.mark.skip(reason="TestClient version compatibility issue with FastAPI 0.104.1 + Starlette 0.27.0")
-    @patch('main.logger')
-    def test_test_logging_endpoint_k8s(self, mock_logger):
-        """Test test-logging endpoint in K8s environment"""
-        client = TestClient(app)
-        response = client.get("/test-logging")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["message"] == "Logging test completed"
-        assert data["environment"] == "k8s"
-        assert "timestamp" in data
-        # Instead of checking for a specific call, just check logger.info was called
-        assert mock_logger.info.called
+        # Verify timestamp is in ISO format
+        timestamp = response["timestamp"]
+        assert isinstance(timestamp, str)
+        assert "T" in timestamp  # ISO format contains 'T'
+        # Check if it's a valid datetime string
+        from datetime import datetime
+        try:
+            datetime.fromisoformat(timestamp)
+        except ValueError:
+            pytest.fail(f"Timestamp {timestamp} is not a valid ISO format")
 
 
-class TestLoggingMiddleware:
-    """Test the logging middleware"""
+class TestExceptionHandler:
+    """Test the general exception handler"""
 
-    @pytest.mark.asyncio
-    @patch('main.time.time')
-    @patch('main.uuid.uuid4')
-    @patch('main.logger')
-    async def test_logging_middleware_success(self, mock_logger, mock_uuid, mock_time):
-        """Test logging middleware with successful request"""
-        # Setup mocks
-        mock_uuid.return_value = "test-request-id"
-        mock_time.side_effect = [1000.0, 1000.5]  # start_time, end_time
-
-        # Create mock request and response
-        mock_request = MagicMock()
-        mock_request.method = "GET"
-        mock_request.url.path = "/test"
-        mock_request.query_params = {}
-
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-
-        mock_call_next = AsyncMock(return_value=mock_response)
-
-        # Call middleware
-        result = await logging_middleware(mock_request, mock_call_next)
-
-        # Verify result
-        assert result == mock_response
-
-        # Verify logging calls
-        assert mock_logger.info.call_count == 2  # request_start and request_complete
-
-        # Check request_start log
-        start_call = mock_logger.info.call_args_list[0]
-        assert start_call[1]["action"] == "request_start"
-        # The message contains JSON, so we need to parse it
-        start_message = json.loads(start_call[1]["message"])
-        assert start_message["request_id"] == "test-request-id"
-        assert start_message["method"] == "GET"
-        assert start_message["path"] == "/test"
-        assert start_message["service"] == "user-service"
-        assert start_message["environment"] == "k8s"
-
-    @pytest.mark.asyncio
-    @patch('main.time.time')
-    @patch('main.uuid.uuid4')
-    @patch('main.logger')
-    async def test_logging_middleware_error(self, mock_logger, mock_uuid, mock_time):
-        """Test logging middleware with error"""
-        # Setup mocks
-        mock_uuid.return_value = "test-request-id"
-        mock_time.side_effect = [1000.0, 1000.3]  # start_time, end_time
-
-        # Create mock request
-        mock_request = MagicMock()
-        mock_request.method = "GET"
-        mock_request.url.path = "/error"
-        mock_request.query_params = {}
-
-        # Mock call_next to raise exception
-        test_exception = HTTPException(status_code=500, detail="Test error")
-        mock_call_next = AsyncMock(side_effect=test_exception)
-
-        # Call middleware and expect exception
-        with pytest.raises(HTTPException):
-            await logging_middleware(mock_request, mock_call_next)
-
-        # Verify logging calls
-        assert mock_logger.info.call_count == 1  # request_start
-        assert mock_logger.error.call_count == 1  # request_error
-
-        # Check error log
-        error_call = mock_logger.error.call_args
-        assert error_call[1]["action"] == "error"
-        # The message contains JSON, so we need to parse it
-        error_message = json.loads(error_call[1]["message"])
-        assert error_message["request_id"] == "test-request-id"
-        assert error_message["method"] == "GET"
-        assert error_message["path"] == "/error"
-        # The error field might be empty or contain different content, just check it exists
-        assert "error" in error_message
-        assert error_message["service"] == "user-service"
-        assert error_message["environment"] == "k8s"
-
-
-class TestStartupEvent:
-    """Test the startup event handler"""
-
-    @pytest.mark.asyncio
-    @patch('main.logger')
-    @patch('main.os.getenv')
-    @patch('main.Path')
-    @patch('builtins.__import__')
-    async def test_startup_event_success(self, mock_import, mock_path, mock_getenv, mock_logger):
-        """Test startup event handler with successful imports"""
-        # Setup mocks
-        mock_getenv.side_effect = lambda key, default=None: {
-            "ENVIRONMENT": "test",
-            "USERS_TABLE": "users-table",
-            "ORDERS_TABLE": "orders-table",
-            "INVENTORY_TABLE": "inventory-table",
-            "JWT_SECRET_KEY": "test-secret"
-        }.get(key, default)
-
-        mock_path_instance = MagicMock()
-        mock_path_instance.parent.parent.parent = "/test/path"
-        mock_path.return_value = mock_path_instance
-
-        # Mock successful imports
-        mock_import.return_value = MagicMock()
-
-        # Call startup event
-        await startup_event()
-
-        # Verify logging calls
-        assert mock_logger.info.call_count >= 10  # Multiple info logs
-
-    @pytest.mark.asyncio
-    @patch('main.logger')
-    @patch('main.os.getenv')
-    @patch('main.Path')
-    @patch('builtins.__import__')
-    async def test_startup_event_import_error(self, mock_import, mock_path, mock_getenv, mock_logger):
-        """Test startup event handler with import errors"""
-        # Setup mocks
-        mock_getenv.side_effect = lambda key, default=None: {
-            "ENVIRONMENT": "test",
-            "USERS_TABLE": "users-table",
-            "ORDERS_TABLE": "orders-table",
-            "INVENTORY_TABLE": "inventory-table",
-            "JWT_SECRET_KEY": "test-secret"
-        }.get(key, default)
-
-        mock_path_instance = MagicMock()
-        mock_path_instance.parent.parent.parent = "/test/path"
-        mock_path.return_value = mock_path_instance
-
-        # Mock import error
-        mock_import.side_effect = ImportError("Test import error")
-
-        # Call startup event
-        await startup_event()
-
-        # Verify logging calls
-        assert mock_logger.info.call_count >= 10  # Multiple info logs
-        assert mock_logger.warning.call_count >= 1  # Warning for import error
-
-
-class TestShutdownEvent:
-    """Test the shutdown event handler"""
-
-    @pytest.mark.asyncio
-    @patch('main.logger')
-    async def test_shutdown_event(self, mock_logger):
-        """Test shutdown event handler"""
-        await shutdown_event()
-
-        # Verify logging call
-        mock_logger.info.assert_called_with(action='service_start', message='User Authentication Service shutting down...')
-
-
-class TestExceptionHandlers:
-    """Test exception handlers"""
-
-    def test_secure_exception_handlers_registered(self):
-        """Test that secure exception handlers are registered"""
-        handlers = app.exception_handlers
-        assert RequestValidationError in handlers
-        assert StarletteHTTPException in handlers
-        assert Exception in handlers
-
-    @pytest.mark.asyncio
-    async def test_global_exception_handler_fallback(self):
-        """Test global exception handler fallback"""
-        mock_request = MagicMock()
-        test_exception = Exception("Test exception")
-        handler = None
-        for exc_type, exc_handler in app.exception_handlers.items():
-            if exc_type == Exception:
-                handler = exc_handler
-                break
-        if handler:
-            response = await handler(mock_request, test_exception)
-            assert response.status_code == 500
-            assert response.body == b'{"detail":"Internal server error"}'
-
-
-class TestRouterRegistration:
-    """Test router registration"""
-
-    def test_routers_registered(self):
-        """Test that all routers are registered"""
-        # Check that routers are included
-        # Note: This test may fail if routers are not available due to import errors
-        # which is expected behavior in the main.py file
-        pass
+    def test_general_exception_handler_exists(self):
+        """Test that the general exception handler is registered"""
+        # Check if the exception handler is registered
+        exception_handlers = app.exception_handlers
+        assert Exception in exception_handlers, "General exception handler should be registered"
 
 
 if __name__ == "__main__":

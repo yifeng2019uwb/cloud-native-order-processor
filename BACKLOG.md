@@ -50,33 +50,7 @@
 - **Status**: 📋 **To Do**
 - **Description**: Implement structured logging for the Go-based Gateway service to match our Python services' logging standards
 
-#### **INFRA-014: Standardize Main.py Across All Services**
-- **Component**: Infrastructure & Service Standardization
-- **Type**: Task
-- **Priority**: 🔶 **MEDIUM PRIORITY**
-- **Status**: 📋 **To Do**
-- **Description**: Create standardized main.py template for all Python services with proper exception handling hierarchy
-- **Acceptance Criteria**:
-  - All services use identical main.py structure and imports
-  - Controllers handle their specific business exceptions (UserValidationException, OrderValidationException, etc.)
-  - Main.py handles only unhandled exceptions by wrapping them in CNOPInternalServerException
-  - Remove verbose startup logging and environment variable checking (infrastructure should handle this)
-  - Standardized FastAPI lifespan handlers (no more @app.on_event deprecation warnings)
-  - Consistent middleware setup across all services
-  - Clean, minimal main.py focused only on app configuration and global exception handling
-- **Dependencies**: LOG-001 ✅ (Python services completed)
-- **Files to Update**:
-  - `services/auth_service/src/main.py` - Standardize structure and exception handling
-  - `services/user_service/src/main.py` - Standardize structure and exception handling
-  - `services/order_service/src/main.py` - Standardize structure and exception handling
-  - `services/inventory_service/src/main.py` - Standardize structure and exception handling
-- **Technical Approach**:
-  - Create template main.py with standard FastAPI lifespan handlers
-  - Implement global exception handler for unhandled exceptions
-  - Remove verbose startup logging and environment validation (infrastructure responsibility)
-  - Standardize middleware configuration and CORS setup
-  - Ensure consistent import organization and structure
-- **Why Needed**: Currently each service has different main.py structures, verbose logging, and inconsistent exception handling. We need a clean, standardized approach where controllers handle business logic exceptions and main.py only handles infrastructure-level issues.
+
 
 #### **GATEWAY-001: Implement Circuit Breaker Pattern and JWT Configuration for Gateway**
 - **Component**: Infrastructure & Gateway Service
@@ -450,6 +424,20 @@
 - **Status**: ✅ **COMPLETED**
 - **Summary**: Completed comprehensive audit of all Python services to identify TODO exception handlers and update backlog tasks accordingly
 
+#### **INFRA-014: Standardize Main.py Across All Services** ✅
+- **Component**: Infrastructure & Service Standardization
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: ✅ **COMPLETED**
+- **Summary**: Successfully standardized all Python services main.py files with clean, minimal structure and consistent exception handling
+
+#### **INFRA-016: Fix DateTime Deprecation Warnings Across All Services** ✅
+- **Component**: Infrastructure & Code Quality
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: ✅ **COMPLETED**
+- **Summary**: Fixed datetime.utcnow() deprecation warnings across all Python services by updating to datetime.now(timezone.utc) for Python 3.11+ compatibility
+
 ### **🐛 Bug Fixes**
 
 #### **BUG-001: Integration Test Failures - Service Validation Issues**
@@ -518,6 +506,8 @@
 *📋 Note: ✅ **JWT Import Issues RESOLVED** - All backend services now pass unit tests (Order: 148, Inventory: 73, User: 233)*
 *📋 Note: ✅ **CI/CD Pipeline FIXED** - All services now pass build and test phases*
 *📋 Note: ✅ **LOGIC-002 COMPLETED** - Email uniqueness validation for profile updates now works correctly*
+*📋 Note: ✅ **INFRA-014 COMPLETED** - All Python services main.py files standardized with clean, minimal structure*
+*📋 Note: ✅ **INFRA-016 COMPLETED** - DateTime deprecation warnings fixed across all services for Python 3.11+ compatibility*
 *📋 For detailed technical specifications, see: `docs/centralized-authentication-architecture.md`*
 *📋 For monitoring design, see: `docs/design-docs/monitoring-design.md`*
 *📋 For logging standards, see: `docs/design-docs/logging-standards.md`*

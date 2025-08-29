@@ -2540,3 +2540,60 @@ The existing integration test suite is actually well-designed and matches our cu
 
 *Last Updated: 8/27/2025*
 *Next Review: After completing LOG-002 (Gateway logging)*
+
+---
+
+### **8/29/2025 - Main.py Standardization and DateTime Fixes Across All Services ✅**
+**Status: COMPLETED**
+
+### **What Was Accomplished:**
+- **✅ Completed INFRA-014: Standardize Main.py Across All Services**
+- **✅ Completed INFRA-016: Fix DateTime Deprecation Warnings Across All Services**
+- **✅ All Python Services Now Use Clean, Standardized main.py Structure**
+- **✅ All DateTime Deprecation Warnings Resolved for Python 3.11+ Compatibility**
+
+### **Technical Details:**
+- **Services Updated**:
+  - ✅ **Auth Service**: Standardized main.py, fixed datetime format
+  - ✅ **User Service**: Standardized main.py, fixed datetime format
+  - ✅ **Inventory Service**: Standardized main.py, fixed datetime format
+  - ✅ **Order Service**: Standardized main.py, fixed datetime format
+
+- **Main.py Standardization (INFRA-014)**:
+  - **Clean Structure**: All services now use identical main.py template
+  - **Exception Handling**: Single general exception handler for unhandled errors
+  - **Middleware**: Consistent CORS and essential middleware setup
+  - **Imports**: Organized imports following standard pattern
+  - **Removed**: Verbose startup logging, environment validation, complex middleware
+  - **Kept**: Health controllers as separate modules for modularity
+
+- **DateTime Fixes (INFRA-016)**:
+  - **Problem**: `datetime.utcnow()` deprecated in Python 3.11+
+  - **Solution**: Updated to `datetime.now(timezone.utc)` across all services
+  - **Import**: Added `from datetime import datetime, timezone`
+  - **Compatibility**: Now works with Python 3.11+ without deprecation warnings
+  - **Format**: Maintains ISO format for API responses
+
+- **Test Updates**:
+  - **Auth Service**: Updated test_main.py to match new structure
+  - **User Service**: Updated test_main.py to match new structure
+  - **Inventory Service**: Updated test_main.py to match new structure
+  - **Order Service**: Updated test_main.py to match new structure
+  - **All Tests Passing**: ✅ Auth: 7/7, User: 6/6, Inventory: 4/4, Order: 6/6
+
+### **Impact:**
+- **Code Quality**: All services now have consistent, clean main.py structure
+- **Maintainability**: Standardized approach makes future updates easier
+- **Performance**: Removed unnecessary complexity and verbose logging
+- **Compatibility**: Python 3.11+ compatible without deprecation warnings
+- **Testing**: All unit tests pass with new structure
+
+### **Next Steps:**
+- **LOG-002**: Implement Structured Logging for Gateway Service (🔥 HIGH PRIORITY)
+- **MON-001**: Essential Authentication Monitoring (🔥 HIGH PRIORITY)
+- **INFRA-012**: Clean Up __init__.py Import Duplication (🔶 MEDIUM PRIORITY)
+
+---
+
+*Last Updated: 8/29/2025*
+*Next Review: After completing LOG-002 (Gateway logging)*

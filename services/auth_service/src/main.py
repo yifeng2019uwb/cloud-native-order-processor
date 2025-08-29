@@ -1,7 +1,7 @@
 """
 Auth Service - FastAPI Application Entry Point
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -47,7 +47,7 @@ def root():
         "service": "Auth Service",
         "version": "1.0.0",
         "status": "running",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "endpoints": {
             "docs": "/docs",
             "health": "/health",
