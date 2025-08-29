@@ -57,6 +57,30 @@
 - **Status**: 📋 **To Do**
 - **Description**: Implement structured logging for the Go-based Gateway service to match our Python services' logging standards
 
+#### **GATEWAY-001: Implement Circuit Breaker Pattern and JWT Configuration for Gateway**
+- **Component**: Infrastructure & Gateway Service
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Implement circuit breaker pattern for service health monitoring and improve JWT configuration in Gateway service
+- **Acceptance Criteria**:
+  - Implement circuit breaker pattern for service health monitoring
+  - Move JWT secret key to environment variables (remove hardcoded dev key)
+  - Add circuit breaker configuration constants
+  - Implement service health monitoring with circuit breaker logic
+  - Remove all TODO comments for circuit breaker and JWT configuration
+- **Dependencies**: LOG-002 ✅ (when completed)
+- **Files to Update**:
+  - `gateway/pkg/constants/constants.go` - Add circuit breaker constants and environment variable usage
+  - `gateway/internal/services/proxy.go` - Implement circuit breaker pattern
+  - `gateway/cmd/gateway/main.go` - Load JWT secret from environment
+- **Technical Approach**:
+  - Implement circuit breaker with configurable failure threshold and timeout
+  - Use environment variables for sensitive configuration
+  - Add service health monitoring with circuit breaker state management
+  - Implement graceful degradation when services are unhealthy
+- **Why Needed**: Gateway currently has TODO placeholders for circuit breaker patterns and uses hardcoded JWT secrets, which should be properly implemented for production readiness and security
+
 - **Acceptance Criteria**:
   - Gateway service uses structured JSON logging (not plain text)
   - Consistent log format with other services (timestamp, level, service, request_id, action, message)
@@ -169,31 +193,13 @@
   - Any other files with defensive import patterns
 - **Why Needed**: Try/import blocks hide real import errors, make debugging harder, and create unnecessary complexity. Import errors should be internal errors that fail fast during startup, not hidden with fallbacks.
 
-#### **INFRA-011: Standardize Import Organization Across All Source and Test Files**
+#### **INFRA-011: Standardize Import Organization Across All Source and Test Files** ✅
 - **Component**: Infrastructure & Code Quality
 - **Type**: Task
 - **Priority**: 🔶 **MEDIUM PRIORITY**
-- **Status**: 📋 **To Do**
-- **Description**: Move all imports to the top of classes and functions across all source and test files for consistent code organization
-- **Acceptance Criteria**:
-  - All imports moved to the top of their respective classes/functions
-  - Consistent import organization pattern across all services
-  - Proper import grouping (standard library, third-party, local)
-  - No imports scattered throughout method bodies
-  - Clean, readable code structure following Python best practices
-  - All test files follow the same import organization pattern
+- **Status**: ✅ **COMPLETED**
+- **Summary**: Successfully organized all imports across all Python services following standard pattern (standard library, third-party, local imports)
 - **Dependencies**: LOG-001 ✅, INFRA-001 ✅
-- **Files to Update**:
-  - **All source files**: `services/*/src/**/*.py`
-  - **All test files**: `services/*/tests/**/*.py`
-  - **Common package**: `services/common/src/**/*.py` and `services/common/tests/**/*.py`
-- **Technical Approach**:
-  - Scan all Python files for imports not at the top
-  - Move imports to appropriate scope (module, class, or function level)
-  - Maintain proper import ordering and grouping
-  - Ensure no circular import issues are introduced
-  - Update any code that depends on import placement
-- **Why Needed**: Consistent import organization improves code readability, maintainability, and follows Python PEP 8 standards. Scattered imports make code harder to understand and debug.
 
 #### **INFRA-012: Clean Up __init__.py Import Duplication and Standardize Import Paths**
 - **Component**: Infrastructure & Code Quality
@@ -208,7 +214,7 @@
   - No conflicting import paths that could cause import confusion
   - Clean separation between package-level and subpackage-level exports
   - Documentation of preferred import paths for each module
-- **Dependencies**: INFRA-011 ✅
+- **Dependencies**: INFRA-011 ✅ (Ready to start)
 - **Files to Update**:
   - **Common package**: `services/common/src/**/__init__.py`
   - **All services**: `services/*/src/**/__init__.py`
@@ -220,6 +226,31 @@
   - Document preferred import paths for each module
   - Ensure no circular import chains through __init__.py files
 - **Why Needed**: Duplicate imports in __init__.py files can cause import confusion, make code harder to maintain, and potentially contribute to circular import issues. Clear import paths improve code clarity and prevent import-related bugs.
+
+#### **INFRA-013: Implement Proper Exception Handlers and Middleware for Order Service**
+- **Component**: Infrastructure & Code Quality (Order Service)
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Implement proper exception handlers and logging middleware for Order Service to replace TODO placeholders
+- **Acceptance Criteria**:
+  - Implement proper logging middleware for Kubernetes deployment
+  - Implement secure validation error handler
+  - Implement secure HTTP exception handler
+  - Implement secure global exception handler
+  - Remove all TODO comments for exception handling
+  - Proper error logging and response formatting
+- **Dependencies**: INFRA-011 ✅, LOG-001 ✅
+- **Files to Update**:
+  - `services/order_service/src/main.py` - Implement exception handlers and middleware
+  - Create `services/order_service/src/exceptions/secure_exceptions.py` for secure handlers
+- **Technical Approach**:
+  - Implement secure exception handlers with proper logging
+  - Add request correlation IDs for tracing
+  - Implement structured error responses
+  - Add security headers and error sanitization
+  - Test exception handling with various error scenarios
+- **Why Needed**: Order Service currently has TODO placeholders for exception handling and middleware, which should be properly implemented for production readiness
 
 ### **🌐 Frontend & User Experience**
 
@@ -237,7 +268,22 @@
 - **Type**: Bug Fix
 - **Priority**: 🔶 **MEDIUM PRIORITY**
 - **Status**: 📋 **To Do**
-- **Description**: Fix email uniqueness validation to exclude current user's email
+- **Description**: Fix email uniqueness validation to exclude current user's email during profile updates and improve exception handling in business validators
+- **Acceptance Criteria**:
+  - Email uniqueness validation excludes current user's email during profile updates
+  - Fix generic exception handlers that incorrectly catch specific exceptions
+  - Proper exception flow maintained for validation errors
+  - Profile update functionality works correctly without false conflicts
+- **Dependencies**: INFRA-011 ✅
+- **Files to Update**:
+  - `services/user_service/src/validation/business_validators.py` - Fix email uniqueness validation and exception handling
+  - `services/user_service/src/controllers/auth/profile.py` - Update profile update logic
+- **Technical Approach**:
+  - Implement `exclude_username` parameter usage in `validate_email_uniqueness`
+  - Fix generic exception handlers to not catch specific exceptions
+  - Ensure proper exception propagation for validation errors
+  - Test profile update scenarios to verify fixes
+- **Why Needed**: Current email uniqueness validation incorrectly flags user's own email as a conflict during profile updates, and generic exception handlers break expected exception flow
 
 ### **📊 Performance & Scaling**
 
