@@ -9,42 +9,27 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Union
 from fastapi import APIRouter, Depends, status, Request
-
-# Import API models
 from api_models.order import OrderCreateRequest, OrderCreateResponse, OrderData
 from api_models.shared.common import ErrorResponse
-
-# Import common entities
 from common.data.entities.order.enums import OrderType, OrderStatus
-
-# Import dependencies
-from controllers.dependencies import (
-    get_current_user, get_transaction_manager,
-    get_asset_dao_dependency, get_user_dao_dependency,
-    get_balance_dao_dependency, get_asset_balance_dao_dependency
-)
 from common.core.utils.transaction_manager import TransactionManager
-
-# Import DAOs
 from common.data.dao.inventory import AssetDAO
 from common.data.dao.user import UserDAO, BalanceDAO
 from common.data.dao.asset import AssetBalanceDAO
-
-# Import exceptions
 from common.exceptions import (
     CNOPInsufficientBalanceException,
     CNOPDatabaseOperationException,
     CNOPLockAcquisitionException
 )
 from common.exceptions.shared_exceptions import CNOPInternalServerException
-
-from order_exceptions import CNOPOrderValidationException
-
-# Import business validators
-from validation.business_validators import validate_order_creation_business_rules
-
-# Import our standardized logger
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from order_exceptions import CNOPOrderValidationException
+from controllers.dependencies import (
+    get_current_user, get_transaction_manager,
+    get_asset_dao_dependency, get_user_dao_dependency,
+    get_balance_dao_dependency, get_asset_balance_dao_dependency
+)
+from validation.business_validators import validate_order_creation_business_rules
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.ORDER)

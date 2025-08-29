@@ -8,31 +8,19 @@ Handles order listing endpoint with business logic directly in controller
 from datetime import datetime
 from typing import Union, Optional
 from fastapi import APIRouter, Depends, status, Query
-
-# Import API models
 from api_models.order import OrderListResponse, OrderSummary
 from api_models.shared.common import ErrorResponse
-
-# Import common entities
 from common.data.entities.order.enums import OrderType
-
-# Import dependencies
+from common.data.dao.order.order_dao import OrderDAO
+from common.data.dao.inventory import AssetDAO
+from common.data.dao.user import UserDAO
+from common.exceptions.shared_exceptions import CNOPInternalServerException
+from common.shared.logging import BaseLogger, Loggers, LogActions
 from controllers.dependencies import (
     get_current_user, get_order_dao_dependency,
     get_asset_dao_dependency, get_user_dao_dependency
 )
-from common.data.dao.order.order_dao import OrderDAO
-from common.data.dao.inventory import AssetDAO
-from common.data.dao.user import UserDAO
-
-# Import exceptions
-from common.exceptions.shared_exceptions import CNOPInternalServerException
-
-# Import business validators
 from validation.business_validators import validate_order_listing_business_rules
-
-# Import our standardized logger
-from common.shared.logging import BaseLogger, Loggers, LogActions
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.ORDER)

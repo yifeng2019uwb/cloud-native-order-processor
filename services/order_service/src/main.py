@@ -10,19 +10,17 @@ This is the API layer entry point. It handles:
 - CloudWatch logging for Lambda deployment
 """
 import os
-import uvicorn
 from datetime import datetime
 from pathlib import Path
+import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-
-# Import our standardized logger
 from common.shared.logging import BaseLogger, Loggers, LogActions
-
-# Import controllers from the controllers package
+from common.aws.sts_client import STSClient
+from order_exceptions import CNOPOrderValidationException
 from controllers import (
     create_order_router,
     get_order_router,
@@ -32,10 +30,6 @@ from controllers import (
     asset_transaction_router,
     health_router
 )
-
-# Import exceptions and AWS client
-from order_exceptions import CNOPOrderValidationException
-from common.aws.sts_client import STSClient
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.ORDER)

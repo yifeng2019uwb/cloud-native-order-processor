@@ -8,30 +8,20 @@ Handles order retrieval endpoint with business logic directly in controller
 from datetime import datetime
 from typing import Union
 from fastapi import APIRouter, Depends, status
-
-# Import API models
 from api_models.order import GetOrderResponse, OrderData
 from api_models.shared.common import ErrorResponse
-
-# Import dependencies
-from controllers.dependencies import (
-    get_current_user, get_order_dao_dependency,
-    get_user_dao_dependency
-)
 from common.data.dao.order.order_dao import OrderDAO
 from common.data.dao.user import UserDAO
-
-# Import exceptions
 from common.exceptions.shared_exceptions import (
     CNOPOrderNotFoundException,
     CNOPInternalServerException
 )
-
-# Import business validators
-from validation.business_validators import validate_order_retrieval_business_rules
-
-# Import our standardized logger
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from controllers.dependencies import (
+    get_current_user, get_order_dao_dependency,
+    get_user_dao_dependency
+)
+from validation.business_validators import validate_order_retrieval_business_rules
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.ORDER)

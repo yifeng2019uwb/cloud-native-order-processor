@@ -9,44 +9,32 @@ Handles asset balance management endpoints
 from datetime import datetime, timezone
 from typing import Union
 from fastapi import APIRouter, Depends, status, Request
-
-# Import API models
 from api_models.asset import (
     GetAssetBalanceRequest, GetAssetBalancesRequest,
     GetAssetBalanceResponse, GetAssetBalancesResponse,
     AssetBalanceData
 )
 from api_models.shared.common import ErrorResponse
-
-# Import dependencies
-from controllers.dependencies import (
-    get_current_user, get_asset_balance_dao_dependency,
-    get_user_dao_dependency, get_asset_dao_dependency
-)
 from common.data.dao.asset import AssetBalanceDAO
 from common.data.dao.user import UserDAO
 from common.data.dao.inventory import AssetDAO
-
-# Import business validators
-from validation.business_validators import validate_user_permissions
-
-# Import exceptions
-from order_exceptions import (
-    CNOPOrderValidationException,
-)
-# Import internal exceptions (from common.exceptions - internal use only)
 from common.exceptions import (
     CNOPEntityNotFoundException,
     CNOPDatabaseOperationException,
     CNOPInternalServerException
 )
-# Import shared external exceptions (from common.exceptions.shared_exceptions - external use)
 from common.exceptions.shared_exceptions import (
     CNOPAssetNotFoundException
 )
-
-# Import our standardized logger
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from order_exceptions import (
+    CNOPOrderValidationException,
+)
+from controllers.dependencies import (
+    get_current_user, get_asset_balance_dao_dependency,
+    get_user_dao_dependency, get_asset_dao_dependency
+)
+from validation.business_validators import validate_user_permissions
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.ORDER)
