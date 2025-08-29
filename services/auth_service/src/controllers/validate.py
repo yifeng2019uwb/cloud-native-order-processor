@@ -5,11 +5,10 @@ Internal endpoint for JWT token validation.
 """
 
 import time
+from typing import Union
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
-
 from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
-from typing import Union
 from common.auth.security import TokenManager
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 from common.shared.logging import BaseLogger, Loggers, LogActions

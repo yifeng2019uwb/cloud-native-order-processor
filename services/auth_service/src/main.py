@@ -7,13 +7,9 @@ FastAPI application entry point.
 from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-# Import controllers
+from common.shared.logging import BaseLogger, Loggers, LogActions
 from controllers.health import router as health_router
 from controllers.validate import router as validate_router
-
-# Import our standardized logger
-from common.shared.logging import BaseLogger, Loggers, LogActions
 
 # Initialize logger
 logger = BaseLogger(Loggers.AUTH)
