@@ -117,7 +117,10 @@ class BaseLogger:
         log_json = json.dumps(log_entry, ensure_ascii=False)
 
         # Output to console (stdout for K8s log collection)
-        print(log_json)
+        # Use sys.stdout.write for Kubernetes compatibility and avoid circular logging
+        import sys
+        sys.stdout.write(log_json + '\n')
+        sys.stdout.flush()
 
         # Write to file if enabled (for Promtail collection)
         if self.log_to_file:

@@ -38,14 +38,14 @@ class TestBaseLogger:
 
     def test_log_basic(self):
         """Test basic logging functionality."""
-        with patch('builtins.print') as mock_print:
+        with patch('sys.stdout.write') as mock_stdout:
             self.logger.log("INFO", "test_action", "Test message")
 
-            # Verify print was called
-            mock_print.assert_called_once()
+            # Verify stdout.write was called
+            mock_stdout.assert_called_once()
 
             # Parse the logged JSON
-            logged_data = json.loads(mock_print.call_args[0][0])
+            logged_data = json.loads(mock_stdout.call_args[0][0])
 
             # Verify required fields
             assert logged_data["level"] == "INFO"
@@ -57,7 +57,7 @@ class TestBaseLogger:
 
     def test_log_with_optional_fields(self):
         """Test logging with optional fields."""
-        with patch('builtins.print') as mock_print:
+        with patch('sys.stdout.write') as mock_stdout:
             self.logger.log(
                 "INFO", "test_action", "Test message",
                 user="test_user",
@@ -66,7 +66,7 @@ class TestBaseLogger:
                 request_id="custom-req-123"
             )
 
-            logged_data = json.loads(mock_print.call_args[0][0])
+            logged_data = json.loads(mock_stdout.call_args[0][0])
 
             # Verify optional fields
             assert logged_data["user"] == "test_user"
@@ -76,18 +76,18 @@ class TestBaseLogger:
 
     def test_log_levels(self):
         """Test that all log levels work correctly."""
-        with patch('builtins.print') as mock_print:
+        with patch('sys.stdout.write') as mock_stdout:
             # Test info level
             self.logger.info("test_info", "Info message")
-            mock_print.assert_called()
+            mock_stdout.assert_called()
 
             # Test warning level
             self.logger.warning("test_warning", "Warning message")
-            mock_print.assert_called()
+            mock_stdout.assert_called()
 
             # Test error level
             self.logger.error("test_error", "Error message")
-            mock_print.assert_called()
+            mock_stdout.assert_called()
 
     def test_create_logger_function(self):
         """Test the convenience create_logger function."""
@@ -97,24 +97,24 @@ class TestBaseLogger:
 
     def test_json_encoding(self):
         """Test JSON encoding handles special characters correctly."""
-        with patch('builtins.print') as mock_print:
+        with patch('sys.stdout.write') as mock_stdout:
             # Test with special characters
             special_message = "Test message with émojis 🚀 and unicode"
             self.logger.info("test_action", special_message)
 
             # Verify JSON was created correctly
-            logged_data = json.loads(mock_print.call_args[0][0])
+            logged_data = json.loads(mock_stdout.call_args[0][0])
             assert logged_data["message"] == special_message
 
     def test_request_id_uniqueness(self):
         """Test that request IDs are unique across multiple logs."""
-        with patch('builtins.print') as mock_print:
+        with patch('sys.stdout.write') as mock_stdout:
             # Log multiple messages
             for i in range(3):
                 self.logger.info("test_action", f"Message {i}")
 
             # Extract request IDs
-            calls = [json.loads(call[0][0]) for call in mock_print.call_args_list]
+            calls = [json.loads(call[0][0]) for call in mock_stdout.call_args_list]
             request_ids = [call["request_id"] for call in calls]
 
             # Verify all request IDs are unique

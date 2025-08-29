@@ -68,6 +68,39 @@
   - Ensure all services use structured logging format
   - Remove debug print statements and console noise
 
+#### **LOG-002: Implement Structured Logging for Gateway Service**
+- **Component**: Infrastructure & Logging (Gateway Service)
+- **Type**: Task
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Implement structured logging for the Go-based Gateway service to match our Python services' logging standards
+
+- **Acceptance Criteria**:
+  - Gateway service uses structured JSON logging (not plain text)
+  - Consistent log format with other services (timestamp, level, service, request_id, action, message)
+  - Proper log levels (DEBUG, INFO, WARN, ERROR) with configurable verbosity
+  - Request correlation IDs for tracing requests through the gateway
+  - Service identification in all logs
+  - Remove all `fmt.Printf` debug statements and replace with proper logging
+  - Clean, professional logging without debug emojis and console noise
+  - Kubernetes-friendly logging (stdout/stderr for log collection)
+- **Dependencies**: LOG-001 ✅ (Python services completed)
+- **Files to Update**:
+  - `gateway/cmd/gateway/main.go` - Replace `log.*` with structured logging
+  - `gateway/internal/middleware/auth.go` - Replace `fmt.Printf` with structured logging
+  - `gateway/internal/middleware/middleware.go` - Enhance Gin logger middleware
+  - `gateway/internal/api/server.go` - Replace `fmt.Printf` with structured logging
+  - `gateway/internal/services/proxy.go` - Replace `fmt.Printf` with structured logging
+  - Create new `gateway/pkg/logging/` package for Go BaseLogger equivalent
+- **Technical Approach**:
+  - Create Go equivalent of Python BaseLogger with similar interface
+  - Use Go's `log` package as foundation but with structured output
+  - Implement JSON formatting for logs
+  - Add request ID generation and correlation
+  - Support different log levels and output formats
+  - Ensure compatibility with Kubernetes log collection systems
+- **Why Needed**: Gateway currently uses inconsistent logging (mix of `log.*` and `fmt.Printf`), lacks structured format, and has debug code in production. Needs to match our Python services' professional logging standards.
+
 #### **FRONTEND-007: Frontend Authentication Retesting After Auth Service**
 - **Component**: Frontend
 - **Type**: Epic
@@ -97,6 +130,26 @@
 - **Priority**: 🔶 **MEDIUM PRIORITY**
 - **Status**: 📋 **To Do**
 - **Description**: Fix email uniqueness validation to exclude current user's email
+
+#### **JWT-001: Fix JWT Response Format Inconsistency**
+- **Component**: Auth Service & Common Package
+- **Type**: Bug Fix
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Fix inconsistency between JWT payload format and API response format
+- **Acceptance Criteria**:
+  - JWT payload uses standard claims (`exp`, `iat`) internally
+  - API responses use user-friendly format (`expires_at`, `created_at`)
+  - Auth service validate endpoint converts JWT timestamps to ISO format
+  - Maintains JWT standards while providing consistent API responses
+- **Dependencies**: LOG-001 ✅
+- **Files to Update**:
+  - `services/auth_service/src/controllers/validate.py` - Convert JWT timestamps to ISO format
+  - No changes needed in `services/common/src/auth/security/token_manager.py` (keep JWT standard)
+- **Technical Details**:
+  - `validate_token_comprehensive()` correctly returns JWT standard claims (`exp`, `iat`)
+  - Auth service should convert `exp` → `expires_at` and `iat` → `created_at` in API response
+  - Maintains separation between JWT internals and API externals
 
 #### **INFRA-004: Enhance dev.sh Build Validation**
 - **Component**: Infrastructure & Development Tools
