@@ -98,6 +98,42 @@
 - **Status**: 📋 **To Do**
 - **Description**: Fix email uniqueness validation to exclude current user's email
 
+#### **INFRA-004: Enhance dev.sh Build Validation**
+- **Component**: Infrastructure & Development Tools
+- **Type**: Enhancement
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Enhance dev.sh build script to catch runtime issues like undefined variables and import-time validation
+- **Acceptance Criteria**:
+  - Add static analysis tools (pylint, flake8) to catch undefined variable usage
+  - Include import-time validation to test module imports
+  - Add basic runtime checks for critical startup code
+  - Maintain current build performance while adding validation layers
+  - Catch issues like "logger is not defined" before runtime
+- **Dependencies**: INFRA-001 ✅
+- **Files to Update**:
+  - `services/*/dev.sh` scripts
+  - `services/dev-tools/` validation tools
+- **Why Needed**: Current build only validates syntax and imports, but misses runtime issues like undefined variables that cause startup failures
+
+#### **INFRA-010: Remove Unnecessary Try/Import Blocks from Main Files**
+- **Component**: Infrastructure & Code Quality
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Remove defensive try/import blocks from main.py files that hide import errors and make debugging harder
+- **Acceptance Criteria**:
+  - Remove all `try: import X except ImportError:` blocks from main.py files
+  - Replace with direct imports at the top of files
+  - Ensure all imports are clearly visible and fail fast if dependencies are missing
+  - Maintain proper import ordering (standard library, third-party, local)
+  - Keep only necessary conditional logic for actual business requirements
+- **Dependencies**: INFRA-001 ✅
+- **Files to Update**:
+  - `services/*/src/main.py` - Remove try/import blocks
+  - Any other files with defensive import patterns
+- **Why Needed**: Try/import blocks hide real import errors, make debugging harder, and create unnecessary complexity. Import errors should be internal errors that fail fast during startup, not hidden with fallbacks.
+
 ### **🌐 Frontend & User Experience**
 
 #### **FRONTEND-006: Standardize Frontend Port to localhost:3000**
@@ -147,6 +183,19 @@
 - **Priority**: 🔥 **HIGH PRIORITY**
 - **Status**: 📋 **To Do**
 - **Description**: Review and fix all API endpoints and functions for async/await consistency
+- **Acceptance Criteria**:
+  - Remove unnecessary `async` keywords from handlers that don't perform async operations
+  - Keep `async` only for handlers that actually use `await`
+  - Ensure middleware functions remain `async` (they need to call `await call_next()`)
+  - Fix exception handlers to be synchronous when they just return responses
+  - Fix event handlers to be synchronous when they just do logging
+  - Maintain FastAPI compatibility and best practices
+- **Dependencies**: INFRA-001 ✅
+- **Files to Update**:
+  - `services/*/src/main.py` - Fix async/sync handlers
+  - `services/*/src/controllers/*.py` - Review endpoint handlers
+  - All exception handlers and middleware functions
+- **Why Needed**: Many handlers are marked `async` unnecessarily, causing performance overhead and unclear code intent
 
 #### **INFRA-005: Docker Production-Ready Refactoring**
 - **Component**: Infrastructure & Docker

@@ -7,7 +7,6 @@ Layer 1: Field validation (handled in API models)
 """
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import Union
-import logging
 from datetime import datetime, timezone
 
 # Import user-service API models
@@ -29,7 +28,8 @@ from common.exceptions import (
     CNOPLockAcquisitionException
 )
 
-logger = logging.getLogger(__name__)
+from common.shared.logging import BaseLogger, Loggers, LogActions
+logger = BaseLogger(Loggers.USER)
 router = APIRouter(tags=["balance"])
 
 
@@ -82,9 +82,10 @@ async def deposit_funds(
     """
     # Log deposit attempt (without sensitive data)
     logger.info(
-        f"Deposit attempt from {request.client.host if request.client else 'unknown'}",
+        action=LogActions.REQUEST_START,
+        message=f"Deposit attempt from {request.client.host if request.client else 'unknown'}",
+        user=current_user.username,
         extra={
-            "username": current_user.username,
             "amount": str(deposit_data.amount),
             "user_agent": request.headers.get("user-agent", "unknown"),
             "timestamp": datetime.now(timezone.utc).isoformat()
@@ -98,7 +99,7 @@ async def deposit_funds(
             amount=deposit_data.amount
         )
 
-        logger.info(f"Deposit successful for user {current_user.username}: {deposit_data.amount} (lock_duration: {result.lock_duration}s)")
+        logger.info(action=LogActions.REQUEST_END, message=f"Deposit successful for user {current_user.username}: {deposit_data.amount} (lock_duration: {result.lock_duration}s)", user=current_user.username)
 
         return DepositResponse(
             success=True,
@@ -108,14 +109,14 @@ async def deposit_funds(
         )
 
     except CNOPLockAcquisitionException as e:
-        logger.warning(f"Lock acquisition failed for deposit: user={current_user.username}, error={str(e)}")
+        logger.warning(action=LogActions.ERROR, message=f"Lock acquisition failed for deposit: user={current_user.username}, error={str(e)}", user=current_user.username)
         raise CNOPInternalServerException("Service temporarily unavailable")
     except CNOPEntityNotFoundException as e:
-        logger.error(f"User balance not found for deposit: user={current_user.username}, error={str(e)}")
+        logger.error(action=LogActions.ERROR, message=f"User balance not found for deposit: user={current_user.username}, error={str(e)}", user=current_user.username)
         raise CNOPUserNotFoundException("User balance not found")
     except CNOPDatabaseOperationException as e:
-        logger.error(f"Database operation failed for deposit: user={current_user.username}, error={str(e)}")
+        logger.error(action=LogActions.ERROR, message=f"Database operation failed for deposit: user={current_user.username}, error={str(e)}", user=current_user.username)
         raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
-        logger.error(f"Unexpected error during deposit: user={current_user.username}, error={str(e)}", exc_info=True)
+        logger.error(action=LogActions.ERROR, message=f"Unexpected error during deposit: user={current_user.username}, error={str(e)}", user=current_user.username)
         raise CNOPInternalServerException("Service temporarily unavailable")

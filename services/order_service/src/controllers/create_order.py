@@ -203,6 +203,7 @@ async def create_order(
                    f"asset={order_data.asset_id}, quantity={order_data.quantity}, error={str(e)}",
             user=current_user['username']
         )
+        # Wrap the exception in CNOPOrderValidationException
         raise CNOPOrderValidationException(str(e))
 
     except CNOPLockAcquisitionException as e:
@@ -227,7 +228,8 @@ async def create_order(
             message=f"Order validation failed: error={str(e)}",
             user=current_user['username']
         )
-        raise CNOPOrderValidationException(str(e))
+        # Re-raise the original exception without wrapping
+        raise
 
     except Exception as e:
         logger.error(

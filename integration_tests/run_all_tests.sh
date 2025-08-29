@@ -113,6 +113,10 @@ fi
 # Install prerequisites before running tests
 install_prerequisites
 
+# Activate virtual environment for all test execution
+echo "Activating virtual environment for test execution..."
+source venv/bin/activate
+
 case $ARG in
     "all")
         echo "=== Running All Tests ==="

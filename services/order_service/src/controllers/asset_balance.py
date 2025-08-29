@@ -293,7 +293,8 @@ def get_user_asset_balance(
             message=f"Validation error for asset_id '{asset_id}': {str(e)}",
             user=current_user['username']
         )
-        raise CNOPOrderValidationException(f"Invalid asset ID: {str(e)}")
+        # Re-raise the original validation error without wrapping
+        raise
     except CNOPEntityNotFoundException:
         logger.info(
             action=LogActions.REQUEST_END,

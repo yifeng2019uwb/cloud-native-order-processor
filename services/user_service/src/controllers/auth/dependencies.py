@@ -4,13 +4,14 @@ FastAPI dependencies for authentication
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status, Request, Header
-import logging
+
 
 from common.data.entities.user import UserResponse
 from common.data.dao.user import UserDAO
 from common.data.database import get_user_dao as get_common_user_dao
 
-logger = logging.getLogger(__name__)
+from common.shared.logging import BaseLogger, Loggers, LogActions
+logger = BaseLogger(Loggers.USER)
 
 
 def verify_gateway_headers(
@@ -38,14 +39,14 @@ def verify_gateway_headers(
     """
     # Validate source headers
     if not x_source or x_source != "gateway":
-        logger.warning(f"Invalid source header: {x_source}")
+        logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid source header: {x_source}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid request source"
         )
 
     if not x_auth_service or x_auth_service != "auth-service":
-        logger.warning(f"Invalid auth service header: {x_auth_service}")
+        logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid auth service header: {x_auth_service}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid authentication service"
@@ -53,13 +54,13 @@ def verify_gateway_headers(
 
     # Extract user information from headers
     if not x_user_id:
-        logger.warning("Missing user ID header")
+        logger.warning(action=LogActions.ACCESS_DENIED, message="Missing user ID header")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User authentication required"
         )
 
-    logger.info(f"🔍 DEBUG: Gateway headers verified for user: '{x_user_id}'")
+    logger.info(action=LogActions.AUTH_SUCCESS, message=f"Gateway headers verified for user: '{x_user_id}'")
     return x_user_id
 
 
@@ -81,13 +82,13 @@ def get_current_user(
         HTTPException: If user not found or database error
     """
     try:
-        logger.info(f"🔍 DEBUG: get_current_user called with username: '{username}'")
+        logger.info(action=LogActions.REQUEST_START, message=f"get_current_user called with username: '{username}'")
 
         user = user_dao.get_user_by_username(username)
-        logger.info(f"🔍 DEBUG: user_dao.get_user_by_username returned: {user}")
+        logger.info(action=LogActions.AUTH_SUCCESS, message=f"user_dao.get_user_by_username returned: {user}")
 
         if user is None:
-            logger.warning(f"❌ DEBUG: User not found for username: '{username}'")
+            logger.warning(action=LogActions.AUTH_FAILED, message=f"User not found for username: '{username}'")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found"
@@ -109,7 +110,7 @@ def get_current_user(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting current user: {e}")
+        logger.error(action=LogActions.ERROR, message=f"Error getting current user: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get user information"
@@ -165,7 +166,7 @@ def get_optional_current_user(
         )
 
     except Exception as e:
-        logger.debug(f"Optional authentication failed: {e}")
+        logger.debug(action=LogActions.AUTH_FAILED, message=f"Optional authentication failed: {e}")
         return None
 
 
@@ -188,5 +189,5 @@ def require_admin_user(
     # For now, all authenticated users are considered admins
     # In production, check user.role or user.is_admin
 
-    logger.debug(f"Admin access granted to user: {current_user.email}")
+    logger.debug(action=LogActions.AUTH_SUCCESS, message=f"Admin access granted to user: {current_user.email}")
     return current_user

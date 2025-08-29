@@ -45,15 +45,15 @@ def validate_jwt_token(request: ValidateTokenRequest):
         # Log successful validation
         logger.info(action=LogActions.AUTH_SUCCESS, message="JWT token validated successfully",
                    user=user_context["username"], duration_ms=duration_ms,
-                   extra={"request_id": request_id, "role": user_context["role"]})
+                   extra={"request_id": request_id, "role": user_context.get("role", "unknown")})
 
         # Return success response
         return ValidateTokenResponse(
             valid=True,
             user=user_context["username"],
-            expires_at=user_context["expires_at"],
-            created_at=user_context["created_at"],
-            metadata=user_context["metadata"],
+            expires_at=str(user_context.get("exp", "")),
+            created_at=str(user_context.get("iat", "")),
+            metadata={"token_type": user_context.get("token_type", "")},
             request_id=request_id
         )
 

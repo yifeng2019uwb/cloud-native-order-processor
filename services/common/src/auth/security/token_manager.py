@@ -172,7 +172,7 @@ class TokenManager:
         """
         try:
             logger.info(
-                action=LogActions.LogActions.SECURITY_EVENT,
+                action=LogActions.SECURITY_EVENT,
                 message="Starting comprehensive token validation"
             )
 
