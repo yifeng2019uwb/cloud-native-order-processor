@@ -9,50 +9,40 @@ This is the API layer entry point. It handles:
 - Environment variables loaded from services/.env
 - Structured logging for K8s deployment
 """
-import sys
-import os
 import json
+import os
+import sys
 import time
-import uuid
 import traceback
+import uuid
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-
-# Import common exceptions (shared across services)
+from common.aws.sts_client import STSClient
 from common.exceptions.shared_exceptions import (
     CNOPInvalidCredentialsException,
     CNOPUserNotFoundException,
     CNOPInternalServerException
 )
-from user_exceptions.exceptions import CNOPUserValidationException
-
-# Import other common exceptions
 from common.exceptions import (
-    # Database exceptions
     CNOPDatabaseOperationException,
-    # Business logic exceptions
     CNOPInsufficientBalanceException
 )
-
-# Import user service specific exceptions
+from common.shared.logging import BaseLogger, Loggers, LogActions
 from user_exceptions.exceptions import (
+    CNOPUserValidationException,
     CNOPUserAlreadyExistsException
 )
-
-# Import our standardized logger
-from common.shared.logging import BaseLogger, Loggers, LogActions
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)
 
 # Load environment variables from services/.env
-from dotenv import load_dotenv
-
 # Find the services root directory (go up from user-service/src to services/)
 services_root = Path(__file__).parent.parent.parent
 env_file = services_root / ".env"
@@ -65,7 +55,6 @@ else:
     logger.info(action=LogActions.SERVICE_START, message="Continuing with system environment variables...")
 
 # Initialize STS client for AWS role assumption
-from common.aws.sts_client import STSClient
 sts_client = STSClient()
 logger.info(action=LogActions.SERVICE_START, message="STS client initialized for role assumption")
 

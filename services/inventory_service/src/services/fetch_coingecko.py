@@ -1,5 +1,5 @@
-import httpx
 import asyncio
+import httpx
 from common.shared.logging import BaseLogger, Loggers, LogActions
 
 logger = BaseLogger(Loggers.INVENTORY)

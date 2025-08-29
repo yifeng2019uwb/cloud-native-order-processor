@@ -9,27 +9,25 @@ This is the API layer entry point. It handles:
 - Environment variables loaded from services/.env
 - Data initialization on startup
 """
-import sys
 import os
+import sys
 import uvicorn
-import controllers.assets
-import controllers.health
+from datetime import datetime
+from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.exceptions import RequestValidationError
-from datetime import datetime
-from pathlib import Path
 from common.aws.sts_client import STSClient
 from common.shared.health import HealthChecker
 from common.shared.logging import BaseLogger, Loggers, LogActions
-
-# Exception handlers will be defined inline
 from inventory_exceptions.exceptions import (
     CNOPAssetValidationException,
     CNOPInventoryServerException
 )
+import controllers.assets
+import controllers.health
 from controllers.assets import router as assets_router
 from controllers.health import router as health_router
 from data.init_inventory import startup_inventory_initialization

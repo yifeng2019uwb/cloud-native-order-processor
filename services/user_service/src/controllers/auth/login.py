@@ -5,31 +5,20 @@ Path: services/user_service/src/controllers/auth/login.py
 Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
-from fastapi import APIRouter, HTTPException, Depends, status
-from typing import Union
 from datetime import datetime, timezone
-
-# Import user-service API models
+from typing import Union
+from fastapi import APIRouter, HTTPException, Depends, status
 from api_models.auth.login import (
     UserLoginRequest,
     LoginSuccessResponse,
     LoginErrorResponse,
     UserLoginResponse
 )
-from api_models.shared.common import ErrorResponse
-from api_models.shared.common import UserBaseInfo
-
-# Import common DAO models
+from api_models.shared.common import ErrorResponse, UserBaseInfo
 from common.data.entities.user import User
-
-# Import dependencies
 from common.data.database import get_user_dao
 from common.auth.security import TokenManager, AuditLogger
-
-# Import exceptions
 from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
-
-# Import our standardized logger
 from common.shared.logging import BaseLogger, Loggers, LogActions
 
 # Initialize our standardized logger

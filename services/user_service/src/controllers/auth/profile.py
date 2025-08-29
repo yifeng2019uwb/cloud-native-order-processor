@@ -5,10 +5,8 @@ Path: services/user_service/src/controllers/auth/profile.py
 Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
-from fastapi import APIRouter, HTTPException, Depends, status
 from typing import Union
-
-# Import user-service API models
+from fastapi import APIRouter, HTTPException, Depends, status
 from api_models.auth.profile import (
     UserProfileResponse,
     UserProfileUpdateRequest,
@@ -16,29 +14,19 @@ from api_models.auth.profile import (
     ProfileUpdateErrorResponse
 )
 from api_models.shared.common import ErrorResponse
-
-# Import dependencies
 from common.data.database import get_user_dao
-
-# Import exceptions
+from common.data.entities.user import UserResponse
 from common.exceptions.shared_exceptions import (
     CNOPEntityNotFoundException as CNOPUserNotFoundException,
     CNOPEntityAlreadyExistsException as CNOPUserAlreadyExistsException
 )
+from common.shared.logging import BaseLogger, Loggers, LogActions
 from user_exceptions.exceptions import CNOPUserValidationException
-
-# Import business validation functions only (Layer 2)
 from validation.business_validators import (
     validate_email_uniqueness,
     validate_age_requirements
 )
-
-# Import the centralized get_current_user from dependencies
 from .dependencies import get_current_user
-from common.data.entities.user import UserResponse
-
-# Import our standardized logger
-from common.shared.logging import BaseLogger, Loggers, LogActions
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)

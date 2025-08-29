@@ -2,24 +2,18 @@
 User Logout API Endpoint
 Path: cloud-native-order-processor/services/user-service/src/controllers/auth/logout.py
 """
-from fastapi import APIRouter, Depends, status
-from typing import Union
 from datetime import datetime, timezone
-
-# Import user-service API models
+from typing import Union
+from fastapi import APIRouter, Depends, status
 from api_models.auth.logout import (
     LogoutRequest,
     LogoutSuccessResponse,
     LogoutErrorResponse
 )
 from api_models.shared.common import ErrorResponse
-
-# Import dependencies
-from .dependencies import get_current_user
 from common.auth.security import AuditLogger
-
-# Import our standardized logger
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from .dependencies import get_current_user
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)

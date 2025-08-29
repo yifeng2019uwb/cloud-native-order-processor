@@ -9,8 +9,6 @@ Combines sanitization + format validation in each function.
 import re
 from datetime import date, timedelta
 from decimal import Decimal
-
-# Import proper exceptions
 from user_exceptions import CNOPUserValidationException
 
 

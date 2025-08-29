@@ -2,11 +2,9 @@
 Assets controller for inventory service
 Path: services/inventory-service/src/controllers/assets.py
 """
-from fastapi import APIRouter, Depends, Query, status
-from typing import Optional
 from datetime import datetime, timezone
-
-# Import API models
+from typing import Optional
+from fastapi import APIRouter, Depends, Query, status
 from api_models.inventory.asset_response import (
     AssetDetailResponse,
     asset_to_detail_response
@@ -17,30 +15,20 @@ from api_models.inventory.asset_list import (
     build_asset_list_response
 )
 from api_models.inventory.asset_requests import AssetIdRequest
-
-# Import common DAO
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.database import get_asset_dao
-
-# Import internal exceptions
+from common.exceptions.shared_exceptions import CNOPAssetNotFoundException
+from common.shared.logging import BaseLogger, Loggers, LogActions
 from inventory_exceptions import (
     CNOPAssetValidationException,
     CNOPInventoryServerException
 )
-from common.exceptions.shared_exceptions import CNOPAssetNotFoundException
-
-# Import business validation functions (Layer 2)
 from validation.business_validators import validate_asset_exists
-
-# Import metrics
 try:
     from metrics import record_asset_retrieval, record_asset_detail_view, update_asset_counts
     METRICS_AVAILABLE = True
 except ImportError:
     METRICS_AVAILABLE = False
-
-# Import our standardized logger
-from common.shared.logging import BaseLogger, Loggers, LogActions
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.INVENTORY)

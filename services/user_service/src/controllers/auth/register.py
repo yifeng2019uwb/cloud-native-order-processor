@@ -5,44 +5,33 @@ Path: services/user_service/src/controllers/auth/register.py
 Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
-from fastapi import APIRouter, HTTPException, Depends, status, Request
-from typing import Union
 from datetime import datetime, timezone
 from decimal import Decimal
-
-# Import user-service API models (same directory structure)
+from typing import Union
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from api_models.auth.registration import (
     UserRegistrationRequest,
     RegistrationSuccessResponse,
     RegistrationErrorResponse
 )
 from api_models.shared.common import ErrorResponse
-
-# Import common DAO models - simple imports
-from common.data.entities.user import UserCreate, User, Balance, BalanceCreate
-
-# Import dependencies and simplified exceptions
+from common.auth.security import TokenManager, AuditLogger
 from common.data.database import get_user_dao, get_balance_dao
+from common.data.entities.user import UserCreate, User, Balance, BalanceCreate
 from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInternalServerException
 )
-
+from common.shared.logging import BaseLogger, Loggers, LogActions
 from user_exceptions.exceptions import (
     CNOPUserAlreadyExistsException,
     CNOPUserValidationException
 )
-from common.auth.security import TokenManager, AuditLogger
-
-# Import business validation functions only (Layer 2)
 from validation.business_validators import (
     validate_username_uniqueness,
     validate_email_uniqueness,
     validate_age_requirements
 )
-
-# Import our standardized logger
-from common.shared.logging import BaseLogger, Loggers, LogActions
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)

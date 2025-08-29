@@ -2,14 +2,10 @@
 FastAPI dependencies for authentication
 """
 from typing import Optional
-
 from fastapi import Depends, HTTPException, status, Request, Header
-
-
 from common.data.entities.user import UserResponse
 from common.data.dao.user import UserDAO
 from common.data.database import get_user_dao as get_common_user_dao
-
 from common.shared.logging import BaseLogger, Loggers, LogActions
 logger = BaseLogger(Loggers.USER)
 

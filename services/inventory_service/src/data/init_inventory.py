@@ -2,17 +2,14 @@
 Initialize sample inventory data on service startup
 Path: services/inventory-service/src/data/init_inventory.py
 """
-from typing import List
-from decimal import Decimal
-import httpx
 import asyncio
-
+from decimal import Decimal
+from typing import List
+import httpx
 from common.data.dao.inventory.asset_dao import AssetDAO
-from common.data.entities.inventory import AssetCreate
 from common.data.database.dynamodb_connection import dynamodb_manager
+from common.data.entities.inventory import AssetCreate
 from common.exceptions import CNOPEntityNotFoundException
-
-# Import our standardized logger
 from common.shared.logging import BaseLogger, Loggers, LogActions
 
 # Initialize our standardized logger

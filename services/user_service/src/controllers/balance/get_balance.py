@@ -5,26 +5,16 @@ Path: services/user_service/src/controllers/balance/get_balance.py
 Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
-from fastapi import APIRouter, HTTPException, Depends, status
-from typing import Union
 from datetime import datetime, timezone
-
-# Import user-service API models
+from typing import Union
+from fastapi import APIRouter, HTTPException, Depends, status
 from api_models.balance import BalanceResponse
 from api_models.shared.common import ErrorResponse
-
-# Import common DAO models
-from common.data.entities.user import UserResponse
-
-# Import dependencies
 from common.data.database import get_balance_dao
-from controllers.auth.dependencies import get_current_user
-
-# Import exceptions
+from common.data.entities.user import UserResponse
 from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
-
-# Import our standardized logger
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from controllers.auth.dependencies import get_current_user
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)

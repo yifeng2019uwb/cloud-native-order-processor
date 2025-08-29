@@ -5,10 +5,8 @@ Provides business logic validation for the user service.
 Handles uniqueness checks and business rules for registration.
 """
 
-from typing import Optional, Any
 from datetime import date
-
-# Import proper exceptions
+from typing import Optional, Any
 from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException
 )

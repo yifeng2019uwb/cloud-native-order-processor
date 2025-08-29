@@ -5,37 +5,26 @@ Path: services/user_service/src/controllers/balance/withdraw.py
 Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
-from fastapi import APIRouter, HTTPException, Depends, status, Request
-from typing import Union
 from datetime import datetime, timezone
-
-# Import user-service API models
+from typing import Union
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from api_models.balance import WithdrawRequest, WithdrawResponse
 from api_models.shared.common import ErrorResponse
-
-# Import common DAO models
 from common.data.entities.user import UserResponse
-
-# Import dependencies
-from controllers.dependencies import get_transaction_manager
-from controllers.auth.dependencies import get_current_user
-
-# Import exceptions
 from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInternalServerException
 )
-from user_exceptions import CNOPUserValidationException
-
-# Import common exceptions for transaction manager
 from common.exceptions import (
     CNOPDatabaseOperationException,
     CNOPEntityNotFoundException,
     CNOPLockAcquisitionException,
     CNOPInsufficientBalanceException
 )
-
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from user_exceptions import CNOPUserValidationException
+from controllers.dependencies import get_transaction_manager
+from controllers.auth.dependencies import get_current_user
 logger = BaseLogger(Loggers.USER)
 router = APIRouter(tags=["balance"])
 
