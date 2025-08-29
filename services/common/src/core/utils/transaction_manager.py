@@ -5,12 +5,11 @@ Provides centralized transaction management with rollback support
 and proper error handling for all database operations.
 """
 
-import logging
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Dict, Any, Optional
-
+from typing import Dict, Any, Optional, Callable
 from .lock_manager import UserLock, LOCK_TIMEOUTS
 from ...data.dao.user import UserDAO, BalanceDAO
 from ...data.dao.order import OrderDAO
@@ -22,8 +21,6 @@ from ...data.entities.asset import AssetTransactionCreate, AssetTransactionType
 from ...data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException
 from ...exceptions.shared_exceptions import CNOPInsufficientBalanceException
 from ...shared.logging import BaseLogger, Loggers, LogActions
-from typing import Optional, Dict, Any, Callable
-from contextlib import contextmanager
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 

@@ -2,11 +2,14 @@
 Tests for Health Checks
 """
 
+# Standard library imports
+from unittest.mock import patch
+
+# Third-party imports
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
-from datetime import datetime, timezone
 from fastapi import HTTPException
 
+# Local imports
 from src.shared.health.health_checks import (
     HealthCheckResponse,
     HealthChecker,

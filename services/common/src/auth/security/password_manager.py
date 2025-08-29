@@ -10,12 +10,11 @@ Responsibilities:
 - Password strength validation
 """
 
-import bcrypt
-from ...shared.logging import BaseLogger, Loggers
 import re
 from typing import Optional
-
+import bcrypt
 from ...exceptions import CNOPEntityValidationException
+from ...shared.logging import BaseLogger, Loggers
 
 logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
 

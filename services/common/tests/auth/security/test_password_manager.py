@@ -1,8 +1,13 @@
 """
 Unit tests for PasswordManager class.
 """
-import pytest
+# Standard library imports
 from unittest.mock import patch, MagicMock
+
+# Third-party imports
+import pytest
+
+# Local imports
 from src.auth.security.password_manager import PasswordManager
 from src.exceptions import CNOPEntityValidationException
 

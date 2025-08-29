@@ -42,31 +42,13 @@
 - **Acceptance Criteria**: Basic auth metrics, Gateway tracking, security monitoring, dashboards & alerting
 - **Dependencies**: INFRA-001, SEC-005, INFRA-003, LOG-001 ✅
 
-#### **LOG-001: Standardize Logging Across All Services**
+#### **LOG-001: Standardize Logging Across All Services** ✅
 - **Component**: Infrastructure & Logging
 - **Type**: Task
 - **Priority**: 🔥 **HIGH PRIORITY**
-- **Status**: 📋 **To Do**
-- **Description**: Standardize all services to use our defined BaseLogger for consistent structured JSON logging and clean up all print statements
-- **Acceptance Criteria**:
-  - Auth service uses BaseLogger (as per requirement)
-  - All other services (User, Order, Inventory) use BaseLogger
-  - Consistent structured JSON logging format across all services
-  - Better error messages and log querying for monitoring
-  - **All print statements removed** and replaced with appropriate logging calls
-  - Clean, professional logging without console noise
+- **Status**: ✅ **COMPLETED** (Python Services)
+- **Summary**: Successfully standardized all Python services to use BaseLogger with structured JSON logging and removed all print statements
 - **Dependencies**: INFRA-001, INFRA-003 ✅
-- **Files to Update**:
-  - `services/auth_service/src/main.py`
-  - `services/user_service/src/main.py`
-  - `services/order_service/src/main.py`
-  - `services/inventory_service/src/main.py`
-  - **All source files** across all services to remove print statements
-- **What to Clean Up**:
-  - Remove `print()` statements for environment loading, status messages, etc.
-  - Replace with appropriate `logger.info()`, `logger.warn()`, `logger.error()` calls
-  - Ensure all services use structured logging format
-  - Remove debug print statements and console noise
 
 #### **LOG-002: Implement Structured Logging for Gateway Service**
 - **Component**: Infrastructure & Logging (Gateway Service)
@@ -186,6 +168,58 @@
   - `services/*/src/main.py` - Remove try/import blocks
   - Any other files with defensive import patterns
 - **Why Needed**: Try/import blocks hide real import errors, make debugging harder, and create unnecessary complexity. Import errors should be internal errors that fail fast during startup, not hidden with fallbacks.
+
+#### **INFRA-011: Standardize Import Organization Across All Source and Test Files**
+- **Component**: Infrastructure & Code Quality
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Move all imports to the top of classes and functions across all source and test files for consistent code organization
+- **Acceptance Criteria**:
+  - All imports moved to the top of their respective classes/functions
+  - Consistent import organization pattern across all services
+  - Proper import grouping (standard library, third-party, local)
+  - No imports scattered throughout method bodies
+  - Clean, readable code structure following Python best practices
+  - All test files follow the same import organization pattern
+- **Dependencies**: LOG-001 ✅, INFRA-001 ✅
+- **Files to Update**:
+  - **All source files**: `services/*/src/**/*.py`
+  - **All test files**: `services/*/tests/**/*.py`
+  - **Common package**: `services/common/src/**/*.py` and `services/common/tests/**/*.py`
+- **Technical Approach**:
+  - Scan all Python files for imports not at the top
+  - Move imports to appropriate scope (module, class, or function level)
+  - Maintain proper import ordering and grouping
+  - Ensure no circular import issues are introduced
+  - Update any code that depends on import placement
+- **Why Needed**: Consistent import organization improves code readability, maintainability, and follows Python PEP 8 standards. Scattered imports make code harder to understand and debug.
+
+#### **INFRA-012: Clean Up __init__.py Import Duplication and Standardize Import Paths**
+- **Component**: Infrastructure & Code Quality
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Clean up duplicate imports in __init__.py files and establish clear, single import paths to prevent confusion and potential circular import issues
+- **Acceptance Criteria**:
+  - No duplicate imports across different __init__.py files in the same package hierarchy
+  - Clear, single import path for each module/class
+  - Consistent import pattern: import from parent package only when name is clear without duplication
+  - No conflicting import paths that could cause import confusion
+  - Clean separation between package-level and subpackage-level exports
+  - Documentation of preferred import paths for each module
+- **Dependencies**: INFRA-011 ✅
+- **Files to Update**:
+  - **Common package**: `services/common/src/**/__init__.py`
+  - **All services**: `services/*/src/**/__init__.py`
+  - **Test packages**: `services/*/tests/**/__init__.py`
+- **Technical Approach**:
+  - Audit all __init__.py files for duplicate imports
+  - Establish clear import hierarchy: parent packages should not re-export what subpackages already export
+  - Use direct imports from subpackages when possible
+  - Document preferred import paths for each module
+  - Ensure no circular import chains through __init__.py files
+- **Why Needed**: Duplicate imports in __init__.py files can cause import confusion, make code harder to maintain, and potentially contribute to circular import issues. Clear import paths improve code clarity and prevent import-related bugs.
 
 ### **🌐 Frontend & User Experience**
 
@@ -353,6 +387,13 @@
 - **Status**: ✅ **COMPLETED**
 - **Description**: Standardized all service dev.sh scripts with import validation
 
+#### **LOG-001: Standardize Logging Across All Services**
+- **Component**: Infrastructure & Logging
+- **Type**: Task
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: ✅ **COMPLETED**
+- **Description**: Successfully standardized all Python services to use BaseLogger with structured JSON logging and removed all print statements
+
 ### **🐛 Bug Fixes**
 
 #### **BUG-001: Integration Test Failures - Service Validation Issues**
@@ -377,9 +418,10 @@
 - **Phase 1-6**: Core System Foundation, Multi-Asset Portfolio, Frontend, K8s, Logging, Auth Service - ✅ **COMPLETED**
 - **Phase 7**: Common Package Restructuring & Service Migration - ✅ **COMPLETED**
 - **Phase 8**: Docker Standardization & Infrastructure Optimization - ✅ **COMPLETED**
+- **Phase 9**: Python Services Logging Standardization - ✅ **COMPLETED**
 
 ### **🔄 Current Focus**
-- **LOG-001**: Standardize Logging Across All Services (🔥 HIGH PRIORITY)
+- **LOG-002**: Implement Structured Logging for Gateway Service (🔥 HIGH PRIORITY)
 - **MON-001**: Essential Authentication Monitoring (🔥 HIGH PRIORITY)
 - **FRONTEND-007**: Frontend Authentication Retesting After Auth Service (🔥 HIGH PRIORITY)
 - **BUG-001**: Fix Inventory Service Exception Handling (🔶 MEDIUM PRIORITY)
@@ -391,7 +433,7 @@
 - **Q1 2026**: Production deployment with monitoring and security
 - **Q1 2026**: Advanced features and RBAC implementation
 
-**🎯 IMMEDIATE NEXT STEP**: LOG-001 - Standardize Logging Across All Services (🔥 **HIGH PRIORITY**)
+**🎯 IMMEDIATE NEXT STEP**: LOG-002 - Implement Structured Logging for Gateway Service (🔥 **HIGH PRIORITY**)
 
 ---
 

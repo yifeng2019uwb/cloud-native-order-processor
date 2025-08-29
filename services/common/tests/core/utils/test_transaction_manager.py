@@ -2,12 +2,16 @@
 Tests for TransactionManager class.
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
-from decimal import Decimal
+# Standard library imports
 from datetime import datetime, timezone
+from decimal import Decimal
 from uuid import UUID
+from unittest.mock import MagicMock, patch, AsyncMock
 
+# Third-party imports
+import pytest
+
+# Local imports
 from src.core.utils.transaction_manager import TransactionManager, TransactionResult
 from src.data.dao.user import UserDAO, BalanceDAO
 from src.data.dao.order import OrderDAO

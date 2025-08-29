@@ -4,10 +4,14 @@ Basic unit tests for BaseLogger class.
 Simple tests to verify the logging functionality works.
 """
 
+# Standard library imports
 import json
 from unittest.mock import patch
+
+# Third-party imports
 import pytest
 
+# Local imports
 from src.shared.logging.base_logger import BaseLogger, create_logger
 
 

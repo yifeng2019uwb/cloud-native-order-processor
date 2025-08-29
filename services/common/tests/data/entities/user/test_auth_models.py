@@ -1,5 +1,8 @@
+# Third-party imports
 import pytest
 from pydantic import ValidationError
+
+# Local imports
 from src.data.entities.user import LoginRequest, TokenResponse
 
 

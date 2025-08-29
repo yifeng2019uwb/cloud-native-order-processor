@@ -3,12 +3,10 @@ Lock Manager for Transaction Atomicity
 Provides user-level locking to prevent race conditions in balance and order operations.
 """
 
-import logging
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 from typing import Optional
-from contextlib import asynccontextmanager
-
 from ...data.database.dynamodb_connection import dynamodb_manager
 from ...data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException, CNOPLockTimeoutException
 from ...shared.logging import BaseLogger, Loggers, LogActions

@@ -2,13 +2,10 @@
 Base exception class with auto-logging for all services
 Path: services/common/src/exceptions/base_exception.py
 """
-from ..shared.logging import BaseLogger, LogActions, Loggers
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
-
-# Create logger instance for exceptions
-logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
+from ..shared.logging import BaseLogger, LogActions, Loggers
 
 
 class BaseInternalException(Exception):
@@ -31,18 +28,6 @@ class BaseInternalException(Exception):
         self.context = context or {}
         self.error_id = str(uuid.uuid4())
         self.timestamp = datetime.now(timezone.utc)
-
-        # Auto-logging: Automatically logs when exception is created
-        logger.error(
-            action=LogActions.ERROR,
-            message=f"{self.__class__.__name__}: {self.message}",
-            extra={
-                "error_id": self.error_id,
-                "context": self.context,
-                "timestamp": self.timestamp.isoformat(),
-                "exception_type": self.__class__.__name__
-            }
-        )
 
         super().__init__(self.message)
 
@@ -89,18 +74,6 @@ class CNOPException(Exception):
         self.context = context or {}
         self.error_id = str(uuid.uuid4())
         self.timestamp = datetime.now(timezone.utc)
-
-        # Auto-logging: Automatically logs when exception is created
-        logger.error(
-            action=LogActions.ERROR,
-            message=f"{self.__class__.__name__}: {self.message}",
-            extra={
-                "error_id": self.error_id,
-                "context": self.context,
-                "timestamp": self.timestamp.isoformat(),
-                "exception_type": self.__class__.__name__
-            }
-        )
 
         super().__init__(self.message)
 

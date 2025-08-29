@@ -5,11 +5,11 @@ Provides common health check functionality for all microservices
 to ensure consistent health monitoring and Kubernetes probe support.
 """
 
-from ...shared.logging import BaseLogger, Loggers, LogActions
 import os
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from fastapi import HTTPException, status
+from ...shared.logging import BaseLogger, Loggers, LogActions
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 

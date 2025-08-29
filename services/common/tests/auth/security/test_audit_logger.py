@@ -1,8 +1,13 @@
 """
 Unit tests for AuditLogger class.
 """
-import pytest
+# Standard library imports
 from unittest.mock import patch, MagicMock
+
+# Third-party imports
+import pytest
+
+# Local imports
 from src.auth.security.audit_logger import AuditLogger
 from src.shared.logging import LogActions
 

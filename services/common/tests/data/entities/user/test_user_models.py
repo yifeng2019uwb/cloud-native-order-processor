@@ -1,10 +1,16 @@
-import sys
+# Standard library imports
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'src')))
+import sys
 
+# Third-party imports
 import pytest
 from pydantic import ValidationError
+
+# Local imports
 from src.data.entities.user import UserCreate, User, UserResponse, UserLogin
+
+# Add src directory to path for absolute imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'src')))
 
 
 class TestUserCreate:

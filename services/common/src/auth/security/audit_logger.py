@@ -11,10 +11,10 @@ Responsibilities:
 - Security monitoring integration
 """
 
-from ...shared.logging import BaseLogger, LogActions, Loggers
-from typing import Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
+from typing import Optional, Dict, Any
+from ...shared.logging import BaseLogger, LogActions, Loggers
 
 # Create logger instance for security events
 logger = BaseLogger(Loggers.AUDIT, log_to_file=True)

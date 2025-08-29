@@ -14,11 +14,11 @@ Responsibilities:
 
 import json
 import os
-import time
+import sys
 import uuid
 from datetime import datetime
-from typing import Optional, Dict, Any, Union
 from pathlib import Path
+from typing import Optional, Dict, Any, Union
 
 
 class BaseLogger:
@@ -118,7 +118,6 @@ class BaseLogger:
 
         # Output to console (stdout for K8s log collection)
         # Use sys.stdout.write for Kubernetes compatibility and avoid circular logging
-        import sys
         sys.stdout.write(log_json + '\n')
         sys.stdout.flush()
 
