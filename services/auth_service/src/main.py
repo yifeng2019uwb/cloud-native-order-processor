@@ -1,12 +1,11 @@
 """
-Auth Service Main Application
-
-FastAPI application entry point.
+Auth Service - FastAPI Application Entry Point
 """
-
-from datetime import datetime, timezone
+from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from controllers.health import router as health_router
 from controllers.validate import router as validate_router
@@ -36,24 +35,26 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(validate_router)
 
-# Root endpoint
+@app.exception_handler(Exception)
+def general_exception_handler(request, exc):
+    logger.error(action=LogActions.ERROR, message=f"Unhandled error: {exc}")
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
 @app.get("/")
 def root():
     """Root endpoint with service information"""
-    logger.info(action=LogActions.REQUEST_START, message="Root endpoint accessed")
-
     return {
         "service": "Auth Service",
         "version": "1.0.0",
         "status": "running",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.utcnow().isoformat(),
         "endpoints": {
             "docs": "/docs",
             "health": "/health",
             "validate": "/internal/auth/validate"
-        },
-        "environment": {
-            "service": "auth-service",
-            "environment": "development"
         }
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

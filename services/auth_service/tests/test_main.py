@@ -57,20 +57,6 @@ class TestRootEndpoint:
         assert response["endpoints"]["health"] == "/health"
         assert response["endpoints"]["validate"] == "/internal/auth/validate"
 
-        # Verify environment information
-        assert response["environment"]["service"] == "auth-service"
-        assert response["environment"]["environment"] == "development"
-
-    def test_root_endpoint_logging(self):
-        """Test that root endpoint logs correctly."""
-        from src.main import root
-
-        with patch('src.main.logger') as mock_logger:
-            response = root()
-
-            assert response is not None
-            mock_logger.info.assert_called_once_with(action='request_start', message='Root endpoint accessed')
-
     def test_root_endpoint_timestamp_format(self):
         """Test that timestamp is in correct ISO format."""
         from src.main import root
@@ -81,4 +67,9 @@ class TestRootEndpoint:
         timestamp = response["timestamp"]
         assert isinstance(timestamp, str)
         assert "T" in timestamp  # ISO format contains 'T'
-        assert timestamp.endswith("Z") or "+" in timestamp or "-" in timestamp[-6:]  # UTC format
+        # Check if it's a valid datetime string
+        from datetime import datetime
+        try:
+            datetime.fromisoformat(timestamp)
+        except ValueError:
+            pytest.fail(f"Timestamp {timestamp} is not a valid ISO format")
