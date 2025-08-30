@@ -17,16 +17,6 @@ from .gateway import (
     HeaderValidator,
 )
 
-from .exceptions import (
-    # Auth-specific exceptions
-    CNOPAuthInvalidCredentialsException,
-    CNOPAuthTokenExpiredException,
-    CNOPAuthTokenInvalidException,
-    CNOPAuthAuthorizationException,
-    CNOPAuthAccessDeniedException,
-    CNOPAuthInsufficientPermissionsException,
-)
-
 __all__ = [
     # Security classes
     "PasswordManager",
@@ -35,12 +25,4 @@ __all__ = [
 
     # Gateway validation class
     "HeaderValidator",
-
-    # Auth-specific exceptions
-    "CNOPAuthInvalidCredentialsException",
-    "CNOPAuthTokenExpiredException",
-    "CNOPAuthTokenInvalidException",
-    "CNOPAuthAuthorizationException",
-    "CNOPAuthAccessDeniedException",
-    "CNOPAuthInsufficientPermissionsException",
 ]

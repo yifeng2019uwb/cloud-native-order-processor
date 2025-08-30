@@ -4,16 +4,6 @@ Common exceptions package
 This package provides CNOP prefixed exceptions for the common package.
 All exceptions use the CNOP prefix to avoid naming conflicts and provide clear ownership.
 
-IMPORTANT: Only truly cross-service exceptions and internal data exceptions are provided here.
-Service-specific validation exceptions should be imported from their respective services.
-
-⚠️  DEPRECATION WARNING ⚠️
-Authentication exceptions are now provided via the auth package:
-    from common.auth.exceptions import CNOPAuthTokenExpiredException  # ✅ NEW
-    from common.exceptions import CNOPTokenExpiredException          # ❌ DEPRECATED
-
-The old authentication exceptions are provided as aliases for backward compatibility
-but will be removed once all services are migrated to the new package structure.
 """
 
 from .base_exception import CNOPException, CNOPInternalException, CNOPClientException

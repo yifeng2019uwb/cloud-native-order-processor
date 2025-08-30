@@ -10,27 +10,5 @@ This package contains all data-related functionality:
 
 __version__ = "1.0.0"
 
-# Export data exceptions (internal infrastructure only)
-from .exceptions import (
-    CNOPDatabaseConnectionException,
-    CNOPDatabaseOperationException,
-    CNOPConfigurationException,
-    CNOPAWSServiceException,
-    CNOPExternalServiceException,
-    CNOPLockAcquisitionException,
-    CNOPLockTimeoutException,
-    CNOPCommonServerException,
-    CNOPEntityValidationException,
-)
-
-__all__ = [
-    "CNOPDatabaseConnectionException",
-    "CNOPDatabaseOperationException",
-    "CNOPConfigurationException",
-    "CNOPAWSServiceException",
-    "CNOPExternalServiceException",
-    "CNOPLockAcquisitionException",
-    "CNOPLockTimeoutException",
-    "CNOPCommonServerException",
-    "CNOPEntityValidationException",
-]
+# Data package - no need to re-export exceptions
+# Exceptions are available from common.exceptions package
