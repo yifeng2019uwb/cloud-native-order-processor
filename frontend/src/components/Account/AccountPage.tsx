@@ -44,7 +44,11 @@ const AccountPage: React.FC = () => {
       }
 
       if (transactionsRes && transactionsRes.transactions) {
-        setTransactions(transactionsRes.transactions);
+        // Sort transactions by date in descending order (most recent first)
+        const sortedTransactions = [...transactionsRes.transactions].sort((a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setTransactions(sortedTransactions);
       }
     } catch (err) {
       setError('Failed to load account data');

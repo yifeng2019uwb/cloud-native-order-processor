@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -6,14 +6,26 @@ WORKDIR /app
 # Copy package files
 COPY frontend/package*.json ./
 
-# Install dependencies (including dev dependencies)
-RUN npm install
+# Install dependencies (including dev dependencies for build)
+RUN npm ci
 
 # Copy source code
 COPY frontend/ ./
 
-# Expose port
-EXPOSE 80
+# Build the application
+RUN npm run build
 
-# Start development server
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "80"]
+# Production stage
+FROM nginx:alpine
+
+# Copy built files from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY docker/frontend/nginx.conf /etc/nginx/nginx.conf
+
+# Expose port 3000 (non-privileged)
+EXPOSE 3000
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

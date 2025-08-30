@@ -116,16 +116,10 @@ class OrderApiService {
       queryParams.append('asset_id', params.asset_id);
     }
 
-        const queryString = queryParams.toString();
+    const queryString = queryParams.toString();
 
-    // Debug logging to see what URL is being constructed
-    console.log('🔍 Orders API Debug:');
-    console.log('  - Base URL:', this.api.defaults.baseURL);
-    console.log('  - Query params:', queryParams.toString());
-
-    // Simple approach - use empty string for path
+    // Construct the correct URL path
     const url = queryString ? `?${queryString}` : '';
-    console.log('  - Path:', url);
 
     const response = await this.api.get<OrderListResponse>(url);
     return response.data;

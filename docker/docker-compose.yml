@@ -30,7 +30,7 @@ services:
       dockerfile: docker/frontend/Dockerfile
     container_name: order-processor-frontend
     ports:
-      - "80:80"
+      - "3000:3000"
     depends_on:
       - user_service
       - inventory_service
@@ -38,11 +38,8 @@ services:
       - gateway
     networks:
       - order-processor-network
-    # Auto-rebuild on changes
-    volumes:
-      - ../frontend:/app/frontend:ro
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
     # Resource limits - Frontend gets 1 CPU, 1GB RAM
     deploy:
       resources:

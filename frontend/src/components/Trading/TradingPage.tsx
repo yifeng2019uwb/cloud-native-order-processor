@@ -54,26 +54,39 @@ const TradingPage: React.FC = () => {
     }
   }, [assets, searchParams]);
 
+  // Update filtered assets when order type changes
+  useEffect(() => {
+    if (orderForm.orderType === 'market_sell') {
+      // For sell orders, only show assets user owns
+      const ownedAssets = assets.filter(asset =>
+        assetBalances.some(ab => ab.asset_id === asset.asset_id)
+      );
+      setFilteredAssets(ownedAssets);
+    } else {
+      // For buy orders, show all assets
+      setFilteredAssets(assets);
+    }
+  }, [orderForm.orderType, assets, assetBalances]);
+
   const loadData = async () => {
     try {
       setIsLoading(true);
-            const [assetsRes, balanceRes, assetBalancesRes, ordersRes] = await Promise.all([
+      const [assetsRes, balanceRes, assetBalancesRes, ordersRes] = await Promise.all([
         inventoryApiService.listAssets(),
         balanceApiService.getBalance().catch(() => null),
         assetBalanceApiService.listAssetBalances().catch(() => ({ success: false, message: '', data: [], timestamp: '' })),
-        orderApiService.listOrders({ limit: 10 }).catch(() => ({ success: false, message: '', data: [], has_more: false, timestamp: '' }))
+        orderApiService.listOrders().catch(() => ({ success: false, message: '', data: [], has_more: false, timestamp: '' }))
       ]);
 
       if (assetsRes.assets) {
-                // Sort assets alphabetically by name for easier selection
+        // Sort assets alphabetically by name for easier selection
         const sortedAssets = [...assetsRes.assets].sort((a, b) =>
           a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
         );
         setAssets(sortedAssets);
         setFilteredAssets(sortedAssets); // Initialize filtered assets with sorted assets
-        if (sortedAssets.length > 0) {
-          setSelectedAsset(sortedAssets[0]);
-        }
+        // Don't auto-select first asset - let user choose
+        setSelectedAsset(null);
       }
 
       if (balanceRes) {
@@ -91,8 +104,10 @@ const TradingPage: React.FC = () => {
         setAssetBalances(assetBalancesRes.data);
       }
 
-      if (ordersRes.success) {
+      if (ordersRes.success && ordersRes.data && Array.isArray(ordersRes.data)) {
         setOrders(ordersRes.data);
+      } else {
+        setOrders([]);
       }
     } catch (err) {
       setError('Failed to load trading data');
@@ -274,24 +289,66 @@ const TradingPage: React.FC = () => {
                     <div className="mb-2">
                       <input
                         type="text"
-                        placeholder="Search assets by name or symbol..."
+                        placeholder={orderForm.orderType === 'market_sell' ?
+                          "Search assets you own by name or symbol..." :
+                          "Search assets by name or symbol..."
+                        }
                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                         onChange={(e) => {
                           const searchTerm = e.target.value.toLowerCase();
                           if (searchTerm) {
-                            const filtered = assets.filter(asset =>
+                            // For sell orders, only search through assets user owns
+                            const assetsToSearch = orderForm.orderType === 'market_sell' ?
+                              assets.filter(asset => assetBalances.some(ab => ab.asset_id === asset.asset_id)) :
+                              assets;
+
+                            const filtered = assetsToSearch.filter(asset =>
                               asset.name.toLowerCase().includes(searchTerm) ||
                               asset.asset_id.toLowerCase().includes(searchTerm)
                             );
                             setFilteredAssets(filtered);
                           } else {
-                            setFilteredAssets(assets);
+                            // For sell orders, only show assets user owns
+                            const assetsToShow = orderForm.orderType === 'market_sell' ?
+                              assets.filter(asset => assetBalances.some(ab => ab.asset_id === asset.asset_id)) :
+                              assets;
+                            setFilteredAssets(assetsToShow);
                           }
                         }}
                       />
                       <div className="text-xs text-gray-500 mt-1">
-                        {filteredAssets.length} of {assets.length} assets
+                        {filteredAssets.length} of {orderForm.orderType === 'market_sell' ?
+                          assets.filter(asset => assetBalances.some(ab => ab.asset_id === asset.asset_id)).length :
+                          assets.length
+                        } assets
+                        {orderForm.orderType === 'market_sell' && (
+                          <span className="text-blue-600"> (assets you own)</span>
+                        )}
                       </div>
+
+                      {/* Quick Asset Selection from Search Results */}
+                      {filteredAssets.length > 0 && filteredAssets.length < assets.length && (
+                        <div className="mt-2 space-y-1">
+                          {filteredAssets.slice(0, 5).map(asset => (
+                            <button
+                              key={asset.asset_id}
+                              type="button"
+                              onClick={() => setSelectedAsset(asset)}
+                              className="w-full text-left p-2 text-sm bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors"
+                            >
+                              <div className="font-medium">{asset.name}</div>
+                              <div className="text-xs text-gray-500">
+                                {asset.asset_id} - ${asset.price_usd?.toFixed(2)}
+                                {orderForm.orderType === 'market_sell' && (
+                                  <span className="text-blue-600">
+                                    {' '}(Own: {assetBalances.find(ab => ab.asset_id === asset.asset_id)?.quantity || '0'})
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <select
@@ -303,10 +360,15 @@ const TradingPage: React.FC = () => {
                       className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                       required
                     >
-                      <option value="">Select an asset</option>
+                      <option value="">
+                        {orderForm.orderType === 'market_sell' ? 'Select an asset you own' : 'Select an asset'}
+                      </option>
                       {(filteredAssets || assets).map(asset => (
                         <option key={asset.asset_id} value={asset.asset_id}>
                           {asset.name} ({asset.asset_id}) - ${asset.price_usd?.toFixed(2)}
+                          {orderForm.orderType === 'market_sell' && (
+                            ` - Own: ${assetBalances.find(ab => ab.asset_id === asset.asset_id)?.quantity || '0'}`
+                          )}
                         </option>
                       ))}
                     </select>
@@ -323,7 +385,22 @@ const TradingPage: React.FC = () => {
                           type="radio"
                           value="market_buy"
                           checked={orderForm.orderType === 'market_buy'}
-                          onChange={(e) => setOrderForm(prev => ({ ...prev, orderType: e.target.value as any }))}
+                          onChange={(e) => {
+                            setOrderForm(prev => ({ ...prev, orderType: e.target.value as any }));
+                            // Clear selected asset when switching order types
+                            setSelectedAsset(null);
+                            // Update filtered assets based on new order type
+                            if (e.target.value === 'market_buy') {
+                              // For buy orders, show all assets
+                              setFilteredAssets(assets);
+                            } else {
+                              // For sell orders, only show assets user owns
+                              const ownedAssets = assets.filter(asset =>
+                                assetBalances.some(ab => ab.asset_id === asset.asset_id)
+                              );
+                              setFilteredAssets(ownedAssets);
+                            }
+                          }}
                           className="mr-2"
                         />
                         Buy
@@ -333,7 +410,22 @@ const TradingPage: React.FC = () => {
                           type="radio"
                           value="market_sell"
                           checked={orderForm.orderType === 'market_sell'}
-                          onChange={(e) => setOrderForm(prev => ({ ...prev, orderType: e.target.value as any }))}
+                          onChange={(e) => {
+                            setOrderForm(prev => ({ ...prev, orderType: e.target.value as any }));
+                            // Clear selected asset when switching order types
+                            setSelectedAsset(null);
+                            // Update filtered assets based on new order type
+                            if (e.target.value === 'market_sell') {
+                              // For sell orders, only show assets user owns
+                              const ownedAssets = assets.filter(asset =>
+                                assetBalances.some(ab => ab.asset_id === asset.asset_id)
+                              );
+                              setFilteredAssets(ownedAssets);
+                            } else {
+                              // For buy orders, show all assets
+                              setFilteredAssets(assets);
+                            }
+                          }}
                           className="mr-2"
                         />
                         Sell
@@ -481,7 +573,14 @@ const TradingPage: React.FC = () => {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-gray-500 text-center py-4">No orders yet</p>
+                    <div className="text-center py-4">
+                      <p className="text-gray-500 mb-2">No orders yet</p>
+                      {error && error.includes('log in') && (
+                        <p className="text-sm text-blue-600">
+                          💡 Orders require authentication - please log in first
+                        </p>
+                      )}
+                    </div>
                   )}
                   <div className="mt-4">
                 <Link
