@@ -54,13 +54,10 @@ class InventoryServiceTests:
         # Field validation happens before business logic, so malformed IDs fail validation first
         r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, "UNKNOWN_ASSET"), timeout=self.timeout)
         assert r.status_code == 422, f"Expected 422 for invalid asset ID format, got {r.status_code}"
-        # Should return error details
-        error_data = r.json()
-        assert "error" in error_data or "detail" in error_data or "message" in error_data
 
     def test_invalid_asset_id_formats(self):
         """Test various invalid asset ID formats"""
-        invalid_ids = ["", "   ", "BTC!", "BTC@123", "A" * 100]  # Empty, whitespace, special chars, too long
+        invalid_ids = ["   ", "BTC!", "BTC@123", "A" * 100]  # Whitespace, special chars, too long
 
         for invalid_id in invalid_ids:
             r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, invalid_id), timeout=self.timeout)

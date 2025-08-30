@@ -40,11 +40,12 @@ CNOP Docker Service Deployment Script
 Usage: $0 [service_name] [action]
 
 Services:
-    all                    All services (auth, user, inventory, order)
+    all                    All services (auth, user, inventory, order, gateway)
     auth                   Auth service only
     user                   User service only
     inventory             Inventory service only
     order                 Order service only
+    gateway               Gateway service only
 
 Actions:
     deploy                 Deploy/redeploy service(s)
@@ -120,7 +121,7 @@ deploy_service() {
 deploy_all() {
     log_info "Deploying all services..."
 
-    local services=("auth_service" "user_service" "inventory_service" "order_service")
+    local services=("auth_service" "user_service" "inventory_service" "order_service" "gateway")
     local failed_services=()
 
     for service in "${services[@]}"; do
@@ -178,7 +179,7 @@ show_status() {
 
     # Show health status
     log_info "Health Status:"
-    for service in auth_service user_service inventory_service order_service; do
+    for service in auth_service user_service inventory_service order_service gateway; do
         if docker-compose ps "$service" | grep -q "healthy"; then
             log_success "$service: Healthy"
         elif docker-compose ps "$service" | grep -q "unhealthy\|restarting"; then
@@ -219,8 +220,13 @@ main() {
                 *) log_error "Invalid action: $action"; show_usage; exit 1 ;;
             esac
             ;;
-        auth|user|inventory|order)
-            local service_name="${service}_service"
+        auth|user|inventory|order|gateway)
+            local service_name
+            if [ "$service" = "gateway" ]; then
+                service_name="gateway"
+            else
+                service_name="${service}_service"
+            fi
             case "$action" in
                 deploy) deploy_service "$service_name" ;;
                 restart) restart_service "$service_name" ;;

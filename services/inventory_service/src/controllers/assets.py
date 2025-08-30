@@ -174,10 +174,9 @@ def get_asset_by_id(
         return asset_to_detail_response(asset)
 
     except CNOPAssetValidationException as e:
-        # Handle validation errors (from API model) - maintain consistent message format
+        # Handle validation errors (from API model) - re-raise as-is to maintain clean error messages
         logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Validation error for asset_id '{asset_id}': {str(e)}")
-        # Wrap the validation error with descriptive prefix for consistent API responses
-        raise CNOPAssetValidationException(f"Invalid asset ID: {str(e)}")
+        raise
     except CNOPAssetNotFoundException as e:
         # Handle business validation errors (asset not found) - re-raise as-is
         logger.warning(action=LogActions.ERROR, message=f"Asset not found: {asset_id}")
