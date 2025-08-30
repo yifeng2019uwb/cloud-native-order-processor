@@ -9,28 +9,35 @@ import (
 	"order-processor-gateway/internal/config"
 	"order-processor-gateway/internal/services"
 	"order-processor-gateway/pkg/constants"
+	"order-processor-gateway/pkg/logging"
 	"order-processor-gateway/pkg/models"
 
 	"github.com/gin-gonic/gin"
 )
 
+// Package-level logger instance
+var logger = logging.NewBaseLogger(logging.GATEWAY)
+
 // AuthMiddleware validates JWT tokens using the Auth Service and extracts user information
 // Phase 2: Auth Service integration for centralized JWT validation
 func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fmt.Printf("🔍 STEP 1: AuthMiddleware START - Path: %s, Method: %s\n", c.Request.URL.Path, c.Request.Method)
+		logger.Info(logging.REQUEST_START, "AuthMiddleware processing request", "", map[string]interface{}{
+			"path":   c.Request.URL.Path,
+			"method": c.Request.Method,
+		})
 
 		// Extract token from Authorization header
 		authHeader := c.GetHeader(constants.AuthorizationHeader)
-		fmt.Printf("🔍 STEP 1.1: AuthMiddleware - authHeader: '%s'\n", authHeader)
+		logger.Info(logging.REQUEST_START, "Auth header extracted", "", map[string]interface{}{
+			"auth_header": authHeader,
+		})
 
 		if authHeader == "" {
 			// No auth header - set public role for unauthenticated users
-			fmt.Printf("🔍 STEP 1.2: AuthMiddleware - No auth header, setting RolePublic\n")
+			logger.Info(logging.REQUEST_END, "No auth header, setting public role", "", nil)
 			c.Set(constants.ContextKeyUserRole, constants.RolePublic)
-			fmt.Printf("🔍 STEP 1.3: AuthMiddleware - RolePublic set, calling c.Next()\n")
 			c.Next()
-			fmt.Printf("🔍 STEP 1.4: AuthMiddleware END\n")
 			return
 		}
 
@@ -52,14 +59,16 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		}
 
 		// Add user information to context
-		fmt.Printf("🔍 STEP 1.5: AuthMiddleware - Setting user context: username=%s, role=%s\n", userContext.Username, userContext.Role)
+		logger.Info(logging.REQUEST_END, "User context set successfully", userContext.Username, map[string]interface{}{
+			"username": userContext.Username,
+			"role":     userContext.Role,
+		})
+
 		c.Set(constants.ContextKeyUserID, userContext.Username)
 		c.Set(constants.ContextKeyUserRole, userContext.Role)
 		c.Set("user_context", userContext)
 
-		fmt.Printf("🔍 STEP 1.6: AuthMiddleware - User context set, calling c.Next()\n")
 		c.Next()
-		fmt.Printf("🔍 STEP 1.7: AuthMiddleware END\n")
 	}
 }
 
@@ -70,20 +79,28 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 // Phase 1: Simple role-based access control
 func RoleMiddleware(requiredRoles []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fmt.Printf("DEBUG: RoleMiddleware called for path: %s\n", c.Request.URL.Path)
+		logger.Info(logging.REQUEST_START, "RoleMiddleware processing request", "", map[string]interface{}{
+			"path":           c.Request.URL.Path,
+			"required_roles": requiredRoles,
+		})
+
 		userRole := c.GetString(constants.ContextKeyUserRole)
-		fmt.Printf("DEBUG: RoleMiddleware - userRole: '%s', requiredRoles: %v\n", userRole, requiredRoles)
+		logger.Info(logging.REQUEST_START, "User role extracted", "", map[string]interface{}{
+			"user_role": userRole,
+		})
 
 		// If no role restrictions, allow access
 		if len(requiredRoles) == 0 {
-			fmt.Printf("DEBUG: RoleMiddleware - No role restrictions, allowing access\n")
+			logger.Info(logging.REQUEST_END, "No role restrictions, allowing access", "", nil)
 			c.Next()
 			return
 		}
 
 		// If user has no role but roles are required, deny access
 		if userRole == "" {
-			fmt.Printf("DEBUG: RoleMiddleware - User has no role but roles are required, denying access\n")
+			logger.Error(logging.AUTH_FAILURE, "User has no role but roles are required", "", map[string]interface{}{
+				"required_roles": requiredRoles,
+			})
 			handleAuthError(c, models.ErrPermInsufficient, fmt.Sprintf("Insufficient permissions. Required roles: %v, User role: none", requiredRoles))
 			return
 		}
@@ -98,18 +115,30 @@ func RoleMiddleware(requiredRoles []string) gin.HandlerFunc {
 		}
 
 		if !hasRole {
-			fmt.Printf("DEBUG: RoleMiddleware - User role '%s' not found in required roles, denying access\n", userRole)
+			logger.Error(logging.AUTH_FAILURE, "User role not found in required roles", "", map[string]interface{}{
+				"user_role":      userRole,
+				"required_roles": requiredRoles,
+			})
 			handleAuthError(c, models.ErrPermInsufficient, fmt.Sprintf("Insufficient permissions. Required roles: %v, User role: %s", requiredRoles, userRole))
 			return
 		}
 
-		fmt.Printf("DEBUG: RoleMiddleware - User role '%s' found in required roles, allowing access\n", userRole)
+		logger.Info(logging.REQUEST_END, "User role found in required roles, allowing access", "", map[string]interface{}{
+			"user_role": userRole,
+		})
 		c.Next()
 	}
 }
 
 // handleAuthError handles authentication and authorization errors
 func handleAuthError(c *gin.Context, errorCode models.ErrorCode, message string) {
+	logger.Error(logging.AUTH_FAILURE, "Authentication/authorization error", "", map[string]interface{}{
+		"error_code": string(errorCode),
+		"message":    message,
+		"path":       c.Request.URL.Path,
+		"method":     c.Request.Method,
+	})
+
 	errorResponse := models.ErrorResponse{
 		Error:     string(errorCode),
 		Message:   message,

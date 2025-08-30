@@ -7,38 +7,56 @@ import (
 	"order-processor-gateway/internal/config"
 	"order-processor-gateway/internal/services"
 	"order-processor-gateway/pkg/constants"
+	"order-processor-gateway/pkg/logging"
 )
 
 func main() {
+	// Initialize structured logger
+	logger := logging.NewBaseLogger(logging.GATEWAY)
+
 	// Log application startup
-	log.Printf("🚀 Starting %s v%s", constants.AppName, constants.AppVersion)
+	logger.Info(logging.STARTUP, "Starting Gateway service", "", map[string]interface{}{
+		"app_name":    constants.AppName,
+		"app_version": constants.AppVersion,
+	})
 
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
+		logger.Error(logging.STARTUP, "Configuration load failed", "", map[string]interface{}{
+			"error": err.Error(),
+		})
 		log.Fatalf("%s: %v", constants.LogConfigLoadFailed, err)
 	}
 
 	// Initialize Redis service
 	redisService, err := services.NewRedisService(&cfg.Redis)
 	if err != nil {
-		log.Printf("Warning: %s: %v", constants.LogRedisConnectFailed, err)
-		log.Println(constants.LogRedisContinueWithout)
+		logger.Warning(logging.STARTUP, "Redis connection failed", "", map[string]interface{}{
+			"error": err.Error(),
+		})
 		redisService = nil
 	} else {
 		defer redisService.Close()
-		log.Printf("✅ %s", constants.LogRedisConnectSuccess)
+		logger.Info(logging.STARTUP, "Redis connection successful", "", nil)
 	}
 
 	// Initialize proxy service
 	proxyService := services.NewProxyService(cfg)
-	log.Printf("✅ %s", constants.LogProxyInitSuccess)
+	logger.Info(logging.STARTUP, "Proxy service initialized", "", nil)
 
 	// Initialize and start the API server
 	server := api.NewServer(cfg, redisService, proxyService)
 
-	log.Printf("🚀 %s %s", constants.LogServerStart, cfg.Server.Port)
+	logger.Info(logging.STARTUP, "Starting HTTP server", "", map[string]interface{}{
+		"port": cfg.Server.Port,
+	})
+
 	if err := server.Start(); err != nil {
+		logger.Error(logging.STARTUP, "Server start failed", "", map[string]interface{}{
+			"error": err.Error(),
+			"port":  cfg.Server.Port,
+		})
 		log.Fatalf("%s: %v", constants.LogServerStartFailed, err)
 	}
 }

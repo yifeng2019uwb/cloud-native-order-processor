@@ -12,6 +12,7 @@ import (
 	"order-processor-gateway/internal/middleware"
 	"order-processor-gateway/internal/services"
 	"order-processor-gateway/pkg/constants"
+	"order-processor-gateway/pkg/logging"
 	"order-processor-gateway/pkg/models"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +24,7 @@ type Server struct {
 	router       *gin.Engine
 	redisService *services.RedisService
 	proxyService *services.ProxyService
+	logger       *logging.BaseLogger
 }
 
 // NewServer creates a new API server
@@ -32,6 +34,7 @@ func NewServer(cfg *config.Config, redisService *services.RedisService, proxySer
 		router:       gin.Default(),
 		redisService: redisService,
 		proxyService: proxyService,
+		logger:       logging.NewBaseLogger(logging.GATEWAY),
 	}
 
 	server.setupRoutes()
@@ -137,56 +140,73 @@ func (s *Server) healthCheck(c *gin.Context) {
 // handleProxyRequest handles all proxy requests with routing and error handling
 // Phase 1: Basic proxy logic with simple error handling
 func (s *Server) handleProxyRequest(c *gin.Context) {
-	fmt.Printf("🔍 STEP 2: handleProxyRequest START - Path: %s, Method: %s\n", c.Request.URL.Path, c.Request.Method)
+	s.logger.Info(logging.REQUEST_START, "handleProxyRequest processing request", "", map[string]interface{}{
+		"path":   c.Request.URL.Path,
+		"method": c.Request.Method,
+	})
 
 	// Get route configuration
 	path := c.Request.URL.Path
-	fmt.Printf("🔍 STEP 2.1: handleProxyRequest - Looking up route config for path: %s\n", path)
+	s.logger.Info(logging.REQUEST_START, "Looking up route config", "", map[string]interface{}{
+		"path": path,
+	})
 	routeConfig, exists := s.proxyService.GetRouteConfig(path)
 
 	if !exists {
 		// Handle dynamic routes (like /assets/:id)
-		fmt.Printf("🔍 STEP 2.2: handleProxyRequest - Route not found, trying basePath\n")
+		s.logger.Info(logging.REQUEST_START, "Route not found, trying basePath", "", nil)
 		basePath := s.getBasePath(path)
 		routeConfig, exists = s.proxyService.GetRouteConfig(basePath)
 		if !exists {
-			fmt.Printf("🔍 STEP 2.3: handleProxyRequest - Route not found, returning 404\n")
+			s.logger.Info(logging.REQUEST_END, "Route not found, returning 404", "", nil)
 			s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, "Route not found")
 			return
 		}
 	}
 
-	fmt.Printf("🔍 STEP 2.4: handleProxyRequest - Route config found: Path=%s, RequiresAuth=%t, AllowedRoles=%v\n",
-		routeConfig.Path, routeConfig.RequiresAuth, routeConfig.AllowedRoles)
-
-	// Check if routeConfig is nil
+	// Check if routeConfig is nil before accessing its properties
 	if routeConfig == nil {
-		fmt.Printf("🔍 STEP 2.5: handleProxyRequest - routeConfig is nil!\n")
+		s.logger.Error(logging.AUTH_FAILURE, "Route config is nil", "", nil)
 		s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, "Route config is nil")
 		return
 	}
 
-	fmt.Printf("🔍 STEP 2.6: handleProxyRequest - About to check authentication requirements. RequiresAuth=%t\n", routeConfig.RequiresAuth)
+	s.logger.Info(logging.REQUEST_END, "Route config found", "", map[string]interface{}{
+		"path":          routeConfig.Path,
+		"requires_auth": routeConfig.RequiresAuth,
+		"allowed_roles": routeConfig.AllowedRoles,
+	})
+
+	s.logger.Info(logging.REQUEST_START, "Checking authentication requirements", "", map[string]interface{}{
+		"requires_auth": routeConfig.RequiresAuth,
+	})
 
 	// Check authentication requirements
 	if routeConfig.RequiresAuth {
 		userRole := c.GetString(constants.ContextKeyUserRole)
-		fmt.Printf("🔍 STEP 2.7: handleProxyRequest - Authentication required, userRole='%s'\n", userRole)
+		s.logger.Info(logging.REQUEST_START, "Authentication required", "", map[string]interface{}{
+			"user_role": userRole,
+		})
 		if userRole == "" {
-			fmt.Printf("🔍 STEP 2.8: handleProxyRequest - No userRole, returning 401\n")
+			s.logger.Error(logging.AUTH_FAILURE, "No userRole, returning 401", "", nil)
 			s.handleError(c, http.StatusUnauthorized, models.ErrAuthInvalidToken, "Authentication required")
 			return
 		}
 	} else {
-		fmt.Printf("🔍 STEP 2.9: handleProxyRequest - No authentication required\n")
+		s.logger.Info(logging.REQUEST_END, "No authentication required", "", nil)
 	}
 
-	fmt.Printf("🔍 STEP 2.10: handleProxyRequest - About to check role permissions. AllowedRoles=%v\n", routeConfig.AllowedRoles)
+	s.logger.Info(logging.REQUEST_START, "Checking role permissions", "", map[string]interface{}{
+		"allowed_roles": routeConfig.AllowedRoles,
+	})
 
 	// Check role permissions
 	if len(routeConfig.AllowedRoles) > 0 {
 		userRole := c.GetString(constants.ContextKeyUserRole)
-		fmt.Printf("🔍 STEP 2.11: handleProxyRequest - userRole='%s', allowedRoles=%v\n", userRole, routeConfig.AllowedRoles)
+		s.logger.Info(logging.REQUEST_START, "Checking user role against allowed roles", "", map[string]interface{}{
+			"user_role":     userRole,
+			"allowed_roles": routeConfig.AllowedRoles,
+		})
 		hasPermission := false
 		for _, role := range routeConfig.AllowedRoles {
 			if role == userRole {
@@ -195,13 +215,18 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 			}
 		}
 		if !hasPermission {
-			fmt.Printf("🔍 STEP 2.12: handleProxyRequest - Permission denied - userRole '%s' not in allowedRoles %v\n", userRole, routeConfig.AllowedRoles)
+			s.logger.Error(logging.AUTH_FAILURE, "Permission denied", "", map[string]interface{}{
+				"user_role":     userRole,
+				"allowed_roles": routeConfig.AllowedRoles,
+			})
 			s.handleError(c, http.StatusForbidden, models.ErrPermInsufficient, "Insufficient permissions")
 			return
 		}
-		fmt.Printf("🔍 STEP 2.13: handleProxyRequest - Permission granted for userRole '%s'\n", userRole)
+		s.logger.Info(logging.REQUEST_END, "Permission granted", "", map[string]interface{}{
+			"user_role": userRole,
+		})
 	} else {
-		fmt.Printf("🔍 STEP 2.14: handleProxyRequest - No role restrictions, allowing access\n")
+		s.logger.Info(logging.REQUEST_END, "No role restrictions, allowing access", "", nil)
 	}
 	// If AllowedRoles is empty, allow access (any role including public)
 
@@ -313,33 +338,34 @@ func (s *Server) getUserContext(c *gin.Context) *models.UserContext {
 
 // getBasePath extracts the base path for dynamic routes
 func (s *Server) getBasePath(path string) string {
-	// Handle specific dynamic route patterns
-	// /api/v1/assets/{asset_id}/transactions -> /api/v1/assets/:asset_id/transactions
-	// /api/v1/assets/{asset_id}/balance -> /api/v1/assets/:asset_id/balance
-	// /api/v1/orders/{id} -> /api/v1/orders/:id
-	// /api/v1/portfolio/{username} -> /api/v1/portfolio/:username
-	// /api/v1/inventory/assets/{id} -> /api/v1/inventory/assets/:id
-
-	fmt.Printf("🔍 getBasePath: Input path: %s\n", path)
+	s.logger.Info(logging.REQUEST_START, "getBasePath processing", "", map[string]interface{}{
+		"input_path": path,
+	})
 
 	// Check for known dynamic route patterns
 	switch {
 	case strings.HasPrefix(path, "/api/v1/assets/balances"):
 		// /api/v1/assets/balances -> /api/v1/assets/balances (exact match)
 		result := "/api/v1/assets/balances"
-		fmt.Printf("🔍 getBasePath: Asset balances pattern -> %s\n", result)
+		s.logger.Info(logging.REQUEST_END, "Asset balances pattern matched", "", map[string]interface{}{
+			"result": result,
+		})
 		return result
 
 	case strings.HasPrefix(path, "/api/v1/assets/") && strings.HasSuffix(path, "/transactions"):
 		// /api/v1/assets/AAVE/transactions -> /api/v1/assets/:asset_id/transactions
 		result := "/api/v1/assets/:asset_id/transactions"
-		fmt.Printf("🔍 getBasePath: Asset transactions pattern -> %s\n", result)
+		s.logger.Info(logging.REQUEST_END, "Asset transactions pattern matched", "", map[string]interface{}{
+			"result": result,
+		})
 		return result
 
 	case strings.HasPrefix(path, "/api/v1/assets/") && strings.HasSuffix(path, "/balance"):
 		// /api/v1/assets/AAVE/balance -> /api/v1/assets/:asset_id/balance
 		result := "/api/v1/assets/:asset_id/balance"
-		fmt.Printf("🔍 getBasePath: Asset balance pattern -> %s\n", result)
+		s.logger.Info(logging.REQUEST_END, "Asset balance pattern matched", "", map[string]interface{}{
+			"result": result,
+		})
 		return result
 
 	case strings.HasPrefix(path, "/api/v1/orders/"):
@@ -347,7 +373,9 @@ func (s *Server) getBasePath(path string) string {
 		parts := strings.Split(path, "/")
 		if len(parts) == 5 { // /api/v1/orders/{id}
 			result := "/api/v1/orders/:id"
-			fmt.Printf("🔍 getBasePath: Order by ID pattern -> %s\n", result)
+			s.logger.Info(logging.REQUEST_END, "Order by ID pattern matched", "", map[string]interface{}{
+				"result": result,
+			})
 			return result
 		}
 
@@ -356,7 +384,9 @@ func (s *Server) getBasePath(path string) string {
 		parts := strings.Split(path, "/")
 		if len(parts) == 5 { // /api/v1/portfolio/{username}
 			result := "/api/v1/portfolio/:username"
-			fmt.Printf("🔍 getBasePath: Portfolio by user pattern -> %s\n", result)
+			s.logger.Info(logging.REQUEST_END, "Portfolio by user pattern matched", "", map[string]interface{}{
+				"result": result,
+			})
 			return result
 		}
 
@@ -365,12 +395,16 @@ func (s *Server) getBasePath(path string) string {
 		parts := strings.Split(path, "/")
 		if len(parts) == 6 { // /api/v1/inventory/assets/{id}
 			result := "/api/v1/inventory/assets/:id"
-			fmt.Printf("🔍 getBasePath: Inventory asset by ID pattern -> %s\n", result)
+			s.logger.Info(logging.REQUEST_END, "Inventory asset by ID pattern matched", "", map[string]interface{}{
+				"result": result,
+			})
 			return result
 		}
 	}
 
-	fmt.Printf("🔍 getBasePath: No pattern matched, returning original path: %s\n", path)
+	s.logger.Info(logging.REQUEST_END, "No pattern matched, returning original path", "", map[string]interface{}{
+		"path": path,
+	})
 	return path
 }
 
