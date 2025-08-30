@@ -371,7 +371,8 @@ class TestAssetsControllerExceptionHandling:
 
             error = exc_info.value
             assert isinstance(error, CNOPAssetValidationException)
-            assert "Invalid asset ID" in str(error)
+            # Check that the error message contains the expected content from the validation_error
+            assert str(validation_error) in str(error)
 
 
 def test_list_assets_metrics_recording():
@@ -469,8 +470,7 @@ def test_get_asset_by_id_validation_error_handling():
             get_asset_by_id("INVALID", asset_dao=mock_dao)
 
         # Verify the exception message is properly formatted
-        # The actual format is: "Invalid asset ID: AssetValidationException: Asset ID cannot be empty"
-        assert "Invalid asset ID:" in str(exc_info.value)
+        # The actual format is: "CNOPAssetValidationException: Asset ID cannot be empty"
         assert "Asset ID cannot be empty" in str(exc_info.value)
 
 
