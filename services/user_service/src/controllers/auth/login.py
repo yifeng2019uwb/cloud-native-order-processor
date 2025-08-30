@@ -18,7 +18,8 @@ from api_models.shared.common import ErrorResponse, UserBaseInfo
 from common.data.entities.user import User
 from common.data.database import get_user_dao
 from common.auth.security import TokenManager, AuditLogger
-from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
+from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException, CNOPInternalServerException
+from user_exceptions import CNOPUserValidationException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 
 # Initialize our standardized logger
@@ -100,3 +101,10 @@ def login_user(
     except CNOPUserNotFoundException:
         # Let the exception bubble up to be handled by RFC 7807 handlers
         raise
+    except CNOPUserValidationException:
+        # Let the exception bubble up to be handled by RFC 7807 handlers
+        raise
+    except Exception as e:
+        # Log unexpected errors and re-raise as internal server error
+        logger.error(action=LogActions.ERROR, message=f"Unexpected error during login: {e}")
+        raise CNOPInternalServerException(f"Internal server error during login: {e}")

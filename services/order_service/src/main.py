@@ -7,6 +7,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.exceptions import (
+    CNOPAssetNotFoundException,
+    CNOPUserNotFoundException,
+    CNOPOrderNotFoundException,
+    CNOPInternalServerException,
+    CNOPAssetBalanceNotFoundException
+)
+from order_exceptions import (
+    CNOPOrderAlreadyExistsException,
+    CNOPOrderServerException,
+    CNOPOrderValidationException
+)
 from controllers import (
     create_order_router,
     get_order_router,
@@ -46,6 +58,47 @@ app.include_router(list_orders_router, prefix="/orders", tags=["orders"])
 app.include_router(portfolio_router, tags=["portfolio"])
 app.include_router(asset_balance_router, tags=["asset-balances"])
 app.include_router(asset_transaction_router, tags=["asset-transactions"])
+
+# Custom exception handlers
+@app.exception_handler(CNOPOrderValidationException)
+def order_validation_exception_handler(request, exc):
+    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Order validation error: {exc}")
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+@app.exception_handler(CNOPOrderAlreadyExistsException)
+def order_already_exists_exception_handler(request, exc):
+    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Order already exists: {exc}")
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+@app.exception_handler(CNOPUserNotFoundException)
+def user_not_found_exception_handler(request, exc):
+    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"User not found: {exc}")
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+@app.exception_handler(CNOPAssetNotFoundException)
+def asset_not_found_exception_handler(request, exc):
+    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Asset not found: {exc}")
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+@app.exception_handler(CNOPAssetBalanceNotFoundException)
+def asset_balance_not_found_exception_handler(request, exc):
+    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Asset balance not found: {exc}")
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+@app.exception_handler(CNOPOrderNotFoundException)
+def order_not_found_exception_handler(request, exc):
+    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Order not found: {exc}")
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+@app.exception_handler(CNOPOrderServerException)
+def order_server_exception_handler(request, exc):
+    logger.error(action=LogActions.ERROR, message=f"Order server error: {exc}")
+    return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+@app.exception_handler(CNOPInternalServerException)
+def internal_server_exception_handler(request, exc):
+    logger.error(action=LogActions.ERROR, message=f"Internal server error: {exc}")
+    return JSONResponse(status_code=500, content={"detail": str(exc)})
 
 @app.exception_handler(Exception)
 def general_exception_handler(request, exc):

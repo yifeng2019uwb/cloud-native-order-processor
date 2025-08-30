@@ -21,7 +21,8 @@ from common.data.dao.inventory import AssetDAO
 from common.exceptions import (
     CNOPEntityNotFoundException,
     CNOPDatabaseOperationException,
-    CNOPInternalServerException
+    CNOPInternalServerException,
+    CNOPAssetBalanceNotFoundException
 )
 from common.exceptions.shared_exceptions import (
     CNOPAssetNotFoundException
@@ -35,6 +36,7 @@ from controllers.dependencies import (
     get_user_dao_dependency, get_asset_dao_dependency
 )
 from validation.business_validators import validate_user_permissions
+
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.ORDER)
@@ -290,6 +292,14 @@ def get_user_asset_balance(
             user=current_user['username']
         )
         raise CNOPAssetNotFoundException(f"Asset balance for {asset_id} not found")
+    except CNOPAssetBalanceNotFoundException as e:
+        logger.info(
+            action=LogActions.REQUEST_END,
+            message=f"Asset balance not found: {str(e)}",
+            user=current_user['username']
+        )
+        # Re-raise the original exception to let main.py handle it
+        raise
     except CNOPDatabaseOperationException as e:
         logger.error(
             action=LogActions.ERROR,

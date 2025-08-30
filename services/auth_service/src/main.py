@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.exceptions import CNOPInternalServerException
+from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 from controllers.health import router as health_router
 from controllers.validate import router as validate_router
 
@@ -34,6 +36,22 @@ app.add_middleware(
 # Include routers
 app.include_router(health_router)
 app.include_router(validate_router)
+
+# Custom exception handlers
+@app.exception_handler(CNOPAuthTokenExpiredException)
+def token_expired_exception_handler(request, exc):
+    logger.warning(action=LogActions.AUTH_FAILED, message=f"Token expired: {exc}")
+    return JSONResponse(status_code=401, content={"detail": str(exc)})
+
+@app.exception_handler(CNOPAuthTokenInvalidException)
+def token_invalid_exception_handler(request, exc):
+    logger.warning(action=LogActions.AUTH_FAILED, message=f"Token invalid: {exc}")
+    return JSONResponse(status_code=401, content={"detail": str(exc)})
+
+@app.exception_handler(CNOPInternalServerException)
+def internal_server_exception_handler(request, exc):
+    logger.error(action=LogActions.ERROR, message=f"Internal server error: {exc}")
+    return JSONResponse(status_code=500, content={"detail": str(exc)})
 
 @app.exception_handler(Exception)
 def general_exception_handler(request, exc):
