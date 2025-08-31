@@ -34,7 +34,7 @@ show_usage() {
     cat << EOF
 Frontend Development Script
 
-Usage: $0 {build|test|clean} [test_target]
+Usage: $0 {build|test|clean|ci} [test_target]
 
 Commands:
     build              Build the frontend application
@@ -92,14 +92,12 @@ test() {
 
     cd "$SCRIPT_DIR"
 
-    # Install dependencies if needed
-    if [[ ! -d "node_modules" ]]; then
-        log_info "Installing dependencies..."
-        npm install
-    fi
+    # Always ensure dependencies are up to date for CI/CD
+    log_info "Installing/updating dependencies..."
+    npm install
 
     # Check if test script exists
-    if npm run | grep -q "test"; then
+    if npm run | grep -q "test:run"; then
         # Run tests
         if [[ -n "$test_target" ]]; then
             log_info "Running tests for: $test_target"
@@ -110,16 +108,10 @@ test() {
         fi
         log_success "Frontend tests completed"
     else
-        log_info "No test script found, running basic checks instead..."
-        # Try to run lint, but don't fail if it has issues
-        if npm run lint 2>/dev/null; then
-            log_success "Frontend lint completed"
-        else
-            log_info "Lint failed, running basic validation..."
-            # Just check if the project builds without errors
-            npm run build >/dev/null 2>&1
-            log_success "Frontend basic validation completed"
-        fi
+        log_error "Test script 'test:run' not found in package.json"
+        log_info "Available scripts:"
+        npm run
+        exit 1
     fi
 }
 
@@ -171,6 +163,9 @@ main() {
             ;;
         clean)
             clean
+            ;;
+        ci)
+            test "$2"
             ;;
         *)
             log_error "Unknown command: $command"

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useInventory } from '@/hooks/useInventory';
-import type { Asset, AssetListRequest } from '@/types';
+import type { Asset } from '@/types';
 
 interface AssetListProps {
   onAssetClick?: (asset: Asset) => void;
@@ -13,57 +13,107 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
     loading,
     error,
     totalCount,
-    activeCount,
-    filteredCount,
     listAssets,
     clearError
   } = useInventory();
 
-  const [filters, setFilters] = useState<AssetListRequest>({
-    active_only: true,
-    limit: undefined
-  });
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
-  const [sortField, setSortField] = useState<'name' | 'price_usd' | 'category'>('name');
+  // Default sort by market cap rank (ascending - rank 1 first)
+  const [sortField, setSortField] = useState<'market_cap_rank' | 'name' | 'price_usd' | 'category' | 'market_cap' | 'total_volume_24h' | 'price_change_percentage_24h'>('market_cap_rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  const handleFilterChange = async (newFilters: AssetListRequest) => {
-    setFilters(newFilters);
-    await listAssets(newFilters);
-  };
-
   const handleRefresh = async () => {
-    await listAssets(filters);
+    await listAssets({ active_only: true, limit: undefined });
   };
 
-  const handleSort = (field: 'name' | 'price_usd' | 'category') => {
+  const handleSort = (field: 'market_cap_rank' | 'name' | 'price_usd' | 'category' | 'market_cap' | 'total_volume_24h' | 'price_change_percentage_24h') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      // Default direction for different fields
+      if (field === 'market_cap_rank') {
+        setSortDirection('asc'); // Rank 1 first
+      } else if (field === 'price_change_percentage_24h') {
+        setSortDirection('desc'); // Best performers first
+      } else {
+        setSortDirection('asc');
+      }
     }
+    setCurrentPage(1); // Reset to first page when sorting changes
   };
 
-  const sortedAssets = [...assets].sort((a, b) => {
-    let aValue: any = a[sortField];
-    let bValue: any = b[sortField];
+  // Sort all assets
+  const sortedAssets = useMemo(() => {
+    return [...assets].sort((a, b) => {
+      let aValue: any = a[sortField];
+      let bValue: any = b[sortField];
 
-    // Handle string values
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      aValue = aValue.toLowerCase();
-      bValue = bValue.toLowerCase();
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      // Handle null/undefined values
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return sortDirection === 'asc' ? -1 : 1;
+      if (bValue == null) return sortDirection === 'asc' ? 1 : -1;
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [assets, sortField, sortDirection]);
+
+  // Paginate sorted assets
+  const paginatedAssets = useMemo(() => {
+    // If itemsPerPage is 250 (All assets), show all assets
+    if (itemsPerPage >= sortedAssets.length) {
+      return sortedAssets;
     }
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return sortedAssets.slice(startIndex, endIndex);
+  }, [sortedAssets, currentPage, itemsPerPage]);
 
-    // Handle null/undefined values
-    if (aValue == null && bValue == null) return 0;
-    if (aValue == null) return sortDirection === 'asc' ? -1 : 1;
-    if (bValue == null) return sortDirection === 'asc' ? 1 : -1;
+  // Calculate pagination info
+  const totalPages = itemsPerPage >= sortedAssets.length ? 1 : Math.ceil(sortedAssets.length / itemsPerPage);
+  const startItem = itemsPerPage >= sortedAssets.length ? 1 : (currentPage - 1) * itemsPerPage + 1;
+  const endItem = itemsPerPage >= sortedAssets.length ? sortedAssets.length : Math.min(currentPage * itemsPerPage, sortedAssets.length);
 
-    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
+  // Pagination handlers
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  const goToNextPage = () => goToPage(currentPage + 1);
+  const goToPrevPage = () => goToPage(currentPage - 1);
+
+  // Format large numbers
+  const formatNumber = (num: number | undefined): string => {
+    if (num === undefined || num === null) return 'N/A';
+    if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
+    if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
+    if (num >= 1e3) return `$${(num / 1e3).toFixed(2)}K`;
+    return `$${num.toFixed(2)}`;
+  };
+
+  // Format percentage change
+  const formatPercentageChange = (change: number | undefined): string => {
+    if (change === undefined || change === null) return 'N/A';
+    const sign = change >= 0 ? '+' : '';
+    return `${sign}${change.toFixed(2)}%`;
+  };
+
+  // Get color for percentage change
+  const getPercentageColor = (change: number | undefined): string => {
+    if (change === undefined || change === null) return 'text-gray-500';
+    return change >= 0 ? 'text-green-600' : 'text-red-600';
+  };
 
   if (loading && assets.length === 0) {
     return (
@@ -96,7 +146,7 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
             >
               <span className="sr-only">Dismiss</span>
               <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293-4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
             </button>
           </div>
@@ -112,36 +162,30 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Assets</h2>
           <p className="text-gray-600">
-            Showing {filteredCount} of {totalCount} assets ({activeCount} active)
+            Showing {startItem}-{endItem} of {sortedAssets.length} assets
+            {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Backend returned: {assets.length} assets | Sorted: {sortedAssets.length} | Paginated: {paginatedAssets.length}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           {showFilters && (
             <div className="flex items-center gap-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={filters.active_only}
-                  onChange={(e) => handleFilterChange({ ...filters, active_only: e.target.checked })}
-                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">Active only</span>
-              </label>
-
               <select
-                value={filters.limit || ''}
-                onChange={(e) => handleFilterChange({
-                  ...filters,
-                  limit: e.target.value ? parseInt(e.target.value) : undefined
-                })}
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(parseInt(e.target.value));
+                  setCurrentPage(1); // Reset to first page when changing items per page
+                }}
                 className="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
               >
-                <option value="">No limit</option>
-                <option value="5">5 assets</option>
-                <option value="10">10 assets</option>
-                <option value="20">20 assets</option>
-                <option value="50">50 assets</option>
+                <option value="10">10 per page</option>
+                <option value="25">25 per page</option>
+                <option value="50">50 per page</option>
+                <option value="100">100 per page</option>
+                <option value="250">All assets</option>
               </select>
             </div>
           )}
@@ -163,7 +207,7 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
         </div>
       </div>
 
-            {/* Assets Table */}
+      {/* Assets Table */}
       {assets.length === 0 ? (
         <div className="text-center py-12">
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -171,7 +215,7 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900">No assets found</h3>
           <p className="mt-1 text-sm text-gray-500">
-            {filters.active_only ? 'No active assets available.' : 'No assets available.'}
+            {'No assets available.'}
           </p>
         </div>
       ) : (
@@ -180,7 +224,20 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button
+                      onClick={() => handleSort('market_cap_rank')}
+                      className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                    >
+                      <span>Rank</span>
+                      {sortField === 'market_cap_rank' && (
+                        <svg className={`h-3 w-3 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px] max-w-[300px]">
                     <button
                       onClick={() => handleSort('name')}
                       className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
@@ -188,25 +245,12 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
                       <span>Asset</span>
                       {sortField === 'name' && (
                         <svg className={`h-3 w-3 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293-4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                         </svg>
                       )}
                     </button>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <button
-                      onClick={() => handleSort('category')}
-                      className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
-                    >
-                      <span>Category</span>
-                      {sortField === 'category' && (
-                        <svg className={`h-3 w-3 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </button>
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button
                       onClick={() => handleSort('price_usd')}
                       className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
@@ -219,69 +263,170 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
                       )}
                     </button>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button
+                      onClick={() => handleSort('price_change_percentage_24h')}
+                      className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                    >
+                      <span>24h Change</span>
+                      {sortField === 'price_change_percentage_24h' && (
+                        <svg className={`h-3 w-3 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
                   </th>
-                  {(filters.limit || !filters.active_only) && (
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                  )}
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button
+                      onClick={() => handleSort('market_cap')}
+                      className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                    >
+                      <span>Market Cap</span>
+                      {sortField === 'market_cap' && (
+                        <svg className={`h-3 w-3 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button
+                      onClick={() => handleSort('total_volume_24h')}
+                      className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                    >
+                      <span>Volume (24h)</span>
+                      {sortField === 'total_volume_24h' && (
+                        <svg className={`h-3 w-3 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293-4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedAssets.map((asset) => (
+                {paginatedAssets.map((asset) => (
                   <tr
                     key={asset.asset_id}
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
                     onClick={() => onAssetClick?.(asset)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {asset.market_cap_rank || 'N/A'}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="flex items-center min-w-0">
                         <div className="flex-shrink-0 h-8 w-8">
-                          <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                          {asset.image ? (
+                            <img
+                              src={asset.image}
+                              alt={asset.name}
+                              className="h-8 w-8 rounded-full"
+                              onError={(e) => {
+                                // Fallback to initials if image fails to load
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                target.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div className={`h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center ${asset.image ? 'hidden' : ''}`}>
                             <span className="text-xs font-medium text-indigo-600">
-                              {asset.name.substring(0, 2).toUpperCase()}
+                              {asset.symbol?.substring(0, 2).toUpperCase() || asset.name.substring(0, 2).toUpperCase()}
                             </span>
                           </div>
                         </div>
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">
+                        <div className="ml-3 min-w-0 flex-1">
+                          <div className="text-sm font-medium text-gray-900 truncate" title={asset.name}>
                             {asset.name}
+                          </div>
+                          <div className="text-sm text-gray-500 truncate" title={asset.symbol || asset.asset_id}>
+                            {asset.symbol || asset.asset_id}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        {asset.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       ${asset.price_usd?.toFixed(2) || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {asset.is_active ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Inactive
-                        </span>
-                      )}
+                    <td className="px-4 py-4 whitespace-nowrap text-sm">
+                      <span className={getPercentageColor(asset.price_change_percentage_24h)}>
+                        {formatPercentageChange(asset.price_change_percentage_24h)}
+                      </span>
                     </td>
-                    {(filters.limit || !filters.active_only) && (
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-500 max-w-xs truncate">
-                          {asset.description || 'No description available'}
-                        </div>
-                      </td>
-                    )}
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatNumber(asset.market_cap)}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatNumber(asset.total_volume_24h)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+          <div className="flex flex-1 justify-between sm:hidden">
+            <button
+              onClick={goToPrevPage}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Previous
+            </button>
+            <button
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages}
+              className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Next
+            </button>
+          </div>
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing <span className="font-medium">{startItem}</span> to <span className="font-medium">{endItem}</span> of{' '}
+                <span className="font-medium">{totalCount}</span> results
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                <button
+                  onClick={goToPrevPage}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                >
+                  <span className="sr-only">Previous</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.83 10l3.93 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.06l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                {/* Current Page */}
+                <button
+                  onClick={() => goToPage(currentPage)}
+                  aria-current="page"
+                  className="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                >
+                  {currentPage}
+                </button>
+                {/* Next Page */}
+                <button
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                >
+                  <span className="sr-only">Next</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.17 10 7.24 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.06l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
+            </div>
           </div>
         </div>
       )}

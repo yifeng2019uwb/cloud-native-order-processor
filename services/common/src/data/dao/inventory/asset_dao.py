@@ -36,15 +36,49 @@ class AssetDAO(BaseDAO):
                 'category': asset_create.category,
                 'amount': asset_create.amount,
                 'price_usd': asset_create.price_usd,
+
+                # CoinGecko API fields - Comprehensive market data
                 'symbol': asset_create.symbol,
                 'image': asset_create.image,
                 'market_cap_rank': asset_create.market_cap_rank,
+
+                # Price data
+                'current_price': asset_create.current_price,
                 'high_24h': asset_create.high_24h,
                 'low_24h': asset_create.low_24h,
+
+                # Supply information
                 'circulating_supply': asset_create.circulating_supply,
+                'total_supply': asset_create.total_supply,
+                'max_supply': asset_create.max_supply,
+
+                # Price changes
                 'price_change_24h': asset_create.price_change_24h,
-                'ath_change_percentage': asset_create.ath_change_percentage,
+                'price_change_percentage_24h': asset_create.price_change_percentage_24h,
+                'price_change_percentage_7d': asset_create.price_change_percentage_7d,
+                'price_change_percentage_30d': asset_create.price_change_percentage_30d,
+
+                # Market metrics
                 'market_cap': asset_create.market_cap,
+                'market_cap_change_24h': asset_create.market_cap_change_24h,
+                'market_cap_change_percentage_24h': asset_create.market_cap_change_percentage_24h,
+
+                # Volume and trading
+                'total_volume_24h': asset_create.total_volume_24h,
+                'volume_change_24h': asset_create.volume_change_24h,
+
+                # Historical context
+                'ath': asset_create.ath,
+                'ath_change_percentage': asset_create.ath_change_percentage,
+                'ath_date': asset_create.ath_date,
+                'atl': asset_create.atl,
+                'atl_change_percentage': asset_create.atl_change_percentage,
+                'atl_date': asset_create.atl_date,
+
+                # Additional metadata
+                'last_updated': asset_create.last_updated,
+                'sparkline_7d': asset_create.sparkline_7d,
+
                 'is_active': True,
                 'created_at': now,
                 'updated_at': now
@@ -63,15 +97,49 @@ class AssetDAO(BaseDAO):
                 category=asset_create.category,
                 amount=asset_create.amount,
                 price_usd=asset_create.price_usd,
+
+                # CoinGecko API fields - Comprehensive market data
                 symbol=asset_create.symbol,
                 image=asset_create.image,
                 market_cap_rank=asset_create.market_cap_rank,
+
+                # Price data
+                current_price=asset_create.current_price,
                 high_24h=asset_create.high_24h,
                 low_24h=asset_create.low_24h,
+
+                # Supply information
                 circulating_supply=asset_create.circulating_supply,
+                total_supply=asset_create.total_supply,
+                max_supply=asset_create.max_supply,
+
+                # Price changes
                 price_change_24h=asset_create.price_change_24h,
-                ath_change_percentage=asset_create.ath_change_percentage,
+                price_change_percentage_24h=asset_create.price_change_percentage_24h,
+                price_change_percentage_7d=asset_create.price_change_percentage_7d,
+                price_change_percentage_30d=asset_create.price_change_percentage_30d,
+
+                # Market metrics
                 market_cap=asset_create.market_cap,
+                market_cap_change_24h=asset_create.market_cap_change_24h,
+                market_cap_change_percentage_24h=asset_create.market_cap_change_percentage_24h,
+
+                # Volume and trading
+                total_volume_24h=asset_create.total_volume_24h,
+                volume_change_24h=asset_create.volume_change_24h,
+
+                # Historical context
+                ath=asset_create.ath,
+                ath_change_percentage=asset_create.ath_change_percentage,
+                ath_date=asset_create.ath_date,
+                atl=asset_create.atl,
+                atl_change_percentage=asset_create.atl_change_percentage,
+                atl_date=asset_create.atl_date,
+
+                # Additional metadata
+                last_updated=asset_create.last_updated,
+                sparkline_7d=asset_create.sparkline_7d,
+
                 is_active=created_item['is_active'],
                 created_at=datetime.fromisoformat(created_item['created_at']),
                 updated_at=datetime.fromisoformat(created_item['updated_at'])
@@ -100,15 +168,49 @@ class AssetDAO(BaseDAO):
                 category=item['category'],
                 amount=float(item['amount']),
                 price_usd=float(item['price_usd']),
+
+                # CoinGecko API fields - Comprehensive market data
                 symbol=item.get('symbol'),
                 image=item.get('image'),
                 market_cap_rank=item.get('market_cap_rank'),
+
+                # Price data
+                current_price=item.get('current_price'),
                 high_24h=item.get('high_24h'),
                 low_24h=item.get('low_24h'),
+
+                # Supply information
                 circulating_supply=item.get('circulating_supply'),
+                total_supply=item.get('total_supply'),
+                max_supply=item.get('max_supply'),
+
+                # Price changes
                 price_change_24h=item.get('price_change_24h'),
-                ath_change_percentage=item.get('ath_change_percentage'),
+                price_change_percentage_24h=item.get('price_change_percentage_24h'),
+                price_change_percentage_7d=item.get('price_change_percentage_7d'),
+                price_change_percentage_30d=item.get('price_change_percentage_30d'),
+
+                # Market metrics
                 market_cap=item.get('market_cap'),
+                market_cap_change_24h=item.get('market_cap_change_24h'),
+                market_cap_change_percentage_24h=item.get('market_cap_change_percentage_24h'),
+
+                # Volume and trading
+                total_volume_24h=item.get('total_volume_24h'),
+                volume_change_24h=item.get('volume_change_24h'),
+
+                # Historical context
+                ath=item.get('ath'),
+                ath_change_percentage=item.get('ath_change_percentage'),
+                ath_date=item.get('ath_date'),
+                atl=item.get('atl'),
+                atl_change_percentage=item.get('atl_change_percentage'),
+                atl_date=item.get('atl_date'),
+
+                # Additional metadata
+                last_updated=item.get('last_updated'),
+                sparkline_7d=item.get('sparkline_7d'),
+
                 is_active=item.get('is_active', True),
                 created_at=datetime.fromisoformat(item['created_at']),
                 updated_at=datetime.fromisoformat(item['updated_at'])
@@ -152,15 +254,49 @@ class AssetDAO(BaseDAO):
                         category=item.get('category', 'unknown'),
                         amount=float(item.get('amount', 0)),
                         price_usd=float(item.get('price_usd', 0)),
+
+                        # CoinGecko API fields - Comprehensive market data
                         symbol=item.get('symbol'),
                         image=item.get('image'),
                         market_cap_rank=item.get('market_cap_rank'),
+
+                        # Price data
+                        current_price=item.get('current_price'),
                         high_24h=item.get('high_24h'),
                         low_24h=item.get('low_24h'),
+
+                        # Supply information
                         circulating_supply=item.get('circulating_supply'),
+                        total_supply=item.get('total_supply'),
+                        max_supply=item.get('max_supply'),
+
+                        # Price changes
                         price_change_24h=item.get('price_change_24h'),
-                        ath_change_percentage=item.get('ath_change_percentage'),
+                        price_change_percentage_24h=item.get('price_change_percentage_24h'),
+                        price_change_percentage_7d=item.get('price_change_percentage_7d'),
+                        price_change_percentage_30d=item.get('price_change_percentage_30d'),
+
+                        # Market metrics
                         market_cap=item.get('market_cap'),
+                        market_cap_change_24h=item.get('market_cap_change_24h'),
+                        market_cap_change_percentage_24h=item.get('market_cap_change_percentage_24h'),
+
+                        # Volume and trading
+                        total_volume_24h=item.get('total_volume_24h'),
+                        volume_change_24h=item.get('volume_change_24h'),
+
+                        # Historical context
+                        ath=item.get('ath'),
+                        ath_change_percentage=item.get('ath_change_percentage'),
+                        ath_date=item.get('ath_date'),
+                        atl=item.get('atl'),
+                        atl_change_percentage=item.get('atl_change_percentage'),
+                        atl_date=item.get('atl_date'),
+
+                        # Additional metadata
+                        last_updated=item.get('last_updated'),
+                        sparkline_7d=item.get('sparkline_7d'),
+
                         is_active=item.get('is_active', True),
                         created_at=datetime.fromisoformat(item.get('created_at', datetime.utcnow().isoformat())),
                         updated_at=datetime.fromisoformat(item.get('updated_at', datetime.utcnow().isoformat()))
@@ -205,15 +341,49 @@ class AssetDAO(BaseDAO):
                         category=item.get('category', category),
                         amount=float(item.get('amount', 0)),
                         price_usd=float(item.get('price_usd', 0)),
+
+                        # CoinGecko API fields - Comprehensive market data
                         symbol=item.get('symbol'),
                         image=item.get('image'),
                         market_cap_rank=item.get('market_cap_rank'),
+
+                        # Price data
+                        current_price=item.get('current_price'),
                         high_24h=item.get('high_24h'),
                         low_24h=item.get('low_24h'),
+
+                        # Supply information
                         circulating_supply=item.get('circulating_supply'),
+                        total_supply=item.get('total_supply'),
+                        max_supply=item.get('max_supply'),
+
+                        # Price changes
                         price_change_24h=item.get('price_change_24h'),
-                        ath_change_percentage=item.get('ath_change_percentage'),
+                        price_change_percentage_24h=item.get('price_change_percentage_24h'),
+                        price_change_percentage_7d=item.get('price_change_percentage_7d'),
+                        price_change_percentage_30d=item.get('price_change_percentage_30d'),
+
+                        # Market metrics
                         market_cap=item.get('market_cap'),
+                        market_cap_change_24h=item.get('market_cap_change_24h'),
+                        market_cap_change_percentage_24h=item.get('market_cap_change_percentage_24h'),
+
+                        # Volume and trading
+                        total_volume_24h=item.get('total_volume_24h'),
+                        volume_change_24h=item.get('volume_change_24h'),
+
+                        # Historical context
+                        ath=item.get('ath'),
+                        ath_change_percentage=item.get('ath_change_percentage'),
+                        ath_date=item.get('ath_date'),
+                        atl=item.get('atl'),
+                        atl_change_percentage=item.get('atl_change_percentage'),
+                        atl_date=item.get('atl_date'),
+
+                        # Additional metadata
+                        last_updated=item.get('last_updated'),
+                        sparkline_7d=item.get('sparkline_7d'),
+
                         is_active=item.get('is_active', True),
                         created_at=datetime.fromisoformat(item.get('created_at', datetime.utcnow().isoformat())),
                         updated_at=datetime.fromisoformat(item.get('updated_at', datetime.utcnow().isoformat()))
@@ -229,13 +399,71 @@ class AssetDAO(BaseDAO):
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving assets by category '{category}': {str(e)}")
 
+    def get_all_assets_sorted_by_rank(self, active_only: bool = False) -> List[Asset]:
+        """Get all assets sorted by market cap rank for frontend display"""
+        try:
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Getting all assets sorted by market cap rank, active_only: {active_only}"
+            )
+
+            # Get all assets first
+            assets = self.get_all_assets(active_only=active_only)
+
+            # Sort by market cap rank (None values go to the end)
+            def sort_key(asset):
+                rank = asset.market_cap_rank
+                return rank if rank is not None else float('inf')
+
+            sorted_assets = sorted(assets, key=sort_key)
+
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Returning {len(sorted_assets)} assets sorted by market cap rank"
+            )
+
+            return sorted_assets
+
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get assets sorted by rank: {e}"
+            )
+            raise CNOPDatabaseOperationException(f"Database operation failed while retrieving assets sorted by rank: {str(e)}")
+
     def update_asset(self, asset_id: str, asset_update: AssetUpdate) -> Asset:
         try:
             updates = {}
             for field in [
+                'name', 'asset_id',  # Add missing core fields
                 'description', 'category', 'amount', 'price_usd', 'is_active',
-                'symbol', 'image', 'market_cap_rank', 'high_24h', 'low_24h',
-                'circulating_supply', 'price_change_24h', 'ath_change_percentage', 'market_cap']:
+
+                # CoinGecko API fields - Comprehensive market data
+                'symbol', 'image', 'market_cap_rank',
+
+                # Price data
+                'current_price', 'high_24h', 'low_24h',
+
+                # Supply information
+                'circulating_supply', 'total_supply', 'max_supply',
+
+                # Price changes
+                'price_change_24h', 'price_change_percentage_24h',
+                'price_change_percentage_7d', 'price_change_percentage_30d',
+
+                # Market metrics
+                'market_cap', 'market_cap_change_24h', 'market_cap_change_percentage_24h',
+
+                # Volume and trading
+                'total_volume_24h', 'volume_change_24h',
+
+                # Historical context
+                'ath', 'ath_change_percentage', 'ath_date',
+                'atl', 'atl_change_percentage', 'atl_date',
+
+                # Additional metadata
+                'last_updated', 'sparkline_7d'
+            ]:
                 value = getattr(asset_update, field, None)
                 if value is not None:
                     updates[field] = value
@@ -259,28 +487,62 @@ class AssetDAO(BaseDAO):
 
             logger.info(
                 action=LogActions.DB_OPERATION,
-                message=f"Asset updated successfully: id={asset_id}, fields_updated={list(asset_update.model_dump(exclude_unset=True).keys())}"
+                message=f"Asset updated successfully: id={asset_id}, fields_updated={list(updates.keys())}"
             )
 
             return Asset(
                 asset_id=item.get('asset_id', asset_id),
-                name=item['name'],
+                name=item.get('name', ''),  # Use safe get with default
                 description=item.get('description', ''),
-                category=item['category'],
-                amount=float(item['amount']),
-                price_usd=float(item['price_usd']),
+                category=item.get('category', 'unknown'),  # Use safe get with default
+                amount=float(item.get('amount', 0)),
+                price_usd=float(item.get('price_usd', 0)),
+
+                # CoinGecko API fields - Comprehensive market data
                 symbol=item.get('symbol'),
                 image=item.get('image'),
                 market_cap_rank=item.get('market_cap_rank'),
+
+                # Price data
+                current_price=item.get('current_price'),
                 high_24h=item.get('high_24h'),
                 low_24h=item.get('low_24h'),
+
+                # Supply information
                 circulating_supply=item.get('circulating_supply'),
+                total_supply=item.get('total_supply'),
+                max_supply=item.get('max_supply'),
+
+                # Price changes
                 price_change_24h=item.get('price_change_24h'),
-                ath_change_percentage=item.get('ath_change_percentage'),
+                price_change_percentage_24h=item.get('price_change_percentage_24h'),
+                price_change_percentage_7d=item.get('price_change_percentage_7d'),
+                price_change_percentage_30d=item.get('price_change_percentage_30d'),
+
+                # Market metrics
                 market_cap=item.get('market_cap'),
+                market_cap_change_24h=item.get('market_cap_change_24h'),
+                market_cap_change_percentage_24h=item.get('market_cap_change_percentage_24h'),
+
+                # Volume and trading
+                total_volume_24h=item.get('total_volume_24h'),
+                volume_change_24h=item.get('volume_change_24h'),
+
+                # Historical context
+                ath=item.get('ath'),
+                ath_change_percentage=item.get('ath_change_percentage'),
+                ath_date=item.get('ath_date'),
+                atl=item.get('atl'),
+                atl_change_percentage=item.get('atl_change_percentage'),
+                atl_date=item.get('atl_date'),
+
+                # Additional metadata
+                last_updated=item.get('last_updated'),
+                sparkline_7d=item.get('sparkline_7d'),
+
                 is_active=item.get('is_active', True),
-                created_at=datetime.fromisoformat(item['created_at']),
-                updated_at=datetime.fromisoformat(item['updated_at'])
+                created_at=datetime.fromisoformat(item.get('created_at', datetime.utcnow().isoformat())),  # Use safe get with default
+                updated_at=datetime.fromisoformat(item.get('updated_at', datetime.utcnow().isoformat()))  # Use safe get with default
             )
         except Exception as e:
             logger.error(

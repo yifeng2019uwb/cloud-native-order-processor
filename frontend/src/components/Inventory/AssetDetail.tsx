@@ -13,6 +13,36 @@ const AssetDetail: React.FC<AssetDetailProps> = ({ assetId, onBack }) => {
   const { isAuthenticated } = useAuth();
   const { asset, loading, error, refetch } = useAssetDetail(assetId);
 
+  // Helper functions for formatting
+  const formatCurrency = (value: number | undefined): string => {
+    if (value === undefined || value === null) return 'N/A';
+    if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+    if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+    if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
+    return `$${value.toLocaleString()}`;
+  };
+
+  const formatPercentage = (value: number | undefined): string => {
+    if (value === undefined || value === null) return 'N/A';
+    const sign = value >= 0 ? '+' : '';
+    return `${sign}${value.toFixed(2)}%`;
+  };
+
+  const getPercentageColor = (value: number | undefined): string => {
+    if (value === undefined || value === null) return 'text-gray-500';
+    return value >= 0 ? 'text-green-600' : 'text-red-600';
+  };
+
+  const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const formatDateTime = (dateString: string | undefined): string => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString();
+  };
+
   const getAvailabilityColor = (status: string) => {
     switch (status) {
       case 'available':
@@ -106,6 +136,53 @@ const AssetDetail: React.FC<AssetDetailProps> = ({ assetId, onBack }) => {
 
   return (
     <div className="space-y-6">
+      {/* Asset Header */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-6 py-6">
+          <div className="flex items-center space-x-6">
+            {asset.image && (
+              <div className="flex-shrink-0">
+                <img
+                  src={asset.image}
+                  alt={asset.name}
+                  className="h-20 w-20 rounded-full"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center space-x-3">
+                <h1 className="text-3xl font-bold text-gray-900">{asset.name}</h1>
+                {asset.symbol && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+                    {asset.symbol}
+                  </span>
+                )}
+                {asset.market_cap_rank && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                    Rank #{asset.market_cap_rank}
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-lg text-gray-600">
+                {formatCurrency(asset.price_usd)} USD
+                {asset.price_change_percentage_24h !== undefined && (
+                  <span className={`ml-3 ${getPercentageColor(asset.price_change_percentage_24h)}`}>
+                    {formatPercentage(asset.price_change_percentage_24h)} (24h)
+                  </span>
+                )}
+              </p>
+              {asset.description && (
+                <p className="mt-2 text-sm text-gray-500">{asset.description}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Asset Card */}
       <AssetCard asset={asset} showDetails={true} />
 
@@ -122,18 +199,23 @@ const AssetDetail: React.FC<AssetDetailProps> = ({ assetId, onBack }) => {
             </div>
 
             <div>
+              <dt className="text-sm font-medium text-gray-500">Symbol</dt>
+              <dd className="mt-1 text-sm text-gray-900">{asset.symbol || 'N/A'}</dd>
+            </div>
+
+            <div>
               <dt className="text-sm font-medium text-gray-500">Name</dt>
               <dd className="mt-1 text-sm text-gray-900">{asset.name}</dd>
             </div>
 
             <div>
-              <dt className="text-sm font-medium text-gray-500">Category</dt>
-              <dd className="mt-1 text-sm text-gray-900 capitalize">{asset.category}</dd>
+              <dt className="text-sm font-medium text-gray-500">Market Cap Rank</dt>
+              <dd className="mt-1 text-sm text-gray-900">{asset.market_cap_rank || 'N/A'}</dd>
             </div>
 
             <div>
-              <dt className="text-sm font-medium text-gray-500">Price (USD)</dt>
-              <dd className="mt-1 text-sm text-gray-900">${asset.price_usd.toLocaleString()}</dd>
+              <dt className="text-sm font-medium text-gray-500">Category</dt>
+              <dd className="mt-1 text-sm text-gray-900 capitalize">{asset.category}</dd>
             </div>
 
             <div>
@@ -167,6 +249,171 @@ const AssetDetail: React.FC<AssetDetailProps> = ({ assetId, onBack }) => {
           </dl>
         </div>
       </div>
+
+      {/* Price Information */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Price Information</h3>
+        </div>
+        <div className="px-6 py-4">
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Current Price (USD)</dt>
+              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.price_usd)}</dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">24h Change</dt>
+              <dd className="mt-1 text-sm">
+                <span className={getPercentageColor(asset.price_change_percentage_24h)}>
+                  {formatPercentage(asset.price_change_percentage_24h)}
+                </span>
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">7d Change</dt>
+              <dd className="mt-1 text-sm">
+                <span className={getPercentageColor(asset.price_change_percentage_7d)}>
+                  {formatPercentage(asset.price_change_percentage_7d)}
+                </span>
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">30d Change</dt>
+              <dd className="mt-1 text-sm">
+                <span className={getPercentageColor(asset.price_change_percentage_30d)}>
+                  {formatPercentage(asset.price_change_percentage_30d)}
+                </span>
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">24h High</dt>
+              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.high_24h)}</dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">24h Low</dt>
+              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.low_24h)}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      {/* Market Data */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Market Data</h3>
+        </div>
+        <div className="px-6 py-4">
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Market Cap</dt>
+              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.market_cap)}</dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">24h Volume</dt>
+              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.total_volume_24h)}</dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Circulating Supply</dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                {asset.circulating_supply ? asset.circulating_supply.toLocaleString() : 'N/A'}
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Total Supply</dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                {asset.total_supply ? asset.total_supply.toLocaleString() : 'N/A'}
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Max Supply</dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                {asset.max_supply ? asset.max_supply.toLocaleString() : 'N/A'}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      {/* Historical Data */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Historical Data</h3>
+        </div>
+        <div className="px-6 py-4">
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+            <div>
+              <dt className="text-sm font-medium text-gray-500">All-Time High</dt>
+              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.ath)}</dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">ATH Change</dt>
+              <dd className="mt-1 text-sm">
+                <span className={getPercentageColor(asset.ath_change_percentage)}>
+                  {formatPercentage(asset.ath_change_percentage)}
+                </span>
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">ATH Date</dt>
+              <dd className="mt-1 text-sm text-gray-900">{formatDate(asset.ath_date)}</dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">All-Time Low</dt>
+              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.atl)}</dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">ATL Change</dt>
+              <dd className="mt-1 text-sm">
+                <span className={getPercentageColor(asset.atl_change_percentage)}>
+                  {formatPercentage(asset.atl_change_percentage)}
+                </span>
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">ATL Date</dt>
+              <dd className="mt-1 text-sm text-gray-900">{formatDate(asset.atl_date)}</dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
+              <dd className="mt-1 text-sm text-gray-900">{formatDateTime(asset.last_updated)}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      {/* 7-Day Price Chart */}
+      {asset.sparkline_7d?.price && asset.sparkline_7d.price.length > 0 && (
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">7-Day Price Trend</h3>
+          </div>
+          <div className="px-6 py-4">
+            <div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center">
+              <p className="text-sm text-gray-500">
+                Chart visualization would go here for {asset.sparkline_7d.price.length} data points
+              </p>
+            </div>
+            <p className="mt-2 text-xs text-gray-500 text-center">
+              {asset.sparkline_7d.price.length} price points over the last 7 days
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex justify-between items-center">

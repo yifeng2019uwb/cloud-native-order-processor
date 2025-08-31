@@ -22,25 +22,28 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
     loadTransactions();
   }, [assetId]);
 
-  const loadTransactions = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await assetTransactionApiService.getAssetTransactions(assetId);
+        const loadTransactions = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          const response = await assetTransactionApiService.getAssetTransactions(assetId);
 
-      if (response.success) {
-        setTransactions(response.data);
-        setHasMore(response.has_more);
-      } else {
-        setError('Failed to load transaction history');
-      }
-    } catch (err) {
-      setError('Asset transaction history is temporarily unavailable. Backend API needs to be fixed.');
-      console.error('Error loading asset transactions:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+          console.log('Asset transaction response:', response); // Debug log
+
+          if (response.success) {
+            console.log('Transaction data:', response.data); // Debug log
+            setTransactions(response.data);
+            setHasMore(response.has_more);
+          } else {
+            setError('Failed to load transaction history');
+          }
+        } catch (err) {
+          setError('Asset transaction history is temporarily unavailable. Backend API needs to be fixed.');
+          console.error('Error loading asset transactions:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
 
   if (loading) {
     return (
@@ -147,37 +150,44 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
                   const price = parseFloat(transaction.price);
                   const totalValue = quantity * price;
 
+                  console.log('Rendering transaction:', transaction); // Debug log
+                  console.log('Transaction type:', transaction.transaction_type); // Debug log
+
                   return (
                     <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          transaction.transaction_type === 'buy'
+                      <td className="px-3 py-2 text-sm text-gray-900">
+                        {new Date(transaction.timestamp).toLocaleDateString()}
+                      </td>
+                      <td className="px-3 py-2 text-sm">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          transaction.transaction_type.toLowerCase() === 'buy'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}>
                           {transaction.transaction_type.toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-2 text-sm text-gray-900">
                         {quantity.toFixed(6)}
+                        <div className="text-gray-500 text-xs">
+                          @${price.toFixed(2)}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${price.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-3 py-2 text-sm text-gray-900">
                         ${totalValue.toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          transaction.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
+                      <td className="px-3 py-2 text-sm">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          transaction.status === 'completed'
+                            ? 'bg-green-100 text-green-800'
+                            : transaction.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : transaction.status === 'failed'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-100 text-gray-700'
                         }`}>
                           {transaction.status}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(transaction.timestamp).toLocaleDateString()} {new Date(transaction.timestamp).toLocaleTimeString()}
                       </td>
                     </tr>
                   );

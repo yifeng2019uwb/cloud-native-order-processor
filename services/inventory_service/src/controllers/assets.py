@@ -58,8 +58,8 @@ def list_assets(
     limit: Optional[int] = Query(
         None,
         ge=1,
-        le=100,
-        description="Maximum number of assets to return (1-100)"
+        le=250,
+        description="Maximum number of assets to return (1-250)"
     ),
     asset_dao: AssetDAO = Depends(get_asset_dao)
 ) -> AssetListResponse:
@@ -67,7 +67,7 @@ def list_assets(
     List all available assets with optional filtering
 
     - **active_only**: Filter to show only active assets (default: true)
-    - **limit**: Maximum number of results to return (1-100)
+    - **limit**: Maximum number of results to return (1-250)
     """
     try:
         logger.info(action=LogActions.REQUEST_START, message=f"Assets list requested - active_only: {active_only}, limit: {limit}")

@@ -306,7 +306,36 @@ const TradingPage: React.FC = () => {
                               asset.name.toLowerCase().includes(searchTerm) ||
                               asset.asset_id.toLowerCase().includes(searchTerm)
                             );
-                            setFilteredAssets(filtered);
+
+                            // Smart sorting: exact matches first, then starts with, then by popularity
+                            const sortedFiltered = filtered.sort((a, b) => {
+                              const aName = a.name.toLowerCase();
+                              const aSymbol = a.asset_id.toLowerCase();
+                              const bName = b.name.toLowerCase();
+                              const bSymbol = b.asset_id.toLowerCase();
+
+                              // Exact matches get highest priority
+                              if (aSymbol === searchTerm) return -1;
+                              if (bSymbol === searchTerm) return 1;
+                              if (aName === searchTerm) return -1;
+                              if (bName === searchTerm) return 1;
+
+                              // Starts with matches get second priority
+                              if (aSymbol.startsWith(searchTerm)) return -1;
+                              if (bSymbol.startsWith(searchTerm)) return 1;
+                              if (aName.startsWith(searchTerm)) return -1;
+                              if (bName.startsWith(searchTerm)) return 1;
+
+                              // Then sort by market cap rank (popularity) - lower rank = more popular
+                              if (a.market_cap_rank && b.market_cap_rank) {
+                                return a.market_cap_rank - b.market_cap_rank;
+                              }
+
+                              // Finally alphabetical for similar relevance
+                              return aName.localeCompare(bName);
+                            });
+
+                            setFilteredAssets(sortedFiltered);
                           } else {
                             // For sell orders, only show assets user owns
                             const assetsToShow = orderForm.orderType === 'market_sell' ?

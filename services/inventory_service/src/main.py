@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
+import asyncio
 
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from common.exceptions import CNOPAssetNotFoundException, CNOPInternalServerException
@@ -41,6 +42,21 @@ app.add_middleware(
 # Include routers
 app.include_router(assets_router)
 app.include_router(health_router)
+
+# Startup event - Initialize inventory data
+@app.on_event("startup")
+async def startup_event():
+    """Initialize inventory data on service startup"""
+    try:
+        from data.init_inventory import startup_inventory_initialization
+        logger.info(action=LogActions.SERVICE_START, message="Starting inventory initialization...")
+
+        # Run initialization in background to not block startup
+        asyncio.create_task(startup_inventory_initialization())
+
+        logger.info(action=LogActions.SERVICE_START, message="Inventory initialization started in background")
+    except Exception as e:
+        logger.error(action=LogActions.ERROR, message=f"Failed to start inventory initialization: {e}")
 
 # Custom exception handlers
 @app.exception_handler(CNOPAssetValidationException)

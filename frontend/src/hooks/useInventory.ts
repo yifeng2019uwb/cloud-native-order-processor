@@ -79,7 +79,8 @@ export const useInventory = (): UseInventoryReturn => {
 
   // Load assets on mount
   useEffect(() => {
-    listAssets();
+    // Always fetch all assets for frontend pagination - no limit
+    listAssets({ active_only: true, limit: undefined });
   }, [listAssets]);
 
   return {

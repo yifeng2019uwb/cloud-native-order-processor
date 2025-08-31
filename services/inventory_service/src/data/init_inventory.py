@@ -5,116 +5,104 @@ Path: services/inventory-service/src/data/init_inventory.py
 import asyncio
 from decimal import Decimal
 from typing import List
-import httpx
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.database.dynamodb_connection import dynamodb_manager
-from common.data.entities.inventory import AssetCreate
+from common.data.entities.inventory import AssetCreate, AssetUpdate
 from common.exceptions import CNOPEntityNotFoundException
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from constants import DEFAULT_ASSET_AMOUNT, DEFAULT_ASSET_CATEGORY
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.INVENTORY)
 
-class Constants:
-    COINGECKO_API = "https://api.coingecko.com/api/v3/coins/markets"
-
-    TOP_N_COINS = 100  # Change this value as needed
-    PARAMS = {
-        "vs_currency": "usd",
-        "order": "market_cap_desc",
-        "per_page": TOP_N_COINS,
-        "page": 1
-    }
-    CATEGORY_MAP = {
-        # You can expand this mapping as needed
-        "bitcoin": "major",
-        "ethereum": "major",
-        "binancecoin": "major",
-        "tether": "stablecoin",
-        "usd-coin": "stablecoin",
-        "dai": "stablecoin",
-        # fallback: altcoin
-    }
-
 def get_category(coin: dict) -> str:
-    # Map CoinGecko id to category, fallback to altcoin
-    return Constants.CATEGORY_MAP.get(coin.get("id"), "altcoin")
-
-async def fetch_top_coins() -> List[dict]:
-    """Fetch top coins from CoinGecko with timeout and error handling"""
-    try:
-        # This doesn't block other requests
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(Constants.COINGECKO_API, params=Constants.PARAMS)
-            response.raise_for_status()
-            coins = response.json()
-            logger.info(action=LogActions.DB_OPERATION, message=f"Fetched {len(coins)} coins from CoinGecko.")
-            return coins
-    except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Failed to fetch coins from CoinGecko: {e}")
-        return []
+    """Get category for coin - simplified to use default"""
+    return DEFAULT_ASSET_CATEGORY
 
 async def upsert_coins_to_inventory(coins: List[dict]) -> int:
+    """Upsert coins data to inventory - update existing, create new"""
     updated_count = 0
     db_connection = dynamodb_manager.get_connection()
     asset_dao = AssetDAO(db_connection)
+
     for coin in coins:
         try:
             asset_id = coin["symbol"].upper()
-            name = coin["name"]
-            description = coin.get("description") or coin.get("id", "")
-            category = get_category(coin)
-            amount = Decimal("1000.0")  # Placeholder, can be dynamic
-            price_usd = Decimal(str(coin["current_price"]))
 
-            asset_create = AssetCreate(
-                asset_id=asset_id,
-                name=name,
-                description=description,
-                category=category,
-                amount=amount,
-                price_usd=price_usd
+            # Only use the mapped fields from fetch_coins, not all original CoinGecko fields
+            # This ensures all numeric values are properly converted to Decimal
+            asset_update = AssetUpdate(
+                asset_id=asset_id,  # Add the asset_id field
+                symbol=coin.get("symbol"),
+                name=coin.get("name"),
+                current_price=coin.get("current_price"),
+                price_usd=coin.get("price_usd"),
+                image=coin.get("image"),
+                market_cap_rank=coin.get("market_cap_rank"),
+                high_24h=coin.get("high_24h"),
+                low_24h=coin.get("low_24h"),
+                circulating_supply=coin.get("circulating_supply"),
+                total_supply=coin.get("total_supply"),
+                max_supply=coin.get("max_supply"),
+                price_change_24h=coin.get("price_change_24h"),
+                price_change_percentage_24h=coin.get("price_change_percentage_24h"),
+                price_change_percentage_7d=coin.get("price_change_percentage_7d"),
+                price_change_percentage_30d=coin.get("price_change_percentage_30d"),
+                market_cap=coin.get("market_cap"),
+                market_cap_change_24h=coin.get("market_cap_change_24h"),
+                market_cap_change_percentage_24h=coin.get("market_cap_change_percentage_24h"),
+                total_volume_24h=coin.get("total_volume_24h"),
+                volume_change_24h=coin.get("volume_change_24h"),
+                ath=coin.get("ath"),
+                ath_change_percentage=coin.get("ath_change_percentage"),
+                ath_date=coin.get("ath_date"),
+                atl=coin.get("atl"),
+                atl_change_percentage=coin.get("atl_change_percentage"),
+                atl_date=coin.get("atl_date"),
+                last_updated=coin.get("last_updated"),
+                sparkline_7d=coin.get("sparkline_7d"),
+                is_active=True  # Ensure all coins from CoinGecko are marked as active
             )
 
-            # Upsert: update if exists, else create
-            try:
-                existing_asset = asset_dao.get_asset_by_id(asset_id)
-                asset_dao.update_asset(asset_id, asset_create)
-                logger.info(action=LogActions.DB_OPERATION, message=f"Updated asset: {asset_id} - {name}")
-                updated_count += 1
-            except Exception as e:
-                # Check if it's CNOPEntityNotFoundException (asset doesn't exist)
-                if isinstance(e, CNOPEntityNotFoundException):
-                    # Asset doesn't exist, create it
-                    asset_dao.create_asset(asset_create)
-                    logger.info(action=LogActions.DB_OPERATION, message=f"Created asset: {asset_id} - {name}")
-                    updated_count += 1
-                else:
-                    # Other exception, re-raise to be caught by outer try-catch
-                    raise e
+            asset_dao.update_asset(asset_id, asset_update)
+            logger.info(action=LogActions.DB_OPERATION, message=f"Upserted asset: {asset_id}")
+            updated_count += 1
+
         except Exception as e:
             logger.error(action=LogActions.ERROR, message=f"Failed to upsert asset {coin.get('symbol', '')}: {e}")
             continue
+
     return updated_count
 
 async def initialize_inventory_data(force_recreate: bool = False) -> dict:
-    """Initialize inventory data on service startup by fetching from CoinGecko"""
-    logger.info(action=LogActions.SERVICE_START, message="Starting inventory data initialization from CoinGecko...")
+    """Initialize inventory data on service startup by fetching from data providers"""
+    logger.info(action=LogActions.SERVICE_START, message="Starting inventory data initialization...")
     try:
-        coins = await fetch_top_coins()
+        # Import here to avoid circular imports
+        from services.fetch_coins import fetch_coins
+
+        coins = await fetch_coins()
+        if not coins:
+            logger.error(action=LogActions.ERROR, message="No coins received from fetch service")
+            return {
+                "status": "error",
+                "error": "No coins received",
+                "message": "Failed to fetch coins from data providers"
+            }
+
         count = await upsert_coins_to_inventory(coins)
-        logger.info(action=LogActions.SERVICE_START, message=f"Successfully upserted {count} assets from CoinGecko")
+        logger.info(action=LogActions.SERVICE_START, message=f"Successfully upserted {count} assets from data providers")
         return {
             "status": "success",
             "assets_upserted": count,
-            "message": f"Successfully upserted {count} assets from CoinGecko"
+            "message": f"Successfully upserted {count} assets from data providers"
         }
     except Exception as e:
         logger.error(action=LogActions.ERROR, message=f"Failed to initialize inventory data: {e}")
         return {
             "status": "error",
             "error": str(e),
-            "message": "Failed to initialize inventory data from CoinGecko"
+            "message": "Failed to initialize inventory data from data providers"
         }
 
 # Convenience function for startup

@@ -27,12 +27,6 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onClick, showDetails = fal
     }
   };
 
-  const getStatusColor = (isActive: boolean) => {
-    return isActive
-      ? 'bg-green-100 text-green-800'
-      : 'bg-red-100 text-red-800';
-  };
-
   return (
     <div
       className={`bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow duration-200 ${
@@ -62,9 +56,6 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onClick, showDetails = fal
       <div className="flex flex-wrap gap-2">
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(asset.category)}`}>
           {asset.category}
-        </span>
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(asset.is_active)}`}>
-          {asset.is_active ? 'Active' : 'Inactive'}
         </span>
       </div>
 
