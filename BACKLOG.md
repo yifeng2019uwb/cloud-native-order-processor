@@ -162,6 +162,31 @@
   - Test exception handling with various error scenarios
 - **Why Needed**: Order Service currently has TODO placeholders for exception handling and middleware, which should be properly implemented for production readiness. These handlers should return our defined exceptions (CNOPInternalServerException, etc.) instead of generic error messages.
 
+#### **TEST-001: Refactor Integration Tests to Use API Model Defined Responses**
+- **Component**: Testing & Quality Assurance
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Refactor integration tests to dynamically use API model defined responses instead of hardcoded field names
+- **Acceptance Criteria**:
+  - Replace hardcoded field names in integration tests with dynamic field extraction from API models
+  - Use AssetDetailResponse.model_fields to automatically stay in sync with API changes
+  - Create reusable test utilities for field validation based on model definitions
+  - Ensure tests automatically adapt when new fields are added to API models
+  - Maintain test coverage while improving maintainability
+- **Dependencies**: INVENTORY-001 ✅ (enhanced asset attributes completed)
+- **Files to Update**:
+  - `integration_tests/inventory_service/inventory_tests.py` - Refactor to use AssetDetailResponse model fields
+  - `integration_tests/order_service/` - Apply same pattern to order service tests
+  - `integration_tests/user_services/` - Apply same pattern to user service tests
+- **Technical Approach**:
+  - Import API models into integration tests
+  - Use model.model_fields to dynamically get available fields
+  - Create field validation functions that work with any API model
+  - Implement field type checking based on model field definitions
+  - Add field presence validation without hardcoding field names
+- **Why Needed**: Current integration tests use hardcoded field names which makes them brittle and requires manual updates when API models change. Using the actual API models ensures tests automatically stay synchronized with API changes and improves maintainability.
+
 ### **🌐 Frontend & User Experience**
 
 #### **FRONTEND-006: Standardize Frontend Port to localhost:3000** ✅

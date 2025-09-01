@@ -154,7 +154,7 @@ pip install -r requirements.txt
 
 - **[Services Design](../docs/design-docs/services-design.md)**: Architecture and design decisions
 - **[Build Documentation](build.md)**: Detailed build and test procedures
-- **[Individual Service READMEs](user_service/README.md)**: Service-specific documentation
+- **[Individual Service READMEs](#quick-links)**: Service-specific documentation
 - **[API Documentation](../gateway/README.md)**: Gateway and API endpoint information
 
 ---

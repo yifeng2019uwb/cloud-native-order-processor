@@ -41,21 +41,37 @@
 user_service/
 ├── src/
 │   ├── main.py                 # FastAPI application entry point
-│   ├── api/                    # API route handlers
-│   │   ├── auth.py            # Authentication endpoints
-│   │   ├── balance.py         # Balance management endpoints
-│   │   └── profile.py         # Profile management endpoints
+│   ├── api_models/             # API request/response models
+│   │   ├── auth/              # Authentication models
+│   │   │   ├── login.py       # Login request/response models
+│   │   │   ├── logout.py      # Logout models
+│   │   │   ├── profile.py     # Profile models
+│   │   │   └── registration.py # Registration models
+│   │   ├── balance/           # Balance models
+│   │   │   └── balance_models.py # Balance operation models
+│   │   ├── errors/            # Error models
+│   │   │   └── exceptions.py  # Error exception models
+│   │   └── shared/            # Shared models
+│   │       └── common.py      # Common model utilities
 │   ├── controllers/            # Business logic controllers
-│   │   ├── auth_controller.py # Authentication logic
-│   │   ├── balance_controller.py # Balance operations
-│   │   └── profile_controller.py # Profile management
-│   ├── validation/            # Input validation and business rules
-│   │   ├── business_validators.py # Business logic validation
-│   │   └── field_validators.py # Field-level validation
-│   └── models/                # Pydantic models
-│       ├── auth_models.py     # Authentication request/response models
-│       ├── balance_models.py  # Balance operation models
-│       └── profile_models.py  # Profile management models
+│   │   ├── auth/              # Authentication controllers
+│   │   │   ├── login.py       # Login logic
+│   │   │   ├── logout.py      # Logout logic
+│   │   │   ├── profile.py     # Profile management
+│   │   │   ├── register.py    # Registration logic
+│   │   │   └── dependencies.py # Auth dependencies
+│   │   ├── balance/           # Balance controllers
+│   │   │   ├── deposit.py     # Deposit operations
+│   │   │   ├── get_balance.py # Balance retrieval
+│   │   │   ├── transactions.py # Transaction history
+│   │   │   └── withdraw.py    # Withdrawal operations
+│   │   ├── health.py          # Health check controller
+│   │   └── dependencies.py    # Controller dependencies
+│   ├── user_exceptions/        # User-specific exceptions
+│   │   └── exceptions.py      # User exception definitions
+│   └── validation/            # Input validation and business rules
+│       ├── business_validators.py # Business logic validation
+│       └── field_validators.py # Field-level validation
 ├── tests/                     # Test suite
 ├── requirements.txt            # Python dependencies
 └── setup.py                   # Package configuration

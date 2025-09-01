@@ -8,10 +8,13 @@ Independent JWT validation service for Order Processor.
 src/
 ├── __init__.py          # Package initialization
 ├── main.py              # FastAPI app entry point (includes root endpoint)
-└── controllers/         # API endpoint handlers
-    ├── __init__.py      # Controllers package
-    ├── validate.py      # /internal/auth/validate endpoint
-    └── health.py        # /health endpoint
+├── controllers/         # API endpoint handlers
+│   ├── __init__.py      # Controllers package
+│   ├── validate.py      # /internal/auth/validate endpoint
+│   └── health.py        # /health endpoint
+├── api_models/          # API request/response models
+├── auth_exceptions/     # Auth-specific exceptions
+└── utils/               # Utility functions
 ```
 
 ## Endpoints

@@ -39,13 +39,12 @@
 
 ```
 exception/
-├── src/
-│   ├── __init__.py           # Package exports
-│   ├── models.py             # Pydantic models for Problem Details
-│   ├── error_codes.py        # Standardized error code definitions
-│   ├── exception_mapper.py   # Exception mapping logic
-│   ├── fastapi_handlers.py   # FastAPI exception handlers
-│   └── utils.py              # Utility functions
+├── __init__.py               # Package exports
+├── error_codes.py            # Standardized error code definitions
+├── error_models.py           # Pydantic models for Problem Details
+├── exception_handlers.py     # FastAPI exception handlers
+├── exception_mapping.py      # Exception mapping logic
+├── MAPPING_GUIDE.md          # Exception mapping guide
 ├── tests/                    # Test suite
 ├── requirements.txt           # Python dependencies
 └── setup.py                  # Package configuration
@@ -182,7 +181,7 @@ python -c "from exception import create_problem_details; print('Import successfu
 ## 📚 Related Documentation
 
 - **[Services Overview](../README.md)**: Complete services architecture
-- **[Common Package](common/README.md)**: Shared utilities and components
+- **[Common Package](../common/README.md)**: Shared utilities and components
 - **[Build Script](../build.sh)**: Automated build and testing
 - **[RFC 7807](https://tools.ietf.org/html/rfc7807)**: Problem Details for HTTP APIs
 

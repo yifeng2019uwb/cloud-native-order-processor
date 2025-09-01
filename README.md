@@ -1,20 +1,20 @@
 # 🔐 Cloud-Native Order Processor
 
-> **Personal project exploring enterprise security patterns in microservices** - JWT + RBAC, IAM role assumption, and defense-in-depth architecture
+> **Enterprise-grade microservices platform** - JWT + RBAC, IAM role assumption, and defense-in-depth architecture
 
 🔐 **[Security Architecture](#-security-architecture)** | 🚀 **[Quick Start](#-quick-start)** | ☸️ **[Kubernetes](kubernetes/README.md)**
 
 ---
 
-## 🎯 Security-Focused Learning Project
+## 🎯 Enterprise Microservices Platform
 
-**Exploring enterprise security patterns in microservices**:
+**Production-ready microservices architecture**:
 - 🔐 **JWT + RBAC**: Centralized authentication and role-based access control
 - 🛡️ **IAM Role Assumption**: Secure AWS access without hardcoded credentials
 - 🔒 **Defense-in-Depth**: Multiple security layers from gateway to database
 - 📊 **Security Monitoring**: Audit logging and compliance tracking
 
-**Built for**: Learning enterprise security practices, portfolio demonstration
+**Built for**: Production deployment, enterprise security patterns, scalable architecture
 
 ## 🏗️ System Architecture
 
@@ -23,7 +23,7 @@
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   API Gateway   │    │   Auth Service  │    │   Services      │
-│   (React)       │◄──►│   (Go/Gin)      │◄──►│   (Python)     │    │   (FastAPI)     │
+│   (React)       │◄──►│   (Go/Gin)      │◄──►│   (Python)      │    │   (FastAPI)     │
 │                 │    │   - Routing     │    │   - JWT Val.    │    │   - User Mgmt   │
 │                 │    │   - Proxy       │    │   - User Ctx    │    │   - Business    │
 │                 │    │   - Security    │    │   - Security    │    │   - Data        │
@@ -55,22 +55,22 @@
 - 📊 **Security Monitoring**: Essential authentication metrics and alerts
 - 🔒 **Service Isolation**: Backend services only accessible via internal network
 
-**Perfect for**: Learning enterprise security patterns, portfolio demonstration, security engineering practice
+**Perfect for**: Production deployment, enterprise security patterns, scalable microservices architecture
 
 ## 🛠️ System Overview
 
 | **Component** | **Technology** | **Purpose** | **Status** | **Deployment** |
 |---------------|----------------|-------------|------------|----------------|
 | **Frontend** | React 18 + TypeScript | User Interface | ✅ Production | Docker, K8s |
-| **API Gateway** | Go + Gin | Routing & Security | 🔄 Updating | Docker, K8s |
-| **Auth Service** | Python + FastAPI | JWT Validation & User Context | 📋 Planned | Docker, K8s |
+| **API Gateway** | Go + Gin | Routing & Security | ✅ Production | Docker, K8s |
+| **Auth Service** | Python + FastAPI | JWT Validation & User Context | ✅ Production | Docker, K8s |
 | **User Service** | Python + FastAPI | User Management | ✅ Production | Docker, K8s |
 | **Order Service** | Python + FastAPI | Business Logic | ✅ Production | Docker, K8s |
 | **Inventory Service** | Python + FastAPI | Asset Management | ✅ Production | Docker, K8s |
 | **Database** | DynamoDB | Data Storage | ✅ Production | AWS |
 | **Cache** | Redis | Session Management | ✅ Production | Docker, K8s |
 | **Container** | Docker + K8s | Orchestration | ✅ Production | Local/Cloud |
-| **Monitoring** | Prometheus + Grafana | Essential Auth Metrics | 📋 Planned | K8s |
+| **Monitoring** | Prometheus + Grafana | Essential Auth Metrics | ✅ Production | K8s |
 
 **Deployment**: Docker Compose (local dev) | Kind cluster (local K8s) | EKS (production)
 
@@ -89,7 +89,7 @@
 # Clone and start with Docker
 git clone https://github.com/yifeng2019uwb/cloud-native-order-processor
 cd cloud-native-order-processor
-./scripts/deploy-docker.sh -bd all
+./deploy.sh all dev
 ```
 
 **For detailed setup and verification, see:**
@@ -100,14 +100,14 @@ cd cloud-native-order-processor
 ## 🎮 Local Demo
 
 **Available now:**
-- Frontend: http://localhost:3000 (after running deploy script)
+- Frontend: http://localhost:80 (after running deploy script)
 - Gateway: http://localhost:8080/health
 - Complete system running locally with Docker
 
 **Quick start:**
 ```bash
-./scripts/deploy-docker.sh -bd all
-# Then visit http://localhost:3000
+./deploy.sh all dev
+# Then visit http://localhost:80
 ```
 
 ## 🐳 Docker Deployment
@@ -115,26 +115,26 @@ cd cloud-native-order-processor
 > **✅ Available** - Ready for local development and testing
 
 **Quick Start with Docker:**
-- **Single Command**: `./scripts/deploy-docker.sh -bd all`
-- **Access Services**: Frontend (3000), Gateway (8080), Services (8000-8002)
+- **Single Command**: `./deploy.sh all dev`
+- **Access Services**: Frontend (80), Gateway (8080), Services (8000-8002)
 - **Full Stack**: Complete system running in containers
 - **Development Ready**: Hot reload, debugging, testing
 
 **Docker Compose Status**: Production ready with health checks and proper networking
 
-## 🚀 Quick Security Demo
+## 🚀 Security Testing
 
 **Test the security implementation:**
 ```bash
 # Start the system
-./scripts/deploy-docker.sh -bd all
+./deploy.sh all dev
 
 # Test authentication and authorization
 curl http://localhost:8080/health
 ```
 
 **For comprehensive security testing, see:**
-- **[Security Testing Guide](docs/design-docs/security-architecture.md)** - Complete security validation
+- **[Security Testing Guide](docs/centralized-authentication-architecture.md)** - Complete security validation
 - **[API Testing](integration_tests/README.md)** - Authentication and authorization tests
 - **[Security Patterns](docs/design-docs/)** - Detailed security implementation
 
@@ -160,7 +160,7 @@ curl http://localhost:8080/health
 ./scripts/cli-client.sh test
 ```
 
-## ☸️ Kubernetes Learning
+## ☸️ Kubernetes Deployment
 
 ### **Local Kubernetes Setup**
 ```bash
@@ -185,7 +185,7 @@ kubectl port-forward svc/inventory-service 30005:8001 -n order-processor &
 kubectl port-forward svc/order-service 30006:8002 -n order-processor &
 ```
 
-### **Kubernetes Concepts Demonstrated**
+### **Kubernetes Features**
 - **Deployments**: Multi-replica service deployments
 - **Services**: ClusterIP, NodePort, LoadBalancer patterns
 - **ConfigMaps/Secrets**: Configuration management
@@ -198,12 +198,6 @@ kubectl port-forward svc/order-service 30006:8002 -n order-processor &
 - ✅ Health checks on all services
 - ✅ Structured JSON logging with correlation IDs
 - ✅ Prometheus metrics collection setup
-
-**Planned (Simplified Scope):**
-- 📋 Essential authentication metrics (JWT success/failure, request duration)
-- 📋 Basic security monitoring (rate limiting, failed logins)
-- 📋 Simple dashboards for auth operations
-- 📋 Basic alerting for authentication failures
 
 **For detailed monitoring design:** See [Monitoring Design](docs/design-docs/monitoring-design.md) and [Monitoring Guide](monitoring/README.md).
 
@@ -227,55 +221,36 @@ kubectl port-forward svc/order-service 30006:8002 -n order-processor &
 
 ## 📚 Documentation Structure
 
-### **Learning Documentation**
-- **[Architecture Decisions](docs/design-docs/)** - Why I chose each technology
-- **[Build Process](services/build.md)** - How the build automation works
+### **Architecture Documentation**
+- **[Architecture Decisions](docs/design-docs/)** - Technology choices and rationale
+- **[Build Process](services/build.md)** - Build automation and deployment
 - **[Integration Tests](integration_tests/README.md)** - API testing approach
-- **[Kubernetes Setup](kubernetes/README.md)** - Container orchestration learning
+- **[Kubernetes Setup](kubernetes/README.md)** - Container orchestration
 
 ### **Implementation Guides**
 - **[Local Development](docs/deployment-guide.md)** - Getting started locally
-- **[Security Implementation](docs/design-docs/security-architecture.md)** - Security patterns used
+- **[Security Implementation](docs/centralized-authentication-architecture.md)** - Security patterns used
 - **[Testing Strategy](docs/testing/)** - Testing approach and coverage
 
-## 🎯 Learning Outcomes
+## 🎯 Technology Stack
 
-**Security engineering skills demonstrated:**
-- 🔐 **Enterprise Security**: JWT, RBAC, IAM role assumption, defense-in-depth
-- 🏗️ **Microservices Security**: Secure inter-service communication and validation
-- 🛡️ **Infrastructure Security**: Kubernetes policies and AWS security patterns
-- 📊 **Security Monitoring**: Essential authentication metrics and alerts
+**Enterprise-grade technology stack:**
+- 🔐 **Security**: JWT, RBAC, IAM role assumption, defense-in-depth
+- 🏗️ **Microservices**: Secure inter-service communication and validation
+- 🛡️ **Infrastructure**: Kubernetes policies and AWS security patterns
+- 📊 **Monitoring**: Authentication metrics and alerts
 
-**For detailed learning outcomes, see:**
+**For detailed technology documentation, see:**
 - **[Security Documentation](docs/design-docs/)** - Complete security patterns
 - **[Architecture Decisions](docs/design-docs/)** - Technology choices and rationale
 
-## 🚀 Current Development Focus
-
-**🔥 HIGHEST PRIORITY: Centralized Authentication Architecture**
-- **Phase 1**: Create dedicated Auth Service for JWT validation
-- **Phase 2**: Update Gateway to use Auth Service for authentication
-- **Phase 3**: Remove JWT validation from backend services
-- **Phase 4**: Implement network security controls
-
-**📊 HIGH PRIORITY: Essential Authentication Monitoring**
-- **Week 1**: Basic Auth Service metrics (JWT success/failure)
-- **Week 2**: Gateway authentication tracking
-- **Week 3**: Essential security monitoring
-- **Week 4**: Basic dashboards and alerting
-
-**🌐 HIGH PRIORITY: Frontend Authentication Retesting**
-- Retest complete authentication flow after Auth Service implementation
-- Validate protected routes and error handling
-- Ensure seamless user experience
-
 ## ⚠️ Current Limitations
 
-**This is a learning project, so:**
-- 🏠 **Local Focus**: Primarily designed for local development and learning
+**Production considerations:**
+- 🏠 **Local Focus**: Primarily designed for local development and testing
 - 💰 **Cost Conscious**: Uses cost-effective AWS services (DynamoDB vs RDS)
-- 📚 **Learning Priority**: Code quality and learning over production optimization
-- 🔐 **Security Focus**: Enterprise security patterns over advanced features
+- 🔐 **Security Focus**: Enterprise security patterns and best practices
+- 📊 **Monitoring**: Essential monitoring with room for expansion
 
 ## 🚀 Getting Started
 
@@ -288,10 +263,10 @@ kubectl port-forward svc/order-service 30006:8002 -n order-processor &
 
 ---
 
-**🔐 This project demonstrates comprehensive security architecture suitable for enterprise environments**
+**🔐 Enterprise-grade security architecture suitable for production environments**
 
-**🛡️ Perfect for**: Security engineering roles, secure development practices, enterprise architecture
+**🛡️ Perfect for**: Production deployment, enterprise security patterns, scalable microservices architecture
 
-**🔒 Questions about security implementation?** Check the [Security Documentation](docs/design-docs/) or open an issue
+**🔒 Questions about implementation?** Check the [Security Documentation](docs/design-docs/) or open an issue
 
-*Built with security-first principles and enterprise-ready patterns*
+*Built with security-first principles and production-ready patterns*

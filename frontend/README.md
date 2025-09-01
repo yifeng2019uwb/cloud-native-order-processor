@@ -72,18 +72,57 @@ docker build -f docker/frontend/Dockerfile -t order-processor-frontend:latest .
 frontend/
 ├── src/
 │   ├── components/
-│   │   ├── Auth/           # Login, Register, ProtectedRoute
+│   │   ├── Auth/           # Login, Register components
+│   │   │   ├── Login.tsx   # Login component
+│   │   │   └── Register.tsx # Registration component
 │   │   ├── Dashboard/      # User dashboard with portfolio
+│   │   │   └── Dashboard.tsx # Dashboard component
 │   │   ├── Trading/        # Order creation and management
+│   │   │   └── TradingPage.tsx # Trading page component
 │   │   ├── Portfolio/      # Asset balances and history
+│   │   │   ├── PortfolioPage.tsx # Portfolio page
+│   │   │   └── AssetTransactionHistory.tsx # Transaction history
 │   │   ├── Account/        # Balance management
+│   │   │   └── AccountPage.tsx # Account management page
 │   │   ├── Profile/        # User profile management
+│   │   │   └── ProfilePage.tsx # Profile management page
 │   │   ├── Inventory/      # Asset browsing and details
+│   │   │   ├── InventoryPage.tsx # Inventory page
+│   │   │   ├── AssetList.tsx # Asset list component
+│   │   │   ├── AssetCard.tsx # Asset card component
+│   │   │   └── AssetDetail.tsx # Asset detail component
 │   │   └── Landing/        # Public landing page
-│   ├── hooks/              # useAuth, useInventory
+│   │       └── LandingPage.tsx # Landing page component
+│   ├── hooks/              # Custom React hooks
+│   │   ├── useAuth.ts      # Authentication hook
+│   │   └── useInventory.ts # Inventory data hook
 │   ├── services/           # API integration services
+│   │   ├── api.ts          # Base API service
+│   │   ├── authApi.ts      # Authentication API
+│   │   ├── balanceApi.ts   # Balance API
+│   │   ├── inventoryApi.ts # Inventory API
+│   │   ├── orderApi.ts     # Order API
+│   │   ├── portfolioApi.ts # Portfolio API
+│   │   ├── profileApi.ts   # Profile API
+│   │   ├── assetBalanceApi.ts # Asset balance API
+│   │   └── assetTransactionApi.ts # Asset transaction API
 │   ├── types/              # TypeScript type definitions
-│   └── utils/              # Authentication utilities
+│   │   ├── auth.ts         # Authentication types
+│   │   ├── balance.ts      # Balance types
+│   │   ├── inventory.ts    # Inventory types
+│   │   ├── orders.ts       # Order types
+│   │   ├── portfolio.ts    # Portfolio types
+│   │   ├── assetBalance.ts # Asset balance types
+│   │   ├── assetTransaction.ts # Asset transaction types
+│   │   └── api.ts          # API types
+│   ├── constants/          # Application constants
+│   │   ├── api.ts          # API constants
+│   │   └── index.ts        # General constants
+│   ├── utils/              # Utility functions
+│   │   └── auth.ts         # Authentication utilities
+│   ├── App.tsx             # Main application component
+│   ├── main.tsx            # Application entry point
+│   └── index.css           # Global styles
 ├── build.sh                # Build and test automation
 ├── vite.config.ts          # Vite configuration
 └── tailwind.config.js      # Tailwind CSS configuration

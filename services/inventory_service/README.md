@@ -41,19 +41,26 @@
 inventory_service/
 ├── src/
 │   ├── main.py                 # FastAPI application entry point
-│   ├── api/                    # API route handlers
-│   │   ├── assets.py          # Asset management endpoints
-│   │   └── health.py          # Health check endpoints
+│   ├── api_models/             # API request/response models
+│   │   └── inventory/         # Inventory models
+│   │       ├── asset_list.py  # Asset list models
+│   │       ├── asset_requests.py # Asset request models
+│   │       └── asset_response.py # Asset response models
 │   ├── controllers/            # Business logic controllers
-│   │   ├── asset_controller.py # Asset operations logic
-│   │   └── health_controller.py # Health monitoring logic
-│   ├── services/               # External service integrations
-│   │   └── coingecko_service.py # CoinGecko API integration
+│   │   ├── assets.py          # Asset operations logic
+│   │   ├── health.py          # Health monitoring logic
+│   │   └── dependencies.py    # Controller dependencies
+│   ├── data/                  # Data initialization
+│   │   └── init_inventory.py  # Inventory initialization
+│   ├── services/              # External service integrations
+│   │   └── fetch_coins.py     # CoinGecko API integration
+│   ├── inventory_exceptions/   # Inventory-specific exceptions
+│   │   └── exceptions.py      # Inventory exception definitions
 │   ├── validation/            # Input validation and business rules
-│   │   └── business_validators.py # Business logic validation
-│   └── models/                # Pydantic models
-│       ├── asset_models.py    # Asset request/response models
-│       └── health_models.py   # Health check models
+│   │   ├── business_validators.py # Business logic validation
+│   │   └── field_validators.py # Field-level validation
+│   ├── constants.py           # Service constants
+│   └── metrics.py             # Metrics collection
 ├── tests/                     # Test suite
 ├── requirements.txt            # Python dependencies
 └── setup.py                   # Package configuration

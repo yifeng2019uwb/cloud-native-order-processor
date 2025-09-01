@@ -79,14 +79,25 @@ gateway/
 │   ├── middleware/
 │   │   ├── middleware.go        # Basic middleware (CORS, Logger, Recovery)
 │   │   ├── auth.go              # Authentication middleware
-│   │   └── rate_limit.go        # Rate limiting middleware (planned)
+│   │   └── rate_limit.go        # Rate limiting middleware
 │   └── services/
-│       ├── redis.go             # Redis operations
-│       └── proxy.go             # Proxy service
+│       ├── auth_client.go       # Auth service client
+│       ├── proxy.go             # Proxy service
+│       └── redis.go             # Redis operations
 ├── pkg/
 │   ├── constants/constants.go   # Route configurations and roles
-│   ├── models/request.go        # Request/response models
-│   └── models/response.go       # Response models
+│   ├── logging/                 # Logging utilities
+│   │   ├── constants.go         # Logging constants
+│   │   ├── json_formatter.go    # JSON log formatter
+│   │   ├── logger.go            # Logger implementation
+│   │   └── middleware.go        # Logging middleware
+│   ├── models/                  # Request/response models
+│   │   ├── request.go           # Request models
+│   │   └── response.go          # Response models
+│   └── utils/                   # Utility functions
+│       ├── rate_limit.go        # Rate limiting utilities
+│       └── request_id.go        # Request ID utilities
+├── scripts/                     # Build and deployment scripts
 └── test/                        # Integration tests
 ```
 

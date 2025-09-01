@@ -41,20 +41,27 @@
 order_service/
 ├── src/
 │   ├── main.py                 # FastAPI application entry point
-│   ├── api/                    # API route handlers
-│   │   ├── orders.py          # Order management endpoints
-│   │   ├── assets.py          # Asset balance endpoints
-│   │   └── portfolio.py       # Portfolio management endpoints
+│   ├── api_models/             # API request/response models
+│   │   ├── asset.py           # Asset balance models
+│   │   ├── order.py           # Order request/response models
+│   │   └── shared/            # Shared models
+│   │       └── common.py      # Common model utilities
 │   ├── controllers/            # Business logic controllers
-│   │   ├── order_controller.py # Order processing logic
-│   │   ├── asset_controller.py # Asset balance operations
-│   │   └── portfolio_controller.py # Portfolio calculations
-│   ├── validation/            # Input validation and business rules
-│   │   └── business_validators.py # Business logic validation
-│   └── models/                # Pydantic models
-│       ├── order_models.py    # Order request/response models
-│       ├── asset_models.py    # Asset balance models
-│       └── portfolio_models.py # Portfolio models
+│   │   ├── asset_balance.py   # Asset balance operations
+│   │   ├── asset_transaction.py # Asset transaction operations
+│   │   ├── create_order.py    # Order creation logic
+│   │   ├── get_order.py       # Order retrieval logic
+│   │   ├── list_orders.py     # Order listing logic
+│   │   ├── portfolio.py       # Portfolio calculations
+│   │   ├── health.py          # Health check controller
+│   │   └── dependencies.py    # Controller dependencies
+│   ├── order_exceptions/       # Order-specific exceptions
+│   │   └── exceptions.py      # Order exception definitions
+│   ├── services/              # Business services
+│   ├── utils/                 # Utility functions
+│   └── validation/            # Input validation and business rules
+│       ├── business_validators.py # Business logic validation
+│       └── field_validators.py # Field-level validation
 ├── tests/                     # Test suite
 ├── requirements.txt            # Python dependencies
 └── setup.py                   # Package configuration
@@ -142,8 +149,8 @@ Order Creation Flow:
 
 - **[Services Overview](../README.md)**: Complete services architecture
 - **[Common Package](../common/README.md)**: Shared utilities and DAOs
-- **[User Service](user_service/README.md)**: Balance management integration
-- **[Inventory Service](inventory_service/README.md)**: Asset information
+- **[User Service](../user_service/README.md)**: Balance management integration
+- **[Inventory Service](../inventory_service/README.md)**: Asset information
 - **[Build Script](../build.sh)**: Automated build and testing
 
 ---

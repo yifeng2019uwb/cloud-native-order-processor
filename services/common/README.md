@@ -40,25 +40,35 @@
 ```
 common/
 ├── src/
-│   ├── entities/           # Data models and entities
-│   │   ├── user/          # User, Balance, BalanceTransaction
-│   │   ├── order/         # Order and related models
-│   │   ├── inventory/     # Asset and inventory models
-│   │   └── asset/         # Asset balance and transaction models
-│   ├── dao/               # Data Access Objects
-│   │   ├── user/          # User and balance DAOs
-│   │   ├── order/         # Order DAO
-│   │   ├── inventory/     # Asset DAO
-│   │   └── asset/         # Asset management DAOs
-│   ├── database/          # Database connections and utilities
-│   ├── exceptions/        # Shared exception classes
-│   ├── health/            # Health check utilities
+│   ├── data/              # Data layer components
+│   │   ├── entities/      # Data models and entities
+│   │   │   ├── user/      # User, Balance, BalanceTransaction
+│   │   │   ├── order/     # Order and related models
+│   │   │   ├── inventory/ # Asset and inventory models
+│   │   │   └── asset/     # Asset balance and transaction models
+│   │   ├── dao/           # Data Access Objects
+│   │   │   ├── user/      # User and balance DAOs
+│   │   │   ├── order/     # Order DAO
+│   │   │   ├── inventory/ # Asset DAO
+│   │   │   └── asset/     # Asset management DAOs
+│   │   ├── database/      # Database connections and utilities
+│   │   └── exceptions/    # Database exception classes
+│   ├── auth/              # Authentication components
+│   │   ├── security/      # Security management components
+│   │   │   ├── password_manager.py    # Password hashing and validation
+│   │   │   ├── token_manager.py       # JWT token management
+│   │   │   └── audit_logger.py        # Security event logging
+│   │   ├── gateway/       # Gateway integration
+│   │   └── exceptions/    # Auth exception classes
+│   ├── core/              # Core business logic
+│   │   ├── utils/         # Core utilities
+│   │   └── validation/    # Core validation
 │   ├── aws/               # AWS utilities (STS, etc.)
-│   ├── security/          # Security management components
-│   │   ├── password_manager.py    # Password hashing and validation
-│   │   ├── token_manager.py       # JWT token management
-│   │   └── audit_logger.py        # Security event logging
-│   └── utils/             # Common utilities (pagination, etc.)
+│   ├── exceptions/        # Shared exception classes
+│   └── shared/            # Shared utilities
+│       ├── health/        # Health check utilities
+│       ├── logging/       # Logging utilities
+│       └── monitoring/    # Monitoring utilities
 ├── tests/                  # Test suite
 ├── requirements.txt         # Python dependencies
 └── setup.py                # Package configuration
@@ -202,7 +212,7 @@ python -c "from common.entities.user import User; print('Import successful')"
 ## 📚 Related Documentation
 
 - **[Services Overview](../README.md)**: Complete services architecture
-- **[Exception Package](exception/README.md)**: Error handling patterns
+- **[Exception Package](../exception/README.md)**: Error handling patterns
 - **[Build Script](../build.sh)**: Automated build and testing
 - **[Individual Services](../user_service/README.md)**: Service-specific usage
 
