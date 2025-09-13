@@ -6,7 +6,7 @@ import sys
 import os
 
 from src.data.dao.user import UserDAO
-from src.data.entities.user import UserCreate, User, UserLogin
+from src.data.entities.user import User, UserItem
 from src.exceptions.shared_exceptions import CNOPEntityAlreadyExistsException, CNOPEntityNotFoundException, CNOPInvalidCredentialsException, CNOPUserNotFoundException
 from botocore.exceptions import ClientError
 from src.data.exceptions import CNOPDatabaseOperationException
@@ -30,7 +30,7 @@ class TestUserDAO:
     @pytest.fixture
     def sample_user_create(self):
         """Sample user creation data with username"""
-        return UserCreate(
+        return User(
             username="john_doe123",
             email="test@example.com",
             password="ValidPass123!",
@@ -96,7 +96,7 @@ class TestUserDAO:
         mock_db_connection.users_table.get_item.return_value = {'Item': mock_created_item}
 
         # Create user
-        user_create = UserCreate(
+        user_create = User(
             username='john_doe123',
             email='test@example.com',
             password='password123',
@@ -113,7 +113,6 @@ class TestUserDAO:
         assert result.first_name == 'Test'
         assert result.last_name == 'User'
         assert result.phone == '+1234567890'
-        assert result.Pk == 'john_doe123'
 
     def test_create_user_username_exists(self, user_dao, mock_db_connection):
         """Test user creation with existing username - REMOVED: DAO doesn't validate existing users"""
@@ -135,6 +134,7 @@ class TestUserDAO:
             'Sk': 'USER',
             'username': 'john_doe123',
             'email': 'test@example.com',
+            'password_hash': 'hashed_password',
             'first_name': 'Test',
             'last_name': 'User',
             'phone': '+1234567890',
@@ -151,7 +151,6 @@ class TestUserDAO:
         assert result is not None
         assert result.username == 'john_doe123'
         assert result.email == 'test@example.com'
-        assert result.Pk == 'john_doe123'
 
     def test_get_user_by_username_not_found(self, user_dao, mock_db_connection):
         """Test getting user by username when user doesn't exist"""
@@ -172,6 +171,7 @@ class TestUserDAO:
             'Sk': 'USER',
             'username': 'john_doe123',
             'email': 'test@example.com',
+            'password_hash': 'hashed_password',
             'first_name': 'Test',
             'last_name': 'User',
             'phone': '+1234567890',
@@ -188,7 +188,6 @@ class TestUserDAO:
         assert result is not None
         assert result.username == 'john_doe123'
         assert result.email == 'test@example.com'
-        assert result.Pk == 'john_doe123'
 
     def test_get_user_by_email_not_found(self, user_dao, mock_db_connection):
         """Test getting user by email when user doesn't exist"""
@@ -208,15 +207,12 @@ class TestUserDAO:
 
         # Mock get_user_by_username to return a user
         mock_user = User(
-            Pk='john_doe123',
-            Sk='USER',
             username='john_doe123',
             email='test@example.com',
+            password='ValidPass123!',
             first_name='Test',
             last_name='User',
-            phone='+1234567890',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            phone='+1234567890'
         )
         user_dao.get_user_by_username = Mock(return_value=mock_user)
 
@@ -242,7 +238,6 @@ class TestUserDAO:
         # Verify result
         assert result is not None
         assert result.username == 'john_doe123'
-        assert result.Pk == 'john_doe123'
 
     def test_authenticate_user_with_email_like_username(self, user_dao, mock_db_connection):
         """Test successful user authentication with email-like username"""
@@ -251,15 +246,12 @@ class TestUserDAO:
 
         # Mock get_user_by_username to return a user
         mock_user = User(
-            Pk='test@example.com',
-            Sk='USER',
             username='test@example.com',
             email='test@example.com',
+            password='ValidPass123!',
             first_name='Test',
             last_name='User',
-            phone='+1234567890',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            phone='+1234567890'
         )
         user_dao.get_user_by_username = Mock(return_value=mock_user)
 
@@ -285,7 +277,6 @@ class TestUserDAO:
         # Verify result
         assert result is not None
         assert result.username == 'test@example.com'
-        assert result.Pk == 'test@example.com'
 
     def test_authenticate_user_wrong_password(self, user_dao, mock_db_connection):
         """Test user authentication with wrong password"""
@@ -329,14 +320,12 @@ class TestUserDAO:
 
         # Mock get_user_by_username to return existing user
         existing_user = User(
-            Pk='john_doe123',
-            Sk='USER',
             username='john_doe123',
             email='test@example.com',
+            password='ValidPass123!',
             first_name='Test',
             last_name='User',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            phone='+1234567890'
         )
         user_dao.get_user_by_username = Mock(return_value=existing_user)
 
@@ -346,6 +335,7 @@ class TestUserDAO:
             'Sk': 'USER',
             'username': 'john_doe123',
             'email': 'updated@example.com',
+            'password_hash': 'hashed_password',
             'first_name': 'Updated',
             'last_name': 'User',
             'phone': '+1234567890',
@@ -356,26 +346,31 @@ class TestUserDAO:
         mock_db_connection.users_table.update_item.return_value = {'Attributes': mock_updated_item}
 
         # Update user
-        result = user_dao.update_user('john_doe123', email='updated@example.com', first_name='Updated', last_name='User', phone='+1234567890')
+        updated_user = User(
+            username='john_doe123',
+            email='updated@example.com',
+            password='ValidPass123!',
+            first_name='Updated',
+            last_name='User',
+            phone='+1234567890'
+        )
+        result = user_dao.update_user(updated_user)
 
         # Verify result
         assert result.email == 'updated@example.com'
         assert result.first_name == 'Updated'
         assert result.last_name == 'User'
-        assert result.Pk == 'john_doe123'
 
     def test_update_user_email_taken(self, user_dao, mock_db_connection):
         """Test update with email already taken by another user"""
         # Mock get_user_by_username to return existing user
         existing_user = User(
-            Pk='john_doe123',
-            Sk='USER',
             username='john_doe123',
             email='test@example.com',
+            password='ValidPass123!',
             first_name='Test',
             last_name='User',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            phone='+1234567890'
         )
         user_dao.get_user_by_username = Mock(return_value=existing_user)
 
@@ -386,6 +381,7 @@ class TestUserDAO:
                 'Sk': 'USER',
                 'username': 'john_doe123',
                 'email': 'taken@example.com',
+                'password_hash': 'hashed_password',
                 'first_name': 'Test',
                 'last_name': 'User',
                 'role': 'user',
@@ -395,7 +391,15 @@ class TestUserDAO:
         }
 
         # Update user (current implementation doesn't check for email conflicts)
-        result = user_dao.update_user('john_doe123', email='taken@example.com')
+        updated_user = User(
+            username='john_doe123',
+            email='taken@example.com',
+            password='ValidPass123!',
+            first_name='Test',
+            last_name='User',
+            phone='+1234567890'
+        )
+        result = user_dao.update_user(updated_user)
 
         # Verify result is not None (update succeeded)
         assert result is not None
@@ -405,14 +409,12 @@ class TestUserDAO:
         """Test update with no changes returns current user"""
         # Mock get_user_by_username
         mock_user = User(
-            Pk='john_doe123',
-            Sk='USER',
             username='john_doe123',
             email='test@example.com',
+            password='ValidPass123!',
             first_name='Test',
             last_name='User',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            phone='+1234567890'
         )
         user_dao.get_user_by_username = Mock(return_value=mock_user)
 
@@ -423,6 +425,7 @@ class TestUserDAO:
                 'Sk': 'USER',
                 'username': 'john_doe123',
                 'email': 'test@example.com',
+                'password_hash': 'hashed_password',
                 'first_name': 'Test',
                 'last_name': 'User',
                 'role': 'user',
@@ -432,11 +435,18 @@ class TestUserDAO:
         }
 
         # Update user with no changes (but timestamp will be updated)
-        result = user_dao.update_user('john_doe123')
+        updated_user = User(
+            username='john_doe123',
+            email='test@example.com',
+            password='ValidPass123!',
+            first_name='Test',
+            last_name='User',
+            phone='+1234567890'
+        )
+        result = user_dao.update_user(updated_user)
 
         # Verify result is not None (timestamp was updated)
         assert result is not None
-        assert result.Pk == 'john_doe123'
 
     def test_delete_user_success(self, user_dao, mock_db_connection):
         """Test successful user deletion"""
@@ -519,14 +529,12 @@ class TestUserDAO:
         """Test authenticate user when database get_item raises exception"""
         # Mock user lookup success
         mock_user = User(
-            Pk='john_doe123',
-            Sk='USER',
             username='john_doe123',
             email='test@example.com',
+            password='ValidPass123!',
             first_name='Test',
             last_name='User',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            phone='+1234567890'
         )
         user_dao.get_user_by_username = Mock(return_value=mock_user)
 
@@ -547,14 +555,12 @@ class TestUserDAO:
 
         # Mock get_user_by_username to return existing user
         existing_user = User(
-            Pk='john_doe123',
-            Sk='USER',
             username='john_doe123',
             email='test@example.com',
+            password='ValidPass123!',
             first_name='Test',
             last_name='User',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            phone='+1234567890'
         )
         user_dao.get_user_by_username = Mock(return_value=existing_user)
 
@@ -572,14 +578,12 @@ class TestUserDAO:
         """Test updating user with the same email they already have"""
         # Mock that email belongs to the same user (should be allowed)
         existing_user = User(
-            Pk='john_doe123',
-            Sk='USER',
             username='john_doe123',
             email='current@example.com',
+            password='ValidPass123!',
             first_name='John',
             last_name='Doe',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            phone='+1234567890'
         )
         user_dao.get_user_by_email = Mock(return_value=existing_user)
         user_dao.get_user_by_username = Mock(return_value=existing_user)
@@ -590,6 +594,7 @@ class TestUserDAO:
             'Sk': 'USER',
             'username': 'john_doe123',
             'email': 'current@example.com',
+            'password_hash': 'hashed_password',
             'first_name': 'John',
             'last_name': 'Doe',
             'role': 'user',
@@ -599,11 +604,18 @@ class TestUserDAO:
         mock_db_connection.users_table.update_item.return_value = {'Attributes': mock_updated_item}
 
         # Update user with same email
-        result = user_dao.update_user('john_doe123', email='current@example.com')
+        updated_user = User(
+            username='john_doe123',
+            email='current@example.com',
+            password='ValidPass123!',
+            first_name='John',
+            last_name='Doe',
+            phone='+1234567890'
+        )
+        result = user_dao.update_user(updated_user)
 
         # Verify result
         assert result.email == 'current@example.com'
-        assert result.Pk == 'john_doe123'
 
     def test_update_user_returns_none_from_database(self, user_dao, mock_db_connection):
         """Test update user when database update returns None"""
@@ -612,14 +624,12 @@ class TestUserDAO:
 
         # Mock get_user_by_username to return existing user
         existing_user = User(
-            Pk='nonexistent_user',
-            Sk='USER',
             username='nonexistent_user',
             email='test@example.com',
+            password='ValidPass123!',
             first_name='Test',
             last_name='User',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            phone='+1234567890'
         )
         user_dao.get_user_by_username = Mock(return_value=existing_user)
 

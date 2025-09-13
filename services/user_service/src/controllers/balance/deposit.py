@@ -10,7 +10,7 @@ from typing import Union
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from api_models.balance import DepositRequest, DepositResponse
 from api_models.shared.common import ErrorResponse
-from common.data.entities.user import UserResponse
+from common.data.entities.user import User
 from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
 from common.exceptions import (
     CNOPDatabaseOperationException,
@@ -62,7 +62,7 @@ router = APIRouter(tags=["balance"])
 async def deposit_funds(
     deposit_data: DepositRequest,
     request: Request,
-    current_user: UserResponse = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     transaction_manager = Depends(get_transaction_manager)
 ) -> DepositResponse:
     """

@@ -2,8 +2,9 @@
 User service entities.
 """
 
-from .user import User, UserCreate, UserResponse, UserLogin
+from .user import User, UserItem
 from .user_enums import UserRole, DEFAULT_USER_ROLE, VALID_ROLES
+from ..entity_constants import UserFields, FieldConstraints
 from .auth import LoginRequest, TokenResponse
 from .balance_enums import TransactionType, TransactionStatus, DEFAULT_TRANSACTION_STATUS, VALID_TRANSACTION_TYPES, VALID_TRANSACTION_STATUSES
 from .balance import (
@@ -19,12 +20,12 @@ from .balance import (
 __all__ = [
     # User entities
     'User',
-    'UserCreate',
-    'UserResponse',
-    'UserLogin',
+    'UserItem',
     'UserRole',
     'DEFAULT_USER_ROLE',
     'VALID_ROLES',
+    'UserFields',
+    'FieldConstraints',
     'LoginRequest',
     'TokenResponse',
 

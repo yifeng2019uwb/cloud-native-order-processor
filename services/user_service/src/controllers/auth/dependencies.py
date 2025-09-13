@@ -3,7 +3,7 @@ FastAPI dependencies for authentication
 """
 from typing import Optional
 from fastapi import Depends, HTTPException, status, Request, Header
-from common.data.entities.user import UserResponse
+from common.data.entities.user import User
 from common.data.dao.user import UserDAO
 from common.data.database import get_user_dao as get_common_user_dao
 from common.shared.logging import BaseLogger, Loggers, LogActions
@@ -63,7 +63,7 @@ def verify_gateway_headers(
 def get_current_user(
     username: str = Depends(verify_gateway_headers),
     user_dao: UserDAO = Depends(get_common_user_dao)
-) -> UserResponse:
+) -> User:
     """
     Get current authenticated user from Gateway headers
 
@@ -90,18 +90,7 @@ def get_current_user(
                 detail="User not found"
             )
 
-        return UserResponse(
-            username=user.username,
-            email=user.email,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            phone=user.phone,
-            date_of_birth=user.date_of_birth,
-            marketing_emails_consent=user.marketing_emails_consent,
-            role=user.role,
-            created_at=user.created_at,
-            updated_at=user.updated_at
-        )
+        return user
 
     except HTTPException:
         raise
@@ -120,7 +109,7 @@ def get_optional_current_user(
     x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
     x_user_role: Optional[str] = Header(None, alias="X-User-Role"),
     user_dao: UserDAO = Depends(get_common_user_dao)
-) -> Optional[UserResponse]:
+) -> Optional[User]:
     """
     Get current user if Gateway headers are provided (optional authentication)
 
@@ -148,18 +137,7 @@ def get_optional_current_user(
         if user is None:
             return None
 
-        return UserResponse(
-            username=user.username,
-            email=user.email,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            phone=user.phone,
-            date_of_birth=user.date_of_birth,
-            marketing_emails_consent=user.marketing_emails_consent,
-            role=user.role,
-            created_at=user.created_at,
-            updated_at=user.updated_at
-        )
+        return user
 
     except Exception as e:
         logger.debug(action=LogActions.AUTH_FAILED, message=f"Optional authentication failed: {e}")
@@ -167,8 +145,8 @@ def get_optional_current_user(
 
 
 def require_admin_user(
-    current_user: UserResponse = Depends(get_current_user)
-) -> UserResponse:
+    current_user: User = Depends(get_current_user)
+) -> User:
     """
     Require admin user (placeholder for future admin functionality)
 

@@ -8,8 +8,9 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from ..base_dao import BaseDAO
-from ...entities.user import User, UserCreate, UserLogin
+from ...entities.user import User, UserItem
 from ...entities.user import DEFAULT_USER_ROLE
+from ...entities.entity_constants import UserFields, TimestampFields
 from ....exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
 from ....auth.security import PasswordManager
 from ....shared.logging import BaseLogger, Loggers, LogActions
@@ -27,61 +28,41 @@ class UserDAO(BaseDAO):
         # Table reference - change here if we need to switch tables
         self.table = self.db.users_table
 
-    def create_user(self, user_create: UserCreate) -> User:
+    def create_user(self, user: User) -> User:
         """Create a new user"""
-        # Simplified: base_dao._safe_put_item handles all exception cases
         # Hash password
-        password_hash = self.password_manager.hash_password(user_create.password)
+        password_hash = self.password_manager.hash_password(user.password)
 
-        # Create user item with new schema
+        # Convert User to UserItem
+        user_item = UserItem.from_user(user)
+
+        # Set the hashed password in the UserItem
+        user_item.password_hash = password_hash
+
         now = datetime.utcnow().isoformat()
-        user_item = {
-            'Pk': user_create.username,  # Primary key
-            'Sk': 'USER',  # Sort key for user records
-            'username': user_create.username,  # For easy access
-            'email': user_create.email,
-            'password_hash': password_hash,
-            'first_name': user_create.first_name,
-            'last_name': user_create.last_name,
-            'phone': user_create.phone,
-            'role': user_create.role,
-            'created_at': now,
-            'updated_at': now
-        }
-
+        user_item.created_at = now
+        user_item.updated_at = now
         # Save to users table
-        created_item = self._safe_put_item(self.table, user_item)
+        created_item = self._safe_put_item(self.table, user_item.model_dump())
 
         logger.info(
             action=LogActions.DB_OPERATION,
-            message=f"User created successfully: username={user_create.username}, email={user_create.email}"
+            message=f"User created successfully: username={user.username}, email={user.email}"
         )
 
-        return User(
-            Pk=user_create.username,
-            Sk='USER',
-            username=user_create.username,
-            email=user_create.email,
-            first_name=user_create.first_name,
-            last_name=user_create.last_name,
-            phone=user_create.phone,
-            role=user_create.role,
-            created_at=datetime.fromisoformat(created_item['created_at']),
-            updated_at=datetime.fromisoformat(created_item['updated_at'])
-        )
+        # Convert created item back to UserItem then to User
+        created_user_item = UserItem(**created_item)
+        user = created_user_item.to_user()
+        return user
 
     def get_user_by_username(self, username: str) -> User:
         """Get user by username (Primary Key lookup)"""
-        # Simplified: base_dao._safe_get_item handles all exception cases
         logger.info(
             action=LogActions.DB_OPERATION,
             message=f"Looking up user by username: '{username}'"
         )
 
-        key = {
-            'Pk': username,  # Primary key
-            'Sk': 'USER'  # Sort key for user records
-        }
+        key = UserItem.get_key_for_username(username)
 
         logger.info(
             action=LogActions.DB_OPERATION,
@@ -97,25 +78,16 @@ class UserDAO(BaseDAO):
         if not item:
             raise CNOPUserNotFoundException(f"User with username '{username}' not found")
 
-        return User(
-            Pk=item['Pk'],
-            Sk=item['Sk'],
-            username=item['username'],
-            email=item['email'],
-            first_name=item.get('first_name', ''),
-            last_name=item.get('last_name', ''),
-            phone=item.get('phone'),
-            role=item.get('role', DEFAULT_USER_ROLE),
-            created_at=datetime.fromisoformat(item['created_at']),
-            updated_at=datetime.fromisoformat(item['updated_at'])
-        )
+        # Convert dict to UserItem then to User
+        user_item = UserItem(**item)
+        user = user_item.to_user()
+        return user
 
     def get_user_by_email(self, email: str) -> User:
         """Get user by email (GSI lookup)"""
-        # Simplified: base_dao._safe_query handles database exceptions
         items = self._safe_query(
             self.table,
-            Key('email').eq(email),
+            Key(UserFields.EMAIL).eq(email),
             index_name='EmailIndex'
         )
 
@@ -125,34 +97,25 @@ class UserDAO(BaseDAO):
         # Should only be one user per email
         item = items[0]
 
-        return User(
-            Pk=item['Pk'],
-            Sk=item['Sk'],
-            username=item['username'],
-            email=item['email'],
-            first_name=item.get('first_name', ''),
-            last_name=item.get('last_name', ''),
-            phone=item.get('phone'),
-            role=item.get('role', DEFAULT_USER_ROLE),
-            created_at=datetime.fromisoformat(item['created_at']),
-            updated_at=datetime.fromisoformat(item['updated_at'])
-        )
+        # Convert dict to UserItem then to User
+        user_item = UserItem(**item)
+        user = user_item.to_user()
+        return user
 
     def authenticate_user(self, username: str, password: str) -> User:
         """Authenticate user with username and password"""
-        # Simplified: base_dao._safe_get_item handles database exceptions
         user = self.get_user_by_username(username)
 
         # Get the stored password hash
-        key = {'Pk': username, 'Sk': 'USER'}
+        key = UserItem.get_key_for_username(username)
         item = self._safe_get_item(self.table, key)
 
-        stored_hash = item.get('password_hash')
+        stored_hash = item.get(UserFields.PASSWORD_HASH)
         if not stored_hash:
             logger.error(
-            action=LogActions.ERROR,
-            message=f"No password hash found for user {username}"
-        )
+                action=LogActions.ERROR,
+                message=f"No password hash found for user {username}"
+            )
             raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{username}'")
 
         # Verify password
@@ -161,55 +124,59 @@ class UserDAO(BaseDAO):
         else:
             raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{username}'")
 
-    def update_user(self, username: str, email: Optional[str] = None,
-                    first_name: Optional[str] = None, last_name: Optional[str] = None,  # FIXED: Split parameters
-                    phone: Optional[str] = None) -> User:
+    def update_user(self, user: User) -> User:
         """Update user information"""
-        # Simplified: base_dao._safe_update_item handles database exceptions
-        # Check if user exists
-        existing_user = self.get_user_by_username(username)
+        # Check if user exists by getting from database directly
+        key = UserItem.get_key_for_username(user.username)
+        existing_item = self._safe_get_item(self.table, key)
+        if not existing_item:
+            raise CNOPUserNotFoundException(f"User with username '{user.username}' not found")
 
         # Build update expression and values
         update_parts = []
         expression_values = {}
         expression_names = {}
 
-        if email is not None:
-            update_parts.append("#email = :email")
-            expression_values[":email"] = email
-            expression_names["#email"] = "email"
+        if user.email is not None:
+            update_parts.append(f"#{UserFields.EMAIL} = :{UserFields.EMAIL}")
+            expression_values[f":{UserFields.EMAIL}"] = user.email
+            expression_names[f"#{UserFields.EMAIL}"] = UserFields.EMAIL
 
-        if first_name is not None:
-            update_parts.append("#first_name = :first_name")
-            expression_values[":first_name"] = first_name
-            expression_names["#first_name"] = "first_name"
+        if user.first_name is not None:
+            update_parts.append(f"#{UserFields.FIRST_NAME} = :{UserFields.FIRST_NAME}")
+            expression_values[f":{UserFields.FIRST_NAME}"] = user.first_name
+            expression_names[f"#{UserFields.FIRST_NAME}"] = UserFields.FIRST_NAME
 
-        if last_name is not None:
-            update_parts.append("#last_name = :last_name")
-            expression_values[":last_name"] = last_name
-            expression_names["#last_name"] = "last_name"
+        if user.last_name is not None:
+            update_parts.append(f"#{UserFields.LAST_NAME} = :{UserFields.LAST_NAME}")
+            expression_values[f":{UserFields.LAST_NAME}"] = user.last_name
+            expression_names[f"#{UserFields.LAST_NAME}"] = UserFields.LAST_NAME
 
-        if phone is not None:
-            update_parts.append("#phone = :phone")
-            expression_values[":phone"] = phone
-            expression_names["#phone"] = "phone"
+        if user.phone is not None:
+            update_parts.append(f"#{UserFields.PHONE} = :{UserFields.PHONE}")
+            expression_values[f":{UserFields.PHONE}"] = user.phone
+            expression_names[f"#{UserFields.PHONE}"] = UserFields.PHONE
 
         # Always update the updated_at timestamp
-        update_parts.append("#updated_at = :updated_at")
-        expression_values[":updated_at"] = datetime.utcnow().isoformat()
-        expression_names["#updated_at"] = "updated_at"
+        update_parts.append(f"#{TimestampFields.UPDATED_AT} = :{TimestampFields.UPDATED_AT}")
+        expression_values[f":{TimestampFields.UPDATED_AT}"] = datetime.utcnow().isoformat()
+        expression_names[f"#{TimestampFields.UPDATED_AT}"] = TimestampFields.UPDATED_AT
 
         if not update_parts:
             logger.warning(
-            action=LogActions.ERROR,
-            message=f"No fields to update for user {username}"
-        )
-            return existing_user
+                action=LogActions.ERROR,
+                message=f"No fields to update for user {user.username}"
+            )
+            # Return existing user with hidden password
+            existing_user_item = UserItem(**existing_item)
+            user = existing_user_item.to_user()
+            user.password = UserFields.HASHED_PASSWORD_MARKER
+            return user
 
         update_expression = "SET " + ", ".join(update_parts)
 
         # Perform the update
-        key = {'Pk': username, 'Sk': 'USER'}
+        key = UserItem.get_key_for_username(user.username)
         updated_item = self._safe_update_item(
             self.table,
             key,
@@ -220,27 +187,17 @@ class UserDAO(BaseDAO):
 
         logger.info(
             action=LogActions.DB_OPERATION,
-            message=f"User updated successfully: username={username}, fields_updated={[k for k, v in locals().items() if v is not None and k in ['email', 'first_name', 'last_name', 'phone']]}"
+            message=f"User updated successfully: {user}"
         )
 
-        # Return updated user
-        return User(
-            Pk=updated_item['Pk'],
-            Sk=updated_item['Sk'],
-            username=updated_item['username'],
-            email=updated_item['email'],
-            first_name=updated_item.get('first_name', ''),
-            last_name=updated_item.get('last_name', ''),
-            phone=updated_item.get('phone'),
-            role=updated_item.get('role', DEFAULT_USER_ROLE),
-            created_at=datetime.fromisoformat(updated_item['created_at']),
-            updated_at=datetime.fromisoformat(updated_item['updated_at'])
-        )
+        # Convert updated item to UserItem then to User
+        user_item = UserItem(**updated_item)
+        user = user_item.to_user()
+        return user
 
     def delete_user(self, username: str) -> bool:
         """Delete a user by username"""
-        # Simplified: base_dao._safe_delete_item handles database exceptions
-        key = {'Pk': username, 'Sk': 'USER'}
+        key = UserItem.get_key_for_username(username)
         success = self._safe_delete_item(self.table, key)
 
         if success:

@@ -2,8 +2,22 @@
 Common models package for all services
 """
 
+# Import entity constants
+from .entity_constants import (
+    DatabaseFields,
+    TimestampFields,
+    UserFields,
+    BalanceFields,
+    TransactionFields,
+    AssetFields,
+    AssetBalanceFields,
+    AssetTransactionFields,
+    OrderFields,
+    FieldConstraints
+)
+
 # Import user entities
-from .user import User, UserCreate, UserLogin, UserResponse, UserRole, DEFAULT_USER_ROLE, VALID_ROLES, LoginRequest, TokenResponse
+from .user import User, UserItem, UserRole, DEFAULT_USER_ROLE, VALID_ROLES, LoginRequest, TokenResponse
 
 # Import asset entities
 from .inventory import Asset, AssetCreate, AssetResponse, AssetUpdate, AssetListResponse
@@ -31,6 +45,18 @@ from .order import (
 )
 
 __all__ = [
+    # Entity Constants
+    "DatabaseFields",
+    "TimestampFields",
+    "UserFields",
+    "BalanceFields",
+    "TransactionFields",
+    "AssetFields",
+    "AssetBalanceFields",
+    "AssetTransactionFields",
+    "OrderFields",
+    "FieldConstraints",
+
     # User enums
     "UserRole",
     "DEFAULT_USER_ROLE",
@@ -38,9 +64,7 @@ __all__ = [
 
     # User models
     "User",
-    "UserCreate",
-    "UserLogin",
-    "UserResponse",
+    "UserItem",
     "TokenResponse",
     "LoginRequest",
 

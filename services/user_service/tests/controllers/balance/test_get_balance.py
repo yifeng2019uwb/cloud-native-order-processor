@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from src.controllers.balance.get_balance import get_user_balance, router
 from src.api_models.balance.balance_models import BalanceResponse
-from common.data.entities.user import Balance, UserResponse
+from common.data.entities.user import Balance, User
 from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
 
 
@@ -21,7 +21,7 @@ class TestGetUserBalance:
     @pytest.fixture
     def mock_current_user(self):
         """Mock current user"""
-        user = Mock(spec=UserResponse)
+        user = Mock(spec=User)
         user.username = "testuser123"
         return user
 
@@ -166,7 +166,7 @@ class TestGetUserBalance:
     def test_get_user_balance_different_user(self, mock_balance_dao):
         """Test balance retrieval for different user"""
 
-        different_user = Mock(spec=UserResponse)
+        different_user = Mock(spec=User)
         different_user.username = "anotheruser456"
 
         different_balance = Mock(spec=Balance)

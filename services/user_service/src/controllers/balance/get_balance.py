@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from api_models.balance import BalanceResponse
 from api_models.shared.common import ErrorResponse
 from common.data.database import get_balance_dao
-from common.data.entities.user import UserResponse
+from common.data.entities.user import User
 from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from controllers.auth.dependencies import get_current_user
@@ -44,7 +44,7 @@ router = APIRouter(tags=["balance"])
     }
 )
 def get_user_balance(
-    current_user: UserResponse = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     balance_dao = Depends(get_balance_dao)
 ) -> BalanceResponse:
     """

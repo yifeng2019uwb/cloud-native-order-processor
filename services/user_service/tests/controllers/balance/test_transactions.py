@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from src.controllers.balance.transactions import get_user_transactions, router
 from src.api_models.balance.balance_models import TransactionListResponse, TransactionResponse
-from common.data.entities.user import UserResponse, BalanceTransaction
+from common.data.entities.user import User, BalanceTransaction
 from common.data.entities.user.balance_enums import TransactionType, TransactionStatus
 
 from common.exceptions.shared_exceptions import CNOPInternalServerException
@@ -23,7 +23,7 @@ class TestGetUserTransactions:
     @pytest.fixture
     def mock_current_user(self):
         """Mock current user"""
-        user = Mock(spec=UserResponse)
+        user = Mock(spec=User)
         user.username = "testuser123"
         return user
 

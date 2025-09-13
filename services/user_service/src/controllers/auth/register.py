@@ -17,7 +17,7 @@ from api_models.auth.registration import (
 from api_models.shared.common import ErrorResponse
 from common.auth.security import TokenManager, AuditLogger
 from common.data.database import get_user_dao, get_balance_dao
-from common.data.entities.user import UserCreate, User, Balance, BalanceCreate
+from common.data.entities.user import User, Balance, BalanceCreate
 from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInternalServerException
@@ -94,8 +94,8 @@ def register_user(
         validate_email_uniqueness(user_data.email, user_dao)
         validate_age_requirements(user_data.date_of_birth)
 
-        # Transform API model to DAO model - proper field mapping
-        user_create = UserCreate(
+        # Transform API model to User entity - proper field mapping
+        user = User(
             username=user_data.username,
             email=user_data.email,
             password=user_data.password,           # Will be hashed in DAO
@@ -105,7 +105,7 @@ def register_user(
         )
 
         # Create the user via DAO (sync operation)
-        created_user = user_dao.create_user(user_create)
+        created_user = user_dao.create_user(user)
 
         # Create initial balance record with 0 balance (sync operation)
         balance_create = BalanceCreate(

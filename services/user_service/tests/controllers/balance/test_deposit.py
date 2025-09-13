@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from src.controllers.balance.deposit import deposit_funds, router
 from src.api_models.balance.balance_models import DepositRequest, DepositResponse
-from common.data.entities.user import UserResponse
+from common.data.entities.user import User
 from common.exceptions import (
     CNOPDatabaseOperationException,
     CNOPEntityNotFoundException,
@@ -35,7 +35,7 @@ class TestDepositFunds:
     @pytest.fixture
     def mock_current_user(self):
         """Mock current user"""
-        user = Mock(spec=UserResponse)
+        user = Mock(spec=User)
         user.username = "testuser123"
         return user
 

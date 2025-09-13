@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from src.controllers.balance.withdraw import withdraw_funds, router
 from src.api_models.balance.balance_models import WithdrawRequest, WithdrawResponse
-from common.data.entities.user import UserResponse
+from common.data.entities.user import User
 from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInsufficientBalanceException,
@@ -36,9 +36,10 @@ class TestWithdrawFunds:
     @pytest.fixture
     def mock_current_user(self):
         """Mock current authenticated user"""
-        return UserResponse(
+        return User(
             username="testuser",
             email="test@example.com",
+            password="[HASHED]",
             first_name="Test",
             last_name="User",
             is_active=True,

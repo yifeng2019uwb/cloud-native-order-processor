@@ -1,53 +1,72 @@
+from __future__ import annotations
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import date, datetime
 from .user_enums import UserRole, DEFAULT_USER_ROLE, VALID_ROLES
-
-
-class UserCreate(BaseModel):
-    """User creation model with simple DB constraints only"""
-    username: str = Field(..., max_length=30)
-    email: EmailStr = Field(..., max_length=255)
-    password: str = Field(..., max_length=128)  # Hashed password length
-    first_name: str = Field(..., max_length=50)
-    last_name: str = Field(..., max_length=50)
-    phone: Optional[str] = Field(None, max_length=15)
-    date_of_birth: Optional[date] = None
-    marketing_emails_consent: bool = False
-    role: str = Field(default=DEFAULT_USER_ROLE, max_length=20)
-
-
-class UserLogin(BaseModel):
-    """User login model with simple DB constraints only"""
-    username: str = Field(..., max_length=30)
-    password: str = Field(..., max_length=128)  # Hashed password length
+from ..entity_constants import UserFields, FieldConstraints, DatabaseFields
 
 
 class User(BaseModel):
-    """User entity model with simple DB constraints only"""
+    """User domain model - pure business entity without database fields"""
+    username: str = Field(..., max_length=FieldConstraints.USERNAME_MAX_LENGTH, description="Username for easy access")
+    email: str = Field(..., max_length=FieldConstraints.EMAIL_MAX_LENGTH)
+    password: str = Field(..., max_length=FieldConstraints.PASSWORD_MAX_LENGTH, description="Hashed password")
+    first_name: str = Field(..., max_length=FieldConstraints.FIRST_NAME_MAX_LENGTH)
+    last_name: str = Field(..., max_length=FieldConstraints.LAST_NAME_MAX_LENGTH)
+    phone: Optional[str] = Field(None, max_length=FieldConstraints.PHONE_MAX_LENGTH)
+    date_of_birth: Optional[date] = None
+    marketing_emails_consent: bool = False
+    role: str = Field(default=DEFAULT_USER_ROLE, max_length=FieldConstraints.ROLE_MAX_LENGTH)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserItem(BaseModel):
+    """User database model - includes DynamoDB fields (Pk, Sk)"""
     Pk: str = Field(..., description="Primary key (username)")
-    Sk: str = Field(..., description="Sort key (USER)")
-    username: str = Field(..., max_length=30, description="Username for easy access")
-    email: str = Field(..., max_length=255)
-    first_name: str = Field(..., max_length=50)
-    last_name: str = Field(..., max_length=50)
-    phone: Optional[str] = Field(None, max_length=15)
+    Sk: str = Field(default=UserFields.SK_VALUE, description="Sort key (USER)")
+    username: str = Field(..., max_length=FieldConstraints.USERNAME_MAX_LENGTH, description="Username for easy access")
+    email: str = Field(..., max_length=FieldConstraints.EMAIL_MAX_LENGTH)
+    password_hash: str = Field(..., max_length=FieldConstraints.PASSWORD_MAX_LENGTH, description="Hashed password")
+    first_name: str = Field(..., max_length=FieldConstraints.FIRST_NAME_MAX_LENGTH)
+    last_name: str = Field(..., max_length=FieldConstraints.LAST_NAME_MAX_LENGTH)
+    phone: Optional[str] = Field(None, max_length=FieldConstraints.PHONE_MAX_LENGTH)
     date_of_birth: Optional[date] = None
     marketing_emails_consent: bool = False
-    role: str = Field(default=DEFAULT_USER_ROLE, max_length=20)
-    created_at: datetime
-    updated_at: datetime
+    role: str = Field(default=DEFAULT_USER_ROLE, max_length=FieldConstraints.ROLE_MAX_LENGTH)
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
 
+    def get_key(self) -> dict:
+        """Get database key for this user item"""
+        return {
+            DatabaseFields.PK: self.Pk,
+            DatabaseFields.SK: self.Sk
+        }
 
-class UserResponse(BaseModel):
-    """User response model with simple DB constraints only"""
-    username: str = Field(..., max_length=30)
-    email: str = Field(..., max_length=255)
-    first_name: str = Field(..., max_length=50)
-    last_name: str = Field(..., max_length=50)
-    phone: Optional[str] = Field(None, max_length=15)
-    date_of_birth: Optional[date] = None
-    marketing_emails_consent: bool = False
-    role: str = Field(default=DEFAULT_USER_ROLE, max_length=20)
-    created_at: datetime
-    updated_at: datetime
+    @staticmethod
+    def get_key_for_username(username: str) -> dict:
+        """Get database key for a username (static method)"""
+        return {
+            DatabaseFields.PK: username,
+            DatabaseFields.SK: UserFields.SK_VALUE
+        }
+
+    @classmethod
+    def from_user(cls, user: User) -> UserItem:
+        """Create UserItem from User domain model"""
+        user_data = user.model_dump()
+        # Map password to password_hash for database storage
+        user_data[UserFields.PASSWORD_HASH] = user_data.pop(UserFields.PASSWORD)
+        return cls(
+            Pk=user.username,
+            Sk=UserFields.SK_VALUE,
+            **user_data
+        )
+
+    def to_user(self) -> User:
+        """Convert UserItem to User domain model"""
+        user_data = self.model_dump(exclude={DatabaseFields.PK, DatabaseFields.SK, UserFields.PASSWORD_HASH})
+        # Mark password as hashed - don't expose the actual hash
+        user_data[UserFields.PASSWORD] = UserFields.HASHED_PASSWORD_MARKER
+        return User(**user_data)

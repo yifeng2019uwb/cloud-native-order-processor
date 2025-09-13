@@ -15,7 +15,7 @@ from api_models.auth.profile import (
 )
 from api_models.shared.common import ErrorResponse
 from common.data.database import get_user_dao
-from common.data.entities.user import UserResponse
+from common.data.entities.user import User
 from common.exceptions.shared_exceptions import (
     CNOPEntityNotFoundException as CNOPUserNotFoundException
 )
@@ -48,7 +48,7 @@ router = APIRouter(tags=["profile"])
 )
 
 def get_profile(
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> UserProfileResponse:
     """Get current user profile (requires JWT token)"""
     try:
@@ -98,7 +98,7 @@ def get_profile(
 )
 def update_profile(
     profile_data: UserProfileUpdateRequest,
-    current_user: UserResponse = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     user_dao = Depends(get_user_dao)
 ) -> ProfileUpdateSuccessResponse:
     """
@@ -117,13 +117,22 @@ def update_profile(
         if profile_data.date_of_birth:
             validate_age_requirements(profile_data.date_of_birth)
 
-        updated_user = user_dao.update_user(
-            username=current_user.username,
-            email=profile_data.email,
-            first_name=profile_data.first_name,
-            last_name=profile_data.last_name,
-            phone=profile_data.phone
-        )
+        # Create updated User object with new values
+        updated_user_data = {
+            "username": current_user.username,
+            "email": profile_data.email or current_user.email,
+            "password": current_user.password,  # Keep existing password
+            "first_name": profile_data.first_name or current_user.first_name,
+            "last_name": profile_data.last_name or current_user.last_name,
+            "phone": profile_data.phone or current_user.phone,
+            "date_of_birth": profile_data.date_of_birth or current_user.date_of_birth,
+            "marketing_emails_consent": current_user.marketing_emails_consent,
+            "role": current_user.role,
+            "created_at": current_user.created_at,
+            "updated_at": current_user.updated_at
+        }
+
+        updated_user = user_dao.update_user(User(**updated_user_data))
 
         if not updated_user:
             raise CNOPUserNotFoundException(f"User '{current_user.username}' not found")

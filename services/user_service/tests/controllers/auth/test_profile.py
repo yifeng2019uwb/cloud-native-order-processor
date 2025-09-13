@@ -42,22 +42,26 @@ def test_update_profile_success():
     mock_user = MagicMock()
     mock_user.username = "john_doe"
     mock_user.email = "john@example.com"
+    mock_user.password = "[HASHED]"
     mock_user.first_name = "John"
     mock_user.last_name = "Doe"
     mock_user.phone = "+1234567890"
     mock_user.date_of_birth = "1990-01-01"
     mock_user.marketing_emails_consent = True
+    mock_user.role = "customer"
     mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
     mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_updated_user = MagicMock()
     mock_updated_user.username = "john_doe"
     mock_updated_user.email = "john.new@example.com"
+    mock_updated_user.password = "[HASHED]"
     mock_updated_user.first_name = "John"
     mock_updated_user.last_name = "Doe"
     mock_updated_user.phone = "+1234567890"
     mock_updated_user.date_of_birth = "1990-01-01"
     mock_updated_user.marketing_emails_consent = True
+    mock_updated_user.role = "customer"
     mock_updated_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
     mock_updated_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
@@ -115,11 +119,13 @@ def test_update_profile_user_not_found():
     mock_user = MagicMock()
     mock_user.username = "john_doe"
     mock_user.email = "john@example.com"
+    mock_user.password = "[HASHED]"
     mock_user.first_name = "John"
     mock_user.last_name = "Doe"
     mock_user.phone = "+1234567890"
     mock_user.date_of_birth = "1990-01-01"
     mock_user.marketing_emails_consent = True
+    mock_user.role = "customer"
     mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
     mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
@@ -142,11 +148,13 @@ def test_update_profile_with_own_email():
     mock_user = MagicMock()
     mock_user.username = "john_doe"
     mock_user.email = "john@example.com"
+    mock_user.password = "[HASHED]"
     mock_user.first_name = "John"
     mock_user.last_name = "Doe"
     mock_user.phone = "+1234567890"
     mock_user.date_of_birth = "1990-01-01"
     mock_user.marketing_emails_consent = True
+    mock_user.role = "customer"
     mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
     mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
@@ -154,10 +162,12 @@ def test_update_profile_with_own_email():
     updated_user = MagicMock()
     updated_user.username = "john_doe"
     updated_user.email = "john@example.com"  # Same email
+    updated_user.password = "[HASHED]"
     updated_user.first_name = "John"
     updated_user.last_name = "Doe"
     updated_user.phone = "+1234567890"
     updated_user.date_of_birth = "1990-01-01"
+    updated_user.role = "customer"
     updated_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
     updated_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
