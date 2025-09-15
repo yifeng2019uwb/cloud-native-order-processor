@@ -44,6 +44,8 @@ class TestGetOrder:
         order.asset_id = "BTC"
         order.quantity = Decimal("1.0")
         order.price = Decimal("50000.00")
+        order.status = "pending"
+        order.total_amount = Decimal("50000.00")
         order.username = "testuser"
         order.created_at = datetime.now(timezone.utc)
         return order

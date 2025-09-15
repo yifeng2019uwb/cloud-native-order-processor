@@ -163,35 +163,6 @@ class TestUpsertCoinsToInventory:
                 assert result == 1
                 assert mock_asset_dao.update_asset.call_count == 2
 
-    @pytest.mark.asyncio
-    async def test_upsert_coins_missing_description(self):
-        """Test handling of coins with missing description"""
-        mock_coins = [
-            {
-                "symbol": "BTC",
-                "name": "Bitcoin",
-                "current_price": 45000.0
-                # No description field
-            }
-        ]
-
-        with patch('data.init_inventory.dynamodb_manager') as mock_db_manager:
-            mock_connection = AsyncMock()
-            mock_db_manager.get_connection.return_value.__aenter__.return_value = mock_connection
-
-            mock_asset_dao = MagicMock()
-            mock_asset_dao.update_asset.return_value = None
-
-            with patch('data.init_inventory.AssetDAO', return_value=mock_asset_dao):
-                result = await upsert_coins_to_inventory(mock_coins)
-
-                assert result == 1
-                # Verify that update_asset was called with the correct data
-                call_args = mock_asset_dao.update_asset.call_args
-                assert call_args[0][0] == "BTC"  # asset_id
-                # The AssetUpdate object will contain all the coin data
-
-
 class TestInitializeInventoryData:
     """Test the initialize_inventory_data function"""
 

@@ -158,6 +158,8 @@ class TestCreateOrder:
             mock_order.asset_id = "BTC"
             mock_order.quantity = Decimal("1.0")
             mock_order.price = Decimal("50000.00")
+            mock_order.status = "pending"
+            mock_order.total_amount = Decimal("50000.00")
             mock_order.created_at = datetime.now(timezone.utc)
 
             mock_result = MagicMock()
@@ -237,6 +239,8 @@ class TestCreateOrder:
             mock_order.asset_id = "BTC"
             mock_order.quantity = Decimal("1.0")
             mock_order.price = Decimal("50000.00")
+            mock_order.status = "pending"
+            mock_order.total_amount = Decimal("50000.00")
             mock_order.created_at = datetime.now(timezone.utc)
 
             mock_result = MagicMock()
@@ -524,6 +528,8 @@ class TestCreateOrder:
             mock_order.asset_id = "BTC"
             mock_order.quantity = Decimal("1.0")
             mock_order.price = Decimal("50000.00")
+            mock_order.status = "pending"
+            mock_order.total_amount = Decimal("50000.00")
             mock_order.created_at = datetime.now(timezone.utc)
 
             mock_result = MagicMock()
