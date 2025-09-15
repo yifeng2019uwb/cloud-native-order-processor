@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import List
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.database.dynamodb_connection import dynamodb_manager
-from common.data.entities.inventory import AssetCreate, AssetUpdate
+from common.data.entities.inventory import Asset
 from common.exceptions import CNOPEntityNotFoundException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from constants import DEFAULT_ASSET_AMOUNT, DEFAULT_ASSET_CATEGORY
@@ -29,16 +29,21 @@ async def upsert_coins_to_inventory(coins: List[dict]) -> int:
         try:
             asset_id = coin["symbol"].upper()
 
-            # Only use the mapped fields from fetch_coins, not all original CoinGecko fields
-            # This ensures all numeric values are properly converted to Decimal
-            asset_update = AssetUpdate(
-                asset_id=asset_id,  # Add the asset_id field
+            # Create Asset entity with all the CoinGecko data
+            asset = Asset(
+                asset_id=asset_id,
+                name=coin.get("name", ""),
+                description=f"Digital asset: {coin.get('name', '')}",
+                category=DEFAULT_ASSET_CATEGORY,
+                amount=Decimal(str(DEFAULT_ASSET_AMOUNT)),
+                price_usd=Decimal(str(coin.get("price_usd", 0))),
+                is_active=True,
+
+                # CoinGecko API fields
                 symbol=coin.get("symbol"),
-                name=coin.get("name"),
-                current_price=coin.get("current_price"),
-                price_usd=coin.get("price_usd"),
                 image=coin.get("image"),
                 market_cap_rank=coin.get("market_cap_rank"),
+                current_price=coin.get("current_price"),
                 high_24h=coin.get("high_24h"),
                 low_24h=coin.get("low_24h"),
                 circulating_supply=coin.get("circulating_supply"),
@@ -60,12 +65,20 @@ async def upsert_coins_to_inventory(coins: List[dict]) -> int:
                 atl_change_percentage=coin.get("atl_change_percentage"),
                 atl_date=coin.get("atl_date"),
                 last_updated=coin.get("last_updated"),
-                sparkline_7d=coin.get("sparkline_7d"),
-                is_active=True  # Ensure all coins from CoinGecko are marked as active
+                sparkline_7d=coin.get("sparkline_7d")
             )
 
-            asset_dao.update_asset(asset_id, asset_update)
-            logger.info(action=LogActions.DB_OPERATION, message=f"Upserted asset: {asset_id}")
+            # Try to get existing asset first
+            try:
+                existing_asset = asset_dao.get_asset_by_id(asset_id)
+                # Asset exists, update it
+                asset_dao.update_asset(asset)
+                logger.info(action=LogActions.DB_OPERATION, message=f"Updated asset: {asset_id}")
+            except CNOPEntityNotFoundException:
+                # Asset doesn't exist, create it
+                asset_dao.create_asset(asset)
+                logger.info(action=LogActions.DB_OPERATION, message=f"Created asset: {asset_id}")
+
             updated_count += 1
 
         except Exception as e:

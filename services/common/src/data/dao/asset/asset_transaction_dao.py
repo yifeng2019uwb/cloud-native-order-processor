@@ -8,7 +8,7 @@ from boto3.dynamodb.conditions import Key
 from decimal import Decimal
 
 from ..base_dao import BaseDAO
-from ...entities.asset import AssetTransaction, AssetTransactionCreate
+from ...entities.asset import AssetTransaction
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPTransactionNotFoundException
 from ....shared.logging import BaseLogger, Loggers, LogActions
@@ -25,28 +25,28 @@ class AssetTransactionDAO(BaseDAO):
         # Table reference - change here if we need to switch tables
         self.table = self.db.users_table
 
-    def create_asset_transaction(self, transaction_create: AssetTransactionCreate) -> AssetTransaction:
+    def create_asset_transaction(self, transaction: AssetTransaction) -> AssetTransaction:
         """Create a new asset transaction"""
         logger.info(
             action=LogActions.DB_OPERATION,
-            message=f"Creating asset transaction: user={transaction_create.username}, "
-                   f"asset={transaction_create.asset_id}, type={transaction_create.transaction_type.value}, "
-                   f"quantity={transaction_create.quantity}, price={transaction_create.price}"
+            message=f"Creating asset transaction: user={transaction.username}, "
+                   f"asset={transaction.asset_id}, type={transaction.transaction_type.value}, "
+                   f"quantity={transaction.quantity}, price={transaction.price}"
         )
 
         now = datetime.utcnow().isoformat()
         timestamp_iso = now.replace('+00:00', 'Z')
 
         transaction_item = {
-            'Pk': f"TRANS#{transaction_create.username}#{transaction_create.asset_id}",
+            'Pk': f"TRANS#{transaction.username}#{transaction.asset_id}",
             'Sk': timestamp_iso,
-            'username': transaction_create.username,
-            'asset_id': transaction_create.asset_id,
-            'transaction_type': transaction_create.transaction_type.value,
-            'quantity': str(transaction_create.quantity),
-            'price': str(transaction_create.price),
-            'total_amount': str(transaction_create.quantity * transaction_create.price),
-            'order_id': transaction_create.order_id,
+            'username': transaction.username,
+            'asset_id': transaction.asset_id,
+            'transaction_type': transaction.transaction_type.value,
+            'quantity': str(transaction.quantity),
+            'price': str(transaction.price),
+            'total_amount': str(transaction.quantity * transaction.price),
+            'order_id': transaction.order_id,
             'status': 'COMPLETED',  # Default status
             'created_at': now
         }
@@ -55,9 +55,9 @@ class AssetTransactionDAO(BaseDAO):
 
         logger.info(
             action=LogActions.DB_OPERATION,
-            message=f"Asset transaction created successfully: user={transaction_create.username}, "
-                   f"asset={transaction_create.asset_id}, type={transaction_create.transaction_type.value}, "
-                   f"quantity={transaction_create.quantity}"
+            message=f"Asset transaction created successfully: user={transaction.username}, "
+                   f"asset={transaction.asset_id}, type={transaction.transaction_type.value}, "
+                   f"quantity={transaction.quantity}"
         )
 
         return AssetTransaction(
@@ -65,7 +65,7 @@ class AssetTransactionDAO(BaseDAO):
             Sk=transaction_item['Sk'],
             username=transaction_item['username'],
             asset_id=transaction_item['asset_id'],
-            transaction_type=transaction_create.transaction_type,
+            transaction_type=transaction.transaction_type,
             quantity=Decimal(transaction_item['quantity']),
             price=Decimal(transaction_item['price']),
             total_amount=Decimal(transaction_item['total_amount']),

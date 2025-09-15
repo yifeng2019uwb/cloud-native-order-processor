@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from boto3.dynamodb.conditions import Key, Attr
 
 from ..base_dao import BaseDAO
-from ...entities.order import Order, OrderUpdate
+from ...entities.order import Order, OrderItem
 from ...entities.order.enums import OrderStatus
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPOrderNotFoundException
@@ -42,21 +42,9 @@ class OrderDAO(BaseDAO):
             CNOPDatabaseOperationException: If database operation fails
         """
         try:
-            # Prepare item for DynamoDB with proper serialization
-            item = order.model_dump()
-
-            # Convert datetime objects to ISO strings for DynamoDB
-            if isinstance(item.get('created_at'), datetime):
-                item['created_at'] = item['created_at'].isoformat()
-            if isinstance(item.get('updated_at'), datetime):
-                item['updated_at'] = item['updated_at'].isoformat()
-
-            # Ensure timestamps are set
-            now = datetime.now(timezone.utc)
-            if not order.created_at:
-                item['created_at'] = now.isoformat()
-            if not order.updated_at:
-                item['updated_at'] = now.isoformat()
+            # Convert Order entity to OrderItem for database storage
+            order_item = OrderItem.from_entity(order)
+            item = order_item.model_dump()
 
             # Add GSI attributes for UserOrdersIndex
             item['GSI-PK'] = order.username
@@ -103,59 +91,10 @@ class OrderDAO(BaseDAO):
         if not item:
             raise CNOPOrderNotFoundException(f"Order '{order_id}' not found")
 
-        return Order(**item)
+        # Convert database item to OrderItem and then to Order entity
+        order_item = OrderItem(**item)
+        return order_item.to_entity()
 
-    def update_order(self, order_id: str, updates: OrderUpdate) -> Order:
-        """
-        Update existing order (only status-related fields).
-
-        Args:
-            order_id: Order ID to update
-            updates: OrderUpdate object with changes
-
-        Returns:
-            Updated order if successful
-
-        Raises:
-            CNOPOrderNotFoundException: If order not found
-            CNOPDatabaseOperationException: If database operation fails
-        """
-        try:
-            # Prepare update expression
-            update_expression = "SET updated_at = :updated_at"
-            expression_values = {
-                ':updated_at': datetime.now(timezone.utc).isoformat()
-            }
-
-            # Add status update if provided
-            if updates.status is not None:
-                update_expression += ", #status = :status"
-                expression_values[':status'] = updates.status.value
-                expression_values['#status'] = 'status'
-
-            # Perform update
-            response = self.table.update_item(
-                Key={'Pk': order_id, 'Sk': 'ORDER'},
-                UpdateExpression=update_expression,
-                ExpressionAttributeValues=expression_values,
-                ReturnValues='ALL_NEW'
-            )
-
-            updated_item = response['Attributes']
-
-            logger.info(
-                action=LogActions.DB_OPERATION,
-                message=f"Order updated successfully: id={order_id}, status={updates.status.value if updates.status else 'unchanged'}"
-            )
-
-            return Order(**updated_item)
-
-        except Exception as e:
-            logger.error(
-                action=LogActions.ERROR,
-                message=f"Failed to update order '{order_id}': {str(e)}"
-            )
-            raise CNOPDatabaseOperationException(f"Database operation failed while updating order '{order_id}': {str(e)}")
 
     def get_orders_by_user(self, username: str, limit: int = 50, offset: int = 0) -> List[Order]:
         """
@@ -180,7 +119,11 @@ class OrderDAO(BaseDAO):
                 ScanIndexForward=False  # Most recent first
             )
 
-            orders = [Order(**item) for item in response.get('Items', [])]
+            # Convert each item to OrderItem and then to Order entity
+            orders = []
+            for item in response.get('Items', []):
+                order_item = OrderItem(**item)
+                orders.append(order_item.to_entity())
 
             # Apply offset (DynamoDB doesn't support offset directly)
             if offset > 0:
@@ -195,78 +138,6 @@ class OrderDAO(BaseDAO):
         )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}': {str(e)}")
 
-    def get_orders_by_user_and_asset(self, username: str, asset_id: str, limit: int = 50, offset: int = 0) -> List[Order]:
-        """
-        Get user's orders for specific asset.
-
-        Args:
-            username: Username to get orders for
-            asset_id: Asset ID to filter by
-            limit: Maximum number of orders to return
-            offset: Number of orders to skip
-
-        Returns:
-            List of orders
-
-        Raises:
-            CNOPDatabaseOperationException: If database operation fails
-        """
-        try:
-            response = self.table.query(
-                IndexName='UserOrdersIndex',
-                KeyConditionExpression=Key('GSI-PK').eq(username) & Key('GSI-SK').eq(asset_id),
-                Limit=limit,
-                ScanIndexForward=False  # Most recent first
-            )
-
-            orders = [Order(**item) for item in response.get('Items', [])]
-
-            # Apply offset
-            if offset > 0:
-                orders = orders[offset:]
-
-            return orders
-
-        except Exception as e:
-            logger.error(
-                action=LogActions.ERROR,
-                message=f"Failed to get orders for user '{username}' and asset '{asset_id}': {str(e)}"
-            )
-            raise CNOPDatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}' and asset '{asset_id}': {str(e)}")
-
-    def get_orders_by_user_and_status(self, username: str, status: OrderStatus, limit: int = 50, offset: int = 0) -> List[Order]:
-        """
-        Get user's orders by status.
-
-        Args:
-            username: Username to get orders for
-            status: Order status to filter by
-            limit: Maximum number of orders to return
-            offset: Number of orders to skip
-
-        Returns:
-            List of orders
-
-        Raises:
-            CNOPDatabaseOperationException: If database operation fails
-        """
-        try:
-            # Query all user orders and filter by status
-            all_orders = self.get_orders_by_user(username, limit=1000)  # Get more to filter
-            filtered_orders = [order for order in all_orders if order.status == status]
-
-            # Apply limit and offset
-            if offset > 0:
-                filtered_orders = filtered_orders[offset:]
-
-            return filtered_orders[:limit]
-
-        except Exception as e:
-            logger.error(
-                action=LogActions.ERROR,
-                message=f"Failed to get orders for user '{username}' with status '{status.value}': {str(e)}"
-            )
-            raise CNOPDatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}' with status '{status.value}': {str(e)}")
 
     def update_order_status(self, order_id: str, new_status: OrderStatus, reason: str = None) -> Order:
         """
@@ -313,7 +184,9 @@ class OrderDAO(BaseDAO):
                 message=f"Order status updated successfully: id={order_id}, new_status={new_status.value}, reason={reason or 'none'}"
             )
 
-            return Order(**updated_item)
+            # Convert database item to OrderItem and then to Order entity
+            order_item = OrderItem(**updated_item)
+            return order_item.to_entity()
 
         except Exception as e:
             logger.error(

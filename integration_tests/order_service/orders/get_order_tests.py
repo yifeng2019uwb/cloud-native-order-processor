@@ -25,7 +25,7 @@ class GetOrderTests:
 
     def order_api_with_id(self, endpoint: str, order_id: str) -> str:
         """Helper method to build order service API URLs with order ID"""
-        return APIEndpoints.get_order_endpoint(endpoint, id=order_id)
+        return APIEndpoints.get_order_endpoint(endpoint, order_id=order_id)
 
     def test_get_order_unauthorized(self):
         """Test getting order without authentication"""
@@ -131,12 +131,16 @@ class GetOrderTests:
                 data = response.json()
 
                 # Check if response has expected structure
-                expected_fields = ["order_id", "user_id", "asset_id", "order_type", "quantity", "price", "status", "created_at"]
-                for field in expected_fields:
-                    if field in data:
-                        print(f"    ✅ Found field: {field}")
-                    else:
-                        print(f"    ⚠️  Missing field: {field}")
+                if "data" in data and isinstance(data["data"], dict):
+                    order_data = data["data"]
+                    expected_fields = ["order_id", "asset_id", "order_type", "quantity", "price", "status", "total_amount", "created_at"]
+                    for field in expected_fields:
+                        if field in order_data:
+                            print(f"    ✅ Found field: {field}")
+                        else:
+                            print(f"    ⚠️  Missing field: {field}")
+                else:
+                    print("    ⚠️  Response data structure unexpected")
 
             elif response.status_code in [401, 403]:
                 print("    ✅ Endpoint correctly requires authentication")

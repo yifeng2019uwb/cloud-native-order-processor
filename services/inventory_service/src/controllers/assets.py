@@ -6,13 +6,9 @@ from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from api_models.inventory.asset_response import (
+    AssetResponse,
     AssetDetailResponse,
-    asset_to_detail_response
-)
-from api_models.inventory.asset_list import (
-    AssetListRequest,
     AssetListResponse,
-    build_asset_list_response
 )
 from api_models.inventory.asset_requests import AssetIdRequest
 from common.data.dao.inventory.asset_dao import AssetDAO
@@ -33,6 +29,38 @@ except ImportError:
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.INVENTORY)
 router = APIRouter(prefix="/inventory", tags=["inventory"])
+
+def build_asset_list(assets: list, request_params, total_count: int) -> AssetListResponse:
+    """Simple method to convert DAO dict results to AssetListResponse"""
+    asset_responses = []
+    for item in assets:
+        asset_response = AssetResponse(
+            asset_id=item.asset_id,
+            name=item.name or '',
+            description=item.description,
+            category=item.category or 'unknown',
+            price_usd=float(item.price_usd),
+            is_active=item.is_active,
+            symbol=item.symbol,
+            image=item.image,
+            market_cap_rank=item.market_cap_rank,
+            price_change_percentage_24h=item.price_change_percentage_24h
+        )
+        asset_responses.append(asset_response)
+
+    # Count active assets
+    active_count = sum(1 for asset in asset_responses if asset.is_active)
+
+    return AssetListResponse(
+        assets=asset_responses,
+        total_count=total_count,
+        active_count=active_count,
+        filters={
+            "active_only": request_params.active_only,
+            "limit": request_params.limit
+        }
+    )
+
 
 @router.get(
     "/assets",
@@ -72,11 +100,13 @@ def list_assets(
     try:
         logger.info(action=LogActions.REQUEST_START, message=f"Assets list requested - active_only: {active_only}, limit: {limit}")
 
-        # Create request object for validation
-        request_params = AssetListRequest(
-            active_only=active_only,
-            limit=limit
-        )
+        # Create simple request object for validation
+        class RequestParams:
+            def __init__(self, active_only, limit):
+                self.active_only = active_only
+                self.limit = limit
+
+        request_params = RequestParams(active_only=active_only, limit=limit)
 
         # Get assets from database
         all_assets = asset_dao.get_all_assets(active_only=active_only)
@@ -101,12 +131,11 @@ def list_assets(
             record_asset_retrieval(category="all", active_only=active_only)
             update_asset_counts(total=total_count, active=len(all_assets))
 
-        # Build response using helper function
-        return build_asset_list_response(
+        # Build response using simple helper function
+        return build_asset_list(
             assets=assets,
             request_params=request_params,
-            total_count=total_count,
-            available_categories=[]  # Remove category exposure
+            total_count=total_count
         )
 
     except Exception as e:
@@ -170,8 +199,54 @@ def get_asset_by_id(
         if METRICS_AVAILABLE:
             record_asset_detail_view(asset_id=validated_asset_id)
 
-        # Convert to detailed response model
-        return asset_to_detail_response(asset)
+        # Convert to detailed response model with all comprehensive fields
+        availability_status = "available" if asset.is_active else "unavailable"
+        last_updated = asset.last_updated or datetime.utcnow().isoformat()
+
+        return AssetDetailResponse(
+            asset_id=asset.asset_id,
+            name=asset.name or '',
+            description=asset.description,
+            category=asset.category or 'unknown',
+            price_usd=float(asset.price_usd),
+            is_active=asset.is_active,
+            availability_status=availability_status,
+
+            # Enhanced fields for detailed view
+            symbol=asset.symbol,
+            image=asset.image,
+            market_cap_rank=asset.market_cap_rank,
+
+            # Comprehensive market data
+            market_cap=asset.market_cap,
+            price_change_24h=asset.price_change_24h,
+            price_change_percentage_24h=asset.price_change_percentage_24h,
+            price_change_percentage_7d=asset.price_change_percentage_7d,
+            price_change_percentage_30d=asset.price_change_percentage_30d,
+
+            # Price range analysis
+            high_24h=asset.high_24h,
+            low_24h=asset.low_24h,
+
+            # Volume and trading metrics
+            total_volume_24h=asset.total_volume_24h,
+
+            # Supply analysis
+            circulating_supply=asset.circulating_supply,
+            total_supply=asset.total_supply,
+            max_supply=asset.max_supply,
+
+            # Historical context
+            ath=asset.ath,
+            ath_change_percentage=asset.ath_change_percentage,
+            ath_date=asset.ath_date,
+            atl=asset.atl,
+            atl_change_percentage=asset.atl_change_percentage,
+            atl_date=asset.atl_date,
+
+            # Additional metadata
+            last_updated=last_updated
+        )
 
     except CNOPAssetValidationException as e:
         # Handle validation errors (from API model) - re-raise as-is to maintain clean error messages

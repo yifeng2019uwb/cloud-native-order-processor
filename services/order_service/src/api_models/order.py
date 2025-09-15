@@ -405,6 +405,8 @@ class OrderData(BaseModel):
                 "asset_id": "BTC",
                 "quantity": 0.5,
                 "price": 45000.00,
+                "status": "pending",
+                "total_amount": 22500.00,
                 "created_at": "2025-07-30T14:30:52Z"
             }
         }
@@ -433,6 +435,16 @@ class OrderData(BaseModel):
     price: Optional[Decimal] = Field(
         None,
         description="Price for limit orders, None for market orders"
+    )
+
+    status: OrderStatus = Field(
+        ...,
+        description="Current order status"
+    )
+
+    total_amount: Optional[Decimal] = Field(
+        None,
+        description="Total order value (calculated from quantity * price)"
     )
 
     created_at: datetime = Field(

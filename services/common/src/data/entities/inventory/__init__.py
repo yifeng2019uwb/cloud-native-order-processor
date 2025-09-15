@@ -2,12 +2,9 @@
 Inventory service entities.
 """
 
-from .asset import Asset, AssetCreate, AssetUpdate, AssetResponse, AssetListResponse
+from .asset import Asset, AssetItem
 
 __all__ = [
-    'Asset',
-    'AssetCreate',
-    'AssetUpdate',
-    'AssetResponse',
-    'AssetListResponse'
+    "Asset",
+    "AssetItem"
 ]

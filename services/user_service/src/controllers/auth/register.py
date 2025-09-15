@@ -17,7 +17,7 @@ from api_models.auth.registration import (
 from api_models.shared.common import ErrorResponse
 from common.auth.security import TokenManager, AuditLogger
 from common.data.database import get_user_dao, get_balance_dao
-from common.data.entities.user import User, Balance, BalanceCreate
+from common.data.entities.user import User, Balance
 from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInternalServerException
@@ -108,12 +108,12 @@ def register_user(
         created_user = user_dao.create_user(user)
 
         # Create initial balance record with 0 balance (sync operation)
-        balance_create = BalanceCreate(
+        initial_balance = Balance(
             username=created_user.username,
-            initial_balance=Decimal('0.00')
+            current_balance=Decimal('0.00')
         )
 
-        balance_dao.create_balance(balance_create)
+        balance_dao.create_balance(initial_balance)
 
         # Log successful registration
         logger.info(action=LogActions.REQUEST_END, message=f"User registered successfully: {user_data.username}")

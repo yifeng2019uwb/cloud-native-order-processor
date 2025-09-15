@@ -194,16 +194,3 @@ class UserDAO(BaseDAO):
         user_item = UserItem(**updated_item)
         user = user_item.to_user()
         return user
-
-    def delete_user(self, username: str) -> bool:
-        """Delete a user by username"""
-        key = UserItem.get_key_for_username(username)
-        success = self._safe_delete_item(self.table, key)
-
-        if success:
-            logger.info(
-                action=LogActions.DB_OPERATION,
-                message=f"User deleted successfully: username={username}"
-            )
-
-        return success

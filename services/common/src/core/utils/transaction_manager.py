@@ -17,7 +17,7 @@ from ...data.dao.inventory import AssetDAO
 from ...data.dao.asset import AssetBalanceDAO, AssetTransactionDAO
 from ...data.entities.user import BalanceTransaction, TransactionType, TransactionStatus
 from ...data.entities.order import Order, OrderStatus, OrderType
-from ...data.entities.asset import AssetTransactionCreate, AssetTransactionType
+from ...data.entities.asset import AssetTransaction, AssetTransactionType
 from ...data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException
 from ...exceptions.shared_exceptions import CNOPInsufficientBalanceException
 from ...shared.logging import BaseLogger, Loggers, LogActions
@@ -335,7 +335,7 @@ class TransactionManager:
                     raise
 
                 # Phase 5: Create asset transaction record
-                asset_transaction_create = AssetTransactionCreate(
+                asset_transaction = AssetTransaction(
                     username=username,
                     asset_id=created_order.asset_id,
                     transaction_type=AssetTransactionType.BUY,
@@ -343,7 +343,7 @@ class TransactionManager:
                     price=created_order.price,
                     order_id=created_order.order_id
                 )
-                created_asset_transaction = self.asset_transaction_dao.create_asset_transaction(asset_transaction_create)
+                created_asset_transaction = self.asset_transaction_dao.create_asset_transaction(asset_transaction)
 
                 # Get updated balance
                 updated_balance = self.balance_dao.get_balance(username)
@@ -462,7 +462,7 @@ class TransactionManager:
                     raise
 
                 # Phase 5: Create asset transaction record
-                asset_transaction_create = AssetTransactionCreate(
+                asset_transaction = AssetTransaction(
                     username=username,
                     asset_id=created_order.asset_id,
                     transaction_type=AssetTransactionType.SELL,
@@ -470,7 +470,7 @@ class TransactionManager:
                     price=created_order.price,
                     order_id=created_order.order_id
                 )
-                created_asset_transaction = self.asset_transaction_dao.create_asset_transaction(asset_transaction_create)
+                created_asset_transaction = self.asset_transaction_dao.create_asset_transaction(asset_transaction)
 
                 # Get updated balance
                 updated_balance = self.balance_dao.get_balance(username)  # Use username directly

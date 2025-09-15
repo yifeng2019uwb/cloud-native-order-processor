@@ -10,7 +10,7 @@ from uuid import UUID
 from boto3.dynamodb.conditions import Key
 
 from ...database.dynamodb_connection import DynamoDBConnection
-from ...entities.user import Balance, BalanceTransaction, BalanceCreate, BalanceTransactionCreate, BalanceResponse
+from ...entities.user import Balance, BalanceTransaction, BalanceItem, BalanceTransactionItem
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPBalanceNotFoundException, CNOPTransactionNotFoundException
 from ..base_dao import BaseDAO
@@ -41,97 +41,34 @@ class BalanceDAO(BaseDAO):
         if not item:
             raise CNOPBalanceNotFoundException(f"Balance for user '{username}' not found")
 
-        return Balance(
-            Pk=item["Pk"],
-            Sk=item["Sk"],
-            username=item["username"],
-            current_balance=Decimal(item["current_balance"]),
-            created_at=datetime.fromisoformat(item["created_at"]),
-            updated_at=datetime.fromisoformat(item["updated_at"]),
-            entity_type=item.get("entity_type", "balance")
-        )
+        # Convert database item to BalanceItem and then to Balance entity
+        balance_item = BalanceItem(**item)
+        return balance_item.to_entity()
 
-    def update_balance(self, username: str, current_balance: Decimal) -> Balance:
-        """Update balance for a user."""
-        try:
-            logger.info(
-            action=LogActions.DB_OPERATION,
-            message=f"Updating balance: user={username}, new_balance={current_balance}"
-        )
-            updated_at = datetime.utcnow()
 
-            response = self.table.update_item(
-                Key={
-                    "Pk": username,
-                    "Sk": "BALANCE"
-                },
-                UpdateExpression="SET current_balance = :balance, updated_at = :updated_at",
-                ExpressionAttributeValues={
-                    ":balance": str(current_balance),
-                    ":updated_at": updated_at.isoformat()
-                },
-                ReturnValues="ALL_NEW"
-            )
-            logger.info(
-            action=LogActions.DB_OPERATION,
-            message=f"Balance updated successfully: user={username}, new_balance={current_balance}"
-        )
-
-            item = response["Attributes"]
-            return Balance(
-                Pk=item["Pk"],
-                Sk=item["Sk"],
-                username=item["username"],
-                current_balance=Decimal(item["current_balance"]),
-                created_at=datetime.fromisoformat(item["created_at"]),
-                updated_at=datetime.fromisoformat(item["updated_at"]),
-                entity_type=item.get("entity_type", "balance")
-            )
-
-        except Exception as e:
-            logger.error(
-            action=LogActions.ERROR,
-            message=f"Failed to update balance for user '{username}': {e}"
-        )
-            raise CNOPDatabaseOperationException(f"Database operation failed while updating balance for user '{username}': {str(e)}")
-
-    def create_balance(self, balance_create: BalanceCreate) -> Balance:
+    def create_balance(self, balance: Balance) -> Balance:
         """Create a new balance record for a user."""
         try:
-            now = datetime.utcnow()
-            balance_item = {
-                "Pk": balance_create.username,
-                "Sk": "BALANCE",
-                "username": balance_create.username,
-                "current_balance": str(balance_create.initial_balance),
-                "created_at": now.isoformat(),
-                "updated_at": now.isoformat(),
-                "entity_type": "balance"
-            }
+            # Convert Balance entity to BalanceItem for database storage
+            balance_item = BalanceItem.from_entity(balance)
+            balance_data = balance_item.model_dump()
 
-            self.table.put_item(Item=balance_item)
+            self.table.put_item(Item=balance_data)
 
             logger.info(
                 action=LogActions.DB_OPERATION,
-                message=f"Balance created successfully: user={balance_create.username}, initial_balance={balance_create.initial_balance}"
+                message=f"Balance created successfully: user={balance.username}, current_balance={balance.current_balance}"
             )
 
-            return Balance(
-                Pk=balance_item["Pk"],
-                Sk=balance_item["Sk"],
-                username=balance_item["username"],
-                current_balance=balance_create.initial_balance,
-                created_at=now,
-                updated_at=now,
-                entity_type="balance"
-            )
+            # Convert back to Balance entity from database response
+            return BalanceItem(**balance_data).to_entity()
 
         except Exception as e:
             logger.error(
                 action=LogActions.ERROR,
-                message=f"Failed to create balance for user '{balance_create.username}': {e}"
+                message=f"Failed to create balance for user '{balance.username}': {e}"
             )
-            raise CNOPDatabaseOperationException(f"Database operation failed while creating balance for user '{balance_create.username}': {str(e)}")
+            raise CNOPDatabaseOperationException(f"Database operation failed while creating balance for user '{balance.username}': {str(e)}")
 
     def create_transaction(self, transaction: BalanceTransaction) -> BalanceTransaction:
         """Create a new balance transaction."""
@@ -143,33 +80,23 @@ class BalanceDAO(BaseDAO):
                        f"description={transaction.description}"
             )
 
-            # Create transaction record
-            item = {
-                "Pk": f"TRANS#{transaction.username}",
-                "username": transaction.username,
-                "Sk": transaction.created_at.isoformat(),
-                "transaction_id": str(transaction.transaction_id),
-                "transaction_type": transaction.transaction_type.value,
-                "amount": str(transaction.amount),
-                "description": transaction.description,
-                "status": transaction.status.value,
-                "reference_id": transaction.reference_id,
-                "created_at": transaction.created_at.isoformat(),
-                "entity_type": "balance_transaction"
-            }
+            # Convert BalanceTransaction entity to BalanceTransactionItem for database storage
+            transaction_item = BalanceTransactionItem.from_entity(transaction)
+            transaction_data = transaction_item.model_dump()
 
             logger.info(
                 action=LogActions.DB_OPERATION,
-                message=f"Transaction item prepared: {item}"
+                message=f"Transaction item prepared: {transaction_data}"
             )
-            self.table.put_item(Item=item)
+            self.table.put_item(Item=transaction_data)
             logger.info(
                 action=LogActions.DB_OPERATION,
                 message=f"Balance transaction created successfully: user={transaction.username}, "
                        f"amount={transaction.amount}, reference_id={transaction.reference_id}"
             )
 
-            return transaction
+            # Convert back to BalanceTransaction entity from database response
+            return BalanceTransactionItem(**transaction_data).to_entity()
 
         except Exception as e:
             logger.error(
@@ -177,6 +104,40 @@ class BalanceDAO(BaseDAO):
                 message=f"Failed to create transaction for user '{transaction.username}': {e}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while creating transaction for user '{transaction.username}': {str(e)}")
+
+    def update_balance(self, username: str, new_balance: Decimal) -> Balance:
+        """Update balance for a user."""
+        try:
+            # Get current balance to preserve created_at
+            current_balance = self.get_balance(username)
+
+            # Create updated balance entity
+            updated_balance = Balance(
+                username=username,
+                current_balance=new_balance,
+                created_at=current_balance.created_at,
+                updated_at=datetime.utcnow()
+            )
+
+            # Convert to BalanceItem and save
+            balance_item = BalanceItem.from_entity(updated_balance)
+            balance_data = balance_item.model_dump()
+
+            self.table.put_item(Item=balance_data)
+
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Balance updated successfully: user={username}, new_balance={new_balance}"
+            )
+
+            return updated_balance
+
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to update balance for user '{username}': {e}"
+            )
+            raise CNOPDatabaseOperationException(f"Database operation failed while updating balance for user '{username}': {str(e)}")
 
     def _update_balance_from_transaction(self, transaction: BalanceTransaction):
         """
@@ -253,19 +214,9 @@ class BalanceDAO(BaseDAO):
 
             transactions = []
             for item in response.get("Items", []):
-                transaction = BalanceTransaction(
-                    Pk=item["Pk"],
-                    username=item["username"],
-                    Sk=item["Sk"],
-                    transaction_id=UUID(item["transaction_id"]),
-                    transaction_type=item["transaction_type"],
-                    amount=Decimal(item["amount"]),
-                    description=item["description"],
-                    status=item["status"],
-                    reference_id=item.get("reference_id"),
-                    created_at=datetime.fromisoformat(item["created_at"]),
-                    entity_type=item.get("entity_type", "balance_transaction")
-                )
+                # Convert database item to BalanceTransactionItem and then to BalanceTransaction entity
+                transaction_item = BalanceTransactionItem(**item)
+                transaction = transaction_item.to_entity()
                 transactions.append(transaction)
 
             last_evaluated_key = response.get("LastEvaluatedKey")

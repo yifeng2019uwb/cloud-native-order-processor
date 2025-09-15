@@ -93,6 +93,8 @@ def get_order(
             asset_id=order.asset_id,
             quantity=order.quantity,
             price=order.price,
+            status=order.status,
+            total_amount=order.total_amount,
             created_at=order.created_at
         )
 

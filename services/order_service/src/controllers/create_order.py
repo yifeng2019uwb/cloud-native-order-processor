@@ -171,6 +171,8 @@ async def create_order(
             asset_id=created_order.asset_id,
             quantity=created_order.quantity,
             price=created_order.price,
+            status=created_order.status,
+            total_amount=created_order.total_amount,
             created_at=created_order.created_at
         )
 
