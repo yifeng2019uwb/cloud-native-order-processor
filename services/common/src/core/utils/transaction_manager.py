@@ -341,6 +341,7 @@ class TransactionManager:
                     transaction_type=AssetTransactionType.BUY,
                     quantity=asset_quantity,
                     price=created_order.price,
+                    total_amount=asset_quantity * created_order.price,
                     order_id=created_order.order_id
                 )
                 created_asset_transaction = self.asset_transaction_dao.create_asset_transaction(asset_transaction)
@@ -468,6 +469,7 @@ class TransactionManager:
                     transaction_type=AssetTransactionType.SELL,
                     quantity=asset_quantity,
                     price=created_order.price,
+                    total_amount=asset_quantity * created_order.price,
                     order_id=created_order.order_id
                 )
                 created_asset_transaction = self.asset_transaction_dao.create_asset_transaction(asset_transaction)

@@ -8,6 +8,7 @@ This package contains all data-related functionality:
 - Data-specific exceptions (internal only)
 """
 
+
 __version__ = "1.0.0"
 
 # Data package - no need to re-export exceptions

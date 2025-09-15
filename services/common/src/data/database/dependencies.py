@@ -5,6 +5,7 @@ This module provides centralized database connection management
 and dependency injection for all services.
 """
 
+
 from ...shared.logging import BaseLogger, Loggers
 from typing import Optional
 from .dynamodb_connection import dynamodb_manager

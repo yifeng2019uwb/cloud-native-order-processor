@@ -98,18 +98,6 @@ def sample_inventory_data():
 @pytest.fixture(autouse=True)
 def mock_database_connection():
     """Mock database connection to prevent actual database calls during tests."""
-    with patch('src.data.database.dynamodb_connection.dynamodb_manager') as mock_manager:
-        # Mock the database manager
-        mock_connection = AsyncMock()
-        mock_users_table = MagicMock()
-        mock_orders_table = MagicMock()
-        mock_inventory_table = MagicMock()
-
-        mock_connection.users_table = mock_users_table
-        mock_connection.orders_table = mock_orders_table
-        mock_connection.inventory_table = mock_inventory_table
-
-        mock_manager.get_connection.return_value.__aenter__.return_value = mock_connection
-        mock_manager.get_connection.return_value.__aexit__.return_value = None
-
-        yield mock_manager
+    # Skip database mocking for entity tests that don't need it
+    # Entity tests only test model validation, not database operations
+    yield None

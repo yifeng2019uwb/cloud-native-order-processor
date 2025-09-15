@@ -11,7 +11,7 @@ from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key
 
 from src.data.dao.user.balance_dao import BalanceDAO
-from src.data.entities.user import Balance, BalanceTransaction, TransactionType, TransactionStatus, BalanceCreate
+from src.data.entities.user import Balance, BalanceTransaction, TransactionType, TransactionStatus
 from src.data.exceptions import CNOPDatabaseOperationException
 from src.exceptions.shared_exceptions import CNOPBalanceNotFoundException, CNOPTransactionNotFoundException
 
@@ -36,21 +36,16 @@ class TestBalanceDAO:
     def sample_balance(self):
         """Sample balance for testing"""
         return Balance(
-            Pk="BALANCE#testuser123",
-            Sk="BALANCE",
             username="testuser123",
             current_balance=Decimal('100.00'),
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-            entity_type="balance"
+            updated_at=datetime.utcnow()
         )
 
     @pytest.fixture
     def sample_transaction(self):
         """Sample transaction for testing"""
         return BalanceTransaction(
-            Pk="TRANS#testuser123",
-            Sk="2023-01-01T00:00:00",
             username="testuser123",
             transaction_id=UUID('12345678-1234-5678-9abc-123456789abc'),
             transaction_type=TransactionType.DEPOSIT,
@@ -58,16 +53,15 @@ class TestBalanceDAO:
             description="Test deposit",
             status=TransactionStatus.COMPLETED,
             reference_id="ref123",
-            created_at=datetime.utcnow(),
-            entity_type="balance_transaction"
+            created_at=datetime.utcnow()
         )
 
     @pytest.fixture
     def sample_balance_create(self):
-        """Sample BalanceCreate for testing"""
-        return BalanceCreate(
+        """Sample Balance for testing"""
+        return Balance(
             username="testuser123",
-            initial_balance=Decimal('100.00')
+            current_balance=Decimal('100.00')
         )
 
     def test_get_balance_success(self, balance_dao, sample_balance, mock_db_connection):
@@ -88,7 +82,7 @@ class TestBalanceDAO:
 
         # Verify result
         assert result is not None
-        assert result.Pk == "testuser123"
+
         assert result.username == "testuser123"
         assert result.current_balance == Decimal('100.00')
 
@@ -119,28 +113,32 @@ class TestBalanceDAO:
 
     def test_update_balance_success(self, balance_dao, sample_balance, mock_db_connection):
         """Test successful balance update"""
-        # Mock database response
-        mock_updated_item = {
-            'Pk': 'BALANCE#testuser123',
+        # Mock the _safe_get_item method to return existing balance
+        mock_existing_item = {
+            'Pk': 'testuser123',
             'Sk': 'BALANCE',
             'username': 'testuser123',
-            'current_balance': '150.00',
+            'current_balance': Decimal('100.00'),
             'created_at': sample_balance.created_at.isoformat(),
-            'updated_at': datetime.utcnow().isoformat(),
+            'updated_at': sample_balance.updated_at.isoformat(),
             'entity_type': 'balance'
         }
-        mock_db_connection.users_table.update_item.return_value = {'Attributes': mock_updated_item}
+
+        # Mock _safe_get_item to return the existing balance
+        balance_dao._safe_get_item = MagicMock(return_value=mock_existing_item)
+
+        # Mock put_item for the update
+        mock_db_connection.users_table.put_item.return_value = None
 
         result = balance_dao.update_balance('testuser123', Decimal('150.00'))
 
         # Verify result
         assert result is not None
-        assert result.Pk == "BALANCE#testuser123"
         assert result.username == "testuser123"
         assert result.current_balance == Decimal('150.00')
 
         # Verify database was called
-        mock_db_connection.users_table.update_item.assert_called_once()
+        mock_db_connection.users_table.put_item.assert_called_once()
 
     def test_update_balance_database_error(self, balance_dao, mock_db_connection):
         """Test balance update with database error"""
@@ -162,11 +160,8 @@ class TestBalanceDAO:
 
         # Verify result
         assert result is not None
-        assert result.Pk == "testuser123"
         assert result.username == "testuser123"
         assert result.current_balance == Decimal('100.00')
-        assert result.Sk == "BALANCE"
-        assert result.entity_type == "balance"
 
         # Verify database was called
         mock_db_connection.users_table.put_item.assert_called_once()
@@ -174,7 +169,7 @@ class TestBalanceDAO:
         assert call_args['Pk'] == "testuser123"
         assert call_args['Sk'] == "BALANCE"
         assert call_args['username'] == "testuser123"
-        assert call_args['current_balance'] == "100.00"
+        assert call_args['current_balance'] == Decimal('100.00')
         assert call_args['entity_type'] == "balance"
 
     def test_create_balance_database_error(self, balance_dao, sample_balance_create, mock_db_connection):
@@ -229,9 +224,7 @@ class TestBalanceDAO:
 
         # Verify result
         assert result == sample_transaction
-        assert result.Pk == "TRANS#testuser123"
         assert result.username == "testuser123"
-        assert result.Sk == "2023-01-01T00:00:00"
 
         # Verify database was called
         mock_db_connection.users_table.put_item.assert_called_once()
@@ -317,10 +310,10 @@ class TestBalanceDAO:
         # Test the private method
         balance_dao._update_balance_from_transaction(sample_transaction)
 
-        # Verify get_balance was called
-        mock_db_connection.users_table.get_item.assert_called_once()
+        # Verify get_balance was called (twice: once directly, once from update_balance)
+        assert mock_db_connection.users_table.get_item.call_count == 2
         # Verify update_balance was called
-        mock_db_connection.users_table.update_item.assert_called_once()
+        mock_db_connection.users_table.put_item.assert_called_once()
 
     def test_update_balance_from_transaction_get_balance_failure(self, balance_dao, sample_transaction, mock_db_connection):
         """Test balance update from transaction when get_balance fails"""
@@ -343,9 +336,9 @@ class TestBalanceDAO:
                 'updated_at': '2023-01-01T00:00:00'
             }
         }
-        mock_db_connection.users_table.update_item.side_effect = ClientError(
+        mock_db_connection.users_table.put_item.side_effect = ClientError(
             {'Error': {'Code': 'InternalServerError', 'Message': 'Update failed'}},
-            'UpdateItem'
+            'PutItem'
         )
 
         with pytest.raises(CNOPDatabaseOperationException, match="Database operation failed while updating balance from transaction"):
@@ -368,9 +361,7 @@ class TestBalanceDAO:
 
         # Verify result
         assert result is not None
-        assert result.Pk == "TRANS#testuser123"
         assert result.username == "testuser123"
-        assert result.Sk == "2023-01-01T00:00:00"
 
     def test_get_transaction_not_found(self, balance_dao, mock_db_connection):
         """Test transaction retrieval when not found"""
@@ -419,9 +410,7 @@ class TestBalanceDAO:
 
         # Verify result
         assert len(transactions) == 1
-        assert transactions[0].Pk == "TRANS#testuser123"
         assert transactions[0].username == "testuser123"
-        assert transactions[0].Sk == "2023-01-01T00:00:00"
 
         # Verify database was called
         mock_db_connection.users_table.query.assert_called_once()

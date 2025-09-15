@@ -12,7 +12,7 @@ from boto3.dynamodb.conditions import Key
 from src.data.dao.asset.asset_transaction_dao import AssetTransactionDAO
 from src.data.entities.asset import (
     AssetTransaction,
-    AssetTransactionCreate,
+    AssetTransactionItem,
     AssetTransactionType,
     AssetTransactionStatus
 )
@@ -39,12 +39,13 @@ class TestAssetTransactionDAO:
     @pytest.fixture
     def sample_transaction_create(self):
         """Sample transaction create for testing"""
-        return AssetTransactionCreate(
+        return AssetTransaction(
             username="testuser123",
             asset_id="BTC",
             transaction_type=AssetTransactionType.BUY,
             quantity=Decimal("2.5"),
             price=Decimal("50000.00"),
+            total_amount=Decimal("125000.00"),
             order_id="order-123"
         )
 
@@ -53,8 +54,6 @@ class TestAssetTransactionDAO:
         """Sample asset transaction for testing"""
         now = datetime.now(timezone.utc)
         return AssetTransaction(
-            Pk="TRANS#testuser123#BTC",
-            Sk="2024-01-01T12:00:00Z",
             username="testuser123",
             asset_id="BTC",
             transaction_type=AssetTransactionType.BUY,
@@ -70,8 +69,6 @@ class TestAssetTransactionDAO:
         """Test successful asset transaction creation"""
         # Mock database response - the actual timestamp will be generated at runtime
         mock_db_connection.users_table.put_item.return_value = {
-            'Pk': 'TRANS#testuser123#BTC',
-            'Sk': '2024-01-01T12:00:00Z',
             'username': 'testuser123',
             'asset_id': 'BTC',
             'transaction_type': 'BUY',
@@ -87,9 +84,6 @@ class TestAssetTransactionDAO:
 
         # Verify result
         assert result is not None
-        assert result.Pk == "TRANS#testuser123#BTC"
-        # Don't check exact timestamp as it's generated at runtime
-        assert result.Sk is not None
         assert result.username == "testuser123"
         assert result.asset_id == "BTC"
         assert result.transaction_type == AssetTransactionType.BUY
@@ -102,23 +96,21 @@ class TestAssetTransactionDAO:
         # Verify database was called
         mock_db_connection.users_table.put_item.assert_called_once()
         call_args = mock_db_connection.users_table.put_item.call_args
-        assert call_args[1]['Item']['Pk'] == 'TRANS#testuser123#BTC'
         assert call_args[1]['Item']['transaction_type'] == 'BUY'
         assert call_args[1]['Item']['status'] == 'COMPLETED'
 
     def test_create_asset_transaction_sell_type(self, asset_transaction_dao, mock_db_connection):
         """Test asset transaction creation with SELL type"""
-        transaction_create = AssetTransactionCreate(
+        transaction_create = AssetTransaction(
             username="testuser123",
             asset_id="ETH",
             transaction_type=AssetTransactionType.SELL,
             quantity=Decimal("10.0"),
-            price=Decimal("3000.00")
+            price=Decimal("3000.00"),
+            total_amount=Decimal("30000.00")
         )
 
         mock_created_item = {
-            'Pk': 'TRANS#testuser123#ETH',
-            'Sk': '2024-01-01T12:00:00Z',
             'username': 'testuser123',
             'asset_id': 'ETH',
             'transaction_type': 'SELL',
@@ -137,17 +129,16 @@ class TestAssetTransactionDAO:
 
     def test_create_asset_transaction_no_order_id(self, asset_transaction_dao, mock_db_connection):
         """Test asset transaction creation without order_id"""
-        transaction_create = AssetTransactionCreate(
+        transaction_create = AssetTransaction(
             username="testuser123",
             asset_id="BTC",
             transaction_type=AssetTransactionType.BUY,
             quantity=Decimal("1.0"),
-            price=Decimal("50000.00")
+            price=Decimal("50000.00"),
+            total_amount=Decimal("50000.00")
         )
 
         mock_created_item = {
-            'Pk': 'TRANS#testuser123#BTC',
-            'Sk': '2024-01-01T12:00:00Z',
             'username': 'testuser123',
             'asset_id': 'BTC',
             'transaction_type': 'BUY',
@@ -196,8 +187,6 @@ class TestAssetTransactionDAO:
 
         # Verify result
         assert result is not None
-        assert result.Pk == "TRANS#testuser123#BTC"
-        assert result.Sk == "2024-01-01T12:00:00Z"
         assert result.username == "testuser123"
         assert result.asset_id == "BTC"
         assert result.transaction_type == AssetTransactionType.BUY
@@ -378,18 +367,17 @@ class TestAssetTransactionDAO:
 
     def test_total_amount_calculation(self, asset_transaction_dao, mock_db_connection):
         """Test that total_amount is calculated correctly during creation"""
-        transaction_create = AssetTransactionCreate(
+        transaction_create = AssetTransaction(
             username="testuser123",
             asset_id="BTC",
             transaction_type=AssetTransactionType.BUY,
             quantity=Decimal("3.0"),
             price=Decimal("40000.00"),
+            total_amount=Decimal("120000.00"),
             order_id="order-456"
         )
 
         mock_created_item = {
-            'Pk': 'TRANS#testuser123#BTC',
-            'Sk': '2024-01-01T12:00:00Z',
             'username': 'testuser123',
             'asset_id': 'BTC',
             'transaction_type': 'BUY',

@@ -10,7 +10,7 @@ from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key
 
 from src.data.dao.asset.asset_balance_dao import AssetBalanceDAO
-from src.data.entities.asset import AssetBalance
+from src.data.entities.asset import AssetBalance, AssetBalanceItem
 from src.data.exceptions import CNOPDatabaseOperationException
 from src.exceptions.shared_exceptions import CNOPAssetBalanceNotFoundException
 
@@ -36,8 +36,6 @@ class TestAssetBalanceDAO:
         """Sample asset balance for testing"""
         now = datetime.now(timezone.utc)
         return AssetBalance(
-            Pk="testuser123",
-            Sk="ASSET#BTC",
             username="testuser123",
             asset_id="BTC",
             quantity=Decimal('10.5'),
@@ -47,16 +45,19 @@ class TestAssetBalanceDAO:
 
     def test_upsert_asset_balance_update_existing(self, asset_balance_dao, sample_asset_balance, mock_db_connection):
         """Test successful asset balance update (existing item)"""
+        # Convert sample_asset_balance to AssetBalanceItem for database operations
+        sample_asset_balance_item = AssetBalanceItem.from_asset_balance(sample_asset_balance)
+
         # Mock get_asset_balance to return existing balance
         with patch.object(asset_balance_dao, 'get_asset_balance', return_value=sample_asset_balance):
-            # Mock database response for existing item
+            # Mock database response for existing item (return AssetBalanceItem data)
             mock_updated_item = {
-                'Pk': 'testuser123',
-                'Sk': 'ASSET#BTC',
+                'Pk': sample_asset_balance_item.Pk,
+                'Sk': sample_asset_balance_item.Sk,
                 'username': 'testuser123',
                 'asset_id': 'BTC',
                 'quantity': '15.5',
-                'created_at': sample_asset_balance.created_at.isoformat(),
+                'created_at': sample_asset_balance_item.created_at,
                 'updated_at': '2024-01-01T12:00:00'
             }
             mock_db_connection.users_table.update_item.return_value = {'Attributes': mock_updated_item}
@@ -65,8 +66,6 @@ class TestAssetBalanceDAO:
 
         # Verify result
         assert result is not None
-        assert result.Pk == "testuser123"
-        assert result.Sk == "ASSET#BTC"
         assert result.username == "testuser123"
         assert result.asset_id == "BTC"
         assert result.quantity == Decimal('15.5')
@@ -79,17 +78,29 @@ class TestAssetBalanceDAO:
 
     def test_upsert_asset_balance_create_new(self, asset_balance_dao, mock_db_connection):
         """Test successful asset balance creation (new item)"""
+        # Create AssetBalance entity for test input
+        test_asset_balance = AssetBalance(
+            username="testuser123",
+            asset_id="ETH",
+            quantity=Decimal('5.0'),
+            created_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            updated_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        )
+
+        # Convert to AssetBalanceItem for database operations
+        test_asset_balance_item = AssetBalanceItem.from_asset_balance(test_asset_balance)
+
         # Mock get_asset_balance to raise CNOPAssetBalanceNotFoundException
         with patch.object(asset_balance_dao, 'get_asset_balance', side_effect=CNOPAssetBalanceNotFoundException("Not found")):
-            # Mock database response for new item
+            # Mock database response for new item (return the AssetBalanceItem data)
             mock_created_item = {
-                'Pk': 'testuser123',
-                'Sk': 'ASSET#ETH',
-                'username': 'testuser123',
-                'asset_id': 'ETH',
-                'quantity': '5.0',
-                'created_at': '2024-01-01T12:00:00',
-                'updated_at': '2024-01-01T12:00:00'
+                'Pk': test_asset_balance_item.Pk,
+                'Sk': test_asset_balance_item.Sk,
+                'username': test_asset_balance_item.username,
+                'asset_id': test_asset_balance_item.asset_id,
+                'quantity': str(test_asset_balance_item.quantity),
+                'created_at': test_asset_balance_item.created_at,
+                'updated_at': test_asset_balance_item.updated_at
             }
 
             mock_db_connection.users_table.put_item.return_value = mock_created_item
@@ -98,8 +109,6 @@ class TestAssetBalanceDAO:
 
         # Verify result
         assert result is not None
-        assert result.Pk == "testuser123"
-        assert result.Sk == "ASSET#ETH"
         assert result.username == "testuser123"
         assert result.asset_id == "ETH"
         assert result.quantity == Decimal('5.0')
@@ -196,8 +205,6 @@ class TestAssetBalanceDAO:
 
         # Verify result
         assert result is not None
-        assert result.Pk == "testuser123"
-        assert result.Sk == "ASSET#BTC"
         assert result.username == "testuser123"
         assert result.asset_id == "BTC"
         assert result.quantity == Decimal('10.5')

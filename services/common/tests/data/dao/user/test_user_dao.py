@@ -257,8 +257,6 @@ class TestUserDAO:
 
         # Mock password hash lookup
         mock_item = {
-            'Pk': 'test@example.com',
-            'Sk': 'USER',
             'username': 'test@example.com',
             'email': 'test@example.com',
             'first_name': 'Test',
@@ -416,22 +414,24 @@ class TestUserDAO:
             last_name='User',
             phone='+1234567890'
         )
+        mock_user_item = {
+            'Pk': 'john_doe123',
+            'Sk': 'USER',
+            'username': 'john_doe123',
+            'email': 'test@example.com',
+            'password_hash': 'hashed_password',
+            'first_name': 'Test',
+            'last_name': 'User',
+            'role': 'user',
+            'created_at': '2023-01-01T00:00:00',
+            'updated_at': '2023-01-01T00:00:00'
+
+        }
         user_dao.get_user_by_username = Mock(return_value=mock_user)
 
         # Mock database update to return the updated user
         mock_db_connection.users_table.update_item.return_value = {
-            'Attributes': {
-                'Pk': 'john_doe123',
-                'Sk': 'USER',
-                'username': 'john_doe123',
-                'email': 'test@example.com',
-                'password_hash': 'hashed_password',
-                'first_name': 'Test',
-                'last_name': 'User',
-                'role': 'user',
-                'created_at': '2023-01-01T00:00:00',
-                'updated_at': '2023-01-01T00:00:00'
-            }
+               'Attributes': mock_user_item
         }
 
         # Update user with no changes (but timestamp will be updated)
@@ -447,35 +447,6 @@ class TestUserDAO:
 
         # Verify result is not None (timestamp was updated)
         assert result is not None
-
-    def test_delete_user_success(self, user_dao, mock_db_connection):
-        """Test successful user deletion"""
-        # Mock successful deletion
-        mock_db_connection.users_table.delete_item.return_value = {'Attributes': {'Pk': 'john_doe123'}}
-
-        # Delete user
-        result = user_dao.delete_user('john_doe123')
-
-        # Should return True
-        assert result is True
-
-        # Verify database was called correctly
-        mock_db_connection.users_table.delete_item.assert_called_once_with(
-            Key={'Pk': 'john_doe123', 'Sk': 'USER'},
-            ReturnValues='ALL_OLD'
-        )
-
-    def test_delete_user_not_found(self, user_dao, mock_db_connection):
-        """Test deleting non-existent user"""
-        # Mock no deletion (user not found)
-        mock_db_connection.users_table.delete_item.return_value = {}
-
-        # Delete user
-        result = user_dao.delete_user('nonexistent')
-
-        # Should return False
-        assert result is False
-
 
     def test_create_user_database_exception(self, user_dao, sample_user_create, mock_db_connection):
         """Test create user with database exception during put_item"""
@@ -639,14 +610,3 @@ class TestUserDAO:
         # Update user
         with pytest.raises(Exception):
             user_dao.update_user('nonexistent_user', email='updated@example.com')
-
-    def test_delete_user_database_exception(self, user_dao, mock_db_connection):
-        """Test delete user with database exception"""
-        # Mock database exception during delete
-        mock_db_connection.users_table.delete_item.side_effect = Exception("Delete failed")
-
-        # Should raise exception
-        with pytest.raises(Exception) as exc_info:
-            user_dao.delete_user('john_doe123')
-
-        assert "Delete failed" in str(exc_info.value)

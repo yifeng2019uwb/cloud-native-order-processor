@@ -8,7 +8,7 @@ from boto3.dynamodb.conditions import Key
 from decimal import Decimal
 
 from ..base_dao import BaseDAO
-from ...entities.asset import AssetBalance
+from ...entities.asset import AssetBalance, AssetBalanceItem
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPAssetBalanceNotFoundException
 from ....shared.logging import BaseLogger, Loggers, LogActions

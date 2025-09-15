@@ -1,10 +1,10 @@
 import pytest
 from decimal import Decimal
-from src.data.entities.inventory import AssetCreate, AssetUpdate
+from src.data.entities.inventory import Asset, AssetItem
 from pydantic import ValidationError
 
 def test_asset_create_all_fields():
-    asset = AssetCreate(
+    asset = Asset(
         asset_id="BTC",
         name="Bitcoin",
         description="Digital currency",
@@ -36,7 +36,7 @@ def test_asset_create_all_fields():
 def test_asset_create_missing_required():
     # asset_id is required
     with pytest.raises(ValidationError):
-        AssetCreate(
+        Asset(
             name="Bitcoin",
             description="Digital currency",
             category="major",
@@ -45,7 +45,7 @@ def test_asset_create_missing_required():
         )
     # name is required
     with pytest.raises(ValidationError):
-        AssetCreate(
+        Asset(
             asset_id="BTC",
             description="Digital currency",
             category="major",
@@ -54,7 +54,7 @@ def test_asset_create_missing_required():
         )
     # category is required
     with pytest.raises(ValidationError):
-        AssetCreate(
+        Asset(
             asset_id="BTC",
             name="Bitcoin",
             description="Digital currency",
@@ -63,7 +63,7 @@ def test_asset_create_missing_required():
         )
     # amount is required
     with pytest.raises(ValidationError):
-        AssetCreate(
+        Asset(
             asset_id="BTC",
             name="Bitcoin",
             description="Digital currency",
@@ -72,7 +72,7 @@ def test_asset_create_missing_required():
         )
     # price_usd is required
     with pytest.raises(ValidationError):
-        AssetCreate(
+        Asset(
             asset_id="BTC",
             name="Bitcoin",
             description="Digital currency",
@@ -81,7 +81,7 @@ def test_asset_create_missing_required():
         )
 
 def test_asset_create_trim_whitespace():
-    asset = AssetCreate(
+    asset = Asset(
         asset_id="  BTC  ",
         name="  Bitcoin  ",
         description="  Digital currency  ",
@@ -98,14 +98,21 @@ def test_asset_create_trim_whitespace():
     assert asset.symbol == "BTC"
     assert asset.image == "https://assets.coingecko.com/coins/images/1/large/bitcoin.png"
 
-def test_asset_update_trim_whitespace():
-    update = AssetUpdate(
+def test_asset_trim_whitespace():
+    """Test that Asset trims whitespace from string fields"""
+    asset = Asset(
+        asset_id="  ETH  ",
+        name="  Ethereum  ",
         description="  Updated desc  ",
         category="  altcoin  ",
+        amount=Decimal("100.0"),
+        price_usd=Decimal("3000.0"),
         symbol="  ETH  ",
         image="  https://assets.coingecko.com/coins/images/279/large/ethereum.png  "
     )
-    assert update.description == "Updated desc"
-    assert update.category == "altcoin"
-    assert update.symbol == "ETH"
-    assert update.image == "https://assets.coingecko.com/coins/images/279/large/ethereum.png"
+    assert asset.asset_id == "ETH"
+    assert asset.name == "Ethereum"
+    assert asset.description == "Updated desc"
+    assert asset.category == "altcoin"
+    assert asset.symbol == "ETH"
+    assert asset.image == "https://assets.coingecko.com/coins/images/279/large/ethereum.png"

@@ -16,8 +16,6 @@ class TestOrder:
     def test_valid_order_creation(self):
         """Test valid order creation."""
         order = Order(
-            Pk="order_123",
-            Sk="ORDER",
             order_id="order_123",
             username="user123",
             order_type=OrderType.MARKET_BUY,
@@ -28,8 +26,6 @@ class TestOrder:
             status=OrderStatus.PENDING
         )
 
-        assert order.Pk == "order_123"
-        assert order.Sk == "ORDER"
         assert order.order_id == "order_123"
         assert order.username == "user123"
         assert order.order_type == OrderType.MARKET_BUY
@@ -47,8 +43,6 @@ class TestOrder:
         updated_at = datetime.now(timezone.utc)
 
         order = Order(
-            Pk="order_456",
-            Sk="ORDER",
             order_id="order_456",
             username="user456",
             order_type=OrderType.LIMIT_SELL,
@@ -70,8 +64,6 @@ class TestOrder:
 
         for order_type in order_types:
             order = Order(
-                Pk=f"order_{order_type.value}",
-                Sk="ORDER",
                 order_id=f"order_{order_type.value}",
                 username="testuser",
                 order_type=order_type,
@@ -90,8 +82,6 @@ class TestOrder:
 
         for status in statuses:
             order = Order(
-                Pk=f"order_{status.value}",
-                Sk="ORDER",
                 order_id=f"order_{status.value}",
                 username="testuser",
                 order_type=OrderType.MARKET_BUY,
@@ -107,8 +97,6 @@ class TestOrder:
     def test_order_serialization(self):
         """Test order serialization."""
         order = Order(
-            Pk="order_serialize",
-            Sk="ORDER",
             order_id="order_serialize",
             username="serialize_user",
             order_type=OrderType.MARKET_BUY,
@@ -121,8 +109,6 @@ class TestOrder:
 
         # Test model_dump
         data = order.model_dump()
-        assert data['Pk'] == "order_serialize"
-        assert data['Sk'] == "ORDER"
         assert data['order_id'] == "order_serialize"
         assert data['username'] == "serialize_user"
         assert data['order_type'] == OrderType.MARKET_BUY.value
@@ -137,8 +123,6 @@ class TestOrder:
     def test_order_from_dict(self):
         """Test creating order from dictionary."""
         order_data = {
-            "Pk": "order_dict",
-            "Sk": "ORDER",
             "order_id": "order_dict",
             "username": "dict_user",
             "order_type": OrderType.LIMIT_BUY,
@@ -151,8 +135,6 @@ class TestOrder:
 
         order = Order(**order_data)
 
-        assert order.Pk == "order_dict"
-        assert order.Sk == "ORDER"
         assert order.order_id == "order_dict"
         assert order.username == "dict_user"
         assert order.order_type == OrderType.LIMIT_BUY
@@ -167,7 +149,7 @@ class TestOrder:
         # Test missing required fields
         with pytest.raises(Exception):  # Pydantic validation error
             Order(
-                # Missing Pk, Sk, order_id, username, etc.
+                # Missing order_id, username, etc.
                 order_type=OrderType.MARKET_BUY,
                 asset_id="BTC",
                 quantity=Decimal("1.0"),
@@ -180,8 +162,6 @@ class TestOrder:
         """Test order validation for quantity > 0."""
         # The Order entity doesn't have gt=0 validation, so this should pass
         order = Order(
-            Pk="order_invalid",
-            Sk="ORDER",
             order_id="order_invalid",
             username="testuser",
             order_type=OrderType.MARKET_BUY,
@@ -197,8 +177,6 @@ class TestOrder:
         """Test order validation for price > 0."""
         # The Order entity doesn't have gt=0 validation, so this should pass
         order = Order(
-            Pk="order_invalid",
-            Sk="ORDER",
             order_id="order_invalid",
             username="testuser",
             order_type=OrderType.MARKET_BUY,
