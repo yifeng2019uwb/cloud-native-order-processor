@@ -13,9 +13,10 @@ from api_models.order import OrderCreateRequest, OrderCreateResponse, OrderData
 from api_models.shared.common import ErrorResponse
 from common.data.entities.order.enums import OrderType, OrderStatus
 from common.core.utils.transaction_manager import TransactionManager
-from common.data.dao.inventory import AssetDAO
-from common.data.dao.user import UserDAO, BalanceDAO
-from common.data.dao.asset import AssetBalanceDAO
+from common.data.dao.inventory.asset_dao import AssetDAO
+from common.data.dao.user.user_dao import UserDAO
+from common.data.dao.user.balance_dao import BalanceDAO
+from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from common.exceptions import (
     CNOPInsufficientBalanceException,
     CNOPDatabaseOperationException,

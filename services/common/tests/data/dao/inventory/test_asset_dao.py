@@ -8,7 +8,7 @@ from decimal import Decimal
 # Add the common directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from src.data.dao.inventory import AssetDAO
+from src.data.dao.inventory.asset_dao import AssetDAO
 from src.data.entities.inventory import Asset, AssetItem
 from src.data.exceptions import CNOPDatabaseOperationException
 

@@ -186,8 +186,8 @@ def get_database_health() -> bool:
     """
     try:
         # Test DynamoDB connection
-        from ...data.database.dynamodb_connection import dynamodb_manager
-        health_ok = dynamodb_manager.health_check()
+        from ...data.database.dynamodb_connection import get_dynamodb_manager
+        health_ok = get_dynamodb_manager().health_check()
         return health_ok
     except Exception as e:
         logger.warning(

@@ -14,7 +14,7 @@ from api_models.auth.profile import (
     ProfileUpdateErrorResponse
 )
 from api_models.shared.common import ErrorResponse
-from common.data.database import get_user_dao
+from common.data.database.dependencies import get_user_dao
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import (
     CNOPEntityNotFoundException as CNOPUserNotFoundException

@@ -11,9 +11,10 @@ from typing import Union
 from fastapi import APIRouter, Depends, status, Request
 from api_models.asset import GetPortfolioRequest, GetPortfolioResponse, PortfolioAssetData
 from api_models.shared.common import ErrorResponse
-from common.data.dao.user import BalanceDAO, UserDAO
-from common.data.dao.asset import AssetBalanceDAO
-from common.data.dao.inventory import AssetDAO
+from common.data.dao.user.balance_dao import BalanceDAO
+from common.data.dao.user.user_dao import UserDAO
+from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
+from common.data.dao.inventory.asset_dao import AssetDAO
 from common.exceptions import CNOPDatabaseOperationException
 from common.exceptions.shared_exceptions import (
     CNOPInternalServerException,

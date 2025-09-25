@@ -98,9 +98,13 @@ class TestAcquireLock:
         operation = "deposit"
         timeout = 10
 
-        with patch('src.core.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
             mock_table = MagicMock()
-            mock_db_manager.get_connection.return_value.users_table = mock_table
+            mock_manager = MagicMock()
+            mock_connection = MagicMock()
+            mock_connection.users_table = mock_table
+            mock_manager.get_connection.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             lock_id = acquire_lock(username, operation, timeout)
 
@@ -126,9 +130,13 @@ class TestAcquireLock:
         operation = "deposit"
         timeout = 10
 
-        with patch('src.core.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
             mock_table = MagicMock()
-            mock_db_manager.get_connection.return_value.users_table = mock_table
+            mock_manager = MagicMock()
+            mock_connection = MagicMock()
+            mock_connection.users_table = mock_table
+            mock_manager.get_connection.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             # Simulate conditional check failure
             error_response = {
@@ -148,9 +156,13 @@ class TestAcquireLock:
         operation = "deposit"
         timeout = 10
 
-        with patch('src.core.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
             mock_table = MagicMock()
-            mock_db_manager.get_connection.return_value.users_table = mock_table
+            mock_manager = MagicMock()
+            mock_connection = MagicMock()
+            mock_connection.users_table = mock_table
+            mock_manager.get_connection.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             # Simulate database error
             mock_table.put_item.side_effect = Exception("Database connection failed")
@@ -167,9 +179,13 @@ class TestReleaseLock:
         username = "test-user-123"
         lock_id = "lock-123"
 
-        with patch('src.core.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
             mock_table = MagicMock()
-            mock_db_manager.get_connection.return_value.users_table = mock_table
+            mock_manager = MagicMock()
+            mock_connection = MagicMock()
+            mock_connection.users_table = mock_table
+            mock_manager.get_connection.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             result = release_lock(username, lock_id)
 
@@ -189,9 +205,13 @@ class TestReleaseLock:
         username = "test-user-123"
         lock_id = "lock-123"
 
-        with patch('src.core.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
             mock_table = MagicMock()
-            mock_db_manager.get_connection.return_value.users_table = mock_table
+            mock_manager = MagicMock()
+            mock_connection = MagicMock()
+            mock_connection.users_table = mock_table
+            mock_manager.get_connection.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             # Simulate conditional check failure
             error_response = {
@@ -211,9 +231,13 @@ class TestReleaseLock:
         username = "test-user-123"
         lock_id = "lock-123"
 
-        with patch('src.core.utils.lock_manager.dynamodb_manager') as mock_db_manager:
+        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
             mock_table = MagicMock()
-            mock_db_manager.get_connection.return_value.users_table = mock_table
+            mock_manager = MagicMock()
+            mock_connection = MagicMock()
+            mock_connection.users_table = mock_table
+            mock_manager.get_connection.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             # Simulate database error
             mock_table.delete_item.side_effect = Exception("Database connection failed")

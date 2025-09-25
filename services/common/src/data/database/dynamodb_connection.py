@@ -6,6 +6,7 @@ retry logic, and health monitoring for all services.
 """
 
 from ...shared.logging import BaseLogger, Loggers, LogActions
+from typing import Optional
 import os
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
@@ -70,7 +71,7 @@ class DynamoDBManager:
             message="DynamoDB connection initialized using universal session pattern (IRSA/AssumeRole/local)"
         )
 
-        # ✅ Get table references
+        # Get table references
         self.users_table = self.dynamodb.Table(self.users_table_name)
         self.orders_table = self.dynamodb.Table(self.orders_table_name)
         self.inventory_table = self.dynamodb.Table(self.inventory_table_name)
@@ -107,17 +108,17 @@ class DynamoDBConnection:
     """
 
     def __init__(self, users_table, orders_table, inventory_table):
-        # ✅ ONLY store table references - NO business logic
+        # Store table references only
         self.users_table = users_table
         self.orders_table = orders_table
         self.inventory_table = inventory_table
 
 
-# ✅ Global DynamoDB manager instance
-dynamodb_manager = DynamoDBManager()
+# Optional improvement: Make it more explicit
+_manager: Optional[DynamoDBManager] = None
 
-
-# ✅ FastAPI dependency for getting database connection
-def get_dynamodb():
-    """FastAPI dependency to get DynamoDB connection"""
-    return dynamodb_manager.get_connection()
+def get_dynamodb_manager() -> DynamoDBManager:
+    global _manager
+    if _manager is None:
+        _manager = DynamoDBManager()
+    return _manager

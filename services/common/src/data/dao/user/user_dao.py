@@ -4,7 +4,7 @@ from boto3.dynamodb.conditions import Key
 import sys
 import os
 
-# Add the src directory to Python path for editor recognition
+# Path setup for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from ..base_dao import BaseDAO
@@ -25,7 +25,7 @@ class UserDAO(BaseDAO):
         """Initialize UserDAO with database connection and password manager"""
         super().__init__(db_connection)
         self.password_manager = PasswordManager()
-        # Table reference - change here if we need to switch tables
+        # Table reference
         self.table = self.db.users_table
 
     def create_user(self, user: User) -> User:

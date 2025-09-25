@@ -12,8 +12,8 @@ from api_models.order import OrderListResponse, OrderSummary
 from api_models.shared.common import ErrorResponse
 from common.data.entities.order.enums import OrderType
 from common.data.dao.order.order_dao import OrderDAO
-from common.data.dao.inventory import AssetDAO
-from common.data.dao.user import UserDAO
+from common.data.dao.inventory.asset_dao import AssetDAO
+from common.data.dao.user.user_dao import UserDAO
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from controllers.dependencies import (

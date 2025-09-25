@@ -10,7 +10,7 @@ from typing import Union
 from fastapi import APIRouter, HTTPException, Depends, status
 from api_models.balance import TransactionListResponse, TransactionResponse
 from api_models.shared.common import ErrorResponse
-from common.data.database import get_balance_dao
+from common.data.database.dependencies import get_balance_dao
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions

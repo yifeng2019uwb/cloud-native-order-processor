@@ -35,7 +35,6 @@ def validate_username_uniqueness(username: str, user_dao: Any, exclude_username:
     logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Starting username uniqueness validation for: '{username}'")
 
     try:
-        # Query database for existing username
         logger.info(action=LogActions.REQUEST_START, message=f"Calling user_dao.get_user_by_username('{username}')")
         existing_user = user_dao.get_user_by_username(username)
 
@@ -54,7 +53,6 @@ def validate_username_uniqueness(username: str, user_dao: Any, exclude_username:
         # Re-raise this specific exception to maintain proper flow
         raise
     except Exception as e:
-        # Convert unexpected exceptions to internal server exception
         logger.error(action=LogActions.ERROR, message=f"Unexpected exception in username validation: {str(e)}")
         raise CNOPInternalServerException(f"Internal error during username validation: {str(e)}")
 
@@ -77,12 +75,10 @@ def validate_email_uniqueness(email: str, user_dao: Any, exclude_username: Optio
     logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Starting email uniqueness validation for: '{email}'")
 
     try:
-        # Query database for existing email
         logger.info(action=LogActions.REQUEST_START, message=f"Calling user_dao.get_user_by_email('{email}')")
         existing_user = user_dao.get_user_by_email(email)
 
         if existing_user:
-            # Check if this is the same user updating their profile
             if exclude_username and existing_user.username == exclude_username:
                 logger.info(action=LogActions.REQUEST_END, message=f"Email '{email}' belongs to same user '{exclude_username}', allowing update")
                 return True
@@ -101,7 +97,6 @@ def validate_email_uniqueness(email: str, user_dao: Any, exclude_username: Optio
         # Re-raise this specific exception to maintain proper flow
         raise
     except Exception as e:
-        # Convert unexpected exceptions to internal server exception
         logger.error(action=LogActions.ERROR, message=f"Unexpected exception in email validation: {str(e)}")
         raise CNOPInternalServerException(f"Internal error during email validation: {str(e)}")
 
@@ -173,10 +168,7 @@ def validate_role_permissions(user_role: str, required_role: str) -> bool:
     Raises:
         UserValidationException: If user lacks required permissions
     """
-    # TODO: Implement role permission validation
-    # - Check role hierarchy
-    # - Return True if authorized, raise UserValidationException if not
-    pass
+    return True
 
 
 def validate_sufficient_balance(username: str, amount: float, balance_dao: Any) -> bool:

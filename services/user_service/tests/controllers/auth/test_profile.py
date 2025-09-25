@@ -12,7 +12,6 @@ from user_exceptions import CNOPUserAlreadyExistsException
 from datetime import datetime, timezone
 
 def test_get_profile_success():
-    # Mock user data
     mock_user = MagicMock()
     mock_user.username = "testuser"
     mock_user.email = "test@example.com"
@@ -95,9 +94,8 @@ def test_update_profile_email_in_use():
     mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
     mock_user_dao = MagicMock()
-    # Mock that another user already has the email
     other_user = MagicMock()
-    other_user.username = "other_user"  # Different username
+    other_user.username = "other_user"
     mock_user_dao.get_user_by_email = MagicMock(return_value=other_user)
 
     profile_data = UserProfileUpdateRequest(
@@ -108,7 +106,6 @@ def test_update_profile_email_in_use():
         date_of_birth="1990-01-01"
     )
 
-    # This should raise CNOPUserAlreadyExistsException due to email uniqueness validation
     with pytest.raises(CNOPUserAlreadyExistsException) as exc_info:
         update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
     assert "Email 'existing@example.com' already exists" in str(exc_info.value)
@@ -158,7 +155,6 @@ def test_update_profile_with_own_email():
     mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
     mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
-    # Mock updated user
     updated_user = MagicMock()
     updated_user.username = "john_doe"
     updated_user.email = "john@example.com"  # Same email
@@ -184,13 +180,11 @@ def test_update_profile_with_own_email():
         date_of_birth="1990-01-01"
     )
 
-    # This should succeed since email is the same
     result = update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
     assert result.message == "Profile updated successfully"
     assert result.user.username == "john_doe"
     assert result.user.email == "john@example.com"
 
-    # Verify that get_user_by_email was not called (since email is the same)
     mock_user_dao.get_user_by_email.assert_not_called()
 
 @pytest.mark.asyncio
@@ -219,6 +213,3 @@ async def test_update_profile_database_error():
     with pytest.raises(HTTPException) as exc_info:
         await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
     assert exc_info.value.status_code == 500
-
-# Note: JWT validation tests removed - now using Gateway header validation
-# The get_current_user function is tested in test_dependencies.py

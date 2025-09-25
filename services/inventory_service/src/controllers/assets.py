@@ -12,7 +12,7 @@ from api_models.inventory.asset_response import (
 )
 from api_models.inventory.asset_requests import AssetIdRequest
 from common.data.dao.inventory.asset_dao import AssetDAO
-from common.data.database import get_asset_dao
+from common.data.database.dependencies import get_asset_dao
 from common.exceptions.shared_exceptions import CNOPAssetNotFoundException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from inventory_exceptions import (

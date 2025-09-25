@@ -139,11 +139,13 @@ class TestDependencies:
 
     def test_get_asset_balance_dao_dependency(self):
         """Test get_asset_balance_dao_dependency"""
-        with patch('src.controllers.dependencies.dynamodb_manager') as mock_dynamodb_manager, \
+        with patch('src.controllers.dependencies.get_dynamodb_manager') as mock_get_manager, \
              patch('src.controllers.dependencies.AssetBalanceDAO') as mock_asset_balance_dao_class:
 
             mock_connection = Mock()
-            mock_dynamodb_manager.get_connection.return_value = mock_connection
+            mock_manager = MagicMock()
+            mock_manager.get_connection.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             mock_dao = Mock(spec=ASSET_BALANCE_DAO_SPEC)
             mock_asset_balance_dao_class.return_value = mock_dao
@@ -151,16 +153,18 @@ class TestDependencies:
             result = get_asset_balance_dao_dependency()
 
             assert result == mock_dao
-            mock_dynamodb_manager.get_connection.assert_called_once()
+            mock_manager.get_connection.assert_called_once()
             mock_asset_balance_dao_class.assert_called_once_with(mock_connection)
 
     def test_get_asset_transaction_dao_dependency(self):
         """Test get_asset_transaction_dao_dependency"""
-        with patch('src.controllers.dependencies.dynamodb_manager') as mock_dynamodb_manager, \
+        with patch('src.controllers.dependencies.get_dynamodb_manager') as mock_get_manager, \
              patch('src.controllers.dependencies.AssetTransactionDAO') as mock_asset_transaction_dao_class:
 
             mock_connection = Mock()
-            mock_dynamodb_manager.get_connection.return_value = mock_connection
+            mock_manager = MagicMock()
+            mock_manager.get_connection.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             mock_dao = Mock(spec=ASSET_TRANSACTION_DAO_SPEC)
             mock_asset_transaction_dao_class.return_value = mock_dao
@@ -168,7 +172,7 @@ class TestDependencies:
             result = get_asset_transaction_dao_dependency()
 
             assert result == mock_dao
-            mock_dynamodb_manager.get_connection.assert_called_once()
+            mock_manager.get_connection.assert_called_once()
             mock_asset_transaction_dao_class.assert_called_once_with(mock_connection)
 
     def test_get_transaction_manager(self):

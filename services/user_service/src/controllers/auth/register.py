@@ -16,7 +16,7 @@ from api_models.auth.registration import (
 )
 from api_models.shared.common import ErrorResponse
 from common.auth.security import TokenManager, AuditLogger
-from common.data.database import get_user_dao, get_balance_dao
+from common.data.database.dependencies import get_user_dao, get_balance_dao
 from common.data.entities.user import User, Balance
 from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,

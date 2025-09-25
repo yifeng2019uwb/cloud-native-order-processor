@@ -15,9 +15,9 @@ from api_models.asset import (
     AssetBalanceData
 )
 from api_models.shared.common import ErrorResponse
-from common.data.dao.asset import AssetBalanceDAO
-from common.data.dao.user import UserDAO
-from common.data.dao.inventory import AssetDAO
+from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
+from common.data.dao.user.user_dao import UserDAO
+from common.data.dao.inventory.asset_dao import AssetDAO
 from common.exceptions import (
     CNOPEntityNotFoundException,
     CNOPDatabaseOperationException,

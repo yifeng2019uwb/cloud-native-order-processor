@@ -5,7 +5,7 @@ from datetime import datetime
 import sys
 import os
 
-from src.data.dao.user import UserDAO
+from src.data.dao.user.user_dao import UserDAO
 from src.data.entities.user import User, UserItem
 from src.exceptions.shared_exceptions import CNOPEntityAlreadyExistsException, CNOPEntityNotFoundException, CNOPInvalidCredentialsException, CNOPUserNotFoundException
 from botocore.exceptions import ClientError
@@ -76,7 +76,6 @@ class TestUserDAO:
 
     def test_create_user_success(self, user_dao, mock_db_connection):
         """Test successful user creation"""
-        # Mock that user doesn't exist initially
         mock_db_connection.users_table.get_item.return_value = {}
 
         # Mock database response
@@ -157,7 +156,6 @@ class TestUserDAO:
         # Mock empty database response
         mock_db_connection.users_table.get_item.return_value = {}
 
-        # Should raise CNOPUserNotFoundException
         with pytest.raises(CNOPUserNotFoundException) as exc_info:
             user_dao.get_user_by_username('nonexistent')
 
@@ -194,7 +192,6 @@ class TestUserDAO:
         # Mock empty database response
         mock_db_connection.users_table.query.return_value = {'Items': []}
 
-        # Should raise CNOPUserNotFoundException
         with pytest.raises(CNOPUserNotFoundException) as exc_info:
             user_dao.get_user_by_email('nonexistent@example.com')
 

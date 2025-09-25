@@ -22,7 +22,7 @@ class AssetTransactionDAO(BaseDAO):
     def __init__(self, db_connection):
         """Initialize AssetTransactionDAO with database connection"""
         super().__init__(db_connection)
-        # Table reference - change here if we need to switch tables
+        # Table reference
         self.table = self.db.users_table
 
     def create_asset_transaction(self, transaction: AssetTransaction) -> AssetTransaction:
@@ -129,7 +129,7 @@ class AssetTransactionDAO(BaseDAO):
         """Get all transactions for a user across all assets"""
         # Note: This method requires a GSI on username for efficient querying
         # For now, we'll return empty list and add GSI later when needed
-        # TODO: Add GSI on username field for efficient user transaction queries
+        # Future enhancement: Add GSI on username field for efficient user transaction queries
         logger.warning(
             action=LogActions.ERROR,
             message="get_user_transactions() requires GSI on username field for efficient querying"

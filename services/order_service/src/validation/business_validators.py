@@ -9,18 +9,16 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-# Import proper enums from common package
 from common.data.entities.order.enums import OrderType, OrderStatus
 
-# Import custom exceptions
 from common.exceptions import CNOPAssetNotFoundException, CNOPOrderNotFoundException
 from order_exceptions import CNOPOrderValidationException
 
-# Import DAOs from common package
-from common.data.dao.inventory import AssetDAO
-from common.data.dao.order import OrderDAO
-from common.data.dao.user import UserDAO, BalanceDAO
-from common.data.dao.asset import AssetBalanceDAO
+from common.data.dao.inventory.asset_dao import AssetDAO
+from common.data.dao.order.order_dao import OrderDAO
+from common.data.dao.user.user_dao import UserDAO
+from common.data.dao.user.balance_dao import BalanceDAO
+from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 
 
 def _validate_username_exists_and_active(username: str, user_dao: UserDAO) -> None:
@@ -37,7 +35,6 @@ def _validate_username_exists_and_active(username: str, user_dao: UserDAO) -> No
     try:
         user = user_dao.get_user_by_username(username)
         # User exists, consider them active (no is_active field in current User entity)
-        # TODO: Add is_active field to User entity if needed for account suspension
     except Exception as e:
         raise CNOPOrderValidationException(f"User '{username}' not found or invalid")
 
@@ -102,12 +99,9 @@ def _validate_user_balance_for_buy_order(
     try:
         user_balance = balance_dao.get_balance(username)
 
-                # For market orders, we need to get real market price
         if order_price is None:
-            # Import here to avoid circular imports
             from controllers.dependencies import get_current_market_price
 
-            # Get current market price using DAO
             try:
                 market_price = get_current_market_price(asset_id, asset_dao)
                 required_amount = quantity * market_price
@@ -173,33 +167,25 @@ def validate_order_creation_business_rules(
     - Market conditions
     """
 
-    # Check if username exists and is active
     _validate_username_exists_and_active(username, user_dao)
 
-    # Check if asset exists and is tradeable
     _validate_asset_exists_and_tradeable(asset_id, asset_dao)
 
-    # Business rule: order_price required for limit orders
     if order_type in [OrderType.LIMIT_BUY, OrderType.LIMIT_SELL]:
         if order_price is None:
             raise CNOPOrderValidationException(f"order_price is required for {order_type.value} orders")
         if expires_at is None:
             raise CNOPOrderValidationException("expires_at is required for limit orders")
-    # For market orders, price is ignored and will be set to current market price
 
-    # Business rule: Check minimum order size
     if quantity < Decimal("0.001"):
         raise CNOPOrderValidationException("Order quantity below minimum threshold (0.001)")
 
-    # Business rule: Check maximum order size
     if quantity > Decimal("1000"):
         raise CNOPOrderValidationException("Order quantity exceeds maximum threshold (1000)")
 
-    # Business rule: Check user balance for buy orders
     if order_type in [OrderType.MARKET_BUY, OrderType.LIMIT_BUY]:
         _validate_user_balance_for_buy_order(username, quantity, order_price, balance_dao, asset_dao, asset_id)
 
-    # Business rule: Check user portfolio for sell orders
     if order_type in [OrderType.MARKET_SELL, OrderType.LIMIT_SELL]:
         _validate_user_asset_quantity_for_sell_order(username, asset_id, quantity, asset_balance_dao)
 
@@ -220,20 +206,16 @@ def validate_order_cancellation_business_rules(
     - User has permission to cancel
     """
 
-    # Check if username exists and is active
     _validate_username_exists_and_active(username, user_dao)
 
-    # Check if order exists and belongs to user
     try:
         order = order_dao.get_order(order_id)
         if order.username != username:
             raise CNOPOrderValidationException("You can only cancel your own orders")
 
-        # Business rule: Only limit orders can be cancelled
         if order.order_type in [OrderType.MARKET_BUY, OrderType.MARKET_SELL]:
             raise CNOPOrderValidationException("Market orders cannot be cancelled")
 
-        # Business rule: Only pending orders can be cancelled
         if order.status not in [OrderStatus.PENDING, OrderStatus.QUEUED]:
             raise CNOPOrderValidationException(f"Order in {order.status.value} state cannot be cancelled")
 
@@ -256,10 +238,8 @@ def validate_order_retrieval_business_rules(
     - User has permission to view
     """
 
-    # Check if username exists and is active
     _validate_username_exists_and_active(username, user_dao)
 
-    # Check if order exists and belongs to user
     try:
         order = order_dao.get_order(order_id)
         if order.username != username:
@@ -285,10 +265,8 @@ def validate_order_listing_business_rules(
     - Status is valid (if filtering by status)
     """
 
-    # Check if username exists and is active
     _validate_username_exists_and_active(username, user_dao)
 
-    # Check if asset exists (if filtering by asset)
     if asset_id:
         _validate_asset_exists(asset_id, asset_dao)
 
@@ -308,10 +286,8 @@ def validate_order_history_business_rules(
     - User has permission to view history
     """
 
-    # Check if username exists and is active
     _validate_username_exists_and_active(username, user_dao)
 
-    # Check if asset exists
     _validate_asset_exists(asset_id, asset_dao)
 
 
@@ -329,15 +305,9 @@ def validate_market_conditions(
     - Price impact is acceptable
     """
 
-    # Basic market condition checks (placeholder for future market service integration)
 
-    # Check if market is open (simplified - always assume open for now)
-    # In a real implementation, this would check market hours, holidays, etc.
 
-    # Check liquidity for large orders (simplified threshold)
     if quantity > Decimal("100"):
-        # For now, just warn about large orders
-        # In a real implementation, this would check actual market liquidity
         pass
 
 
@@ -355,10 +325,6 @@ def validate_user_permissions(
     - User is not rate limited
     """
 
-    # Check if user account is active
     _validate_username_exists_and_active(username, user_dao)
 
-    # Basic rate limiting check (simplified)
-    # In a real implementation, this would check against a rate limiting service
-    # For now, we'll assume no rate limiting issues
     pass

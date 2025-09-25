@@ -7,7 +7,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 from typing import Optional
-from ...data.database.dynamodb_connection import dynamodb_manager
+from ...data.database.dynamodb_connection import get_dynamodb_manager
 from ...data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException, CNOPLockTimeoutException
 from ...shared.logging import BaseLogger, Loggers, LogActions
 
@@ -76,7 +76,7 @@ def acquire_lock(username: str, operation: str, timeout_seconds: int = 15) -> Op
 
         # Use conditional write to acquire lock
         # Only succeeds if no lock exists or existing lock is expired
-        dynamodb_manager.get_connection().users_table.put_item(
+        get_dynamodb_manager().get_connection().users_table.put_item(
             Item={
                 "Pk": f"USER#{username}",
                 "Sk": "LOCK",
@@ -131,7 +131,7 @@ def release_lock(username: str, lock_id: str) -> bool:
     """
     try:
         # Delete lock if it matches our lock_id
-        dynamodb_manager.get_connection().users_table.delete_item(
+        get_dynamodb_manager().get_connection().users_table.delete_item(
             Key={
                 "Pk": f"USER#{username}",
                 "Sk": "LOCK"

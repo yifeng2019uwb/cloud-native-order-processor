@@ -16,7 +16,7 @@ from api_models.auth.login import (
 )
 from api_models.shared.common import ErrorResponse, UserBaseInfo
 from common.data.entities.user import User
-from common.data.database import get_user_dao
+from common.data.database.dependencies import get_user_dao
 from common.auth.security import TokenManager, AuditLogger
 from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException, CNOPInternalServerException
 from user_exceptions import CNOPUserValidationException

@@ -4,7 +4,7 @@ from boto3.dynamodb.conditions import Attr
 import sys
 import os
 
-# Add the src directory to Python path for imports
+# Path setup for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from ..base_dao import BaseDAO
@@ -23,7 +23,7 @@ class AssetDAO(BaseDAO):
     def __init__(self, db_connection):
         """Initialize AssetDAO with database connection"""
         super().__init__(db_connection)
-        # Table reference - change here if we need to switch tables
+        # Table reference
         self.table = self.db.inventory_table
 
 

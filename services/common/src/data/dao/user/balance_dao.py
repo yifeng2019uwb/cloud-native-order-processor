@@ -9,7 +9,6 @@ from uuid import UUID
 
 from boto3.dynamodb.conditions import Key
 
-from ...database.dynamodb_connection import DynamoDBConnection
 from ...entities.user import Balance, BalanceTransaction, BalanceItem, BalanceTransactionItem
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPBalanceNotFoundException, CNOPTransactionNotFoundException
@@ -22,10 +21,9 @@ logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 class BalanceDAO(BaseDAO):
     """Data Access Object for balance operations."""
 
-    def __init__(self, db_connection: DynamoDBConnection):
+    def __init__(self, db_connection):
         super().__init__(db_connection)
-        self.table_name = "users"  # Using the same user table for balance data
-        # Table reference - change here if we need to switch tables
+        self.table_name = "users"
         self.table = self.db.users_table
 
 
@@ -41,7 +39,6 @@ class BalanceDAO(BaseDAO):
         if not item:
             raise CNOPBalanceNotFoundException(f"Balance for user '{username}' not found")
 
-        # Convert database item to BalanceItem and then to Balance entity
         balance_item = BalanceItem(**item)
         return balance_item.to_entity()
 
@@ -49,7 +46,6 @@ class BalanceDAO(BaseDAO):
     def create_balance(self, balance: Balance) -> Balance:
         """Create a new balance record for a user."""
         try:
-            # Convert Balance entity to BalanceItem for database storage
             balance_item = BalanceItem.from_entity(balance)
             balance_data = balance_item.model_dump()
 
@@ -60,7 +56,6 @@ class BalanceDAO(BaseDAO):
                 message=f"Balance created successfully: user={balance.username}, current_balance={balance.current_balance}"
             )
 
-            # Convert back to Balance entity from database response
             return BalanceItem(**balance_data).to_entity()
 
         except Exception as e:
@@ -80,7 +75,6 @@ class BalanceDAO(BaseDAO):
                        f"description={transaction.description}"
             )
 
-            # Convert BalanceTransaction entity to BalanceTransactionItem for database storage
             transaction_item = BalanceTransactionItem.from_entity(transaction)
             transaction_data = transaction_item.model_dump()
 
@@ -95,7 +89,6 @@ class BalanceDAO(BaseDAO):
                        f"amount={transaction.amount}, reference_id={transaction.reference_id}"
             )
 
-            # Convert back to BalanceTransaction entity from database response
             return BalanceTransactionItem(**transaction_data).to_entity()
 
         except Exception as e:
@@ -108,10 +101,8 @@ class BalanceDAO(BaseDAO):
     def update_balance(self, username: str, new_balance: Decimal) -> Balance:
         """Update balance for a user."""
         try:
-            # Get current balance to preserve created_at
             current_balance = self.get_balance(username)
 
-            # Create updated balance entity
             updated_balance = Balance(
                 username=username,
                 current_balance=new_balance,
@@ -119,7 +110,6 @@ class BalanceDAO(BaseDAO):
                 updated_at=datetime.utcnow()
             )
 
-            # Convert to BalanceItem and save
             balance_item = BalanceItem.from_entity(updated_balance)
             balance_data = balance_item.model_dump()
 
@@ -153,9 +143,7 @@ class BalanceDAO(BaseDAO):
                        f"transaction_amount={transaction.amount}, type={transaction.transaction_type.value}"
             )
 
-            # Get current balance and update it
             current_balance = self.get_balance(transaction.username)
-            # Calculate new balance value
             new_balance = current_balance.current_balance + transaction.amount
             logger.info(
                 action=LogActions.DB_OPERATION,
@@ -163,7 +151,6 @@ class BalanceDAO(BaseDAO):
                         f"transaction={transaction.amount}, new={new_balance}"
             )
 
-            # Update existing balance
             self.update_balance(transaction.username, new_balance)
             logger.info(
                 action=LogActions.DB_OPERATION,
@@ -177,8 +164,7 @@ class BalanceDAO(BaseDAO):
     def get_transaction(self, username: str, transaction_id: UUID) -> BalanceTransaction:
         """Get a specific transaction for a user."""
         try:
-            # Note: This method needs GSI2 for efficient lookup by transaction_id
-            # For now, we'll need to query by user and filter
+
             transactions, _ = self.get_user_transactions(username, limit=1000)
 
             for transaction in transactions:
@@ -214,7 +200,6 @@ class BalanceDAO(BaseDAO):
 
             transactions = []
             for item in response.get("Items", []):
-                # Convert database item to BalanceTransactionItem and then to BalanceTransaction entity
                 transaction_item = BalanceTransactionItem(**item)
                 transaction = transaction_item.to_entity()
                 transactions.append(transaction)
@@ -228,3 +213,24 @@ class BalanceDAO(BaseDAO):
             message=f"Failed to get transactions for user '{username}': {e}"
         )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving transactions for user '{username}': {str(e)}")
+
+    def cleanup_failed_transaction(self, username: str, transaction_id: UUID) -> None:
+        """Clean up a failed transaction record to maintain data consistency."""
+        try:
+
+            key = {
+                "Pk": f"TRANS#{username}#{transaction_id}",
+                "Sk": "TRANSACTION"
+            }
+
+            self.table.delete_item(Key=key)
+            logger.info(
+                action=LogActions.DATABASE_OPERATION,
+                message=f"Cleaned up failed transaction: user={username}, transaction_id={transaction_id}"
+            )
+
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to cleanup transaction: user={username}, transaction_id={transaction_id}, error={str(e)}"
+            )

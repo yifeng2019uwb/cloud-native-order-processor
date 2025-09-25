@@ -25,7 +25,7 @@ class OrderDAO(BaseDAO):
     def __init__(self, db_connection):
         """Initialize Order DAO with DynamoDB connection"""
         super().__init__(db_connection)
-        # Table reference - change here if we need to switch tables
+        # Table reference
         self.table = self.db.orders_table
 
     def create_order(self, order: Order) -> Order:

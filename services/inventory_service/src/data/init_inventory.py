@@ -6,13 +6,12 @@ import asyncio
 from decimal import Decimal
 from typing import List
 from common.data.dao.inventory.asset_dao import AssetDAO
-from common.data.database.dynamodb_connection import dynamodb_manager
+from common.data.database.dynamodb_connection import get_dynamodb_manager
 from common.data.entities.inventory import Asset
 from common.exceptions import CNOPEntityNotFoundException
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from constants import DEFAULT_ASSET_AMOUNT, DEFAULT_ASSET_CATEGORY
+from src.constants import DEFAULT_ASSET_AMOUNT, DEFAULT_ASSET_CATEGORY
 
-# Initialize our standardized logger
 logger = BaseLogger(Loggers.INVENTORY)
 
 def get_category(coin: dict) -> str:
@@ -22,14 +21,13 @@ def get_category(coin: dict) -> str:
 async def upsert_coins_to_inventory(coins: List[dict]) -> int:
     """Upsert coins data to inventory - update existing, create new"""
     updated_count = 0
-    db_connection = dynamodb_manager.get_connection()
+    db_connection = get_dynamodb_manager().get_connection()
     asset_dao = AssetDAO(db_connection)
 
     for coin in coins:
         try:
             asset_id = coin["symbol"].upper()
 
-            # Create Asset entity with all the CoinGecko data
             asset = Asset(
                 asset_id=asset_id,
                 name=coin.get("name", ""),
@@ -91,7 +89,6 @@ async def initialize_inventory_data(force_recreate: bool = False) -> dict:
     """Initialize inventory data on service startup by fetching from data providers"""
     logger.info(action=LogActions.SERVICE_START, message="Starting inventory data initialization...")
     try:
-        # Import here to avoid circular imports
         from services.fetch_coins import fetch_coins
 
         coins = await fetch_coins()

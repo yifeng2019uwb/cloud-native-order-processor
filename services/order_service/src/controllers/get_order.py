@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, status
 from api_models.order import GetOrderResponse, OrderData
 from api_models.shared.common import ErrorResponse
 from common.data.dao.order.order_dao import OrderDAO
-from common.data.dao.user import UserDAO
+from common.data.dao.user.user_dao import UserDAO
 from common.exceptions.shared_exceptions import (
     CNOPOrderNotFoundException,
     CNOPInternalServerException

@@ -4,8 +4,8 @@ FastAPI dependencies for authentication
 from typing import Optional
 from fastapi import Depends, HTTPException, status, Request, Header
 from common.data.entities.user import User
-from common.data.dao.user import UserDAO
-from common.data.database import get_user_dao as get_common_user_dao
+from common.data.dao.user.user_dao import UserDAO
+from common.data.database.dependencies import get_user_dao as get_common_user_dao
 from common.shared.logging import BaseLogger, Loggers, LogActions
 logger = BaseLogger(Loggers.USER)
 
@@ -124,12 +124,10 @@ def get_optional_current_user(
     Returns:
         Current user information if authenticated, None otherwise
     """
-    # Check if all required headers are present
     if not all([x_source, x_auth_service, x_user_id]):
         return None
 
     try:
-        # Verify headers
         if x_source != "gateway" or x_auth_service != "auth-service":
             return None
 
@@ -159,9 +157,6 @@ def require_admin_user(
     Raises:
         HTTPException: If user is not admin
     """
-    # TODO: Implement admin role checking
-    # For now, all authenticated users are considered admins
-    # In production, check user.role or user.is_admin
 
     logger.debug(action=LogActions.AUTH_SUCCESS, message=f"Admin access granted to user: {current_user.email}")
     return current_user

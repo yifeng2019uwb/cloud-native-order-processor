@@ -11,12 +11,14 @@ Provides dependency injection for:
 from decimal import Decimal
 from typing import Optional
 from fastapi import HTTPException, status, Request, Header
-from common.data.database import get_order_dao, get_balance_dao, get_asset_dao, get_user_dao
-from common.data.database.dynamodb_connection import dynamodb_manager
+from common.data.database.dependencies import get_order_dao, get_balance_dao, get_asset_dao, get_user_dao
+from common.data.database.dynamodb_connection import get_dynamodb_manager
 from common.data.dao.order.order_dao import OrderDAO
-from common.data.dao.user import UserDAO, BalanceDAO
-from common.data.dao.inventory import AssetDAO
-from common.data.dao.asset import AssetBalanceDAO, AssetTransactionDAO
+from common.data.dao.user.user_dao import UserDAO
+from common.data.dao.user.balance_dao import BalanceDAO
+from common.data.dao.inventory.asset_dao import AssetDAO
+from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
+from common.data.dao.asset.asset_transaction_dao import AssetTransactionDAO
 from common.core.utils.transaction_manager import TransactionManager
 from common.shared.logging import BaseLogger, Loggers, LogActions
 
@@ -46,12 +48,12 @@ def get_asset_dao_dependency() -> AssetDAO:
 
 def get_asset_balance_dao_dependency() -> AssetBalanceDAO:
     """Get AssetBalanceDAO instance for asset balance operations"""
-    return AssetBalanceDAO(dynamodb_manager.get_connection())
+    return AssetBalanceDAO(get_dynamodb_manager().get_connection())
 
 
 def get_asset_transaction_dao_dependency() -> AssetTransactionDAO:
     """Get AssetTransactionDAO instance for asset transaction operations"""
-    return AssetTransactionDAO(dynamodb_manager.get_connection())
+    return AssetTransactionDAO(get_dynamodb_manager().get_connection())
 
 
 def get_transaction_manager() -> TransactionManager:

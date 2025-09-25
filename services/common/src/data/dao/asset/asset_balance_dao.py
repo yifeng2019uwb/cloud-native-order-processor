@@ -22,7 +22,7 @@ class AssetBalanceDAO(BaseDAO):
     def __init__(self, db_connection):
         """Initialize AssetBalanceDAO with database connection"""
         super().__init__(db_connection)
-        # Table reference - change here if we need to switch tables
+        # Table reference
         self.table = self.db.users_table
 
     def upsert_asset_balance(self, username: str, asset_id: str, quantity: Decimal) -> AssetBalance:

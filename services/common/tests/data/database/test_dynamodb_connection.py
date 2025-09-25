@@ -15,7 +15,7 @@ os.environ.setdefault('AWS_REGION', 'us-west-2')
 
 # Mock boto3 before any imports
 with patch('boto3.resource'), patch('boto3.client'):
-    from src.data.database.dynamodb_connection import DynamoDBManager, DynamoDBConnection, get_dynamodb, dynamodb_manager
+    from src.data.database.dynamodb_connection import DynamoDBManager, DynamoDBConnection, get_dynamodb_manager
     from src.exceptions.shared_exceptions import CNOPInternalServerException
 
 
@@ -233,58 +233,33 @@ class TestDynamoDBConnection:
         assert connection.inventory_table.name == 'inventory'
 
 
-class TestGetDynamoDBFunction:
-    """Test get_dynamodb function"""
+class TestGetDynamoDBManagerFunction:
+    """Test get_dynamodb_manager function"""
 
-    @patch('src.data.database.dynamodb_connection.dynamodb_manager')
-    def test_get_dynamodb_dependency(self, mock_manager):
-        """Test get_dynamodb FastAPI dependency function"""
-        # Create mock connection
-        mock_connection = Mock()
-        mock_manager.get_connection.return_value = mock_connection
+    def test_get_dynamodb_manager_singleton(self):
+        """Test get_dynamodb_manager returns singleton instance"""
+        # Clear any existing manager
+        import src.data.database.dynamodb_connection as module
+        module._manager = None
 
-        # Test the dependency function
-        result = get_dynamodb()
-        assert result == mock_connection
-        mock_manager.get_connection.assert_called_once()
+        # Test the function returns a manager
+        result = get_dynamodb_manager()
+        assert result is not None
+        assert isinstance(result, DynamoDBManager)
 
-    @patch('src.data.database.dynamodb_connection.dynamodb_manager')
-    def test_get_dynamodb_dependency_with_exception(self, mock_manager):
-        """Test get_dynamodb dependency handles exceptions"""
-        # Create mock connection that raises exception
-        mock_manager.get_connection.side_effect = Exception("Connection failed")
+    def test_get_dynamodb_manager_singleton_behavior(self):
+        """Test get_dynamodb_manager returns same instance"""
+        # Clear any existing manager
+        import src.data.database.dynamodb_connection as module
+        module._manager = None
 
-        # Test the dependency function
-        with pytest.raises(Exception) as exc_info:
-            get_dynamodb()
-        assert "Connection failed" in str(exc_info.value)
+        # Get two instances
+        manager1 = get_dynamodb_manager()
+        manager2 = get_dynamodb_manager()
+
+        assert manager1 is manager2
 
 
-class TestGlobalDynamoDBManager:
-    """Test global dynamodb_manager instance"""
-
-    def test_global_manager_initialization(self):
-        """Test that global dynamodb_manager is properly initialized"""
-
-        # Verify manager is initialized
-        assert dynamodb_manager is not None
-        assert hasattr(dynamodb_manager, 'users_table_name')
-        assert hasattr(dynamodb_manager, 'orders_table_name')
-        assert hasattr(dynamodb_manager, 'inventory_table_name')
-
-    @patch.dict(os.environ, {
-        'USERS_TABLE': 'test-users-table',
-        'ORDERS_TABLE': 'test-orders-table',
-        'INVENTORY_TABLE': 'test-inventory-table',
-        'AWS_REGION': 'us-west-2'
-    })
-    def test_global_manager_configuration(self):
-        """Test global manager has correct configuration"""
-        # Verify manager is initialized
-        assert dynamodb_manager is not None
-        assert hasattr(dynamodb_manager, 'users_table_name')
-        assert hasattr(dynamodb_manager, 'orders_table_name')
-        assert hasattr(dynamodb_manager, 'inventory_table_name')
 
 
 class TestDynamoDBIntegration:

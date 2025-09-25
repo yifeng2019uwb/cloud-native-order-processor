@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from common.exceptions import CNOPEntityNotFoundException
 
-# Import the module to test
 from data.init_inventory import (
     get_category,
     upsert_coins_to_inventory,
@@ -58,9 +57,11 @@ class TestUpsertCoinsToInventory:
             }
         ]
 
-        with patch('data.init_inventory.dynamodb_manager') as mock_db_manager:
+        with patch('data.init_inventory.get_dynamodb_manager') as mock_get_manager:
             mock_connection = AsyncMock()
-            mock_db_manager.get_connection.return_value.__aenter__.return_value = mock_connection
+            mock_manager = MagicMock()
+            mock_manager.get_connection.return_value.__aenter__.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             mock_asset_dao = MagicMock()
             mock_asset_dao.update_asset.return_value = None
@@ -84,9 +85,11 @@ class TestUpsertCoinsToInventory:
             }
         ]
 
-        with patch('data.init_inventory.dynamodb_manager') as mock_db_manager:
+        with patch('data.init_inventory.get_dynamodb_manager') as mock_get_manager:
             mock_connection = AsyncMock()
-            mock_db_manager.get_connection.return_value.__aenter__.return_value = mock_connection
+            mock_manager = MagicMock()
+            mock_manager.get_connection.return_value.__aenter__.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             mock_asset_dao = MagicMock()
             mock_asset_dao.update_asset.return_value = None
@@ -116,9 +119,11 @@ class TestUpsertCoinsToInventory:
             }
         ]
 
-        with patch('data.init_inventory.dynamodb_manager') as mock_db_manager:
+        with patch('data.init_inventory.get_dynamodb_manager') as mock_get_manager:
             mock_connection = AsyncMock()
-            mock_db_manager.get_connection.return_value.__aenter__.return_value = mock_connection
+            mock_manager = MagicMock()
+            mock_manager.get_connection.return_value.__aenter__.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             mock_asset_dao = MagicMock()
             mock_asset_dao.update_asset.return_value = None
@@ -148,9 +153,11 @@ class TestUpsertCoinsToInventory:
             }
         ]
 
-        with patch('data.init_inventory.dynamodb_manager') as mock_db_manager:
+        with patch('data.init_inventory.get_dynamodb_manager') as mock_get_manager:
             mock_connection = AsyncMock()
-            mock_db_manager.get_connection.return_value.__aenter__.return_value = mock_connection
+            mock_manager = MagicMock()
+            mock_manager.get_connection.return_value.__aenter__.return_value = mock_connection
+            mock_get_manager.return_value = mock_manager
 
             mock_asset_dao = MagicMock()
             # First call succeeds, second call fails
@@ -159,7 +166,6 @@ class TestUpsertCoinsToInventory:
             with patch('data.init_inventory.AssetDAO', return_value=mock_asset_dao):
                 result = await upsert_coins_to_inventory(mock_coins)
 
-                # Should still return 1 for the successful upsert
                 assert result == 1
                 assert mock_asset_dao.update_asset.call_count == 2
 

@@ -11,10 +11,6 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, Any, Optional, Callable
 from .lock_manager import UserLock, LOCK_TIMEOUTS
-from ...data.dao.user import UserDAO, BalanceDAO
-from ...data.dao.order import OrderDAO
-from ...data.dao.inventory import AssetDAO
-from ...data.dao.asset import AssetBalanceDAO, AssetTransactionDAO
 from ...data.entities.user import BalanceTransaction, TransactionType, TransactionStatus
 from ...data.entities.order import Order, OrderStatus, OrderType
 from ...data.entities.asset import AssetTransaction, AssetTransactionType
@@ -49,8 +45,8 @@ class TransactionManager:
     Handles order and balance operations atomically with proper locking.
     """
 
-    def __init__(self, user_dao: UserDAO, balance_dao: BalanceDAO, order_dao: OrderDAO, asset_dao: AssetDAO,
-                 asset_balance_dao: AssetBalanceDAO, asset_transaction_dao: AssetTransactionDAO):
+    def __init__(self, user_dao, balance_dao, order_dao, asset_dao,
+                 asset_balance_dao, asset_transaction_dao):
         self.user_dao = user_dao
         self.balance_dao = balance_dao
         self.order_dao = order_dao
@@ -73,7 +69,6 @@ class TransactionManager:
 
         try:
             async with UserLock(username, "deposit", LOCK_TIMEOUTS["deposit"]):
-                # Create deposit transaction
                 transaction = BalanceTransaction(
                     Pk=f"TRANS#{username}",
                     username=username,
@@ -85,24 +80,19 @@ class TransactionManager:
                     entity_type="balance_transaction"
                 )
 
-                # Create transaction record
                 created_transaction = self.balance_dao.create_transaction(transaction)
 
-                # Update balance separately
-                # Note: Balance records are created during user registration, so they should always exist
                 try:
                     self.balance_dao._update_balance_from_transaction(created_transaction)
                 except Exception as e:
-                    # If balance update fails, clean up the transaction record to maintain consistency
                     logger.error(
                 action=LogActions.ERROR,
                 message=f"Balance update failed, cleaning up transaction: user={username}, error={str(e)}"
             )
-                    # TODO: Implement transaction cleanup method in balance_dao
+                    self.balance_dao.cleanup_failed_transaction(username, created_transaction.transaction_id)
                     raise CNOPDatabaseOperationException(f"Transaction failed: {str(e)}")
 
-                # Get updated balance
-                balance = self.balance_dao.get_balance(username)  # Use username directly
+                balance = self.balance_dao.get_balance(username)
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
@@ -149,11 +139,8 @@ class TransactionManager:
 
         try:
             async with UserLock(username, "withdraw", LOCK_TIMEOUTS["withdraw"]):
-                # Check balance first
-                balance = self.balance_dao.get_balance(username)  # Use username directly
+                balance = self.balance_dao.get_balance(username)
                 if not balance:
-                    # CRITICAL: This should NEVER happen - balance is created during user registration
-                    # If this occurs, it indicates a serious system issue (database corruption, race condition, or bug)
                     logger.critical(f"CRITICAL SYSTEM ERROR: User balance missing for user {username}. "
                                   f"This should NEVER happen as balance is created during user registration.")
                     raise CNOPDatabaseOperationException(
@@ -171,23 +158,19 @@ class TransactionManager:
                         f"Please deposit additional funds or reduce withdrawal amount."
                     )
 
-                # Create withdrawal transaction
                 transaction = BalanceTransaction(
                     Pk=f"TRANS#{username}",
                     username=username,
                     Sk=datetime.utcnow().isoformat(),
-                    transaction_type=TransactionType.WITHDRAW,  # Use WITHDRAW not WITHDRAWAL
-                    amount=-amount,  # Negative for withdrawal
+                    transaction_type=TransactionType.WITHDRAW,
+                    amount=-amount,
                     description="Withdrawal",
                     status=TransactionStatus.COMPLETED,
                     entity_type="balance_transaction"
                 )
 
-                # Create transaction record
                 created_transaction = self.balance_dao.create_transaction(transaction)
 
-                # Update balance separately
-                # Note: Balance records are created during user registration, so they should always exist
                 try:
                     self.balance_dao._update_balance_from_transaction(created_transaction)
                 except Exception as e:
@@ -196,11 +179,11 @@ class TransactionManager:
                 action=LogActions.ERROR,
                 message=f"Balance update failed, cleaning up transaction: user={username}, error={str(e)}"
             )
-                    # TODO: Implement transaction cleanup method in balance_dao
+                    # Clean up the failed transaction
+                    self.balance_dao.cleanup_failed_transaction(username, created_transaction.transaction_id)
                     raise CNOPDatabaseOperationException(f"Transaction failed: {str(e)}")
 
-                # Get updated balance
-                updated_balance = self.balance_dao.get_balance(username)  # Use username directly
+                updated_balance = self.balance_dao.get_balance(username)
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
@@ -259,11 +242,8 @@ class TransactionManager:
 
         try:
             async with UserLock(username, "buy_order", LOCK_TIMEOUTS["buy_order"]):
-                # Phase 1: Validate prerequisites
-                balance = self.balance_dao.get_balance(username)  # Use username directly
+                balance = self.balance_dao.get_balance(username)
                 if not balance:
-                    # CRITICAL: This should NEVER happen - balance is created during user registration
-                    # If this occurs, it indicates a serious system issue (database corruption, race condition, or bug)
                     logger.critical(f"CRITICAL SYSTEM ERROR: User balance missing for user {username}. "
                                   f"This should NEVER happen as balance is created during user registration.")
                     raise CNOPDatabaseOperationException(
@@ -283,13 +263,12 @@ class TransactionManager:
                         f"Please deposit additional funds or reduce order quantity."
                     )
 
-                # Phase 2: Create order
                 now = datetime.now(timezone.utc)
                 order = Order(
                     Pk=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
                     Sk="ORDER",
                     order_id=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
-                    username=username,  # Use username directly
+                    username=username,
                     order_type=order_type,
                     asset_id=asset_id,
                     quantity=quantity,
@@ -302,7 +281,6 @@ class TransactionManager:
 
                 created_order = self.order_dao.create_order(order)
 
-                # Phase 3: Create balance transaction
                 now_timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
                 transaction = BalanceTransaction(
                     Pk=f"TRANS#{username}",
@@ -318,10 +296,8 @@ class TransactionManager:
 
                 created_transaction = self.balance_dao.create_transaction(transaction)
 
-                # Update balance
                 self.balance_dao._update_balance_from_transaction(created_transaction)
 
-                # Phase 4: Update asset balance
                 try:
                     asset_quantity = created_order.quantity
                     updated_asset_balance = self.asset_balance_dao.upsert_asset_balance(
@@ -334,7 +310,6 @@ class TransactionManager:
             )
                     raise
 
-                # Phase 5: Create asset transaction record
                 asset_transaction = AssetTransaction(
                     username=username,
                     asset_id=created_order.asset_id,
@@ -346,7 +321,6 @@ class TransactionManager:
                 )
                 created_asset_transaction = self.asset_transaction_dao.create_asset_transaction(asset_transaction)
 
-                # Get updated balance
                 updated_balance = self.balance_dao.get_balance(username)
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
@@ -410,13 +384,12 @@ class TransactionManager:
 
         try:
             async with UserLock(username, "sell_order", LOCK_TIMEOUTS["sell_order"]):
-                # Phase 2: Create order
                 now = datetime.now(timezone.utc)
                 order = Order(
                     Pk=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
                     Sk="ORDER",
                     order_id=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
-                    username=username,  # Use username directly
+                    username=username,
                     order_type=order_type,
                     asset_id=asset_id,
                     quantity=quantity,
@@ -429,7 +402,6 @@ class TransactionManager:
 
                 created_order = self.order_dao.create_order(order)
 
-                # Phase 3: Create balance transaction
                 now_timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
                 transaction = BalanceTransaction(
                     Pk=f"TRANS#{username}",
@@ -444,14 +416,10 @@ class TransactionManager:
 
                 created_transaction = self.balance_dao.create_transaction(transaction)
 
-                # Update balance separately
                 self.balance_dao._update_balance_from_transaction(created_transaction)
 
-                # Phase 4: Update asset balance (reduce quantity for sell order)
                 try:
                     asset_quantity = created_order.quantity
-                    # For sell orders, we need to reduce the asset balance by the quantity being sold
-                    # Use negative quantity to reduce the balance
                     updated_asset_balance = self.asset_balance_dao.upsert_asset_balance(
                         username, created_order.asset_id, -asset_quantity
                     )
@@ -462,7 +430,6 @@ class TransactionManager:
             )
                     raise
 
-                # Phase 5: Create asset transaction record
                 asset_transaction = AssetTransaction(
                     username=username,
                     asset_id=created_order.asset_id,
@@ -474,7 +441,6 @@ class TransactionManager:
                 )
                 created_asset_transaction = self.asset_transaction_dao.create_asset_transaction(asset_transaction)
 
-                # Get updated balance
                 updated_balance = self.balance_dao.get_balance(username)  # Use username directly
 
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()

@@ -33,14 +33,6 @@ async def fetch_coins() -> List[Dict[str, Any]]:
     except Exception as e:
         logger.error(action=LogActions.ERROR, message=f"CoinGecko failed: {e}")
 
-    # TODO: Add fallback provider here if needed
-    # try:
-    #     coins = await _fetch_from_fallback_provider()
-    #     if coins:
-    #         return _map_fallback_to_our_format(coins)
-    # except Exception as e:
-    #     logger.error(action=LogActions.ERROR, message=f"Fallback provider failed: {e}")
-
     logger.error(action=LogActions.ERROR, message="All coin providers failed")
     return []
 

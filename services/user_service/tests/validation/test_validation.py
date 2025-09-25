@@ -103,11 +103,8 @@ class TestFieldValidators:
 
         def test_username_after_sanitization_empty(self):
             """Test username that becomes empty after sanitization"""
-            # This tests line 101 in field_validators.py
-            # Note: The actual logic checks suspicious content first, so we need a different approach
-            # Use a string that will pass suspicious check but become empty after sanitization
             with pytest.raises(CNOPUserValidationException, match="Username cannot be empty"):
-                validate_username("   ")  # Whitespace only becomes empty after sanitization
+                validate_username("   ")
 
     class TestNameValidation:
         """Test name validation (first_name, last_name)"""
@@ -179,15 +176,12 @@ class TestFieldValidators:
 
         def test_sanitize_string_non_string_input(self):
             """Test sanitize_string with non-string input (line 20)"""
-            # Test with integer
             result = sanitize_string(123)
             assert result == "123"
 
-            # Test with float
             result = sanitize_string(45.67)
             assert result == "45.67"
 
-            # Test with None
             result = sanitize_string(None)
             assert result == "None"
 
@@ -196,7 +190,6 @@ class TestFieldValidators:
 
             long_string = "This is a very long string that should be truncated"
             result = sanitize_string(long_string, max_length=20)
-            # The actual implementation truncates at word boundaries, not exactly at max_length
             assert len(result) <= 20
             assert "This is a very long" in result
 
@@ -205,7 +198,6 @@ class TestFieldValidators:
 
             html_string = "<script>alert('xss')</script>Hello World"
             result = sanitize_string(html_string)
-            # The actual implementation removes script tags but may leave other content
             assert "Hello World" in result
             assert "<script>" not in result
 
@@ -215,13 +207,10 @@ class TestFieldValidators:
         def test_is_suspicious_non_string_input(self):
             """Test is_suspicious with non-string input (line 30)"""
 
-            # Test with integer
             assert is_suspicious(123) is False
 
-            # Test with float
             assert is_suspicious(45.67) is False
 
-            # Test with None
             assert is_suspicious(None) is False
 
         def test_is_suspicious_suspicious_patterns(self):
@@ -274,8 +263,6 @@ class TestFieldValidators:
 
         def test_invalid_email_format(self):
             """Test invalid email formats"""
-            # These should fail format validation before suspicious content check
-            # Note: The current regex allows consecutive dots, so "user..name@domain.com" is actually valid
             invalid_emails = [
                 "invalid-email",  # No @ symbol
                 "@domain.com",    # No local part
@@ -306,23 +293,15 @@ class TestFieldValidators:
 
         def test_email_sanitization_and_formatting(self):
             """Test email sanitization and formatting behavior"""
-            # The current implementation checks format validation before sanitization
-            # So whitespace around emails will fail format validation
-            # This test documents the current behavior and tests what can actually be validated
-
-            # Test that valid emails work correctly
             result = validate_email("user@example.com")
             assert result == "user@example.com"
 
-            # Test that emails with dots in local part work (current regex allows this)
             result = validate_email("user.name@example.com")
             assert result == "user.name@example.com"
 
-            # Test that emails with special characters work
             result = validate_email("user+tag@example.com")
             assert result == "user+tag@example.com"
 
-            # Test that emails are converted to lowercase
             result = validate_email("User@Example.COM")
             assert result == "user@example.com"
 
@@ -341,7 +320,6 @@ class TestFieldValidators:
 
             for phone in valid_phones:
                 result = validate_phone(phone)
-                # Should extract digits only
                 assert result.isdigit()
                 assert 10 <= len(result) <= 15
 
@@ -373,8 +351,7 @@ class TestFieldValidators:
 
         def test_phone_after_sanitization_empty(self):
             """Test phone that becomes empty after sanitization (line 132)"""
-            # Use a string that will pass suspicious check but become empty after sanitization
-            result = validate_phone("   ")  # Whitespace only becomes empty after sanitization
+            result = validate_phone("   ")
             assert result == ""
 
         def test_phone_with_insufficient_digits(self):
@@ -446,9 +423,8 @@ class TestFieldValidators:
 
         def test_password_after_sanitization_empty(self):
             """Test password that becomes empty after sanitization (line 184)"""
-            # Use a string that will pass suspicious check but become empty after sanitization
             with pytest.raises(CNOPUserValidationException, match="Password cannot be empty"):
-                validate_password("   ")  # Whitespace only becomes empty after sanitization
+                validate_password("   ")
 
     class TestDateOfBirthValidation:
         """Test date of birth validation"""
@@ -576,8 +552,6 @@ class TestBusinessValidators:
         with pytest.raises(CNOPUserAlreadyExistsException, match="Username 'existinguser' already exists"):
             validate_username_uniqueness("existinguser", mock_dao)
 
-    # Removed test_validate_username_uniqueness_exclude_current as we simplified the logic
-    # to just raise UserAlreadyExistsException if user exists, without exclude_username handling
 
     def test_validate_email_uniqueness_unique(self):
         """Test email uniqueness when email is unique"""
@@ -680,11 +654,9 @@ class TestBusinessValidators:
             validate_email_uniqueness("new@example.com", mock_dao)
 
     def test_validate_role_permissions(self):
-        """Test role permissions validation (currently just passes)"""
-        # This function currently just has a pass statement
-        # Test that it doesn't raise any exceptions
+        """Test role permissions validation (currently returns True)"""
         result = validate_role_permissions("user", "admin")
-        assert result is None  # pass statement returns None
+        assert result is True
 
 def test_validate_sufficient_balance_success():
     """Test successful balance validation"""
