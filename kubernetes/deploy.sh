@@ -6,7 +6,7 @@
 set -e
 
 # Script configuration
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPTS_DIR="${ROOT_DIR}/scripts"
 
 # Component directories - Clear and simple naming
@@ -112,7 +112,7 @@ deploy_infrastructure() {
             # Check if cluster already exists
             if ! kind get clusters | grep -q "order-processor"; then
                 log_info "Creating Kind cluster: order-processor"
-                kind create cluster --config kubernetes/kind-config.yaml --name order-processor
+                kind create cluster --config kind-config.yaml --name order-processor
             else
                 log_info "Kind cluster 'order-processor' already exists"
             fi
@@ -125,7 +125,7 @@ deploy_infrastructure() {
                 log_info "Deleting existing cluster..."
                 kind delete cluster --name order-processor
                 log_info "Creating fresh Kind cluster: order-processor"
-                kind create cluster --config kubernetes/kind-config.yaml --name order-processor
+                kind create cluster --config kind-config.yaml --name order-processor
             else
                 log_info "Found $node_count existing nodes"
             fi

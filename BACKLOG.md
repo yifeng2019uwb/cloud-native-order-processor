@@ -380,6 +380,50 @@
   - Standardize documentation templates and formats
 - **Why Needed**: Personal project should have clean, accurate documentation. Outdated docs cause confusion and maintenance overhead. Current docs have references to old package structures and completed migrations that are no longer relevant.
 
+#### **DEPLOY-001: AWS EKS Test Deployment with Integration Testing**
+- **Component**: Infrastructure & Testing
+- **Type**: Task
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Create fully automated AWS EKS deployment, integration testing, and cleanup system with comprehensive monitoring and reporting
+- **Acceptance Criteria**:
+  - Create automated deployment script (`scripts/aws-test-deploy.sh`)
+  - Create automated cleanup script (`scripts/aws-test-cleanup.sh`)
+  - Create EKS-specific integration test configuration
+  - Deploy complete infrastructure to AWS EKS using Terraform
+  - Build and push all container images to ECR automatically
+  - Deploy all services to EKS cluster with health checks
+  - Run full integration test suite against AWS deployment
+  - Generate comprehensive test reports with AWS-specific metrics
+  - Monitor costs and destroy resources automatically after testing
+  - Create detailed deployment report with findings and recommendations
+  - Support both manual execution and CI/CD integration
+- **Dependencies**: INFRA-001 ✅, INFRA-017 ✅ (request ID propagation for proper testing)
+- **Files to Create/Update**:
+  - `scripts/aws-test-deploy.sh` - Main deployment automation script
+  - `scripts/aws-test-cleanup.sh` - Automated cleanup script
+  - `scripts/build-and-push-images.sh` - ECR image building script
+  - `integration_tests/config/aws_constants.py` - AWS-specific test configuration
+  - `integration_tests/aws_test_runner.py` - EKS-specific test runner
+  - `integration_tests/reports/aws_deployment_report.py` - AWS deployment reporting
+  - `kubernetes/prod/aws-kustomization.yaml` - AWS-specific K8s configuration
+- **Technical Approach**:
+  - **Phase 1**: Infrastructure deployment with Terraform
+  - **Phase 2**: Container image building and ECR push
+  - **Phase 3**: Kubernetes deployment with health checks
+  - **Phase 4**: Integration testing with AWS endpoint detection
+  - **Phase 5**: Automated cleanup and cost monitoring
+  - **Phase 6**: Comprehensive reporting and documentation
+- **Automation Features**:
+  - One-command deployment: `./scripts/aws-test-deploy.sh`
+  - One-command cleanup: `./scripts/aws-test-cleanup.sh`
+  - Automatic cost monitoring and alerts
+  - Health check validation before testing
+  - Automatic retry logic for failed deployments
+  - Comprehensive logging and error reporting
+  - Integration test result analysis and reporting
+- **Why Critical**: Need to validate production deployment works correctly before considering it production-ready. This is essential for understanding real-world performance and identifying any AWS-specific issues. Automation ensures consistent, repeatable testing with minimal manual intervention.
+
 #### **INFRA-004: API & Function Sync/Async Consistency Review**
 - **Component**: Infrastructure & Code Quality
 - **Type**: Epic

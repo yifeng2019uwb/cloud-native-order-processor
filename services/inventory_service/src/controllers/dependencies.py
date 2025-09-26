@@ -11,7 +11,7 @@ from typing import Optional
 from fastapi import Depends
 
 from common.data.database.dependencies import get_asset_dao
-from common.data.dao.inventory import AssetDAO
+from common.data.dao.inventory.asset_dao import AssetDAO
 
 from common.shared.logging import BaseLogger, Loggers, LogActions
 
