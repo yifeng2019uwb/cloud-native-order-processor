@@ -205,7 +205,7 @@ def get_user_asset_balance(
     current_user: dict = Depends(get_current_user),
     asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency),
     user_dao: UserDAO = Depends(get_user_dao_dependency),
-    asset_dao: AssetDAO = Depends(get_asset_balance_dao_dependency)
+    asset_dao: AssetDAO = Depends(get_asset_dao_dependency)
 ) -> GetAssetBalanceResponse:
     """
     Get specific asset balance for the authenticated user

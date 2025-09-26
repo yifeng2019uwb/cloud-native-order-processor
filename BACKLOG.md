@@ -33,6 +33,31 @@
 
 ### **🔐 Security & Compliance**
 
+#### **INFRA-017: Fix Request ID Propagation for Distributed Tracing**
+- **Component**: Infrastructure & Observability
+- **Type**: Bug Fix
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Fix critical missing request ID propagation from Gateway to backend services for proper distributed tracing and debugging
+- **Acceptance Criteria**:
+  - Gateway passes `X-Request-ID` header to all backend services
+  - Backend services extract and use request ID from headers
+  - All logging includes consistent request ID for correlation
+  - Request tracing works across all microservices
+  - Integration tests validate request ID propagation
+- **Dependencies**: INFRA-002 ✅ (logging system completed)
+- **Files to Update**:
+  - `gateway/internal/services/proxy.go` - Add X-Request-ID header propagation
+  - `services/*/src/controllers/dependencies.py` - Extract request ID from headers
+  - `services/common/src/shared/logging/base_logger.py` - Use request ID from context
+  - All service logging calls - Include request ID parameter
+- **Technical Approach**:
+  - Add `req.Header.Set("X-Request-ID", proxyReq.Context.RequestID)` in gateway proxy
+  - Create request ID extraction dependency in all services
+  - Update all logger calls to include request_id parameter
+  - Add integration tests to validate end-to-end request tracing
+- **Why Critical**: Currently impossible to track requests across services, making debugging and monitoring extremely difficult. This is essential for production debugging and distributed tracing.
+
 #### **MON-001: Essential Authentication Monitoring**
 - **Component**: Monitoring & Observability
 - **Type**: Epic
@@ -223,7 +248,137 @@
 - **Type**: Epic
 - **Priority**: 🔥 **HIGH PRIORITY**
 - **Status**: 🚧 **IN PROGRESS**
-- **Description**: Ensure complete data model consistency across all services
+- **Description**: Ensure complete data model consistency across all services and consolidate duplicate code into common package
+
+##### **INFRA-003.1: Consolidate Security Validation Functions**
+- **Component**: Common Package & Security
+- **Type**: Subtask
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Move duplicate `is_suspicious` method from all services to common package with enhanced security patterns
+- **Acceptance Criteria**:
+  - Create centralized `is_suspicious` method in common package
+  - Include SQL injection, XSS, and path traversal patterns
+  - Remove duplicate implementations from all services
+  - Update all services to import from common package
+  - Add comprehensive tests for security patterns
+- **Dependencies**: INFRA-001 ✅
+- **Files to Update**:
+  - `services/common/src/validation/security_validators.py` - Create centralized security validation
+  - `services/user_service/src/validation/field_validators.py` - Remove duplicate, import from common
+  - `services/order_service/src/validation/field_validators.py` - Remove duplicate, import from common
+  - `services/inventory_service/src/validation/field_validators.py` - Remove duplicate, import from common
+- **Technical Approach**:
+  - Create enhanced `is_suspicious` method with SQL injection, XSS, and path traversal patterns
+  - Use regex patterns for comprehensive security validation
+  - Maintain backward compatibility with existing validation logic
+  - Add unit tests for all security patterns
+- **Why Needed**: Currently `is_suspicious` is duplicated across 3 services, creating maintenance overhead and potential security inconsistencies
+
+##### **INFRA-003.2: Standardize Field Validators Across Services**
+- **Component**: Common Package & Validation
+- **Type**: Subtask
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Consolidate common field validation functions into shared common package
+- **Acceptance Criteria**:
+  - Identify duplicate validation functions across services
+  - Move common validators to common package
+  - Standardize validation patterns and error messages
+  - Update all services to use centralized validators
+- **Dependencies**: INFRA-003.1 ✅
+- **Files to Update**:
+  - `services/common/src/validation/` - Create centralized validation package
+  - All service validation files - Update imports and remove duplicates
+
+#### **PERF-003: Implement Batch Asset Operations for Performance Optimization**
+- **Component**: Performance & Asset Management
+- **Type**: Task
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Implement batch operations for asset retrieval to eliminate N+1 query patterns in portfolio operations
+- **Acceptance Criteria**:
+  - Add `get_assets_by_ids(asset_ids: List[str])` method to AssetDAO
+  - Add `get_market_prices_batch(asset_ids: List[str])` method for efficient price lookup
+  - Update portfolio operations to use batch retrieval instead of individual calls
+  - Update asset balance operations to use batch retrieval
+  - Add comprehensive tests for batch operations
+  - Maintain backward compatibility with existing single-asset methods
+- **Dependencies**: INFRA-001 ✅
+- **Files to Update**:
+  - `services/common/src/data/dao/inventory/asset_dao.py` - Add batch methods
+  - `services/order_service/src/controllers/portfolio.py` - Use batch operations
+  - `services/order_service/src/controllers/asset_balance.py` - Use batch operations
+  - `services/order_service/src/controllers/dependencies.py` - Add batch price lookup
+  - All related test files - Add batch operation tests
+- **Technical Approach**:
+  - Use DynamoDB `batch_get_item` for efficient multi-asset retrieval
+  - Implement batch price lookup using single query instead of N+1 pattern
+  - Add proper error handling for partial batch failures
+  - Optimize for common use cases (portfolio loading, asset balance display)
+- **Why Critical**: Current portfolio operations use N+1 query pattern - if user has 10 assets, makes 10 separate DB calls. This causes significant performance degradation and increased costs.
+
+#### **INFRA-018: Activate Rate Limiting in Gateway with Metrics**
+- **Component**: Infrastructure & Security (Gateway)
+- **Type**: Task
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Activate existing rate limiting middleware in gateway and add comprehensive rate limiting metrics for monitoring
+- **Acceptance Criteria**:
+  - Activate rate limiting middleware in gateway server.go (currently commented out)
+  - Add Prometheus metrics for rate limiting (violations, requests, limits)
+  - Add `/metrics` endpoint to gateway for Prometheus scraping
+  - Add rate limit headers to responses (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)
+  - Configure different rate limits for different endpoints (auth vs public)
+  - Add rate limiting metrics to Grafana dashboards
+  - Test rate limiting functionality with load testing
+- **Dependencies**: INFRA-001 ✅, MON-001 (for dashboard integration)
+- **Files to Update**:
+  - `gateway/internal/api/server.go` - Activate rate limiting middleware
+  - `gateway/internal/middleware/rate_limit.go` - Add metrics collection
+  - `gateway/pkg/metrics/` - Create Prometheus metrics package
+  - `gateway/internal/api/server.go` - Add /metrics endpoint
+  - `monitoring/grafana/dashboards/` - Add rate limiting dashboard
+- **Technical Approach**:
+  - Use existing Redis-based rate limiting with metrics enhancement
+  - Add Prometheus client library to Go gateway
+  - Implement rate limiting metrics: requests_total, rate_limit_violations_total, rate_limit_remaining
+  - Add endpoint-specific rate limiting (auth: 5/min, public: 100/min)
+  - Integrate with existing monitoring infrastructure
+- **Why Critical**: Rate limiting code exists but is inactive. This provides immediate security improvement and monitoring visibility for production deployment.
+
+#### **DOCS-001: Comprehensive Documentation Cleanup and Consolidation**
+- **Component**: Documentation & Project Maintenance
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Clean up outdated, redundant, and confusing documentation across the project to maintain clarity and reduce maintenance overhead
+- **Acceptance Criteria**:
+  - Audit all documentation files for outdated information
+  - Remove or update outdated design documents and migration guides
+  - Consolidate duplicate documentation (multiple README files, overlapping guides)
+  - Update references to old package structures and deprecated features
+  - Remove completed migration documentation that's no longer relevant
+  - Standardize documentation format and structure
+  - Update main README.md to reflect current system state
+  - Remove TODO/FIXME comments from documentation
+- **Dependencies**: INFRA-003 ✅ (after package restructuring is complete)
+- **Files to Review/Update**:
+  - `docs/README.md` - Main documentation hub
+  - `docs/migration/` - Remove completed migration docs
+  - `docs/design-docs/` - Update outdated design decisions
+  - `docs/ENTITY_DAO_REFACTORING.md` - Remove if refactoring complete
+  - `README.md` - Update project status and features
+  - All service README files - Ensure accuracy
+  - `docs/project-status.md` - Update current status
+- **Technical Approach**:
+  - Create documentation audit checklist
+  - Identify outdated vs. current information
+  - Consolidate similar documents (e.g., multiple architecture docs)
+  - Remove completed migration guides and old refactoring docs
+  - Update all cross-references and links
+  - Standardize documentation templates and formats
+- **Why Needed**: Personal project should have clean, accurate documentation. Outdated docs cause confusion and maintenance overhead. Current docs have references to old package structures and completed migrations that are no longer relevant.
 
 #### **INFRA-004: API & Function Sync/Async Consistency Review**
 - **Component**: Infrastructure & Code Quality
