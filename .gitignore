@@ -1,6 +1,7 @@
-echo "*.tfvars" >> .gitignore
-echo ".env" >> .gitignore
-echo "terraform.tfstate*" >> .gitignore
+# Terraform sensitive files
+*.tfvars
+.env
+terraform.tfstate*
 
 # Compiled class file
 *.class
@@ -115,9 +116,11 @@ coverage/
 # Go workspace file
 go.work
 
-EOF
-
 # Lambda Package Dependencies (IMPORTANT!)
 lambda_package/**/
 !lambda_package/lambda_handler.py
 !lambda_package/requirements.txt
+
+# AWS Deployment Scripts (contain sensitive info)
+scripts/aws-eks-deploy.sh
+scripts/aws-eks-cleanup.sh
