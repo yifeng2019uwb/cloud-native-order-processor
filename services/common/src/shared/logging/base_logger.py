@@ -50,7 +50,12 @@ class BaseLogger:
         # Use environment variable or default path
         base_path = log_file_path or os.getenv("LOG_FILE_PATH", "logs")
         log_dir = Path(base_path) / "services" / self.service_name
-        log_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            log_dir.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            # If we can't create the directory, fall back to /tmp
+            log_dir = Path("/tmp") / "logs" / "services" / self.service_name
+            log_dir.mkdir(parents=True, exist_ok=True)
 
         # Create log file path
         self.log_file = log_dir / f"{self.service_name}.log"

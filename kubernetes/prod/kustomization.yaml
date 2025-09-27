@@ -1,19 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-metadata:
-  name: order-processor-production
-  namespace: order-processor
-
 resources:
 - ../base
-- service-account.yaml
 - deployment.yaml
 - service.yaml
 - ingress.yaml
-- secrets.yaml
 
-labels:
+commonLabels:
   environment: production
   deployment: production
 
@@ -23,18 +17,18 @@ commonAnnotations:
   cluster: "aws-eks-order-processor-prod"
 
 images:
-- name: docker-user_service
-  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-user-service
-  newTag: latest
-- name: docker-inventory_service
-  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-inventory-service
-  newTag: latest
-- name: docker-order_service
-  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-order-service
-  newTag: latest
-- name: docker-auth_service
-  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-auth-service
-  newTag: latest
-- name: docker-frontend-dev
-  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-frontend
-  newTag: latest
+- name: order-processor-user-service
+  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-prod-user-service
+  newTag: ${IMAGE_TAG}
+- name: order-processor-inventory-service
+  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-prod-inventory-service
+  newTag: ${IMAGE_TAG}
+- name: order-processor-order-service
+  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-prod-order-service
+  newTag: ${IMAGE_TAG}
+- name: order-processor-auth-service
+  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-prod-auth-service
+  newTag: ${IMAGE_TAG}
+- name: order-processor-gateway
+  newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-prod-gateway
+  newTag: ${IMAGE_TAG}

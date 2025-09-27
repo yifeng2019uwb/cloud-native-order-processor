@@ -8,7 +8,7 @@ metadata:
     component: user-service
     environment: production
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: order-processor
@@ -21,9 +21,11 @@ spec:
         environment: production
     spec:
       serviceAccountName: order-processor-sa
+      imagePullSecrets:
+      - name: ecr-registry-secret
       containers:
       - name: user-service
-        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-user-service:latest
+        image: order-processor-user-service:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
@@ -43,7 +45,9 @@ spec:
               name: app-secrets
               key: jwt-secret
         - name: AWS_REGION
-          value: "us-east-1"
+          value: "us-west-2"
+        - name: LOG_FILE_PATH
+          value: "/app/logs"
         - name: REDIS_ENDPOINT
           valueFrom:
             secretKeyRef:
@@ -55,11 +59,11 @@ spec:
           value: "0"
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "250m"
+            memory: "64Mi"
+            cpu: "50m"
           limits:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "128Mi"
+            cpu: "100m"
         livenessProbe:
           httpGet:
             path: /health
@@ -80,7 +84,12 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -92,7 +101,7 @@ metadata:
     component: inventory-service
     environment: production
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: order-processor
@@ -105,9 +114,11 @@ spec:
         environment: production
     spec:
       serviceAccountName: order-processor-sa
+      imagePullSecrets:
+      - name: ecr-registry-secret
       containers:
       - name: inventory-service
-        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-inventory-service:latest
+        image: order-processor-inventory-service:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8001
@@ -122,7 +133,9 @@ spec:
         - name: INVENTORY_TABLE
           value: "order-processor-prod-inventory"
         - name: AWS_REGION
-          value: "us-east-1"
+          value: "us-west-2"
+        - name: LOG_FILE_PATH
+          value: "/app/logs"
         - name: REDIS_ENDPOINT
           valueFrom:
             secretKeyRef:
@@ -134,89 +147,23 @@ spec:
           value: "0"
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "250m"
+            memory: "64Mi"
+            cpu: "50m"
           limits:
-            memory: "1Gi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8001
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8001
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 1000
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: frontend
-  namespace: order-processor
-  labels:
-    app: order-processor
-    component: frontend
-    environment: production
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: order-processor
-      component: frontend
-  template:
-    metadata:
-      labels:
-        app: order-processor
-        component: frontend
-        environment: production
-    spec:
-      serviceAccountName: order-processor-sa
-      containers:
-      - name: frontend
-        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-frontend:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 3000
-          name: http
-        env:
-        - name: REACT_APP_API_URL
-          value: "https://api.order-processor.yourdomain.com"
-        - name: REACT_APP_USER_SERVICE_URL
-          value: "https://api.order-processor.yourdomain.com/auth"
-        - name: REACT_APP_INVENTORY_SERVICE_URL
-          value: "https://api.order-processor.yourdomain.com/inventory"
-        resources:
-          requests:
             memory: "128Mi"
             cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
         livenessProbe:
           httpGet:
-            path: /
-            port: 3000
+            path: /health
+            port: 8001
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /
-            port: 3000
+            path: /health
+            port: 8001
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
@@ -225,7 +172,12 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -237,7 +189,7 @@ metadata:
     component: order-service
     environment: production
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: order-processor
@@ -250,9 +202,11 @@ spec:
         environment: production
     spec:
       serviceAccountName: order-processor-sa
+      imagePullSecrets:
+      - name: ecr-registry-secret
       containers:
       - name: order-service
-        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-order-service:latest
+        image: order-processor-order-service:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8002
@@ -267,7 +221,9 @@ spec:
         - name: INVENTORY_TABLE
           value: "order-processor-prod-inventory"
         - name: AWS_REGION
-          value: "us-east-1"
+          value: "us-west-2"
+        - name: LOG_FILE_PATH
+          value: "/app/logs"
         - name: REDIS_ENDPOINT
           valueFrom:
             secretKeyRef:
@@ -279,11 +235,11 @@ spec:
           value: "0"
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "250m"
+            memory: "64Mi"
+            cpu: "50m"
           limits:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "128Mi"
+            cpu: "100m"
         livenessProbe:
           httpGet:
             path: /health
@@ -304,7 +260,12 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -316,7 +277,7 @@ metadata:
     component: auth-service
     environment: production
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: order-processor
@@ -329,9 +290,11 @@ spec:
         environment: production
     spec:
       serviceAccountName: order-processor-sa
+      imagePullSecrets:
+      - name: ecr-registry-secret
       containers:
       - name: auth-service
-        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/order-processor-auth-service:latest
+        image: order-processor-auth-service:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8003
@@ -339,7 +302,7 @@ spec:
         env:
         - name: ENVIRONMENT
           value: "production"
-        - name: JWT_SECRET_KEY
+        - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
               name: app-secrets
@@ -348,13 +311,17 @@ spec:
           value: "HS256"
         - name: JWT_EXPIRATION_MINUTES
           value: "60"
+        - name: AWS_REGION
+          value: "us-west-2"
+        - name: LOG_FILE_PATH
+          value: "/app/logs"
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "250m"
+            memory: "128Mi"
+            cpu: "100m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "256Mi"
+            cpu: "200m"
         livenessProbe:
           httpGet:
             path: /health
@@ -375,4 +342,99 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: gateway
+    environment: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-processor
+      component: gateway
+  template:
+    metadata:
+      labels:
+        app: order-processor
+        component: gateway
+        environment: production
+    spec:
+      serviceAccountName: order-processor-sa
+      imagePullSecrets:
+      - name: ecr-registry-secret
+      containers:
+      - name: gateway
+        image: order-processor-gateway:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: GATEWAY_HOST
+          value: "0.0.0.0"
+        - name: GATEWAY_PORT
+          value: "8080"
+        - name: USER_SERVICE_URL
+          value: "http://user-service:8000"
+        - name: INVENTORY_SERVICE_URL
+          value: "http://inventory-service:8001"
+        - name: ORDER_SERVICE_URL
+          value: "http://order-service:8002"
+        - name: AUTH_SERVICE_URL
+          value: "http://auth-service:8003"
+        - name: REDIS_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: redis-endpoint
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_DB
+          value: "0"
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: logs-volume
+        emptyDir: {}

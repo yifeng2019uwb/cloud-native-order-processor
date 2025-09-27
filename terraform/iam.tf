@@ -34,17 +34,71 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
   role       = aws_iam_role.eks_cluster[0].name
 }
 
+# EKS Node Group role
+resource "aws_iam_role" "eks_node_group" {
+  count = local.enable_prod ? 1 : 0
+
+  name = "${local.resource_prefix}-eks-node-group-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
+  count = local.enable_prod ? 1 : 0
+
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_node_group[0].name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
+  count = local.enable_prod ? 1 : 0
+
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.eks_node_group[0].name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
+  count = local.enable_prod ? 1 : 0
+
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.eks_node_group[0].name
+}
+
+# Get the OIDC issuer thumbprint
+data "tls_certificate" "eks" {
+  count = local.enable_prod ? 1 : 0
+  url = aws_eks_cluster.main[0].identity[0].oidc[0].issuer
+}
+
 # EKS OIDC Provider for service account authentication
 resource "aws_iam_openid_connect_provider" "eks" {
   count = local.enable_prod ? 1 : 0
 
-  url = "https://oidc.eks.${data.aws_region.current.name}.amazonaws.com/id/${aws_eks_cluster.main[0].id}"
+  url = aws_eks_cluster.main[0].identity[0].oidc[0].issuer
 
   client_id_list = ["sts.amazonaws.com"]
 
   thumbprint_list = [
-    "9e99a48a9960b14926bb7f3b02e22da2b0ab7280"
+    data.tls_certificate.eks[0].certificates[0].sha1_fingerprint
   ]
+
+  # Force recreation when cluster ID changes
+  lifecycle {
+    replace_triggered_by = [aws_eks_cluster.main[0].id]
+  }
 
   tags = local.common_tags
 }

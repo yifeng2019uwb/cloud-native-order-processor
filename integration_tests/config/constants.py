@@ -28,8 +28,9 @@ class Headers:
 # External Service Configuration (Integration tests only see Gateway)
 class ExternalServices:
     # Gateway is the only entry point for integration tests
-    GATEWAY_HOST = "localhost"
-    GATEWAY_PORT = 8080
+    # Use environment variable or default to localhost for local testing
+    GATEWAY_HOST = os.getenv("GATEWAY_HOST", "localhost")
+    GATEWAY_PORT = int(os.getenv("GATEWAY_PORT", "8080"))
     GATEWAY_BASE_URL = f"http://{GATEWAY_HOST}:{GATEWAY_PORT}"
 
     # Frontend (for end-to-end tests if needed)

@@ -121,6 +121,15 @@ lambda_package/**/
 !lambda_package/lambda_handler.py
 !lambda_package/requirements.txt
 
-# AWS Deployment Scripts (contain sensitive info)
-scripts/aws-eks-deploy.sh
-scripts/aws-eks-cleanup.sh
+# Sensitive files
+*.pem
+*.key
+*secret*
+*credential*
+.env.local
+.env.prod
+*.tfvars
+kubernetes/secrets/deployment_dev.yaml
+kubernetes/secrets/development.yaml
+kubernetes/dev/kustomization.yaml
+kubernetes/base/service-account.yaml

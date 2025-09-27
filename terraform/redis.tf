@@ -55,6 +55,9 @@ resource "aws_elasticache_cluster" "redis" {
   subnet_group_name    = aws_elasticache_subnet_group.redis[0].name
   security_group_ids   = [aws_security_group.redis[0].id]
 
+  # Disable SSL for simplicity in personal project
+  transit_encryption_enabled = false
+
   # Minimal settings for personal project
   maintenance_window = "sun:05:00-sun:06:00"
 

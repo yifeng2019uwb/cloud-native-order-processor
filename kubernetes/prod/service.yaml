@@ -93,22 +93,22 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend
+  name: gateway
   namespace: order-processor
   labels:
     app: order-processor
-    component: frontend
+    component: gateway
     environment: production
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
     service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     app: order-processor
-    component: frontend
+    component: gateway
   ports:
   - name: http
-    port: 80
-    targetPort: 80
+    port: 8080
+    targetPort: 8080
     protocol: TCP

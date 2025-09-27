@@ -6,9 +6,7 @@ namespace: order-processor
 resources:
   - namespace.yaml
   - service-account.yaml
-  - redis.yaml
-  - logging-config.yaml
-  - monitoring.yaml  # Add monitoring infrastructure
+  # Removed: redis.yaml, logging-config.yaml, monitoring.yaml for minimal deployment
 
 commonLabels:
   app.kubernetes.io/name: order-processor

@@ -10,9 +10,11 @@ output "eks_cluster_name" {
   value       = local.enable_prod ? aws_eks_cluster.main[0].name : null
 }
 
-output "ecr_repository_url" {
-  description = "ECR repository URL for container deployment"
-  value       = local.enable_prod ? aws_ecr_repository.order_api[0].repository_url : null
+output "ecr_repository_urls" {
+  description = "ECR repository URLs for all services"
+  value = local.enable_prod ? {
+    for k, v in aws_ecr_repository.repositories : k => v.repository_url
+  } : null
 }
 
 # ====================
