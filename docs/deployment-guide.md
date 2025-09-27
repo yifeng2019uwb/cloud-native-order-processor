@@ -53,25 +53,79 @@ make test                        # Test all components
 make deploy-k8s                  # Deploy to Kubernetes
 ```
 
-## ☸️ **Kubernetes Deployment (Production)**
+## ☸️ **Kubernetes Deployment**
 
 ### **1. Local Kubernetes (Kind)**
 ```bash
 # Deploy to local Kubernetes
-./scripts/deploy.sh --type k8s --environment dev
+./kubernetes/deploy.sh dev
 
 # Access services
 # Frontend: http://localhost:30004
 # Gateway: http://localhost:30000
 ```
 
-### **2. Production Kubernetes**
-```bash
-# Deploy to production Kubernetes
-./scripts/deploy.sh --type k8s --environment prod
+### **2. AWS EKS Production Deployment**
 
-# Configure kubectl for EKS
-aws eks update-kubeconfig --region us-west-2 --name order-processor-prod
+#### **Complete AWS EKS Deployment (Recommended)**
+```bash
+# Deploy everything: infrastructure + images + services
+./scripts/aws-eks-deploy.sh
+
+# This will:
+# 1. Deploy AWS infrastructure (EKS, VPC, DynamoDB, ECR, LoadBalancer, Redis)
+# 2. Build and push Docker images to ECR
+# 3. Deploy services to EKS cluster
+# 4. Create Kubernetes secrets automatically
+```
+
+#### **Step-by-Step AWS EKS Deployment**
+```bash
+# Step 1: Deploy AWS infrastructure only
+./scripts/aws-eks-deploy.sh --infrastructure-only
+
+# Step 2: Build and push Docker images only
+./scripts/aws-eks-deploy.sh --images-only
+
+# Step 3: Deploy to Kubernetes only (requires infrastructure and images)
+./scripts/aws-eks-deploy.sh --k8s-only
+
+# Step 4: Build and push specific services only
+./scripts/aws-eks-deploy.sh --services user-service order-service
+```
+
+#### **AWS EKS Configuration**
+```bash
+# Configure kubectl for EKS (done automatically by script)
+aws eks update-kubeconfig --region us-west-2 --name order-processor-prod-cluster
+
+# Get LoadBalancer URL for integration tests
+kubectl get services -n order-processor
+# Look for gateway LoadBalancer EXTERNAL-IP
+
+# Set environment variable for integration tests
+export GATEWAY_HOST="your-loadbalancer-url.elb.us-west-2.amazonaws.com"
+```
+
+#### **Integration Testing on AWS EKS**
+```bash
+# Run integration tests against AWS deployment
+cd integration_tests
+export GATEWAY_HOST="your-loadbalancer-url.elb.us-west-2.amazonaws.com"
+./run_all_tests.sh
+```
+
+#### **AWS EKS Cleanup**
+```bash
+# Destroy all AWS resources
+./scripts/aws-eks-deploy.sh --destroy
+
+# This will:
+# 1. Delete EKS cluster and all associated resources
+# 2. Delete VPC, subnets, and security groups
+# 3. Delete DynamoDB tables
+# 4. Delete ECR repositories
+# 5. Delete LoadBalancer and Redis
 ```
 
 ## 🔧 **Environment Configuration**
@@ -101,7 +155,22 @@ export ENVIRONMENT="dev"
 
 ## 🏗️ **Infrastructure Deployment**
 
-### **1. Terraform Deployment**
+### **1. Terraform Deployment (Automated)**
+
+#### **Using Terraform Scripts (Recommended)**
+```bash
+# Deploy production infrastructure
+cd terraform
+./apply.sh prod
+
+# Deploy development infrastructure
+./apply.sh dev
+
+# Destroy infrastructure
+./destroy.sh prod
+```
+
+#### **Manual Terraform Deployment**
 ```bash
 # Navigate to terraform directory
 cd terraform
@@ -109,14 +178,82 @@ cd terraform
 # Initialize Terraform
 terraform init
 
-# Deploy dev environment
-terraform apply -var="environment=dev"
+# Plan deployment
+terraform plan -var="environment=prod"
 
 # Deploy production infrastructure
 terraform apply -var="environment=prod"
+
+# Deploy development infrastructure
+terraform apply -var="environment=dev"
 ```
 
-### **2. Infrastructure Testing**
+#### **Infrastructure Components**
+```bash
+# What gets deployed:
+# - EKS cluster (t3.small instances, 2-3 nodes)
+# - VPC with public/private subnets
+# - DynamoDB tables (users, orders, inventory)
+# - ECR repositories for Docker images
+# - Application LoadBalancer for external access
+# - ElastiCache Redis cluster
+# - IAM roles and policies for EKS service accounts
+# - Security groups and network ACLs
+```
+
+### **2. AWS EKS Architecture**
+
+#### **Infrastructure Overview**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    AWS EKS Cluster                          │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
+│  │   Node Group    │  │   Node Group    │  │ Node Group  │  │
+│  │   (t3.small)    │  │   (t3.small)    │  │ (t3.small)  │  │
+│  │                 │  │                 │  │             │  │
+│  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────┐ │  │
+│  │ │User Service │ │  │ │Inventory    │ │  │ │Gateway   │ │  │
+│  │ │             │ │  │ │Service      │ │  │ │          │ │  │
+│  │ └─────────────┘ │  │ └─────────────┘ │  │ └─────────┘ │  │
+│  │                 │  │                 │  │             │  │
+│  │ ┌─────────────┐ │  │ ┌─────────────┐ │  │ ┌─────────┐ │  │
+│  │ │Order Service│ │  │ │Auth Service │ │  │ │System    │ │  │
+│  │ │             │ │  │ │             │ │  │ │Pods      │ │  │
+│  │ └─────────────┘ │  │ └─────────────┘ │  │ └─────────┘ │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │ LoadBalancer    │
+                    │ (External IP)   │
+                    └─────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │   Internet      │
+                    └─────────────────┘
+```
+
+#### **Security Architecture**
+```bash
+# IAM Roles for Service Accounts (IRSA)
+# - Each service pod gets AWS permissions via IAM roles
+# - OIDC provider links Kubernetes service accounts to AWS IAM roles
+# - No hardcoded AWS credentials in pods
+
+# Network Security
+# - Private subnets for application pods
+# - Public subnets only for LoadBalancer
+# - Security groups restrict traffic between components
+
+# Data Security
+# - DynamoDB encryption at rest
+# - Redis encryption in transit (optional)
+# - Secrets managed via Kubernetes secrets
+```
+
+### **3. Infrastructure Testing**
 ```bash
 # Run comprehensive infrastructure tests
 ./run-infrastructure-tests.sh
@@ -126,6 +263,11 @@ terraform apply -var="environment=prod"
 
 # Production environment testing
 ./run-infrastructure-tests.sh --environment prod
+
+# AWS EKS specific tests
+kubectl get nodes
+kubectl get pods -n order-processor
+kubectl get services -n order-processor
 ```
 
 ## 📊 **Monitoring Deployment**
@@ -265,6 +407,30 @@ kubectl rollout status deployment/[deployment-name] -n order-processor
 ## 🚨 **Troubleshooting**
 
 ### **1. Common Issues**
+
+#### **AWS EKS Specific Issues**
+```bash
+# Pods stuck in Pending state
+kubectl describe pod [pod-name] -n order-processor
+# Check for: "Insufficient pods" or "No nodes available"
+
+# Image pull errors
+kubectl describe pod [pod-name] -n order-processor
+# Check for: "ImagePullBackOff" or "ErrImagePull"
+# Solution: Verify ECR repository exists and image is pushed
+
+# IAM/OIDC authentication errors
+kubectl logs [pod-name] -n order-processor
+# Check for: "InvalidIdentityToken" or "AccessDenied"
+# Solution: Verify OIDC provider and IAM role trust policy
+
+# LoadBalancer not getting external IP
+kubectl get services -n order-processor
+# Check for: EXTERNAL-IP in <pending> state
+# Solution: Wait 2-3 minutes for AWS to provision LoadBalancer
+```
+
+#### **General Kubernetes Issues**
 ```bash
 # Service not starting
 kubectl describe pod [pod-name] -n order-processor
@@ -277,6 +443,26 @@ kubectl get endpoints -n order-processor
 ```
 
 ### **2. Debug Commands**
+
+#### **AWS EKS Debug Commands**
+```bash
+# Check cluster status
+aws eks describe-cluster --name order-processor-prod-cluster --region us-west-2
+
+# Check node group status
+aws eks describe-nodegroup --cluster-name order-processor-prod-cluster --nodegroup-name order-processor-prod-nodes --region us-west-2
+
+# Check IAM role trust policy
+aws iam get-role --role-name order-processor-prod-k8s-sa-role
+
+# Check OIDC provider
+aws iam get-open-id-connect-provider --open-id-connect-provider-arn arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):oidc-provider/oidc.eks.us-west-2.amazonaws.com/id/$(aws eks describe-cluster --name order-processor-prod-cluster --region us-west-2 --query cluster.identity.oidc.issuer --output text | cut -d'/' -f5)
+
+# Check ECR repositories
+aws ecr describe-repositories --region us-west-2
+```
+
+#### **General Debug Commands**
 ```bash
 # Check pod events
 kubectl describe pod [pod-name] -n order-processor
@@ -286,6 +472,46 @@ kubectl exec -it [pod-name] -n order-processor -- curl http://[service-name]:[po
 
 # Check resource usage
 kubectl top pods -n order-processor
+kubectl top nodes
+
+# Check AWS permissions
+aws sts get-caller-identity
+```
+
+### **3. Common Solutions**
+
+#### **Pod Capacity Issues**
+```bash
+# If getting "Too many pods" error:
+# 1. Check current pod count per node
+kubectl get pods -o wide --all-namespaces
+
+# 2. Scale up node group (if using t3.micro)
+aws eks update-nodegroup-config --cluster-name order-processor-prod-cluster --nodegroup-name order-processor-prod-nodes --scaling-config minSize=2,maxSize=5,desiredSize=3 --region us-west-2
+
+# 3. Or upgrade to larger instances
+# Edit terraform/eks.tf: instance_types = ["t3.small"]
+```
+
+#### **IAM Permission Issues**
+```bash
+# Fix AWS Console access
+kubectl patch configmap aws-auth -n kube-system --patch '{"data":{"mapUsers":"- userarn: arn:aws:iam::ACCOUNT_ID:user/USERNAME\n  username: USERNAME\n  groups:\n  - system:masters"}}'
+
+# Fix service account permissions
+kubectl annotate serviceaccount order-processor-sa -n order-processor eks.amazonaws.com/role-arn=arn:aws:iam::ACCOUNT_ID:role/order-processor-prod-k8s-sa-role
+```
+
+#### **Network Connectivity Issues**
+```bash
+# Test LoadBalancer connectivity
+curl -v http://your-loadbalancer-url.elb.us-west-2.amazonaws.com/health
+
+# Check security groups
+aws ec2 describe-security-groups --filters "Name=group-name,Values=*order-processor*" --region us-west-2
+
+# Test internal service connectivity
+kubectl exec -it [pod-name] -n order-processor -- nslookup gateway-service
 ```
 
 ## 📚 **Additional Resources**
@@ -300,17 +526,29 @@ kubectl top pods -n order-processor
 ### **Pre-Deployment**
 - [ ] All tests passing
 - [ ] Environment variables configured
-- [ ] AWS credentials verified
+- [ ] AWS credentials verified (`aws sts get-caller-identity`)
 - [ ] Infrastructure ready
+- [ ] ECR repositories created
+- [ ] IAM roles and policies configured
 
-### **Deployment**
-- [ ] Services deployed successfully
-- [ ] Health checks passing
-- [ ] Integration tests running
-- [ ] Monitoring stack deployed
+### **AWS EKS Deployment**
+- [ ] Terraform infrastructure deployed (`./terraform/apply.sh prod`)
+- [ ] Docker images built and pushed to ECR (`./scripts/aws-eks-deploy.sh --images-only`)
+- [ ] Kubernetes services deployed (`./scripts/aws-eks-deploy.sh --k8s-only`)
+- [ ] LoadBalancer has external IP
+- [ ] All pods running (`kubectl get pods -n order-processor`)
+- [ ] Service endpoints accessible (`kubectl get services -n order-processor`)
+
+### **Integration Testing**
+- [ ] Gateway URL obtained from LoadBalancer
+- [ ] Environment variable set (`export GATEWAY_HOST="your-loadbalancer-url"`)
+- [ ] Integration tests passing (`./run_all_tests.sh`)
+- [ ] Smoke tests passing
+- [ ] Service health checks passing
 
 ### **Post-Deployment**
 - [ ] All endpoints accessible
 - [ ] Performance metrics normal
 - [ ] Error rates acceptable
 - [ ] Documentation updated
+- [ ] AWS resources cleanup plan ready (`./scripts/aws-eks-deploy.sh --destroy`)
