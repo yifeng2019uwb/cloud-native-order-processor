@@ -73,6 +73,18 @@ def get_transaction_manager() -> TransactionManager:
     )
 
 
+def get_request_id(
+    x_request_id: Optional[str] = Header(None, alias="X-Request-ID")
+) -> str:
+    """
+    Extract request ID from Gateway headers for distributed tracing
+
+    Returns:
+        Request ID string for correlation across services
+    """
+    return x_request_id or "no-request-id"
+
+
 def get_current_user(
     request: Request,
     x_source: Optional[str] = Header(None, alias="X-Source"),

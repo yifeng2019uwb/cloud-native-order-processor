@@ -25,7 +25,7 @@ from order_exceptions import CNOPOrderValidationException
 from controllers.dependencies import (
     get_current_user, get_balance_dao_dependency,
     get_asset_balance_dao_dependency, get_user_dao_dependency,
-    get_asset_dao_dependency
+    get_asset_dao_dependency, get_request_id
 )
 from validation.business_validators import validate_user_permissions
 
@@ -67,7 +67,8 @@ def get_user_portfolio(
     balance_dao: BalanceDAO = Depends(get_balance_dao_dependency),
     asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency),
     user_dao: UserDAO = Depends(get_user_dao_dependency),
-    asset_dao: AssetDAO = Depends(get_asset_dao_dependency)
+    asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
+    request_id: str = Depends(get_request_id)
 ) -> GetPortfolioResponse:
     """
     Get user's complete portfolio with calculated market values
@@ -82,6 +83,7 @@ def get_user_portfolio(
         action=LogActions.REQUEST_START,
         message=f"Portfolio request from {request.client.host if request.client else 'unknown'}",
         user=current_user["username"],
+        request_id=request_id,
         extra={
             "requested_username": username,
             "user_agent": request.headers.get("user-agent", "unknown"),
@@ -102,7 +104,8 @@ def get_user_portfolio(
             logger.warning(
                 action=LogActions.ACCESS_DENIED,
                 message=f"Unauthorized portfolio access attempt: tried to access {username}'s portfolio",
-                user=current_user['username']
+                user=current_user['username'],
+                request_id=request_id
             )
             raise CNOPOrderValidationException("You can only view your own portfolio")
 
@@ -158,7 +161,8 @@ def get_user_portfolio(
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"Portfolio retrieved successfully: total_value={total_portfolio_value}, asset_count={len(portfolio_assets)}",
-            user=username
+            user=username,
+            request_id=request_id
         )
 
         return GetPortfolioResponse(
@@ -175,13 +179,15 @@ def get_user_portfolio(
         logger.error(
             action=LogActions.ERROR,
             message=f"Database operation failed for portfolio: error={str(e)}",
-            user=username
+            user=username,
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(
             action=LogActions.ERROR,
             message=f"Unexpected error during portfolio retrieval: error={str(e)}",
-            user=username
+            user=username,
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")

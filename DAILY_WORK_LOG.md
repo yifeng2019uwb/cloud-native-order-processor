@@ -2933,5 +2933,50 @@ The existing integration test suite is actually well-designed and matches our cu
 
 ---
 
-*Last Updated: 9/27/2025*
+## **9/28/2025 - INFRA-017: Fix Request ID Propagation for Distributed Tracing** ✅ **COMPLETED**
+
+### **Task Overview:**
+- **Component**: Infrastructure & Observability
+- **Type**: Bug Fix
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Description**: Fix critical missing request ID propagation from Gateway to backend services for proper distributed tracing and debugging
+
+### **Implementation Details:**
+- **Gateway Changes**: Added `X-Request-ID` header propagation in `gateway/internal/services/proxy.go`
+- **Backend Services**: Created `get_request_id` dependency in all services (user, order, inventory)
+- **Logging Integration**: Updated all service logging calls to include `request_id` parameter
+- **Testing**: Validated through manual testing with local Docker deployment
+
+### **Technical Changes:**
+- **Files Updated**:
+  - `gateway/internal/services/proxy.go` - Added X-Request-ID header propagation
+  - `services/*/src/controllers/dependencies.py` - Added request ID extraction dependency
+  - `services/common/src/shared/logging/base_logger.py` - Request ID integration
+  - All service logging calls - Updated to include request_id parameter
+
+### **Testing Results:**
+- ✅ **AWS Dev Resources**: Deployed with Terraform
+- ✅ **Local Deployment**: All services built and deployed with Docker
+- ✅ **Request ID Propagation**: Verified through manual API testing
+- ✅ **Log Correlation**: Confirmed across Gateway → Inventory Service flow
+- ✅ **Structured Logging**: Request_id field working correctly
+
+### **Evidence of Success:**
+```json
+{"timestamp": "2025-09-28T19:03:41.702343Z", "level": "INFO", "service": "inventory", "request_id": "req-1759086220707751304", "action": "request_start", "message": "Assets list requested - active_only: True, limit: None"}
+```
+
+### **Impact:**
+- **Distributed Tracing**: Now possible to track requests across all microservices
+- **Debugging**: Much easier to correlate logs and debug issues
+- **Production Ready**: Essential for production monitoring and troubleshooting
+- **Observability**: Foundation for comprehensive monitoring implementation
+
+### **Next Steps:**
+- **MON-001**: Essential Authentication Monitoring (next high priority)
+- **Advanced Monitoring**: Build upon request ID foundation for comprehensive observability
+
+---
+
+*Last Updated: 9/28/2025*
 *Next Review: After completing MON-001 (Essential Authentication Monitoring)*

@@ -18,7 +18,7 @@ from common.exceptions import (
     CNOPLockAcquisitionException
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from controllers.dependencies import get_transaction_manager
+from controllers.dependencies import get_transaction_manager, get_request_id
 from controllers.auth.dependencies import get_current_user
 logger = BaseLogger(Loggers.USER)
 router = APIRouter(tags=["balance"])
@@ -63,7 +63,8 @@ async def deposit_funds(
     deposit_data: DepositRequest,
     request: Request,
     current_user: User = Depends(get_current_user),
-    transaction_manager = Depends(get_transaction_manager)
+    transaction_manager = Depends(get_transaction_manager),
+    request_id: str = Depends(get_request_id)
 ) -> DepositResponse:
     """
     Deposit funds to user account using transaction manager for atomicity
@@ -76,6 +77,7 @@ async def deposit_funds(
         action=LogActions.REQUEST_START,
         message=f"Deposit attempt from {request.client.host if request.client else 'unknown'}",
         user=current_user.username,
+        request_id=request_id,
         extra={
             "amount": str(deposit_data.amount),
             "user_agent": request.headers.get("user-agent", "unknown"),
@@ -90,7 +92,7 @@ async def deposit_funds(
             amount=deposit_data.amount
         )
 
-        logger.info(action=LogActions.REQUEST_END, message=f"Deposit successful for user {current_user.username}: {deposit_data.amount} (lock_duration: {result.lock_duration}s)", user=current_user.username)
+        logger.info(action=LogActions.REQUEST_END, message=f"Deposit successful for user {current_user.username}: {deposit_data.amount} (lock_duration: {result.lock_duration}s)", user=current_user.username, request_id=request_id)
 
         return DepositResponse(
             success=True,
@@ -100,14 +102,14 @@ async def deposit_funds(
         )
 
     except CNOPLockAcquisitionException as e:
-        logger.warning(action=LogActions.ERROR, message=f"Lock acquisition failed for deposit: user={current_user.username}, error={str(e)}", user=current_user.username)
+        logger.warning(action=LogActions.ERROR, message=f"Lock acquisition failed for deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException("Service temporarily unavailable")
     except CNOPEntityNotFoundException as e:
-        logger.error(action=LogActions.ERROR, message=f"User balance not found for deposit: user={current_user.username}, error={str(e)}", user=current_user.username)
+        logger.error(action=LogActions.ERROR, message=f"User balance not found for deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPUserNotFoundException("User balance not found")
     except CNOPDatabaseOperationException as e:
-        logger.error(action=LogActions.ERROR, message=f"Database operation failed for deposit: user={current_user.username}, error={str(e)}", user=current_user.username)
+        logger.error(action=LogActions.ERROR, message=f"Database operation failed for deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Unexpected error during deposit: user={current_user.username}, error={str(e)}", user=current_user.username)
+        logger.error(action=LogActions.ERROR, message=f"Unexpected error during deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException("Service temporarily unavailable")

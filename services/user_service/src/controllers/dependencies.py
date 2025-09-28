@@ -5,8 +5,22 @@ This module provides dependency injection functions for the User Service,
 including a simplified transaction manager that only uses available DAOs.
 """
 
+from typing import Optional
+from fastapi import Header
 from common.data.database.dependencies import get_user_dao, get_balance_dao
 from common.core.utils import TransactionManager
+
+
+def get_request_id(
+    x_request_id: Optional[str] = Header(None, alias="X-Request-ID")
+) -> str:
+    """
+    Extract request ID from Gateway headers for distributed tracing
+
+    Returns:
+        Request ID string for correlation across services
+    """
+    return x_request_id or "no-request-id"
 
 
 def get_transaction_manager() -> TransactionManager:

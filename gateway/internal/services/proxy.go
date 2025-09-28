@@ -121,6 +121,11 @@ func (p *ProxyService) createHTTPRequest(ctx context.Context, proxyReq *models.P
 		req.Header.Set(key, value)
 	}
 
+	// Add request ID header for distributed tracing
+	if proxyReq.Context != nil && proxyReq.Context.RequestID != "" {
+		req.Header.Set(constants.XRequestIDHeader, proxyReq.Context.RequestID)
+	}
+
 	// Add user context headers if user is authenticated
 	if proxyReq.Context != nil && proxyReq.Context.User != nil && proxyReq.Context.User.Username != "" {
 		req.Header.Set(constants.XUserIDHeader, proxyReq.Context.User.Username)

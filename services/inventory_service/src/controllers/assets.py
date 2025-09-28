@@ -13,6 +13,7 @@ from api_models.inventory.asset_response import (
 from api_models.inventory.asset_requests import AssetIdRequest
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.database.dependencies import get_asset_dao
+from controllers.dependencies import get_request_id
 from common.exceptions.shared_exceptions import CNOPAssetNotFoundException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from inventory_exceptions import (
@@ -89,7 +90,8 @@ def list_assets(
         le=250,
         description="Maximum number of assets to return (1-250)"
     ),
-    asset_dao: AssetDAO = Depends(get_asset_dao)
+    asset_dao: AssetDAO = Depends(get_asset_dao),
+    request_id: str = Depends(get_request_id)
 ) -> AssetListResponse:
     """
     List all available assets with optional filtering
@@ -98,7 +100,7 @@ def list_assets(
     - **limit**: Maximum number of results to return (1-250)
     """
     try:
-        logger.info(action=LogActions.REQUEST_START, message=f"Assets list requested - active_only: {active_only}, limit: {limit}")
+        logger.info(action=LogActions.REQUEST_START, message=f"Assets list requested - active_only: {active_only}, limit: {limit}", request_id=request_id)
 
         # Create simple request object for validation
         class RequestParams:
