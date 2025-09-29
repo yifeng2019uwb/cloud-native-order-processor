@@ -149,7 +149,8 @@ class TestWithdrawFunds:
         mock_logger.warning.assert_called_with(
             action='error',
             message='Lock acquisition failed for withdrawal: user=testuser, error=CNOPLockAcquisitionException: Lock timeout',
-            user='testuser'
+            user='testuser',
+            request_id='no-request-id'
         )
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -182,7 +183,8 @@ class TestWithdrawFunds:
         mock_logger.warning.assert_called_with(
             action='validation_error',
             message='Insufficient balance for withdrawal: user=testuser, error=CNOPInsufficientBalanceException: Insufficient funds',
-            user='testuser'
+            user='testuser',
+            request_id='no-request-id'
         )
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -215,7 +217,8 @@ class TestWithdrawFunds:
         mock_logger.warning.assert_called_with(
             action='validation_error',
             message='User validation error for withdrawal: user=testuser, error=CNOPUserValidationException: User not found',
-            user='testuser'
+            user='testuser',
+            request_id='no-request-id'
         )
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -248,7 +251,8 @@ class TestWithdrawFunds:
         mock_logger.error.assert_called_with(
             action='error',
             message='System error - user balance not found for withdrawal: user=testuser, error=CNOPDatabaseOperationException: User balance not found',
-            user='testuser'
+            user='testuser',
+            request_id='no-request-id'
         )
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -281,7 +285,8 @@ class TestWithdrawFunds:
         mock_logger.error.assert_called_with(
             action='error',
             message='Database operation failed for withdrawal: user=testuser, error=CNOPDatabaseOperationException: Connection timeout',
-            user='testuser'
+            user='testuser',
+            request_id='no-request-id'
         )
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -314,7 +319,8 @@ class TestWithdrawFunds:
         mock_logger.error.assert_called_with(
             action='error',
             message='Unexpected error during withdrawal: user=testuser, error=Unexpected system error',
-            user='testuser'
+            user='testuser',
+            request_id='no-request-id'
         )
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -454,7 +460,8 @@ class TestWithdrawFunds:
         mock_logger.info.assert_any_call(
             action='request_end',
             message='Withdrawal successful for user testuser: 100.00 (lock_duration: Nones)',
-            user='testuser'
+            user='testuser',
+            request_id='no-request-id'
         )
 
 

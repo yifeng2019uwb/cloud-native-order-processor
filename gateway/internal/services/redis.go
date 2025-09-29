@@ -77,6 +77,38 @@ func (r *RedisService) CheckRateLimit(ctx context.Context, key string, limit int
 	return current <= int64(limit), nil
 }
 
+// CheckRateLimitWithDetails checks if request is within rate limits and returns additional details
+func (r *RedisService) CheckRateLimitWithDetails(ctx context.Context, key string, limit int, window time.Duration) (bool, int64, int64, error) {
+	// Get current count
+	current, err := r.client.Incr(ctx, key).Result()
+	if err != nil {
+		return false, 0, 0, err
+	}
+
+	// Set expiry on first request
+	if current == 1 {
+		r.client.Expire(ctx, key, window)
+	}
+
+	// Calculate remaining requests
+	remaining := int64(limit) - current
+	if remaining < 0 {
+		remaining = 0
+	}
+
+	// Get TTL to calculate reset time
+	ttl, err := r.client.TTL(ctx, key).Result()
+	if err != nil {
+		return false, remaining, 0, err
+	}
+
+	// Calculate reset time (current time + TTL)
+	resetTime := time.Now().Add(ttl).Unix()
+
+	allowed := current <= int64(limit)
+	return allowed, remaining, resetTime, nil
+}
+
 // CacheResponse caches API responses
 func (r *RedisService) CacheResponse(ctx context.Context, key string, data interface{}, ttl time.Duration) error {
 	jsonData, err := json.Marshal(data)

@@ -6,7 +6,7 @@ Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
 from typing import Union
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from api_models.auth.profile import (
     UserProfileResponse,
     UserProfileUpdateRequest,
@@ -26,6 +26,7 @@ from validation.business_validators import (
     validate_age_requirements
 )
 from .dependencies import get_current_user
+from controllers.dependencies import get_request_id_from_request
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)
@@ -48,11 +49,15 @@ router = APIRouter(tags=["profile"])
 )
 
 def get_profile(
+    request: Request,
     current_user: User = Depends(get_current_user)
 ) -> UserProfileResponse:
     """Get current user profile (requires JWT token)"""
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     try:
-        logger.info(action=LogActions.REQUEST_START, message=f"Profile accessed by user: {current_user.username}")
+        logger.info(action=LogActions.REQUEST_START, message=f"Profile accessed by user: {current_user.username}", request_id=request_id)
 
         return UserProfileResponse(
             username=current_user.username,
@@ -67,7 +72,7 @@ def get_profile(
         )
 
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Failed to get profile for user {current_user.username}: {str(e)}")
+        logger.error(action=LogActions.ERROR, message=f"Failed to get profile for user {current_user.username}: {str(e)}", request_id=request_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve profile"
@@ -98,6 +103,7 @@ def get_profile(
 )
 def update_profile(
     profile_data: UserProfileUpdateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     user_dao = Depends(get_user_dao)
 ) -> ProfileUpdateSuccessResponse:
@@ -107,8 +113,11 @@ def update_profile(
     Layer 1: Field validation already handled in API models
     Layer 2: Business validation (uniqueness, age requirements, etc.)
     """
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     try:
-        logger.info(action=LogActions.REQUEST_START, message=f"Profile update attempt by user: {current_user.username}")
+        logger.info(action=LogActions.REQUEST_START, message=f"Profile update attempt by user: {current_user.username}", request_id=request_id)
 
         # Layer 2: Business validation only
         if profile_data.email and profile_data.email != current_user.email:
@@ -137,7 +146,7 @@ def update_profile(
         if not updated_user:
             raise CNOPUserNotFoundException(f"User '{current_user.username}' not found")
 
-        logger.info(action=LogActions.REQUEST_END, message=f"Profile updated successfully for user: {current_user.username}")
+        logger.info(action=LogActions.REQUEST_END, message=f"Profile updated successfully for user: {current_user.username}", request_id=request_id)
 
         return ProfileUpdateSuccessResponse(
             message="Profile updated successfully",
@@ -156,7 +165,7 @@ def update_profile(
     except (CNOPUserNotFoundException, HTTPException, CNOPUserValidationException, CNOPUserAlreadyExistsException):
         raise
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Profile update failed for user {current_user.username}: {str(e)}")
+        logger.error(action=LogActions.ERROR, message=f"Profile update failed for user {current_user.username}: {str(e)}", request_id=request_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update profile"

@@ -13,9 +13,12 @@ import (
 	"order-processor-gateway/internal/services"
 	"order-processor-gateway/pkg/constants"
 	"order-processor-gateway/pkg/logging"
+	"order-processor-gateway/pkg/metrics"
 	"order-processor-gateway/pkg/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Server represents the API server
@@ -25,16 +28,23 @@ type Server struct {
 	redisService *services.RedisService
 	proxyService *services.ProxyService
 	logger       *logging.BaseLogger
+	metrics      *metrics.GatewayMetrics
 }
 
 // NewServer creates a new API server
 func NewServer(cfg *config.Config, redisService *services.RedisService, proxyService *services.ProxyService) *Server {
+	return NewServerWithRegistry(cfg, redisService, proxyService, nil)
+}
+
+// NewServerWithRegistry creates a new API server with a custom metrics registry (for testing)
+func NewServerWithRegistry(cfg *config.Config, redisService *services.RedisService, proxyService *services.ProxyService, reg prometheus.Registerer) *Server {
 	server := &Server{
 		config:       cfg,
 		router:       gin.Default(),
 		redisService: redisService,
 		proxyService: proxyService,
 		logger:       logging.NewBaseLogger(logging.GATEWAY),
+		metrics:      metrics.NewGatewayMetricsWithRegistry(reg),
 	}
 
 	server.setupRoutes()
@@ -53,8 +63,8 @@ func (s *Server) setupRoutes() {
 
 	// Add Redis-based middleware if Redis is available
 	if s.redisService != nil {
-		// Phase 2: Add rate limiting middleware
-		// s.router.Use(middleware.RateLimitMiddleware(s.redisService, 100, time.Minute))
+		// Add rate limiting middleware with metrics
+		s.router.Use(middleware.RateLimitMiddleware(s.redisService, 100, time.Minute, s.metrics.RateLimit))
 
 		// Phase 2: Add session middleware
 		// s.router.Use(middleware.SessionMiddleware(s.redisService))
@@ -62,6 +72,9 @@ func (s *Server) setupRoutes() {
 
 	// Health check endpoint
 	s.router.GET(constants.HealthPath, s.healthCheck)
+
+	// Metrics endpoint for Prometheus
+	s.router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// API v1 routes
 	api := s.router.Group(constants.APIV1Path)

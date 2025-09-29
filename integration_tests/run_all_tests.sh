@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Simple script to run test cases with options
-# Usage: ./run_all_tests.sh [all|smoke|inventory|user|order]
+# Usage: ./run_all_tests.sh [all|smoke|inventory|user|order|load]
 
 # Global exit code tracking
 OVERALL_EXIT_CODE=0
@@ -103,6 +103,22 @@ run_order_tests() {
     run_test_suite "order asset transaction tests" "python3 order_service/asset_transaction_tests.py"
 }
 
+run_load_tests() {
+    echo "=== Running Load Tests ==="
+
+    # Check if load tests directory exists
+    if [ -d "load_tests" ]; then
+        echo "Running load test suite..."
+        cd load_tests
+        chmod +x *.sh
+        ./run_all_load_tests.sh
+        cd ..
+    else
+        echo "❌ Load tests directory not found"
+        OVERALL_EXIT_CODE=1
+    fi
+}
+
 # Default to all tests if no argument provided
 if [ $# -eq 0 ]; then
     ARG="all"
@@ -145,6 +161,11 @@ case $ARG in
         echo "=== Running Order Tests ==="
         run_order_tests
         echo "=== Order tests completed ==="
+        ;;
+    "load")
+        echo "=== Running Load Tests ==="
+        run_load_tests
+        echo "=== Load tests completed ==="
         ;;
     *)
         echo "Error: Invalid argument '$ARG'"

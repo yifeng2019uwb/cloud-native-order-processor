@@ -73,16 +73,17 @@ def get_transaction_manager() -> TransactionManager:
     )
 
 
-def get_request_id(
-    x_request_id: Optional[str] = Header(None, alias="X-Request-ID")
-) -> str:
+def get_request_id_from_request(request: Request) -> str:
     """
-    Extract request ID from Gateway headers for distributed tracing
+    Extract request ID from Request object headers for distributed tracing
+
+    Args:
+        request: FastAPI Request object
 
     Returns:
         Request ID string for correlation across services
     """
-    return x_request_id or "no-request-id"
+    return request.headers.get("X-Request-ID") or "no-request-id"
 
 
 def get_current_user(

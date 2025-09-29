@@ -33,7 +33,8 @@ from order_exceptions import (
 )
 from controllers.dependencies import (
     get_current_user, get_asset_balance_dao_dependency,
-    get_user_dao_dependency, get_asset_dao_dependency
+    get_user_dao_dependency, get_asset_dao_dependency,
+    get_request_id_from_request
 )
 from validation.business_validators import validate_user_permissions
 
@@ -102,11 +103,15 @@ def get_user_asset_balances(
     """
     Get all asset balances for the authenticated user
     """
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     # Log request
     logger.info(
         action=LogActions.REQUEST_START,
         message=f"Asset balances request from {request.client.host if request.client else 'unknown'}",
         user=current_user["username"],
+        request_id=request_id,
         extra={
             "user_agent": request.headers.get("user-agent", "unknown"),
             "timestamp": datetime.now(timezone.utc).isoformat()
@@ -147,7 +152,8 @@ def get_user_asset_balances(
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"Asset balances retrieved successfully: asset_count={len(balance_data_list)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
 
         return GetAssetBalancesResponse(
@@ -161,14 +167,16 @@ def get_user_asset_balances(
         logger.error(
             action=LogActions.ERROR,
             message=f"Database operation failed for asset balances: error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(
             action=LogActions.ERROR,
             message=f"Unexpected error during asset balances retrieval: error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")
 
@@ -210,11 +218,15 @@ def get_user_asset_balance(
     """
     Get specific asset balance for the authenticated user
     """
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     # Log request
     logger.info(
         action=LogActions.REQUEST_START,
         message=f"Asset balance request from {request.client.host if request.client else 'unknown'}",
         user=current_user["username"],
+        request_id=request_id,
         extra={
             "asset_id": asset_id,
             "user_agent": request.headers.get("user-agent", "unknown"),
@@ -231,7 +243,8 @@ def get_user_asset_balance(
             logger.warning(
                 action=LogActions.VALIDATION_ERROR,
                 message=f"Field validation failed for asset_id '{asset_id}': {str(validation_error)}",
-                user=current_user['username']
+                user=current_user['username'],
+                request_id=request_id
             )
             # Re-raise the original validation error without wrapping
             raise
@@ -266,7 +279,8 @@ def get_user_asset_balance(
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"Asset balance retrieved successfully: asset={validated_asset_id}, quantity={asset_balance.quantity}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
 
         return GetAssetBalanceResponse(
@@ -281,7 +295,8 @@ def get_user_asset_balance(
         logger.warning(
             action=LogActions.VALIDATION_ERROR,
             message=f"Validation error for asset_id '{asset_id}': {str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         # Re-raise the original validation error without wrapping
         raise
@@ -289,14 +304,16 @@ def get_user_asset_balance(
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"Asset balance not found: asset={asset_id}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPAssetNotFoundException(f"Asset balance for {asset_id} not found")
     except CNOPAssetBalanceNotFoundException as e:
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"Asset balance not found: {str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         # Re-raise the original exception to let main.py handle it
         raise
@@ -304,13 +321,15 @@ def get_user_asset_balance(
         logger.error(
             action=LogActions.ERROR,
             message=f"Database operation failed for asset balance: asset={asset_id}, error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(
             action=LogActions.ERROR,
             message=f"Unexpected error during asset balance retrieval: asset={asset_id}, error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")

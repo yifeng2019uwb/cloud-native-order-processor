@@ -10,6 +10,13 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 
+
+def create_mock_request(request_id="test-request-id"):
+    """Helper function to create a mock request object with headers"""
+    mock_request = MagicMock()
+    mock_request.headers = {"X-Request-ID": request_id}
+    return mock_request
+
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'common', 'src'))

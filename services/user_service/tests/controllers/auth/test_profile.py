@@ -11,6 +11,13 @@ from common.exceptions.shared_exceptions import (
 from user_exceptions import CNOPUserAlreadyExistsException
 from datetime import datetime, timezone
 
+
+def create_mock_request(request_id="test-request-id"):
+    """Helper function to create a mock request object with headers"""
+    mock_request = MagicMock()
+    mock_request.headers = {"X-Request-ID": request_id}
+    return mock_request
+
 def test_get_profile_success():
     mock_user = MagicMock()
     mock_user.username = "testuser"
@@ -24,7 +31,7 @@ def test_get_profile_success():
     mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0, tzinfo=timezone.utc)
 
     # Call the function
-    result = get_profile(current_user=mock_user)
+    result = get_profile(request=create_mock_request(), current_user=mock_user)
 
     # Verify result
     assert result.username == "testuser"
@@ -75,7 +82,7 @@ def test_update_profile_success():
         phone="+1234567890",
         date_of_birth="1990-01-01"
     )
-    result = update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
+    result = update_profile(profile_data, request=create_mock_request(), current_user=mock_user, user_dao=mock_user_dao)
     assert result.message == "Profile updated successfully"
     assert result.user.username == "john_doe"
     assert result.user.email == "john.new@example.com"
@@ -107,7 +114,7 @@ def test_update_profile_email_in_use():
     )
 
     with pytest.raises(CNOPUserAlreadyExistsException) as exc_info:
-        update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
+        update_profile(profile_data, request=create_mock_request(), current_user=mock_user, user_dao=mock_user_dao)
     assert "Email 'existing@example.com' already exists" in str(exc_info.value)
 
 
@@ -137,7 +144,7 @@ def test_update_profile_user_not_found():
         date_of_birth="1990-01-01"
     )
     with pytest.raises(CNOPEntityNotFoundException) as exc_info:
-        update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
+        update_profile(profile_data, request=create_mock_request(), current_user=mock_user, user_dao=mock_user_dao)
     assert "User 'john_doe' not found" in str(exc_info.value)
 
 def test_update_profile_with_own_email():
@@ -180,7 +187,7 @@ def test_update_profile_with_own_email():
         date_of_birth="1990-01-01"
     )
 
-    result = update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
+    result = update_profile(profile_data, request=create_mock_request(), current_user=mock_user, user_dao=mock_user_dao)
     assert result.message == "Profile updated successfully"
     assert result.user.username == "john_doe"
     assert result.user.email == "john@example.com"
@@ -211,5 +218,5 @@ async def test_update_profile_database_error():
         date_of_birth="1990-01-01"
     )
     with pytest.raises(HTTPException) as exc_info:
-        await update_profile(profile_data, current_user=mock_user, user_dao=mock_user_dao)
+        await update_profile(profile_data, request=create_mock_request(), current_user=mock_user, user_dao=mock_user_dao)
     assert exc_info.value.status_code == 500

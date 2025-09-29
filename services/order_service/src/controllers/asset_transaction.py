@@ -24,7 +24,8 @@ from common.exceptions.shared_exceptions import CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from controllers.dependencies import (
     get_current_user, get_asset_transaction_dao_dependency,
-    get_asset_dao_dependency, get_user_dao_dependency
+    get_asset_dao_dependency, get_user_dao_dependency,
+    get_request_id_from_request
 )
 from validation.business_validators import validate_order_history_business_rules
 
@@ -61,9 +62,9 @@ router = APIRouter(tags=["asset-transactions"])
 )
 def get_asset_transactions(
     asset_id: str,
+    request: Request,
     limit: int = 50,
     offset: int = 0,
-    request: Request = None,
     current_user: dict = Depends(get_current_user),
     asset_transaction_dao: AssetTransactionDAO = Depends(get_asset_transaction_dao_dependency),
     asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
@@ -72,11 +73,15 @@ def get_asset_transactions(
     """
     Get asset transaction history for the authenticated user
     """
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     # Log request
     logger.info(
         action=LogActions.REQUEST_START,
         message=f"Asset transactions request from {request.client.host if request.client else 'unknown'}",
         user=current_user["username"],
+        request_id=request_id,
         extra={
             "asset_id": asset_id,
             "limit": limit,
@@ -121,7 +126,8 @@ def get_asset_transactions(
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"Asset transactions retrieved successfully: asset={asset_id}, count={len(transaction_data_list)}, has_more={has_more}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
 
         return GetAssetTransactionsResponse(
@@ -136,7 +142,8 @@ def get_asset_transactions(
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"No asset transactions found: asset={asset_id}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         # Return empty list instead of error for no transactions
         return GetAssetTransactionsResponse(
@@ -150,13 +157,15 @@ def get_asset_transactions(
         logger.error(
             action=LogActions.ERROR,
             message=f"Database operation failed for asset transactions: asset={asset_id}, error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
         logger.error(
             action=LogActions.ERROR,
             message=f"Unexpected error during asset transactions retrieval: asset={asset_id}, error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")

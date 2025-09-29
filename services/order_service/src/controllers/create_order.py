@@ -28,7 +28,8 @@ from order_exceptions import CNOPOrderValidationException
 from controllers.dependencies import (
     get_current_user, get_transaction_manager,
     get_asset_dao_dependency, get_user_dao_dependency,
-    get_balance_dao_dependency, get_asset_balance_dao_dependency
+    get_balance_dao_dependency, get_asset_balance_dao_dependency,
+    get_request_id_from_request
 )
 from validation.business_validators import validate_order_creation_business_rules
 
@@ -86,11 +87,15 @@ async def create_order(
     - Market Sell: Immediate sale with asset balance validation
     - Limit Buy/Sell: Future implementation
     """
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     # Log order creation attempt
     logger.info(
         action=LogActions.REQUEST_START,
         message=f"Order creation attempt from {request.client.host if request.client else 'unknown'}",
         user=current_user["username"],
+        request_id=request_id,
         extra={
             "order_type": order_data.order_type.value,
             "asset_id": order_data.asset_id,
@@ -137,7 +142,8 @@ async def create_order(
                 message=f"Buy order executed successfully: order_id={result.data['order'].order_id}, "
                        f"asset={order_data.asset_id}, quantity={order_data.quantity}, "
                        f"total_cost={total_amount}, lock_duration={result.lock_duration}s",
-                user=current_user['username']
+                user=current_user['username'],
+                request_id=request_id
             )
 
         elif order_data.order_type in [OrderType.MARKET_SELL, OrderType.LIMIT_SELL]:
@@ -156,7 +162,8 @@ async def create_order(
                 message=f"Sell order executed successfully: order_id={result.data['order'].order_id}, "
                        f"asset={order_data.asset_id}, quantity={order_data.quantity}, "
                        f"asset_amount={total_amount}, lock_duration={result.lock_duration}s",
-                user=current_user['username']
+                user=current_user['username'],
+                request_id=request_id
             )
 
         else:
@@ -189,7 +196,8 @@ async def create_order(
             action=LogActions.VALIDATION_ERROR,
             message=f"Insufficient balance for order: order_type={order_data.order_type.value}, "
                    f"asset={order_data.asset_id}, quantity={order_data.quantity}, error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         # Wrap the exception in CNOPOrderValidationException
         raise CNOPOrderValidationException(str(e))
@@ -198,7 +206,8 @@ async def create_order(
         logger.warning(
             action=LogActions.ERROR,
             message=f"Lock acquisition failed for order: error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable - please try again")
 
@@ -206,7 +215,8 @@ async def create_order(
         logger.error(
             action=LogActions.ERROR,
             message=f"Database operation failed for order: error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")
 
@@ -214,7 +224,8 @@ async def create_order(
         logger.warning(
             action=LogActions.VALIDATION_ERROR,
             message=f"Order validation failed: error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         # Re-raise the original exception without wrapping
         raise
@@ -224,6 +235,7 @@ async def create_order(
             action=LogActions.ERROR,
             message=f"Unexpected error during order creation: order_type={order_data.order_type.value}, "
                    f"asset={order_data.asset_id}, quantity={order_data.quantity}, error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")

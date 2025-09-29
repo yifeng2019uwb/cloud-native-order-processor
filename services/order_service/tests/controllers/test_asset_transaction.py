@@ -17,6 +17,13 @@ from common.exceptions.shared_exceptions import (
 )
 
 
+def create_mock_request(request_id="test-request-id"):
+    """Helper function to create a mock request object with headers"""
+    mock_request = MagicMock()
+    mock_request.headers = {"X-Request-ID": request_id}
+    return mock_request
+
+
 # Mock dependencies before importing
 with patch('src.controllers.asset_transaction.get_current_user', create=True), \
      patch('src.controllers.asset_transaction.get_asset_transaction_dao_dependency', create=True), \

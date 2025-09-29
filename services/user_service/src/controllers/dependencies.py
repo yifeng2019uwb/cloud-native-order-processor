@@ -6,21 +6,22 @@ including a simplified transaction manager that only uses available DAOs.
 """
 
 from typing import Optional
-from fastapi import Header
+from fastapi import Header, Request
 from common.data.database.dependencies import get_user_dao, get_balance_dao
 from common.core.utils import TransactionManager
 
 
-def get_request_id(
-    x_request_id: Optional[str] = Header(None, alias="X-Request-ID")
-) -> str:
+def get_request_id_from_request(request: Request) -> str:
     """
-    Extract request ID from Gateway headers for distributed tracing
+    Extract request ID from Request object headers for distributed tracing
+
+    Args:
+        request: FastAPI Request object
 
     Returns:
         Request ID string for correlation across services
     """
-    return x_request_id or "no-request-id"
+    return request.headers.get("X-Request-ID") or "no-request-id"
 
 
 def get_transaction_manager() -> TransactionManager:

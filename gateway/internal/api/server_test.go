@@ -15,6 +15,7 @@ import (
 	"order-processor-gateway/pkg/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +31,9 @@ func setupTestServer() (*Server, *config.Config) {
 		},
 	}
 
-	server := NewServer(cfg, nil, services.NewProxyService(cfg))
+	// Create a new registry for each test to avoid duplicate metrics registration
+	reg := prometheus.NewRegistry()
+	server := NewServerWithRegistry(cfg, nil, services.NewProxyService(cfg), reg)
 	return server, cfg
 }
 
@@ -49,7 +52,9 @@ func TestNewServer(t *testing.T) {
 	redisService := &services.RedisService{}
 	proxyService := services.NewProxyService(cfg)
 
-	server := NewServer(cfg, redisService, proxyService)
+	// Create a new registry for each test to avoid duplicate metrics registration
+	reg := prometheus.NewRegistry()
+	server := NewServerWithRegistry(cfg, redisService, proxyService, reg)
 
 	assert.NotNil(t, server)
 	assert.Equal(t, cfg, server.config)

@@ -4,7 +4,7 @@ Path: services/inventory-service/src/controllers/assets.py
 """
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from api_models.inventory.asset_response import (
     AssetResponse,
     AssetDetailResponse,
@@ -13,7 +13,7 @@ from api_models.inventory.asset_response import (
 from api_models.inventory.asset_requests import AssetIdRequest
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.database.dependencies import get_asset_dao
-from controllers.dependencies import get_request_id
+from controllers.dependencies import get_request_id_from_request
 from common.exceptions.shared_exceptions import CNOPAssetNotFoundException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from inventory_exceptions import (
@@ -80,6 +80,7 @@ def build_asset_list(assets: list, request_params, total_count: int) -> AssetLis
     }
 )
 def list_assets(
+    request: Request,
     active_only: Optional[bool] = Query(
         True,
         description="Show only active assets"
@@ -90,8 +91,7 @@ def list_assets(
         le=250,
         description="Maximum number of assets to return (1-250)"
     ),
-    asset_dao: AssetDAO = Depends(get_asset_dao),
-    request_id: str = Depends(get_request_id)
+    asset_dao: AssetDAO = Depends(get_asset_dao)
 ) -> AssetListResponse:
     """
     List all available assets with optional filtering
@@ -100,6 +100,8 @@ def list_assets(
     - **limit**: Maximum number of results to return (1-250)
     """
     try:
+        # Extract request_id from headers using existing method
+        request_id = get_request_id_from_request(request)
         logger.info(action=LogActions.REQUEST_START, message=f"Assets list requested - active_only: {active_only}, limit: {limit}", request_id=request_id)
 
         # Create simple request object for validation
@@ -166,6 +168,7 @@ def list_assets(
     }
 )
 def get_asset_by_id(
+    request: Request,
     asset_id: str,
     asset_dao: AssetDAO = Depends(get_asset_dao)
 ) -> AssetDetailResponse:
@@ -178,7 +181,9 @@ def get_asset_by_id(
     - **asset_id**: The asset symbol/identifier (e.g., "BTC", "ETH")
     """
     try:
-        logger.info(action=LogActions.REQUEST_START, message=f"Asset details requested for: {asset_id}")
+        # Extract request_id from headers using existing method
+        request_id = get_request_id_from_request(request)
+        logger.info(action=LogActions.REQUEST_START, message=f"Asset details requested for: {asset_id}", request_id=request_id)
 
         # Layer 1: Field validation using AssetIdRequest model
         try:

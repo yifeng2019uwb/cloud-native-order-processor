@@ -7,7 +7,7 @@ Handles order retrieval endpoint with business logic directly in controller
 """
 from datetime import datetime
 from typing import Union
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 from api_models.order import GetOrderResponse, OrderData
 from api_models.shared.common import ErrorResponse
 from common.data.dao.order.order_dao import OrderDAO
@@ -19,7 +19,7 @@ from common.exceptions.shared_exceptions import (
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from controllers.dependencies import (
     get_current_user, get_order_dao_dependency,
-    get_user_dao_dependency
+    get_user_dao_dependency, get_request_id_from_request
 )
 from validation.business_validators import validate_order_retrieval_business_rules
 
@@ -52,6 +52,7 @@ router = APIRouter(tags=["orders"])
 )
 def get_order(
     order_id: str,
+    request: Request,
     current_user: dict = Depends(get_current_user),
     order_dao: OrderDAO = Depends(get_order_dao_dependency),
     user_dao: UserDAO = Depends(get_user_dao_dependency)
@@ -59,6 +60,9 @@ def get_order(
     """
     Get order by ID with user authorization
     """
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     try:
         # Business validation (Layer 2)
         validate_order_retrieval_business_rules(
@@ -76,14 +80,16 @@ def get_order(
             logger.warning(
                 action=LogActions.ACCESS_DENIED,
                 message=f"Unauthorized access attempt: order_id={order_id}",
-                user=current_user['username']
+                user=current_user['username'],
+                request_id=request_id
             )
             raise CNOPOrderNotFoundException(f"Order '{order_id}' not found")
 
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"Order retrieved: order_id={order_id}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
 
         # Create response
@@ -111,6 +117,7 @@ def get_order(
         logger.error(
             action=LogActions.ERROR,
             message=f"Unexpected error retrieving order: order_id={order_id}, error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")

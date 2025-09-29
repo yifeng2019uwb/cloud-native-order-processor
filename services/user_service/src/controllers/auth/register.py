@@ -23,6 +23,7 @@ from common.exceptions.shared_exceptions import (
     CNOPInternalServerException
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from controllers.dependencies import get_request_id_from_request
 from user_exceptions.exceptions import (
     CNOPUserAlreadyExistsException,
     CNOPUserValidationException
@@ -76,10 +77,14 @@ def register_user(
     # Initialize security managers
     audit_logger = AuditLogger()
 
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     # Log register attempt (without sensitive data)
     logger.info(
         action=LogActions.REQUEST_START,
         message=f"Register attempt from {request.client.host if request.client else 'unknown'}",
+        request_id=request_id,
         extra={
             "username": user_data.username,
             "email": user_data.email,
@@ -116,7 +121,7 @@ def register_user(
         balance_dao.create_balance(initial_balance)
 
         # Log successful registration
-        logger.info(action=LogActions.REQUEST_END, message=f"User registered successfully: {user_data.username}")
+        logger.info(action=LogActions.REQUEST_END, message=f"User registered successfully: {user_data.username}", request_id=request_id)
 
         # Audit log successful registration
         audit_logger.log_security_event(
@@ -176,5 +181,5 @@ def register_user(
             }
         )
         # Log unexpected errors and convert to internal server exception
-        logger.error(action=LogActions.ERROR, message=f"Unexpected error during user registration: {str(e)}")
+        logger.error(action=LogActions.ERROR, message=f"Unexpected error during user registration: {str(e)}", request_id=request_id)
         raise CNOPInternalServerException(f"Registration failed: {str(e)}")

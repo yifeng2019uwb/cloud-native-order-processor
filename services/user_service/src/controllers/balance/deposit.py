@@ -18,7 +18,7 @@ from common.exceptions import (
     CNOPLockAcquisitionException
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from controllers.dependencies import get_transaction_manager, get_request_id
+from controllers.dependencies import get_transaction_manager, get_request_id_from_request
 from controllers.auth.dependencies import get_current_user
 logger = BaseLogger(Loggers.USER)
 router = APIRouter(tags=["balance"])
@@ -63,8 +63,7 @@ async def deposit_funds(
     deposit_data: DepositRequest,
     request: Request,
     current_user: User = Depends(get_current_user),
-    transaction_manager = Depends(get_transaction_manager),
-    request_id: str = Depends(get_request_id)
+    transaction_manager = Depends(get_transaction_manager)
 ) -> DepositResponse:
     """
     Deposit funds to user account using transaction manager for atomicity
@@ -72,6 +71,9 @@ async def deposit_funds(
     Layer 1: Field validation already handled in API models
     Layer 2: Business validation (user authentication, etc.)
     """
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     # Log deposit attempt (without sensitive data)
     logger.info(
         action=LogActions.REQUEST_START,

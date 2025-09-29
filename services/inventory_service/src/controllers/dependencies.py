@@ -7,8 +7,7 @@ Provides dependency injection for:
 - Service instances
 - No authentication required (public APIs)
 """
-from typing import Optional
-from fastapi import Depends, Header
+from fastapi import Request
 
 from common.data.database.dependencies import get_asset_dao
 from common.data.dao.inventory.asset_dao import AssetDAO
@@ -18,16 +17,17 @@ from common.shared.logging import BaseLogger, Loggers, LogActions
 logger = BaseLogger(Loggers.INVENTORY)
 
 
-def get_request_id(
-    x_request_id: Optional[str] = Header(None, alias="X-Request-ID")
-) -> str:
+def get_request_id_from_request(request: Request) -> str:
     """
-    Extract request ID from Gateway headers for distributed tracing
+    Extract request ID from Request object headers for distributed tracing
+
+    Args:
+        request: FastAPI Request object
 
     Returns:
         Request ID string for correlation across services
     """
-    return x_request_id or "no-request-id"
+    return request.headers.get("X-Request-ID") or "no-request-id"
 
 
 def get_asset_dao_dependency() -> AssetDAO:

@@ -15,6 +15,13 @@ from common.data.entities.user import Balance, User
 from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
 
 
+def create_mock_request(request_id="test-request-id"):
+    """Helper function to create a mock request object with headers"""
+    mock_request = Mock()
+    mock_request.headers = {"X-Request-ID": request_id}
+    return mock_request
+
+
 class TestGetUserBalance:
     """Test cases for get_user_balance function"""
 
@@ -45,6 +52,7 @@ class TestGetUserBalance:
         mock_balance_dao.get_balance.return_value = sample_balance
 
         result = get_user_balance(
+            request=create_mock_request(),
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -64,6 +72,7 @@ class TestGetUserBalance:
         mock_balance_dao.get_balance.return_value = zero_balance
 
         result = get_user_balance(
+            request=create_mock_request(),
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -81,6 +90,7 @@ class TestGetUserBalance:
         mock_balance_dao.get_balance.return_value = negative_balance
 
         result = get_user_balance(
+            request=create_mock_request(),
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -98,6 +108,7 @@ class TestGetUserBalance:
         mock_balance_dao.get_balance.return_value = large_balance
 
         result = get_user_balance(
+            request=create_mock_request(),
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -115,6 +126,7 @@ class TestGetUserBalance:
         mock_balance_dao.get_balance.return_value = precise_balance
 
         result = get_user_balance(
+            request=create_mock_request(),
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -129,6 +141,7 @@ class TestGetUserBalance:
         # UserNotFoundException should be re-raised without modification
         with pytest.raises(CNOPUserNotFoundException, match="User not found"):
             get_user_balance(
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao
             )
@@ -139,6 +152,7 @@ class TestGetUserBalance:
 
         with pytest.raises(CNOPInternalServerException, match="Failed to get balance: Database connection failed"):
             get_user_balance(
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao
             )
@@ -149,6 +163,7 @@ class TestGetUserBalance:
 
         with pytest.raises(CNOPInternalServerException, match="Failed to get balance: Table does not exist"):
             get_user_balance(
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao
             )
@@ -159,6 +174,7 @@ class TestGetUserBalance:
 
         with pytest.raises(CNOPInternalServerException, match="Failed to get balance: Connection timeout"):
             get_user_balance(
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao
             )
@@ -176,6 +192,7 @@ class TestGetUserBalance:
         mock_balance_dao.get_balance.return_value = different_balance
 
         result = get_user_balance(
+            request=create_mock_request(),
             current_user=different_user,
             balance_dao=mock_balance_dao
         )

@@ -25,7 +25,7 @@ from order_exceptions import CNOPOrderValidationException
 from controllers.dependencies import (
     get_current_user, get_balance_dao_dependency,
     get_asset_balance_dao_dependency, get_user_dao_dependency,
-    get_asset_dao_dependency, get_request_id
+    get_asset_dao_dependency, get_request_id_from_request
 )
 from validation.business_validators import validate_user_permissions
 
@@ -67,8 +67,7 @@ def get_user_portfolio(
     balance_dao: BalanceDAO = Depends(get_balance_dao_dependency),
     asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency),
     user_dao: UserDAO = Depends(get_user_dao_dependency),
-    asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
-    request_id: str = Depends(get_request_id)
+    asset_dao: AssetDAO = Depends(get_asset_dao_dependency)
 ) -> GetPortfolioResponse:
     """
     Get user's complete portfolio with calculated market values
@@ -78,6 +77,9 @@ def get_user_portfolio(
     - Individual asset market values
     - Asset allocation percentages
     """
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     # Log portfolio request
     logger.info(
         action=LogActions.REQUEST_START,

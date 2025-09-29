@@ -14,6 +14,13 @@ from common.data.entities.order.enums import OrderType, OrderStatus
 from common.exceptions import CNOPInternalServerException
 
 
+def create_mock_request(request_id="test-request-id"):
+    """Helper function to create a mock request object with headers"""
+    mock_request = MagicMock()
+    mock_request.headers = {"X-Request-ID": request_id}
+    return mock_request
+
+
 class TestListOrders:
     """Test list_orders function"""
 
@@ -76,6 +83,7 @@ class TestListOrders:
                 order_type=None,
                 limit=50,
                 offset=0,
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,
                 asset_dao=mock_asset_dao,
@@ -125,6 +133,7 @@ class TestListOrders:
                 order_type=None,
                 limit=50,
                 offset=0,
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,
                 asset_dao=mock_asset_dao,
@@ -166,6 +175,7 @@ class TestListOrders:
                 order_type=OrderType.MARKET_BUY,
                 limit=50,
                 offset=0,
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,
                 asset_dao=mock_asset_dao,
@@ -207,6 +217,7 @@ class TestListOrders:
                 order_type=None,
                 limit=2,
                 offset=1,
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,
                 asset_dao=mock_asset_dao,
@@ -252,6 +263,7 @@ class TestListOrders:
                 order_type=OrderType.MARKET_BUY,
                 limit=50,
                 offset=0,
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,
                 asset_dao=mock_asset_dao,
@@ -295,6 +307,7 @@ class TestListOrders:
                 order_type=None,
                 limit=50,
                 offset=0,
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,
                 asset_dao=mock_asset_dao,
@@ -343,6 +356,7 @@ class TestListOrders:
                 order_type=None,
                 limit=50,
                 offset=0,
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,
                 asset_dao=mock_asset_dao,
@@ -376,6 +390,7 @@ class TestListOrders:
                     order_type=None,
                     limit=50,
                     offset=0,
+                    request=create_mock_request(),
                     current_user=mock_current_user,
                     order_dao=mock_order_dao,
                     asset_dao=mock_asset_dao,
@@ -408,6 +423,7 @@ class TestListOrders:
                 order_type=None,
                 limit=50,
                 offset=0,
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,
                 asset_dao=mock_asset_dao,

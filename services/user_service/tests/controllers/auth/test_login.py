@@ -6,6 +6,13 @@ from api_models.auth.login import UserLoginRequest
 from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
 import pydantic
 
+
+def create_mock_request(request_id="test-request-id"):
+    """Helper function to create a mock request object with headers"""
+    mock_request = MagicMock()
+    mock_request.headers = {"X-Request-ID": request_id}
+    return mock_request
+
 def test_login_success():
     # Mock user DAO
     mock_user_dao = MagicMock()
@@ -18,7 +25,7 @@ def test_login_success():
     login_data = UserLoginRequest(username="testuser", password="ValidPass123!@#")
 
     # Call the function
-    result = login_user(login_data, user_dao=mock_user_dao)
+    result = login_user(login_data, request=create_mock_request(), user_dao=mock_user_dao)
 
     # Verify result
     assert result.message == "Login successful"
@@ -36,7 +43,7 @@ def test_login_invalid_credentials():
 
     # Test that the function raises the correct exception
     with pytest.raises(CNOPInvalidCredentialsException) as exc_info:
-        login_user(login_data, user_dao=mock_user_dao)
+        login_user(login_data, request=create_mock_request(), user_dao=mock_user_dao)
 
     assert "Invalid credentials for user 'testuser'" in str(exc_info.value)
 
@@ -50,7 +57,7 @@ def test_login_user_not_found():
 
     # Test that the function raises the correct exception
     with pytest.raises(CNOPUserNotFoundException) as exc_info:
-        login_user(login_data, user_dao=mock_user_dao)
+        login_user(login_data, request=create_mock_request(), user_dao=mock_user_dao)
 
     assert "User not found" in str(exc_info.value)
 
@@ -68,5 +75,5 @@ async def test_login_database_error():
 
     # Database errors should bubble up as exceptions
     with pytest.raises(Exception) as exc_info:
-        login_user(login_data, user_dao=mock_user_dao)
+        login_user(login_data, request=create_mock_request(), user_dao=mock_user_dao)
     assert "db error" in str(exc_info.value)

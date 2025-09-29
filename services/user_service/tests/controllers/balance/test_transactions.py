@@ -17,6 +17,13 @@ from common.data.entities.user.balance_enums import TransactionType, Transaction
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 
 
+def create_mock_request(request_id="test-request-id"):
+    """Helper function to create a mock request object with headers"""
+    mock_request = Mock()
+    mock_request.headers = {"X-Request-ID": request_id}
+    return mock_request
+
+
 class TestGetUserTransactions:
     """Test cases for get_user_transactions function"""
 
@@ -71,6 +78,7 @@ class TestGetUserTransactions:
         mock_balance_dao.get_user_transactions.return_value = (sample_transactions, 3)
 
         result = get_user_transactions(
+            request=create_mock_request(),
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -104,6 +112,7 @@ class TestGetUserTransactions:
         mock_balance_dao.get_user_transactions.return_value = (None, 0)
 
         result = get_user_transactions(
+            request=create_mock_request(),
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -116,6 +125,7 @@ class TestGetUserTransactions:
         mock_balance_dao.get_user_transactions.return_value = ([], 0)
 
         result = get_user_transactions(
+            request=create_mock_request(),
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -129,6 +139,7 @@ class TestGetUserTransactions:
 
         with pytest.raises(CNOPInternalServerException, match="Failed to get transactions: Database error"):
             get_user_transactions(
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao
             )
@@ -146,6 +157,7 @@ class TestGetUserTransactions:
         mock_balance_dao.get_user_transactions.return_value = ([single_transaction], 1)
 
         result = get_user_transactions(
+            request=create_mock_request(),
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )
@@ -171,6 +183,7 @@ class TestGetUserTransactions:
         mock_balance_dao.get_user_transactions.return_value = (large_transactions, 10)
 
         result = get_user_transactions(
+            request=create_mock_request(),
             current_user=mock_current_user,
             balance_dao=mock_balance_dao
         )

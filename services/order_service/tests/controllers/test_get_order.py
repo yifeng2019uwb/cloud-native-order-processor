@@ -15,6 +15,13 @@ from common.exceptions.shared_exceptions import CNOPOrderNotFoundException, CNOP
 from order_exceptions import CNOPOrderValidationException
 
 
+def create_mock_request(request_id="test-request-id"):
+    """Helper function to create a mock request object with headers"""
+    mock_request = MagicMock()
+    mock_request.headers = {"X-Request-ID": request_id}
+    return mock_request
+
+
 class TestGetOrder:
     """Test get_order function"""
 
@@ -68,6 +75,7 @@ class TestGetOrder:
             # Test the function
             result = get_order(
                 order_id="order123",
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,
                 user_dao=mock_user_dao
@@ -117,6 +125,7 @@ class TestGetOrder:
             with pytest.raises(CNOPOrderNotFoundException, match="Order 'order123' not found"):
                 get_order(
                     order_id="order123",
+                    request=create_mock_request(),
                     current_user=mock_current_user,
                     order_dao=mock_order_dao,
                     user_dao=mock_user_dao
@@ -141,6 +150,7 @@ class TestGetOrder:
             with pytest.raises(CNOPOrderNotFoundException, match="Order not found"):
                 get_order(
                     order_id="nonexistent",
+                    request=create_mock_request(),
                     current_user=mock_current_user,
                     order_dao=mock_order_dao,
                     user_dao=mock_user_dao
@@ -164,6 +174,7 @@ class TestGetOrder:
             with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
                 get_order(
                     order_id="order123",
+                    request=create_mock_request(),
                     current_user=mock_current_user,
                     order_dao=mock_order_dao,
                     user_dao=mock_user_dao
@@ -194,6 +205,7 @@ class TestGetOrder:
             with pytest.raises(CNOPOrderNotFoundException, match="Order 'order123' not found"):
                 get_order(
                     order_id="order123",
+                    request=create_mock_request(),
                     current_user=mock_current_user,
                     order_dao=mock_order_dao,
                     user_dao=mock_user_dao
@@ -220,6 +232,7 @@ class TestGetOrder:
             # Test the function
             result = get_order(
                 order_id="order123",
+                request=create_mock_request(),
                 current_user=mock_current_user,
                 order_dao=mock_order_dao,
                 user_dao=mock_user_dao

@@ -7,7 +7,7 @@ Handles order listing endpoint with business logic directly in controller
 """
 from datetime import datetime
 from typing import Union, Optional
-from fastapi import APIRouter, Depends, status, Query
+from fastapi import APIRouter, Depends, status, Query, Request
 from api_models.order import OrderListResponse, OrderSummary
 from api_models.shared.common import ErrorResponse
 from common.data.entities.order.enums import OrderType
@@ -18,7 +18,8 @@ from common.exceptions.shared_exceptions import CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from controllers.dependencies import (
     get_current_user, get_order_dao_dependency,
-    get_asset_dao_dependency, get_user_dao_dependency
+    get_asset_dao_dependency, get_user_dao_dependency,
+    get_request_id_from_request
 )
 from validation.business_validators import validate_order_listing_business_rules
 
@@ -46,6 +47,7 @@ router = APIRouter(tags=["orders"])
     }
 )
 def list_orders(
+    request: Request,
     asset_id: Optional[str] = Query(None, description="Filter by asset ID"),
     order_type: Optional[OrderType] = Query(None, description="Filter by order type"),
     limit: int = Query(50, ge=1, le=100, description="Maximum number of orders to return"),
@@ -58,6 +60,9 @@ def list_orders(
     """
     List user orders with optional filters and pagination
     """
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     try:
         # Business validation (Layer 2)
         validate_order_listing_business_rules(
@@ -90,7 +95,8 @@ def list_orders(
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"Orders listed: count={len(paginated_orders)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
 
         # Convert to response format
@@ -121,6 +127,7 @@ def list_orders(
         logger.error(
             action=LogActions.ERROR,
             message=f"Unexpected error listing orders: error={str(e)}",
-            user=current_user['username']
+            user=current_user['username'],
+            request_id=request_id
         )
         raise CNOPInternalServerException("Service temporarily unavailable")

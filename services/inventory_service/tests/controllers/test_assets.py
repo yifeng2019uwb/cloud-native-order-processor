@@ -15,6 +15,12 @@ from inventory_exceptions import (
     CNOPAssetValidationException,
     CNOPInventoryServerException
 )
+
+def create_mock_request(request_id="test-request-id"):
+    """Helper function to create a mock request object with headers"""
+    mock_request = MagicMock()
+    mock_request.headers = {"X-Request-ID": request_id}
+    return mock_request
 from common.exceptions import (
     CNOPDatabaseOperationException,
     CNOPAssetNotFoundException
@@ -70,8 +76,12 @@ def test_list_assets_with_limit():
 
         mock_dao.get_all_assets.return_value = mock_assets
 
+        # Create mock request object
+        mock_request = MagicMock()
+        mock_request.headers = {"X-Request-ID": "test-request-id"}
+
         # test with limit
-        result = list_assets(active_only=True, limit=3, asset_dao=mock_dao)
+        result = list_assets(request=mock_request, active_only=True, limit=3, asset_dao=mock_dao)
 
         # Verify limit was applied
         assert len(result.assets) == 3
@@ -127,8 +137,12 @@ def test_list_assets_without_limit():
 
         mock_dao.get_all_assets.return_value = mock_assets
 
+        # Create mock request object
+        mock_request = MagicMock()
+        mock_request.headers = {"X-Request-ID": "test-request-id"}
+
         # test without limit
-        result = list_assets(active_only=True, limit=None, asset_dao=mock_dao)
+        result = list_assets(request=mock_request, active_only=True, limit=None, asset_dao=mock_dao)
 
         # Verify all assets were returned
         assert len(result.assets) == 3
@@ -180,7 +194,7 @@ def test_list_assets_without_limit():
             mock_dao.get_asset_by_id.return_value = mock_asset
 
             # test the function
-            result = get_asset_by_id("BTC", asset_dao=mock_dao)
+            result = get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_dao)
 
         # Verify AssetDAO was called with uppercase asset_id
         mock_dao.get_asset_by_id.assert_called_once_with("BTC")
@@ -202,7 +216,7 @@ def test_get_asset_by_id_not_found():
 
         # Test that the function raises the correct exception
         with pytest.raises(CNOPInventoryServerException) as exc_info:
-            get_asset_by_id("INVALID", asset_dao=mock_dao)
+            get_asset_by_id(create_mock_request(), "INVALID", asset_dao=mock_dao)
 
         error = exc_info.value
         # Check that the error message contains the operation context
@@ -255,7 +269,7 @@ def test_get_asset_by_id_not_found():
             mock_dao.get_asset_by_id.return_value = mock_asset
 
             # Test with lowercase input
-            result = get_asset_by_id("btc", asset_dao=mock_dao)
+            result = get_asset_by_id(create_mock_request(), "btc", asset_dao=mock_dao)
 
         # Verify AssetDAO was called with uppercase asset_id
         mock_dao.get_asset_by_id.assert_called_once_with("BTC")
@@ -279,7 +293,7 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao.get_all_assets.side_effect = Exception("Database connection failed")
 
         with pytest.raises(CNOPInventoryServerException) as exc_info:
-            list_assets(active_only=True, limit=10, asset_dao=mock_asset_dao)
+            list_assets(request=create_mock_request(), active_only=True, limit=10, asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Check that the error message contains the operation context
@@ -292,7 +306,7 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao.get_asset_by_id.side_effect = Exception("Database query failed")
 
         with pytest.raises(CNOPInventoryServerException) as exc_info:
-            get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+            get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Check that the error message contains the operation context
@@ -307,7 +321,7 @@ class TestAssetsControllerExceptionHandling:
         )
 
         with pytest.raises(CNOPInventoryServerException) as exc_info:
-            list_assets(active_only=True, limit=10, asset_dao=mock_asset_dao)
+            list_assets(request=create_mock_request(), active_only=True, limit=10, asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Check that the error message contains the operation context
@@ -322,7 +336,7 @@ class TestAssetsControllerExceptionHandling:
         )
 
         with pytest.raises(CNOPInventoryServerException) as exc_info:
-            get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+            get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Check that the error message contains the operation context
@@ -335,7 +349,7 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao.get_asset_by_id.side_effect = Exception("Test database error")
 
         with pytest.raises(CNOPInventoryServerException) as exc_info:
-            get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+            get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Check that the error has proper context
@@ -351,7 +365,7 @@ class TestAssetsControllerExceptionHandling:
         )
 
         with pytest.raises(CNOPInventoryServerException) as exc_info:
-            list_assets(active_only=True, limit=5, asset_dao=mock_asset_dao)
+            list_assets(request=create_mock_request(), active_only=True, limit=5, asset_dao=mock_asset_dao)
 
         error = exc_info.value
         # Verify the error is properly wrapped
@@ -374,7 +388,7 @@ class TestAssetsControllerExceptionHandling:
         mock_asset_dao.get_asset_by_id.side_effect = complex_error
 
         with pytest.raises(CNOPInventoryServerException) as exc_info:
-            get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+            get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
 
         error = exc_info.value
         assert "failed to get asset btc" in str(error).lower()
@@ -395,7 +409,7 @@ class TestAssetsControllerExceptionHandling:
             mock_asset_dao.get_asset_by_id.side_effect = exc
 
             with pytest.raises(expected_exception_type) as exc_info:
-                get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+                get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
 
             error = exc_info.value
             assert isinstance(error, expected_exception_type)
@@ -416,7 +430,7 @@ class TestAssetsControllerExceptionHandling:
             mock_asset_dao.get_asset_by_id.side_effect = validation_error
 
             with pytest.raises(CNOPAssetValidationException) as exc_info:
-                get_asset_by_id("BTC", asset_dao=mock_asset_dao)
+                get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
 
             error = exc_info.value
             assert isinstance(error, CNOPAssetValidationException)
@@ -552,7 +566,7 @@ def test_list_assets_metrics_recording():
         mock_dao.get_all_assets.side_effect = mock_get_all_assets
 
         # test the function
-        result = list_assets(active_only=True, limit=2, asset_dao=mock_dao)
+        result = list_assets(request=create_mock_request(), active_only=True, limit=2, asset_dao=mock_dao)
 
         # Verify metrics were recorded
         mock_record_retrieval.assert_called_once_with(category="all", active_only=True)
@@ -619,7 +633,7 @@ def test_get_asset_by_id_validation_error_handling():
         mock_validate.return_value = None  # No validation error
 
         # Test successful case first
-        result = get_asset_by_id("BTC", asset_dao=mock_dao)
+        result = get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_dao)
 
         # Verify validation was called
         mock_validate.assert_called_once_with("BTC", mock_dao)
@@ -631,7 +645,7 @@ def test_get_asset_by_id_validation_error_handling():
         mock_validate.side_effect = CNOPAssetValidationException("Asset ID cannot be empty")
 
         with pytest.raises(CNOPAssetValidationException) as exc_info:
-            get_asset_by_id("INVALID", asset_dao=mock_dao)
+            get_asset_by_id(create_mock_request(), "INVALID", asset_dao=mock_dao)
 
         # Verify the exception message is properly formatted
         # The actual format is: "CNOPAssetValidationException: Asset ID cannot be empty"
@@ -693,7 +707,7 @@ def test_get_asset_by_id_metrics_recording():
         mock_validate.return_value = None  # No validation error
 
         # Test the function
-        result = get_asset_by_id("ETH", asset_dao=mock_dao)
+        result = get_asset_by_id(create_mock_request(), "ETH", asset_dao=mock_dao)
 
         # Verify metrics were recorded
         mock_record_view.assert_called_once_with(asset_id="ETH")
@@ -722,7 +736,7 @@ class TestValidationErrorHandling:
 
                 # Test that validation error is converted to internal server exception
                 with pytest.raises(CNOPInventoryServerException, match="Failed to get asset invalid-asset-id"):
-                    get_asset_by_id("invalid-asset-id", asset_dao=mock_dao)
+                    get_asset_by_id(create_mock_request(), "invalid-asset-id", asset_dao=mock_dao)
 
     def test_get_asset_by_id_validation_error_asset_id_logging(self):
         """Test validation error logging when asset_id is invalid"""
@@ -740,7 +754,7 @@ class TestValidationErrorHandling:
                 # Mock logger to capture warning and error
                 with patch('controllers.assets.logger') as mock_logger:
                     with pytest.raises(CNOPInventoryServerException):
-                        get_asset_by_id("invalid-asset-id", asset_dao=mock_dao)
+                        get_asset_by_id(create_mock_request(), "invalid-asset-id", asset_dao=mock_dao)
 
                     # Check that warning was logged for validation error
                     mock_logger.warning.assert_called_once()
@@ -766,7 +780,7 @@ class TestValidationErrorHandling:
 
                     # Test that CNOPAssetValidationException is re-raised as-is
                     with pytest.raises(CNOPAssetValidationException, match="Asset ID cannot be empty"):
-                        get_asset_by_id("BTC", asset_dao=mock_dao)
+                        get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_dao)
 
 
 class TestExceptionHandling:
@@ -792,7 +806,7 @@ class TestExceptionHandling:
 
                     # Test that database exception is converted to internal server exception
                     with pytest.raises(CNOPInventoryServerException, match="Failed to get asset BTC"):
-                        get_asset_by_id("BTC", asset_dao=mock_dao)
+                        get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_dao)
 
     def test_get_asset_by_id_unexpected_exception(self):
         """Test handling of unexpected exceptions"""
@@ -814,4 +828,4 @@ class TestExceptionHandling:
 
                     # Test that unexpected exception is converted to internal server exception
                     with pytest.raises(CNOPInventoryServerException, match="Failed to get asset BTC"):
-                        get_asset_by_id("BTC", asset_dao=mock_dao)
+                        get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_dao)

@@ -23,7 +23,7 @@ from common.exceptions import (
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from user_exceptions import CNOPUserValidationException
-from controllers.dependencies import get_transaction_manager
+from controllers.dependencies import get_transaction_manager, get_request_id_from_request
 from controllers.auth.dependencies import get_current_user
 logger = BaseLogger(Loggers.USER)
 router = APIRouter(tags=["balance"])
@@ -73,11 +73,15 @@ async def withdraw_funds(
     Layer 1: Field validation already handled in API models
     Layer 2: Business validation (user authentication, etc.)
     """
+    # Extract request_id from headers using existing method
+    request_id = get_request_id_from_request(request)
+
     # Log withdrawal attempt (without sensitive data)
     logger.info(
         action=LogActions.REQUEST_START,
         message=f"Withdrawal attempt from {request.client.host if request.client else 'unknown'}",
         user=current_user.username,
+        request_id=request_id,
         extra={
             "amount": str(withdraw_data.amount),
             "user_agent": request.headers.get("user-agent", "unknown"),
@@ -92,7 +96,7 @@ async def withdraw_funds(
             amount=withdraw_data.amount
         )
 
-        logger.info(action=LogActions.REQUEST_END, message=f"Withdrawal successful for user {current_user.username}: {withdraw_data.amount} (lock_duration: {result.lock_duration}s)", user=current_user.username)
+        logger.info(action=LogActions.REQUEST_END, message=f"Withdrawal successful for user {current_user.username}: {withdraw_data.amount} (lock_duration: {result.lock_duration}s)", user=current_user.username, request_id=request_id)
 
         return WithdrawResponse(
             success=True,
@@ -102,24 +106,24 @@ async def withdraw_funds(
         )
 
     except CNOPLockAcquisitionException as e:
-        logger.warning(action=LogActions.ERROR, message=f"Lock acquisition failed for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username)
+        logger.warning(action=LogActions.ERROR, message=f"Lock acquisition failed for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException("Service temporarily unavailable")
 
     except CNOPInsufficientBalanceException as e:
-        logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Insufficient balance for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username)
+        logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Insufficient balance for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         # Wrap the exception in CNOPUserValidationException
         raise CNOPUserValidationException(str(e))
     except CNOPUserValidationException as e:
-        logger.warning(action=LogActions.VALIDATION_ERROR, message=f"User validation error for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username)
+        logger.warning(action=LogActions.VALIDATION_ERROR, message=f"User validation error for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         # Re-raise the original exception without wrapping
         raise
     except CNOPDatabaseOperationException as e:
         if "User balance not found" in str(e):
-            logger.error(action=LogActions.ERROR, message=f"System error - user balance not found for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username)
+            logger.error(action=LogActions.ERROR, message=f"System error - user balance not found for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
             raise CNOPInternalServerException("System error - please contact support")
         else:
-            logger.error(action=LogActions.ERROR, message=f"Database operation failed for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username)
+            logger.error(action=LogActions.ERROR, message=f"Database operation failed for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
             raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Unexpected error during withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username)
+        logger.error(action=LogActions.ERROR, message=f"Unexpected error during withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException("Service temporarily unavailable")

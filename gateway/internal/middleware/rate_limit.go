@@ -2,35 +2,65 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"order-processor-gateway/internal/services"
 	"order-processor-gateway/pkg/constants"
+	"order-processor-gateway/pkg/metrics"
 
 	"github.com/gin-gonic/gin"
 )
 
-// RateLimitMiddleware creates rate limiting middleware using Redis
-func RateLimitMiddleware(redisService *services.RedisService, limit int, window time.Duration) gin.HandlerFunc {
+// RateLimitMiddleware creates rate limiting middleware using Redis with metrics
+func RateLimitMiddleware(redisService *services.RedisService, limit int, window time.Duration, metrics *metrics.RateLimitMetrics) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Create rate limit key based on IP or user ID
-		key := constants.RedisKeyPrefixRateLimit + c.ClientIP()
+		clientIP := c.ClientIP()
+		endpoint := c.FullPath()
+		method := c.Request.Method
+
+		// Create rate limit key based on IP
+		key := constants.RedisKeyPrefixRateLimit + clientIP
 
 		// Check rate limit
-		allowed, err := redisService.CheckRateLimit(c.Request.Context(), key, limit, window)
+		allowed, remaining, resetTime, err := redisService.CheckRateLimitWithDetails(c.Request.Context(), key, limit, window)
 		if err != nil {
 			// If Redis is down, allow request (fail open)
+			if metrics != nil {
+				metrics.RecordRequest(method, endpoint, "500", clientIP)
+			}
 			c.Next()
 			return
 		}
 
+		// Add rate limit headers to response
+		c.Header("X-RateLimit-Limit", strconv.Itoa(limit))
+		c.Header("X-RateLimit-Remaining", strconv.FormatInt(remaining, 10))
+		c.Header("X-RateLimit-Reset", strconv.FormatInt(resetTime, 10))
+
 		if !allowed {
+			// Record rate limit violation
+			if metrics != nil {
+				metrics.RecordRateLimitViolation(clientIP, endpoint)
+				metrics.UpdateRateLimitRemaining(clientIP, endpoint, remaining)
+				metrics.UpdateRateLimitReset(clientIP, endpoint, resetTime)
+			}
+
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":       constants.ErrorRateLimitExceeded,
 				"retry_after": window.Seconds(),
+				"limit":       limit,
+				"remaining":   remaining,
+				"reset_time":  resetTime,
 			})
 			c.Abort()
 			return
+		}
+
+		// Update metrics for allowed request
+		if metrics != nil {
+			metrics.UpdateRateLimitRemaining(clientIP, endpoint, remaining)
+			metrics.UpdateRateLimitReset(clientIP, endpoint, resetTime)
 		}
 
 		c.Next()
