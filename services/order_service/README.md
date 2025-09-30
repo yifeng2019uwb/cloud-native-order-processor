@@ -93,6 +93,7 @@ GET  /portfolio/{username}      # Get user portfolio with market values
 GET  /health                    # Service health status
 GET  /health/ready              # Readiness check
 GET  /health/live               # Liveness check
+GET  /internal/metrics          # Prometheus metrics (internal monitoring)
 ```
 
 ## 🏗️ Architecture
@@ -126,8 +127,9 @@ Order Creation Flow:
 - **Authentication**: JWT tokens via API Gateway
 - **Validation**: Pydantic models and business validators
 - **Testing**: pytest with comprehensive coverage
-- **Monitoring**: Health checks and readiness probes
+- **Monitoring**: Prometheus metrics, middleware tracking, and health checks
 - **Integration**: User Service and Inventory Service APIs
+- **Observability**: Request correlation, performance metrics, and business metrics
 
 ## 🧪 Testing & Development
 

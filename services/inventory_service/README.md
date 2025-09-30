@@ -79,7 +79,7 @@ GET  /inventory/assets/search    # Search assets by criteria
 ```bash
 GET  /health                     # Service health status
 GET  /health/detailed            # Detailed health with external API status
-GET  /metrics                    # Prometheus metrics
+GET  /internal/metrics           # Prometheus metrics (internal monitoring)
 ```
 
 ## 🏗️ Architecture
@@ -103,6 +103,13 @@ GET  /metrics                    # Prometheus metrics
 4. Status Management → Asset availability tracking
 ```
 
+### **Monitoring & Metrics**
+- **Request Metrics**: HTTP method, status code, endpoint, duration
+- **Asset Operations**: Asset retrieval, search, and detail view metrics
+- **External API**: CoinGecko API call success rates and response times
+- **Performance**: Response times, throughput, and error rates
+- **Business Metrics**: Asset popularity, search patterns, and usage statistics
+
 ## 🛠️ Technology Stack
 
 - **Framework**: FastAPI with async support
@@ -110,8 +117,9 @@ GET  /metrics                    # Prometheus metrics
 - **External API**: CoinGecko for cryptocurrency data
 - **Validation**: Pydantic models and business validators
 - **Testing**: pytest with comprehensive coverage
-- **Monitoring**: Prometheus metrics and health checks
+- **Monitoring**: Prometheus metrics, middleware tracking, and health checks
 - **Documentation**: Swagger/OpenAPI automatic generation
+- **Observability**: Request correlation, performance metrics, and business metrics
 
 ## 🧪 Testing & Development
 

@@ -103,7 +103,7 @@ GET  /balance/transactions # Get transaction history
 ### **System**
 ```bash
 GET  /health               # Service health status
-GET  /metrics              # Prometheus metrics
+GET  /internal/metrics     # Prometheus metrics (internal monitoring)
 ```
 
 ## 🏗️ Architecture
@@ -131,8 +131,9 @@ GET  /metrics              # Prometheus metrics
 - **Authentication**: JWT tokens with centralized management
 - **Validation**: Pydantic models and business validators
 - **Testing**: pytest with comprehensive coverage
-- **Monitoring**: Prometheus metrics and health checks
+- **Monitoring**: Prometheus metrics, middleware tracking, and health checks
 - **Security**: Centralized security components
+- **Observability**: Request correlation, performance metrics, and business metrics
 
 ## 🧪 Testing & Development
 

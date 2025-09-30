@@ -70,7 +70,7 @@
 | **Database** | DynamoDB | Data Storage | ✅ Production | AWS |
 | **Cache** | Redis | Session Management | ✅ Production | Docker, K8s |
 | **Container** | Docker + K8s | Orchestration | ✅ Production | Local/Cloud |
-| **Monitoring** | Prometheus + Grafana | Essential Auth Metrics | ✅ Production | K8s |
+| **Monitoring** | Prometheus + Middleware | Comprehensive Metrics | ✅ Production | K8s |
 
 **Deployment**: Docker Compose (local dev) | Kind cluster (local K8s) | EKS (production)
 
@@ -192,12 +192,21 @@ kubectl port-forward svc/order-service 30006:8002 -n order-processor &
 - **Namespaces**: Environment isolation
 - **Kustomize**: Environment-specific configurations
 
-## 📊 Monitoring
+## 📊 Monitoring & Observability
 
-**Currently implemented:**
-- ✅ Health checks on all services
-- ✅ Structured JSON logging with correlation IDs
-- ✅ Prometheus metrics collection setup
+**Comprehensive monitoring implemented:**
+- ✅ **Middleware-Based Metrics**: Automatic request tracking across all services
+- ✅ **Prometheus Integration**: `/internal/metrics` endpoints for all services
+- ✅ **Health Checks**: Kubernetes-ready health and readiness probes
+- ✅ **Structured Logging**: JSON logging with request correlation IDs
+- ✅ **Performance Metrics**: Request duration, error rates, and throughput tracking
+- ✅ **Business Metrics**: Service-specific operations and success rates
+
+**Metrics Collection:**
+- **Request Metrics**: HTTP method, status code, endpoint, duration
+- **Business Metrics**: Authentication, orders, assets, user operations
+- **System Metrics**: Service health, error rates, performance indicators
+- **Custom Metrics**: Service-specific counters and histograms
 
 **For detailed monitoring design:** See [Monitoring Design](docs/design-docs/monitoring-design.md) and [Monitoring Guide](monitoring/README.md).
 
