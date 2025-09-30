@@ -63,8 +63,8 @@ func (s *Server) setupRoutes() {
 
 	// Add Redis-based middleware if Redis is available
 	if s.redisService != nil {
-		// Add rate limiting middleware with metrics
-		s.router.Use(middleware.RateLimitMiddleware(s.redisService, 100, time.Minute, s.metrics.RateLimit))
+		// Add rate limiting middleware with metrics (increased for testing)
+		s.router.Use(middleware.RateLimitMiddleware(s.redisService, 1000, time.Minute, s.metrics.RateLimit))
 
 		// Phase 2: Add session middleware
 		// s.router.Use(middleware.SessionMiddleware(s.redisService))

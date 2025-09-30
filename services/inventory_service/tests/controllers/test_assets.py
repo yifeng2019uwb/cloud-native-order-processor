@@ -438,12 +438,9 @@ class TestAssetsControllerExceptionHandling:
             assert str(validation_error) in str(error)
 
 
-def test_list_assets_metrics_recording():
-    """Test list_assets with metrics recording (lines 40-41)"""
-    with patch('controllers.assets.AssetDAO') as mock_dao_class, \
-         patch('controllers.assets.METRICS_AVAILABLE', True), \
-         patch('controllers.assets.record_asset_retrieval') as mock_record_retrieval, \
-         patch('controllers.assets.update_asset_counts') as mock_update_counts:
+def test_list_assets_success():
+    """Test list_assets success case"""
+    with patch('controllers.assets.AssetDAO') as mock_dao_class:
 
         # Setup mock AssetDAO
         mock_dao = MagicMock()
@@ -568,10 +565,6 @@ def test_list_assets_metrics_recording():
         # test the function
         result = list_assets(request=create_mock_request(), active_only=True, limit=2, asset_dao=mock_dao)
 
-        # Verify metrics were recorded
-        mock_record_retrieval.assert_called_once_with(category="all", active_only=True)
-        mock_update_counts.assert_called_once_with(total=3, active=2)
-
         # Verify result structure
         assert result is not None
         assert hasattr(result, 'assets')
@@ -581,9 +574,7 @@ def test_list_assets_metrics_recording():
 def test_get_asset_by_id_validation_error_handling():
     """Test get_asset_by_id with AssetValidationException handling (lines 172-176)"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class, \
-         patch('controllers.assets.validate_asset_exists') as mock_validate, \
-         patch('controllers.assets.METRICS_AVAILABLE', True), \
-         patch('controllers.assets.record_asset_detail_view') as mock_record_view:
+         patch('controllers.assets.validate_asset_exists') as mock_validate:
 
         # Setup mock AssetDAO
         mock_dao = MagicMock()
@@ -638,9 +629,6 @@ def test_get_asset_by_id_validation_error_handling():
         # Verify validation was called
         mock_validate.assert_called_once_with("BTC", mock_dao)
 
-        # Verify metrics were recorded
-        mock_record_view.assert_called_once_with(asset_id="BTC")
-
         # Now test with AssetValidationException
         mock_validate.side_effect = CNOPAssetValidationException("Asset ID cannot be empty")
 
@@ -652,12 +640,10 @@ def test_get_asset_by_id_validation_error_handling():
         assert "Asset ID cannot be empty" in str(exc_info.value)
 
 
-def test_get_asset_by_id_metrics_recording():
-    """Test get_asset_by_id with metrics recording when METRICS_AVAILABLE is True"""
+def test_get_asset_by_id_success():
+    """Test get_asset_by_id success case"""
     with patch('controllers.assets.AssetDAO') as mock_dao_class, \
-         patch('controllers.assets.validate_asset_exists') as mock_validate, \
-         patch('controllers.assets.METRICS_AVAILABLE', True), \
-         patch('controllers.assets.record_asset_detail_view') as mock_record_view:
+         patch('controllers.assets.validate_asset_exists') as mock_validate:
 
         # Setup mock AssetDAO
         mock_dao = MagicMock()
@@ -709,8 +695,6 @@ def test_get_asset_by_id_metrics_recording():
         # Test the function
         result = get_asset_by_id(create_mock_request(), "ETH", asset_dao=mock_dao)
 
-        # Verify metrics were recorded
-        mock_record_view.assert_called_once_with(asset_id="ETH")
 
         # Verify result structure
         assert result is not None

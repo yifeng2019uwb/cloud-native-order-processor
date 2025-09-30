@@ -60,6 +60,9 @@ class AssetDAO(BaseDAO):
                 )
                 raise CNOPAssetNotFoundException(f"Asset '{asset_id}' not found")
             return AssetItem(**item).to_entity()
+        except CNOPAssetNotFoundException:
+            # Re-raise asset not found exceptions directly
+            raise
         except Exception as e:
             logger.error(
                 action=LogActions.ERROR,
@@ -107,8 +110,9 @@ class AssetDAO(BaseDAO):
             # Get existing asset to preserve created_at
             existing_asset = self.get_asset_by_id(asset.asset_id)
 
-            # Convert Asset to dict for database storage
-            asset_data = asset.model_dump()
+            # Convert Asset to AssetItem for database storage (handles float to Decimal conversion)
+            asset_item = AssetItem.from_entity(asset)
+            asset_data = asset_item.model_dump()
 
             # Add product_id for database key
             asset_data[AssetFields.PRODUCT_ID] = asset.asset_id
@@ -119,11 +123,28 @@ class AssetDAO(BaseDAO):
 
             # Update the item in database
             key = {AssetFields.PRODUCT_ID: asset.asset_id}
+            # Filter out product_id from update (it's the primary key)
+            update_data = {k: v for k, v in asset_data.items() if k != AssetFields.PRODUCT_ID}
+
+            # Handle reserved keyword "name" with expression attribute names
+            expression_names = {"#name": "name"} if "name" in update_data else {}
+            update_parts = []
+            expression_values = {}
+
+            for k, v in update_data.items():
+                if k == "name":
+                    update_parts.append("#name = :name")
+                    expression_values[":name"] = v
+                else:
+                    update_parts.append(f"{k} = :{k}")
+                    expression_values[f":{k}"] = v
+
             updated_item = self._safe_update_item(
                 self.table,
                 key,
-                "SET " + ", ".join([f"{k} = :{k}" for k in asset_data.keys()]),
-                {f":{k}": v for k, v in asset_data.items()}
+                "SET " + ", ".join(update_parts),
+                expression_values,
+                expression_names
             )
 
             logger.info(
@@ -132,6 +153,9 @@ class AssetDAO(BaseDAO):
             )
 
             return updated_item
+        except CNOPAssetNotFoundException:
+            # Re-raise asset not found exceptions directly
+            raise
         except Exception as e:
             logger.error(
                 action=LogActions.ERROR,

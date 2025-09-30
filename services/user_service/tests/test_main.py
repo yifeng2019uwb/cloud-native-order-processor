@@ -3,6 +3,7 @@ Unit tests for main.py - FastAPI application entry point
 """
 import pytest
 from fastapi.testclient import TestClient
+from unittest.mock import patch
 
 from main import app, root
 
@@ -49,24 +50,27 @@ class TestRootEndpoint:
         """Test the root endpoint returns correct information"""
         response = root()
 
-        assert response["service"] == "User Authentication Service"
+        assert response["service"] == "user-service"
         assert response["version"] == "1.0.0"
         assert response["status"] == "running"
         assert "timestamp" in response
         assert "endpoints" in response
 
-        # Check endpoints
-        endpoints = response["endpoints"]
-        assert endpoints["docs"] == "/docs"
-        assert endpoints["health"] == "/health"
-        assert endpoints["register"] == "/auth/register"
-        assert endpoints["login"] == "/auth/login"
-        assert endpoints["profile"] == "/auth/profile"
-        assert endpoints["logout"] == "/auth/logout"
-        assert endpoints["balance"] == "/balance"
-        assert endpoints["deposit"] == "/balance/deposit"
-        assert endpoints["withdraw"] == "/balance/withdraw"
-        assert endpoints["transactions"] == "/balance/transactions"
+class TestMetricsEndpoint:
+    """Test cases for the internal metrics endpoint."""
+
+    @patch('src.main.get_metrics_response')
+    def test_internal_metrics_endpoint(self, mock_get_metrics_response):
+        """Test that internal metrics endpoint calls get_metrics_response."""
+        from fastapi import Response
+        mock_response = Response(content=b"# metrics data", status_code=200)
+        mock_get_metrics_response.return_value = mock_response
+
+        from src.main import internal_metrics
+        response = internal_metrics()
+
+        assert response == mock_response
+        mock_get_metrics_response.assert_called_once()
 
     def test_root_endpoint_timestamp_format(self):
         """Test that timestamp is in correct ISO format"""

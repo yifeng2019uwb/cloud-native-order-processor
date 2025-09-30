@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.data.dao.inventory.asset_dao import AssetDAO
 from src.data.entities.inventory import Asset, AssetItem
 from src.data.exceptions import CNOPDatabaseOperationException
+from src.exceptions.shared_exceptions import CNOPAssetNotFoundException
 
 
 class TestAssetDAO:
@@ -190,8 +191,8 @@ class TestAssetDAO:
         # Mock empty response
         mock_db_connection.inventory_table.get_item.return_value = {}
 
-        # Should raise CNOPDatabaseOperationException (wraps EntityNotFoundException)
-        with pytest.raises(CNOPDatabaseOperationException):
+        # Should raise CNOPAssetNotFoundException directly
+        with pytest.raises(CNOPAssetNotFoundException):
             asset_dao.get_asset_by_id('NONEXISTENT')
 
         # Verify database was called
@@ -526,7 +527,7 @@ class TestAssetDAO:
         # Mock that asset doesn't exist
         mock_db_connection.inventory_table.get_item.return_value = {}
 
-        # Should raise CNOPDatabaseOperationException (wraps EntityNotFoundException)
+        # Should raise CNOPAssetNotFoundException directly
         asset_update = Asset(
             asset_id="NONEXISTENT",
             name="Test",
@@ -535,7 +536,7 @@ class TestAssetDAO:
             price_usd=Decimal("100.0"),
             description='New description'
         )
-        with pytest.raises(CNOPDatabaseOperationException):
+        with pytest.raises(CNOPAssetNotFoundException):
             asset_dao.update_asset(asset_update)
 
     def test_update_asset_database_error(self, asset_dao, mock_db_connection):

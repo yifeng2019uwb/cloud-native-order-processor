@@ -30,7 +30,7 @@ def test_root_endpoint():
     from src.main import root
 
     response = root()
-    assert response["service"] == "Inventory Service"
+    assert response["service"] == "inventory-service"
     assert response["version"] == "1.0.0"
     assert response["status"] == "running"
     assert "timestamp" in response

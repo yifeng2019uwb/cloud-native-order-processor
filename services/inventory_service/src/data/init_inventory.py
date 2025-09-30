@@ -8,9 +8,9 @@ from typing import List
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.database.dynamodb_connection import get_dynamodb_manager
 from common.data.entities.inventory import Asset
-from common.exceptions import CNOPEntityNotFoundException
+from common.exceptions import CNOPEntityNotFoundException, CNOPAssetNotFoundException
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from src.constants import DEFAULT_ASSET_AMOUNT, DEFAULT_ASSET_CATEGORY
+from constants import DEFAULT_ASSET_AMOUNT, DEFAULT_ASSET_CATEGORY
 
 logger = BaseLogger(Loggers.INVENTORY)
 
@@ -27,6 +27,7 @@ async def upsert_coins_to_inventory(coins: List[dict]) -> int:
     for coin in coins:
         try:
             asset_id = coin["symbol"].upper()
+            logger.info(action=LogActions.DB_OPERATION, message=f"Processing coin: {asset_id}, current_price: {coin.get('current_price')}")
 
             asset = Asset(
                 asset_id=asset_id,
@@ -68,14 +69,20 @@ async def upsert_coins_to_inventory(coins: List[dict]) -> int:
 
             # Try to get existing asset first
             try:
+                logger.info(action=LogActions.DB_OPERATION, message=f"Checking if asset exists: {asset_id}")
                 existing_asset = asset_dao.get_asset_by_id(asset_id)
                 # Asset exists, update it
+                logger.info(action=LogActions.DB_OPERATION, message=f"Asset exists, updating: {asset_id}")
                 asset_dao.update_asset(asset)
                 logger.info(action=LogActions.DB_OPERATION, message=f"Updated asset: {asset_id}")
-            except CNOPEntityNotFoundException:
+            except (CNOPEntityNotFoundException, CNOPAssetNotFoundException):
                 # Asset doesn't exist, create it
+                logger.info(action=LogActions.DB_OPERATION, message=f"Asset doesn't exist, creating: {asset_id}")
                 asset_dao.create_asset(asset)
                 logger.info(action=LogActions.DB_OPERATION, message=f"Created asset: {asset_id}")
+            except Exception as e:
+                logger.error(action=LogActions.ERROR, message=f"Database operation failed for {asset_id}: {e}")
+                continue
 
             updated_count += 1
 

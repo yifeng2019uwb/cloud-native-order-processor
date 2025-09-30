@@ -90,29 +90,45 @@ class AssetItem(BaseModel):
     symbol: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_SYMBOL_MAX_LENGTH, description="Ticker symbol")
     image: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_IMAGE_MAX_LENGTH, description="URL to coin logo")
     market_cap_rank: Optional[int] = Field(None, description="Rank by market cap")
-    current_price: Optional[float] = Field(None, description="Current price in USD")
-    high_24h: Optional[float] = Field(None, description="24-hour high price")
-    low_24h: Optional[float] = Field(None, description="24-hour low price")
-    circulating_supply: Optional[float] = Field(None, description="Circulating supply")
-    total_supply: Optional[float] = Field(None, description="Total supply")
-    max_supply: Optional[float] = Field(None, description="Maximum supply")
-    price_change_24h: Optional[float] = Field(None, description="Price change in last 24h (USD)")
-    price_change_percentage_24h: Optional[float] = Field(None, description="Price change percentage in last 24h")
-    price_change_percentage_7d: Optional[float] = Field(None, description="Price change percentage in last 7 days")
-    price_change_percentage_30d: Optional[float] = Field(None, description="Price change percentage in last 30 days")
-    market_cap: Optional[float] = Field(None, description="Market capitalization")
-    market_cap_change_24h: Optional[float] = Field(None, description="Market cap change in last 24h")
-    market_cap_change_percentage_24h: Optional[float] = Field(None, description="Market cap change percentage in last 24h")
-    total_volume_24h: Optional[float] = Field(None, description="Total trading volume in last 24h")
-    volume_change_24h: Optional[float] = Field(None, description="Volume change in last 24h")
-    ath: Optional[float] = Field(None, description="All-time high price")
-    ath_change_percentage: Optional[float] = Field(None, description="% change from all-time high")
+    current_price: Optional[Decimal] = Field(None, description="Current price in USD")
+    high_24h: Optional[Decimal] = Field(None, description="24-hour high price")
+    low_24h: Optional[Decimal] = Field(None, description="24-hour low price")
+    circulating_supply: Optional[Decimal] = Field(None, description="Circulating supply")
+    total_supply: Optional[Decimal] = Field(None, description="Total supply")
+    max_supply: Optional[Decimal] = Field(None, description="Maximum supply")
+    price_change_24h: Optional[Decimal] = Field(None, description="Price change in last 24h (USD)")
+    price_change_percentage_24h: Optional[Decimal] = Field(None, description="Price change percentage in last 24h")
+    price_change_percentage_7d: Optional[Decimal] = Field(None, description="Price change percentage in last 7 days")
+    price_change_percentage_30d: Optional[Decimal] = Field(None, description="Price change percentage in last 30 days")
+    market_cap: Optional[Decimal] = Field(None, description="Market capitalization")
+    market_cap_change_24h: Optional[Decimal] = Field(None, description="Market cap change in last 24h")
+    market_cap_change_percentage_24h: Optional[Decimal] = Field(None, description="Market cap change percentage in last 24h")
+    total_volume_24h: Optional[Decimal] = Field(None, description="Total trading volume in last 24h")
+    volume_change_24h: Optional[Decimal] = Field(None, description="Volume change in last 24h")
+    ath: Optional[Decimal] = Field(None, description="All-time high price")
+    ath_change_percentage: Optional[Decimal] = Field(None, description="% change from all-time high")
     ath_date: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_DATE_MAX_LENGTH, description="Date of all-time high")
-    atl: Optional[float] = Field(None, description="All-time low price")
-    atl_change_percentage: Optional[float] = Field(None, description="% change from all-time low")
+    atl: Optional[Decimal] = Field(None, description="All-time low price")
+    atl_change_percentage: Optional[Decimal] = Field(None, description="% change from all-time low")
     atl_date: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_DATE_MAX_LENGTH, description="Date of all-time low")
     last_updated: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_LAST_UPDATED_MAX_LENGTH, description="Last update timestamp")
     sparkline_7d: Optional[dict] = Field(None, description="7-day price sparkline data")
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_floats_to_decimal(cls, values):
+        """Convert float values to Decimal for DynamoDB compatibility"""
+        if isinstance(values, dict):
+            for field in ["current_price", "high_24h", "low_24h", "circulating_supply",
+                         "total_supply", "max_supply", "price_change_24h",
+                         "price_change_percentage_24h", "price_change_percentage_7d",
+                         "price_change_percentage_30d", "market_cap", "market_cap_change_24h",
+                         "market_cap_change_percentage_24h", "total_volume_24h",
+                         "volume_change_24h", "ath", "ath_change_percentage",
+                         "atl", "atl_change_percentage"]:
+                if field in values and values[field] is not None and isinstance(values[field], (int, float)):
+                    values[field] = Decimal(str(values[field]))
+        return values
 
     @classmethod
     def from_entity(cls, asset: Asset) -> AssetItem:
