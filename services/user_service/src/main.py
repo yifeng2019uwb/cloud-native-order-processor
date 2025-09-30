@@ -13,6 +13,9 @@ from controllers.auth.profile import router as profile_router
 from controllers.auth.logout import router as logout_router
 from controllers.balance import router as balance_router
 from controllers.health import router as health_router
+from metrics import get_metrics_response
+from constants import METRICS_ENDPOINT, SERVICE_NAME, SERVICE_VERSION
+from middleware import metrics_middleware
 
 # Import custom exceptions
 from user_exceptions import (
@@ -48,6 +51,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add metrics middleware
+app.middleware("http")(metrics_middleware)
+
 # Include routers
 app.include_router(login_router, prefix="/auth", tags=["authentication"])
 app.include_router(register_router, prefix="/auth", tags=["authentication"])
@@ -55,6 +61,12 @@ app.include_router(profile_router, prefix="/auth", tags=["authentication"])
 app.include_router(logout_router, prefix="/auth", tags=["authentication"])
 app.include_router(balance_router, tags=["balance"])
 app.include_router(health_router, tags=["health"])
+
+# Add internal metrics endpoint
+@app.get(METRICS_ENDPOINT)
+def internal_metrics():
+    """Internal Prometheus metrics endpoint for monitoring"""
+    return get_metrics_response()
 
 # Custom exception handlers
 @app.exception_handler(CNOPUserValidationException)
@@ -97,8 +109,8 @@ def general_exception_handler(request, exc):
 def root():
     """Root endpoint with service information"""
     return {
-        "service": "User Authentication Service",
-        "version": "1.0.0",
+        "service": SERVICE_NAME,
+        "version": SERVICE_VERSION,
         "status": "running",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "endpoints": {
