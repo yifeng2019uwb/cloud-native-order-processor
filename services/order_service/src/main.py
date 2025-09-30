@@ -28,6 +28,9 @@ from controllers import (
     asset_transaction_router,
     health_router
 )
+from metrics import get_metrics_response
+from constants import METRICS_ENDPOINT, SERVICE_NAME, SERVICE_VERSION
+from middleware import metrics_middleware
 
 # Initialize logger
 logger = BaseLogger(Loggers.ORDER)
@@ -50,6 +53,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add metrics middleware
+app.middleware("http")(metrics_middleware)
+
 # Include API routers
 app.include_router(health_router, tags=["health"])
 app.include_router(create_order_router, prefix="/orders", tags=["orders"])
@@ -58,6 +64,12 @@ app.include_router(list_orders_router, prefix="/orders", tags=["orders"])
 app.include_router(portfolio_router, tags=["portfolio"])
 app.include_router(asset_balance_router, tags=["asset-balances"])
 app.include_router(asset_transaction_router, tags=["asset-transactions"])
+
+# Add internal metrics endpoint
+@app.get(METRICS_ENDPOINT)
+def internal_metrics():
+    """Internal Prometheus metrics endpoint for monitoring"""
+    return get_metrics_response()
 
 # Custom exception handlers
 @app.exception_handler(CNOPOrderValidationException)
@@ -110,8 +122,8 @@ def general_exception_handler(request, exc):
 def root():
     """Root endpoint with service information"""
     return {
-        "service": "Order Service",
-        "version": "1.0.0",
+        "service": SERVICE_NAME,
+        "version": SERVICE_VERSION,
         "status": "running",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "endpoints": {
@@ -121,7 +133,8 @@ def root():
             "order_detail": "/orders/{order_id}",
             "portfolio": "/portfolio/{username}",
             "asset_balances": "/assets/balances",
-            "asset_transactions": "/assets/{asset_id}/transactions"
+            "asset_transactions": "/assets/{asset_id}/transactions",
+            "metrics": METRICS_ENDPOINT
         }
     }
 

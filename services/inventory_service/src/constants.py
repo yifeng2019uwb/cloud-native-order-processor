@@ -5,6 +5,14 @@ Path: services/inventory-service/src/constants.py
 This file contains essential constant values used across the inventory service
 """
 
+# Service metadata
+SERVICE_NAME = "inventory-service"
+SERVICE_VERSION = "1.0.0"
+SERVICE_DESCRIPTION = "Inventory management service for crypto assets"
+
+# Metrics endpoint
+METRICS_ENDPOINT = "/internal/metrics"
+
 # CoinGecko API Configuration
 COINGECKO_API_URL = "https://api.coingecko.com/api/v3/coins/markets"
 COINGECKO_DEFAULT_PARAMS = {

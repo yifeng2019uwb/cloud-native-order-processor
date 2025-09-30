@@ -1,34 +1,37 @@
 """
-Inventory Service Metrics - Simplified for Personal Project
+Order Service Metrics - Simplified for Personal Project
 """
+
 import time
 from prometheus_client import Counter, Histogram, Gauge, Info, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Response
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from constants import SERVICE_NAME, SERVICE_VERSION
 
-logger = BaseLogger(Loggers.INVENTORY)
+logger = BaseLogger(Loggers.ORDER)
 
 # ========================================
 # SIMPLE METRICS
 # ========================================
 
 # Service info
-service_info = Info('inventory_service_info', 'Inventory service information')
+service_info = Info('order_service_info', 'Order service information')
 service_info.info({'version': SERVICE_VERSION, 'service': SERVICE_NAME})
 
 # Core counters
-inventory_requests_total = Counter('inventory_requests_total', 'Total inventory requests', ['status', 'endpoint'])
+order_requests_total = Counter('order_requests_total', 'Total order requests', ['status', 'endpoint'])
+order_operations_total = Counter('order_operations_total', 'Total order operations', ['operation', 'result'])
+portfolio_operations_total = Counter('portfolio_operations_total', 'Total portfolio operations', ['operation', 'result'])
 asset_operations_total = Counter('asset_operations_total', 'Total asset operations', ['operation', 'result'])
-api_calls_total = Counter('api_calls_total', 'Total external API calls', ['api', 'result'])
 
 # Simple histograms
-request_duration = Histogram('inventory_request_duration_seconds', 'Request duration', ['status', 'endpoint'])
+request_duration = Histogram('order_request_duration_seconds', 'Request duration', ['status', 'endpoint'])
+order_duration = Histogram('order_operation_duration_seconds', 'Order operation duration', ['operation'])
+portfolio_duration = Histogram('portfolio_operation_duration_seconds', 'Portfolio operation duration', ['operation'])
 asset_duration = Histogram('asset_operation_duration_seconds', 'Asset operation duration', ['operation'])
-api_duration = Histogram('api_call_duration_seconds', 'API call duration', ['api'])
 
 # Uptime
-service_uptime = Gauge('inventory_service_uptime_seconds', 'Service uptime')
+service_uptime = Gauge('order_service_uptime_seconds', 'Service uptime')
 _start_time = time.time()
 
 # ========================================
@@ -38,23 +41,29 @@ _start_time = time.time()
 class SimpleMetricsCollector:
     """Simple metrics collector"""
 
-    def record_inventory_request(self, endpoint: str, status: str, duration: float = None):
-        """Record inventory request"""
-        inventory_requests_total.labels(status=status, endpoint=endpoint).inc()
+    def record_order_request(self, endpoint: str, status: str, duration: float = None):
+        """Record order request"""
+        order_requests_total.labels(status=status, endpoint=endpoint).inc()
         if duration:
             request_duration.labels(status=status, endpoint=endpoint).observe(duration)
+
+    def record_order_operation(self, operation: str, result: str, duration: float = None):
+        """Record order operation"""
+        order_operations_total.labels(operation=operation, result=result).inc()
+        if duration:
+            order_duration.labels(operation=operation).observe(duration)
+
+    def record_portfolio_operation(self, operation: str, result: str, duration: float = None):
+        """Record portfolio operation"""
+        portfolio_operations_total.labels(operation=operation, result=result).inc()
+        if duration:
+            portfolio_duration.labels(operation=operation).observe(duration)
 
     def record_asset_operation(self, operation: str, result: str, duration: float = None):
         """Record asset operation"""
         asset_operations_total.labels(operation=operation, result=result).inc()
         if duration:
             asset_duration.labels(operation=operation).observe(duration)
-
-    def record_api_call(self, api: str, result: str, duration: float = None):
-        """Record external API call"""
-        api_calls_total.labels(api=api, result=result).inc()
-        if duration:
-            api_duration.labels(api=api).observe(duration)
 
     def get_metrics(self) -> bytes:
         """Get metrics"""
@@ -79,22 +88,3 @@ def get_metrics_response() -> Response:
     except Exception as e:
         logger.error(action=LogActions.ERROR, message=f"Metrics error: {e}")
         return Response(content="# Error\n", status_code=500)
-
-# Legacy functions for backward compatibility
-def get_metrics():
-    """Legacy function for backward compatibility"""
-    return get_metrics_response().body
-
-async def metrics_middleware(request, call_next):
-    """Legacy middleware for backward compatibility"""
-    start_time = time.time()
-    response = await call_next(request)
-    duration = time.time() - start_time
-
-    metrics_collector.record_inventory_request(
-        endpoint=request.url.path,
-        status=str(response.status_code),
-        duration=duration
-    )
-
-    return response

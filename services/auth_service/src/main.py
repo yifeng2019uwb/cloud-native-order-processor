@@ -13,6 +13,7 @@ from controllers.health import router as health_router
 from controllers.validate import router as validate_router
 from metrics import get_metrics_response
 from constants import METRICS_ENDPOINT, SERVICE_NAME, SERVICE_VERSION
+from middleware import metrics_middleware
 
 # Initialize logger
 logger = BaseLogger(Loggers.AUTH)
@@ -34,6 +35,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add metrics middleware
+app.middleware("http")(metrics_middleware)
 
 # Include routers
 app.include_router(health_router)

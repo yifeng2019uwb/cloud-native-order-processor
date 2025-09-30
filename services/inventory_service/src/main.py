@@ -16,7 +16,9 @@ from inventory_exceptions import (
 )
 from controllers.assets import router as assets_router
 from controllers.health import router as health_router
-from metrics import get_metrics
+from metrics import get_metrics_response
+from constants import METRICS_ENDPOINT, SERVICE_NAME, SERVICE_VERSION
+from middleware import metrics_middleware
 
 # Initialize logger
 logger = BaseLogger(Loggers.INVENTORY)
@@ -38,6 +40,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add metrics middleware
+app.middleware("http")(metrics_middleware)
 
 # Include routers
 app.include_router(assets_router)
@@ -89,22 +94,19 @@ def general_exception_handler(request, exc):
     logger.error(action=LogActions.ERROR, message=f"Unhandled error: {exc}")
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
-# Add metrics endpoint
-@app.get("/metrics")
-def metrics():
-    """Prometheus metrics endpoint"""
-    return Response(
-        content=get_metrics(),
-        media_type="text/plain"
-    )
+# Add internal metrics endpoint
+@app.get(METRICS_ENDPOINT)
+def internal_metrics():
+    """Internal Prometheus metrics endpoint for monitoring"""
+    return get_metrics_response()
 
 # Root endpoint
 @app.get("/")
 def root():
     """Root endpoint with service information"""
     return {
-        "service": "Inventory Service",
-        "version": "1.0.0",
+        "service": SERVICE_NAME,
+        "version": SERVICE_VERSION,
         "status": "running",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "endpoints": {
@@ -112,7 +114,7 @@ def root():
             "health": "/health",
             "assets": "/inventory/assets",
             "asset_detail": "/inventory/assets/{asset_id}",
-            "metrics": "/metrics"
+            "metrics": METRICS_ENDPOINT
         }
     }
 

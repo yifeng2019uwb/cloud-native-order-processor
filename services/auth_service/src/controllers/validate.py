@@ -9,7 +9,6 @@ from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, Val
 from common.auth.security import TokenManager
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from metrics import metrics_collector
 
 router = APIRouter(prefix="/internal/auth", tags=["internal"])
 logger = BaseLogger(Loggers.AUTH)
@@ -33,8 +32,7 @@ def _determine_token_type(token_payload: dict) -> str:
 @router.post("/validate", response_model=Union[ValidateTokenResponse, ValidateTokenErrorResponse])
 def validate_jwt_token(request: ValidateTokenRequest):
     """Validate JWT token and extract user context"""
-    start_time = time.time()
-    request_id = request.request_id or f"req-{int(start_time * 1000)}"
+    request_id = request.request_id or f"req-{int(time.time() * 1000)}"
 
     try:
         logger.info(action=LogActions.REQUEST_START, message="Validating JWT", extra={"request_id": request_id})
@@ -42,11 +40,6 @@ def validate_jwt_token(request: ValidateTokenRequest):
         # Validate token
         token_manager = TokenManager()
         user_context = token_manager.validate_token_comprehensive(request.token)
-
-        # Record success
-        duration = time.time() - start_time
-        metrics_collector.record_jwt_validation('success', duration)
-        metrics_collector.record_request('success', duration)
 
         logger.info(action=LogActions.AUTH_SUCCESS, message="Token valid", user=user_context["username"], extra={"request_id": request_id})
 
@@ -60,10 +53,6 @@ def validate_jwt_token(request: ValidateTokenRequest):
         )
 
     except CNOPAuthTokenExpiredException:
-        duration = time.time() - start_time
-        metrics_collector.record_jwt_validation('failure', duration)
-        metrics_collector.record_request('failure', duration)
-
         logger.warning(action=LogActions.AUTH_FAILED, message="Token expired", extra={"request_id": request_id})
 
         return ValidateTokenErrorResponse(
@@ -74,10 +63,6 @@ def validate_jwt_token(request: ValidateTokenRequest):
         )
 
     except CNOPAuthTokenInvalidException as e:
-        duration = time.time() - start_time
-        metrics_collector.record_jwt_validation('failure', duration)
-        metrics_collector.record_request('failure', duration)
-
         logger.warning(action=LogActions.AUTH_FAILED, message="Token invalid", extra={"request_id": request_id, "error": str(e)})
 
         return ValidateTokenErrorResponse(
@@ -88,10 +73,6 @@ def validate_jwt_token(request: ValidateTokenRequest):
         )
 
     except Exception as e:
-        duration = time.time() - start_time
-        metrics_collector.record_jwt_validation('failure', duration)
-        metrics_collector.record_request('error', duration)
-
         logger.error(action=LogActions.ERROR, message="Validation error", extra={"request_id": request_id, "error": str(e)})
 
         return ValidateTokenErrorResponse(
