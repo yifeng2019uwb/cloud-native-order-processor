@@ -11,6 +11,8 @@ from common.exceptions import CNOPInternalServerException
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 from controllers.health import router as health_router
 from controllers.validate import router as validate_router
+from metrics import get_metrics_response
+from constants import METRICS_ENDPOINT, SERVICE_NAME, SERVICE_VERSION
 
 # Initialize logger
 logger = BaseLogger(Loggers.AUTH)
@@ -37,6 +39,12 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(validate_router)
 
+# Add internal metrics endpoint
+@app.get(METRICS_ENDPOINT)
+def internal_metrics():
+    """Internal Prometheus metrics endpoint for monitoring"""
+    return get_metrics_response()
+
 # Custom exception handlers
 @app.exception_handler(CNOPAuthTokenExpiredException)
 def token_expired_exception_handler(request, exc):
@@ -62,14 +70,15 @@ def general_exception_handler(request, exc):
 def root():
     """Root endpoint with service information"""
     return {
-        "service": "Auth Service",
-        "version": "1.0.0",
+        "service": SERVICE_NAME,
+        "version": SERVICE_VERSION,
         "status": "running",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "endpoints": {
             "docs": "/docs",
             "health": "/health",
-            "validate": "/internal/auth/validate"
+            "validate": "/internal/auth/validate",
+            "metrics": METRICS_ENDPOINT
         }
     }
 

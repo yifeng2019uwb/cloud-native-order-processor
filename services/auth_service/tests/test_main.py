@@ -3,9 +3,12 @@ Test cases for Auth Service main application.
 """
 
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from fastapi.testclient import TestClient
+from fastapi import Request
 from src.main import app
+from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
+from common.exceptions import CNOPInternalServerException
 
 
 class TestMainApp:
@@ -47,7 +50,7 @@ class TestRootEndpoint:
         response = root()
 
         # Verify response structure
-        assert response["service"] == "Auth Service"
+        assert response["service"] == "auth-service"
         assert response["version"] == "1.0.0"
         assert response["status"] == "running"
         assert "timestamp" in response
@@ -73,3 +76,86 @@ class TestRootEndpoint:
             datetime.fromisoformat(timestamp)
         except ValueError:
             pytest.fail(f"Timestamp {timestamp} is not a valid ISO format")
+
+
+class TestMetricsEndpoint:
+    """Test cases for the internal metrics endpoint."""
+
+    @patch('src.main.get_metrics_response')
+    def test_internal_metrics_endpoint(self, mock_get_metrics_response):
+        """Test that internal metrics endpoint calls get_metrics_response."""
+        # Mock the metrics response
+        mock_response = {"auth_requests_total": 10, "jwt_validations_total": 5}
+        mock_get_metrics_response.return_value = mock_response
+
+        # Test the endpoint function directly
+        from src.main import internal_metrics
+        response = internal_metrics()
+
+        # Verify the response and that get_metrics_response was called
+        assert response == mock_response
+        mock_get_metrics_response.assert_called_once()
+
+
+class TestExceptionHandlers:
+    """Test cases for custom exception handlers."""
+
+    def test_token_expired_exception_handler(self):
+        """Test token expired exception handler."""
+        from src.main import token_expired_exception_handler
+
+        # Create mock request and exception
+        mock_request = Mock(spec=Request)
+        mock_exception = CNOPAuthTokenExpiredException("Token has expired")
+
+        # Call the handler
+        response = token_expired_exception_handler(mock_request, mock_exception)
+
+        # Verify response
+        assert response.status_code == 401
+        assert response.body.decode() == '{"detail":"CNOPAuthTokenExpiredException: Token has expired"}'
+
+    def test_token_invalid_exception_handler(self):
+        """Test token invalid exception handler."""
+        from src.main import token_invalid_exception_handler
+
+        # Create mock request and exception
+        mock_request = Mock(spec=Request)
+        mock_exception = CNOPAuthTokenInvalidException("Invalid token format")
+
+        # Call the handler
+        response = token_invalid_exception_handler(mock_request, mock_exception)
+
+        # Verify response
+        assert response.status_code == 401
+        assert response.body.decode() == '{"detail":"CNOPAuthTokenInvalidException: Invalid token format"}'
+
+    def test_internal_server_exception_handler(self):
+        """Test internal server exception handler."""
+        from src.main import internal_server_exception_handler
+
+        # Create mock request and exception
+        mock_request = Mock(spec=Request)
+        mock_exception = CNOPInternalServerException("Database connection failed")
+
+        # Call the handler
+        response = internal_server_exception_handler(mock_request, mock_exception)
+
+        # Verify response
+        assert response.status_code == 500
+        assert response.body.decode() == '{"detail":"CNOPInternalServerException: Database connection failed"}'
+
+    def test_general_exception_handler(self):
+        """Test general exception handler."""
+        from src.main import general_exception_handler
+
+        # Create mock request and exception
+        mock_request = Mock(spec=Request)
+        mock_exception = ValueError("Unexpected error occurred")
+
+        # Call the handler
+        response = general_exception_handler(mock_request, mock_exception)
+
+        # Verify response
+        assert response.status_code == 500
+        assert response.body.decode() == '{"detail":"Internal server error"}'

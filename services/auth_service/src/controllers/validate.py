@@ -1,68 +1,71 @@
 """
 JWT Validation Controller
-
-Internal endpoint for JWT token validation.
 """
 
 import time
 from typing import Union
-from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter
 from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
 from common.auth.security import TokenManager
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from metrics import metrics_collector
 
 router = APIRouter(prefix="/internal/auth", tags=["internal"])
 logger = BaseLogger(Loggers.AUTH)
 
 
+def _determine_token_type(token_payload: dict) -> str:
+    """Determine token type from JWT payload"""
+    # Check for explicit token type claim
+    token_type = token_payload.get('token_type', '').lower()
+    if token_type in ['access', 'refresh']:
+        return token_type
+
+    # Check for JWT standard claims that might indicate token type
+    if 'scope' in token_payload:
+        return 'access'
+
+    # Default to access token
+    return 'access'
+
+
 @router.post("/validate", response_model=Union[ValidateTokenResponse, ValidateTokenErrorResponse])
 def validate_jwt_token(request: ValidateTokenRequest):
-    """
-    Validate JWT token and extract user context.
-
-    This endpoint is called internally by the Gateway to validate JWT tokens
-    and extract user information for authentication purposes.
-    """
+    """Validate JWT token and extract user context"""
     start_time = time.time()
     request_id = request.request_id or f"req-{int(start_time * 1000)}"
 
     try:
-        logger.info(action=LogActions.REQUEST_START, message="JWT token validation request received",
-                   extra={"request_id": request_id, "token_length": len(request.token)})
+        logger.info(action=LogActions.REQUEST_START, message="Validating JWT", extra={"request_id": request_id})
 
-        # Initialize token manager from common package
+        # Validate token
         token_manager = TokenManager()
-
-        # Validate token and extract user context using common package
         user_context = token_manager.validate_token_comprehensive(request.token)
 
-        # Calculate processing time
-        duration_ms = int((time.time() - start_time) * 1000)
+        # Record success
+        duration = time.time() - start_time
+        metrics_collector.record_jwt_validation('success', duration)
+        metrics_collector.record_request('success', duration)
 
-        # Log successful validation
-        logger.info(action=LogActions.AUTH_SUCCESS, message="JWT token validated successfully",
-                   user=user_context["username"], duration_ms=duration_ms,
-                   extra={"request_id": request_id, "role": user_context.get("role", "unknown")})
+        logger.info(action=LogActions.AUTH_SUCCESS, message="Token valid", user=user_context["username"], extra={"request_id": request_id})
 
-        # Return success response
         return ValidateTokenResponse(
             valid=True,
             user=user_context["username"],
             expires_at=str(user_context.get("exp", "")),
             created_at=str(user_context.get("iat", "")),
-            metadata={"token_type": user_context.get("token_type", "")},
+            metadata=user_context.get("metadata", {}),
             request_id=request_id
         )
 
-    except CNOPAuthTokenExpiredException as e:
-        duration_ms = int((time.time() - start_time) * 1000)
+    except CNOPAuthTokenExpiredException:
+        duration = time.time() - start_time
+        metrics_collector.record_jwt_validation('failure', duration)
+        metrics_collector.record_request('failure', duration)
 
-        logger.warning(action=LogActions.AUTH_FAILED, message="JWT token expired",
-                      duration_ms=duration_ms, extra={"request_id": request_id})
+        logger.warning(action=LogActions.AUTH_FAILED, message="Token expired", extra={"request_id": request_id})
 
-        # Return error response for expired token
         return ValidateTokenErrorResponse(
             valid=False,
             error="token_expired",
@@ -71,12 +74,12 @@ def validate_jwt_token(request: ValidateTokenRequest):
         )
 
     except CNOPAuthTokenInvalidException as e:
-        duration_ms = int((time.time() - start_time) * 1000)
+        duration = time.time() - start_time
+        metrics_collector.record_jwt_validation('failure', duration)
+        metrics_collector.record_request('failure', duration)
 
-        logger.warning(action=LogActions.AUTH_FAILED, message="JWT token invalid",
-                      duration_ms=duration_ms, extra={"request_id": request_id, "error_message": str(e)})
+        logger.warning(action=LogActions.AUTH_FAILED, message="Token invalid", extra={"request_id": request_id, "error": str(e)})
 
-        # Return error response for invalid token
         return ValidateTokenErrorResponse(
             valid=False,
             error="token_invalid",
@@ -85,12 +88,12 @@ def validate_jwt_token(request: ValidateTokenRequest):
         )
 
     except Exception as e:
-        duration_ms = int((time.time() - start_time) * 1000)
+        duration = time.time() - start_time
+        metrics_collector.record_jwt_validation('failure', duration)
+        metrics_collector.record_request('error', duration)
 
-        logger.error(action=LogActions.ERROR, message="Unexpected error during token validation",
-                    duration_ms=duration_ms, extra={"request_id": request_id, "error": str(e), "error_type": type(e).__name__})
+        logger.error(action=LogActions.ERROR, message="Validation error", extra={"request_id": request_id, "error": str(e)})
 
-        # Return generic error response
         return ValidateTokenErrorResponse(
             valid=False,
             error="validation_error",
