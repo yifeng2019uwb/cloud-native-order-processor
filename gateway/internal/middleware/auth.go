@@ -34,9 +34,9 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		})
 
 		if authHeader == "" {
-			// No auth header - set public role for unauthenticated users
-			logger.Info(logging.REQUEST_END, "No auth header, setting public role", "", nil)
-			c.Set(constants.ContextKeyUserRole, constants.RolePublic)
+			// No auth header - don't set any role, let the route handler decide
+			// Protected routes will check for empty role and return 401
+			logger.Info(logging.REQUEST_END, "No auth header provided", "", nil)
 			c.Next()
 			return
 		}

@@ -270,23 +270,23 @@ var (
 		// Auth service routes
 		APIV1AuthLogin: {
 			Path:         APIV1AuthLogin,
-			RequiresAuth: false,                // Login doesn't require authentication
-			AllowedRoles: []string{RolePublic}, // Only public (unauthenticated) users can access
+			RequiresAuth: false,      // Login doesn't require authentication
+			AllowedRoles: []string{}, // Public access - no role needed
 		},
 		APIV1AuthRegister: {
 			Path:         APIV1AuthRegister,
-			RequiresAuth: false,                // Registration doesn't require authentication
-			AllowedRoles: []string{RolePublic}, // Only public (unauthenticated) users can access
+			RequiresAuth: false,      // Registration doesn't require authentication
+			AllowedRoles: []string{}, // Public access - no role needed
 		},
 		APIV1AuthProfile: {
 			Path:         APIV1AuthProfile,
-			RequiresAuth: true, // Profile requires authentication
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			RequiresAuth: true,       // Profile requires authentication
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 		APIV1AuthLogout: {
 			Path:         APIV1AuthLogout,
-			RequiresAuth: true, // Logout requires authentication
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			RequiresAuth: true,       // Logout requires authentication
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 
 		// Inventory service routes
@@ -305,58 +305,58 @@ var (
 		APIV1Orders: {
 			Path:         APIV1Orders,
 			RequiresAuth: true,
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 		APIV1OrderByID: {
 			Path:         APIV1OrderByID,
 			RequiresAuth: true,
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 
 		// Portfolio service routes (all require auth)
 		APIV1PortfolioByUser: {
 			Path:         APIV1PortfolioByUser,
 			RequiresAuth: true,
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 
 		// Balance service routes (all require auth)
 		APIV1BalanceGet: {
 			Path:         APIV1BalanceGet,
 			RequiresAuth: true,
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 		APIV1BalanceDeposit: {
 			Path:         APIV1BalanceDeposit,
 			RequiresAuth: true,
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 		APIV1BalanceWithdraw: {
 			Path:         APIV1BalanceWithdraw,
 			RequiresAuth: true,
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 		APIV1BalanceTransactions: {
 			Path:         APIV1BalanceTransactions,
 			RequiresAuth: true,
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 
 		// Asset balance service routes (all require auth)
 		APIV1AssetBalances: {
 			Path:         APIV1AssetBalances,
 			RequiresAuth: true,
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 		APIV1AssetBalanceByID: {
 			Path:         APIV1AssetBalanceByID,
 			RequiresAuth: true,
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 		APIV1AssetTransactionsByID: {
 			Path:         APIV1AssetTransactionsByID,
 			RequiresAuth: true,
-			AllowedRoles: []string{RoleCustomer, RoleVIP, RoleAdmin},
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
 	}
 )

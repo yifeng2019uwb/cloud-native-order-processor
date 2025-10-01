@@ -15,22 +15,20 @@ Individual API tests will:
 ## What is tested here
 
 ### All Protected Services (User & Order)
-1. **No token** - ❌ DISABLED - endpoints return 403 (BUG: should be 401, see GATEWAY-002)
-2. **Invalid token** - ✅ ACTIVE - endpoints return 401
+1. **No token** - ✅ All endpoints return 401
+2. **Invalid token** - ✅ All endpoints return 401
 
 ### Inventory Service
-1. **Public access** - ✅ ACTIVE - endpoints are accessible without auth (no 401)
+1. **Public access** - ✅ Endpoints accessible without auth (no 401)
 
-**⚠️ Known Issue (GATEWAY-002)**: ALL protected services return 403 instead of 401 for missing tokens. This is a critical gateway bug that needs fixing. All services should return 401 for authentication failures.
-
-**Tests Currently Disabled**:
-- `test_user_service_no_token()` - Disabled until GATEWAY-002 is fixed
-- `test_order_service_no_token()` - Disabled until GATEWAY-002 is fixed
-
-**Active Tests**:
-- `test_user_service_invalid_token()` - ✅ Passing
-- `test_order_service_invalid_token()` - ✅ Passing
-- `test_inventory_service_is_public()` - ✅ Passing
+**All Tests Active and Passing (7 tests)**:
+- `test_user_service_no_token()` - ✅ Tests 6 user endpoints (GET profile, balance, transactions; POST deposit, withdraw, logout)
+- `test_user_service_invalid_token()` - ✅ Tests 6 user endpoints with invalid token
+- `test_order_service_no_token()` - ✅ Tests 6 order endpoints (GET/POST orders, portfolio, asset balances/transactions)
+- `test_order_service_invalid_token()` - ✅ Tests 6 order endpoints with invalid token
+- `test_malformed_auth_header()` - ✅ Tests 4 malformed header formats
+- `test_public_endpoints_accessible()` - ✅ Tests login and register are public
+- `test_inventory_service_is_public()` - ✅ Tests 2 inventory endpoints are public
 
 ## Test Coverage
 

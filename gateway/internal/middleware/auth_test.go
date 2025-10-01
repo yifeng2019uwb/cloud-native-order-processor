@@ -59,10 +59,9 @@ func TestAuthMiddleware(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 
-		// Public users should have role set but no user_id or user_context
+		// No auth header - no user context set at all
 		assert.Equal(t, false, response["user_id_exists"])
-		assert.Equal(t, true, response["user_role_exists"])
-		assert.Equal(t, "public", response["user_role"])
+		assert.Equal(t, false, response["user_role_exists"])
 		assert.Equal(t, false, response["user_context_exists"])
 	})
 
