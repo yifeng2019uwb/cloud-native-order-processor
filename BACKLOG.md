@@ -31,6 +31,36 @@
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
+#### **SDK-001: Create Python SDK for CNOP Services**
+- **Component**: Development Tools & Client Libraries
+- **Type**: Task
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Create a comprehensive Python SDK for interacting with CNOP microservices, providing object-oriented access to APIs
+- **Acceptance Criteria**:
+  - Design SDK architecture with client classes for each service (Inventory, Order, User, Auth)
+  - Implement Pydantic response models for type safety and validation
+  - Create base client with HTTP handling, error management, and retry logic
+  - Add comprehensive error handling with custom exceptions
+  - Write unit tests and integration tests for SDK
+  - Package SDK with proper setup.py and requirements
+  - Create documentation and usage examples
+- **Dependencies**: All core services must be stable and documented
+- **Files to Create**:
+  - `cnop-sdk/` - Main SDK package directory
+  - `cnop-sdk/__init__.py` - Package initialization
+  - `cnop-sdk/client.py` - Main client classes
+  - `cnop-sdk/models/` - Response model definitions
+  - `cnop-sdk/exceptions.py` - Custom exception classes
+  - `cnop-sdk/setup.py` - Package configuration
+  - `cnop-sdk/README.md` - SDK documentation
+- **Benefits**:
+  - Type safety and IDE autocomplete for API consumers
+  - Cleaner integration tests with object-oriented access
+  - Reusable client library for CLI tools and other applications
+  - Better error handling and retry logic
+  - Consistent API surface across all services
+
 #### **GATEWAY-001: Implement Circuit Breaker Pattern and JWT Configuration for Gateway**
 - **Component**: Infrastructure & Gateway Service
 - **Type**: Task

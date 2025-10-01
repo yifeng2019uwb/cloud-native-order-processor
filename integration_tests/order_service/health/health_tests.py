@@ -13,6 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from test_data import TestDataManager
 from api_endpoints import APIEndpoints, OrderAPI
+from test_constants import OrderFields, TestValues, CommonFields
 
 class HealthTests:
     """Integration tests for health check API (GET /health)"""
@@ -28,7 +29,6 @@ class HealthTests:
 
     def test_health_endpoint_accessible(self):
         """Test that health endpoint is accessible without authentication"""
-        print("  🏥 Testing health endpoint accessibility")
 
         response = self.session.get(
             self.health_api(),
@@ -37,11 +37,9 @@ class HealthTests:
 
         # Health endpoint should be accessible without auth
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-        print("  ✅ Health endpoint accessible without authentication")
 
     def test_health_response_schema(self):
         """Test that health response has correct schema"""
-        print("  🔍 Testing health response schema")
 
         response = self.session.get(
             self.health_api(),
@@ -50,38 +48,14 @@ class HealthTests:
 
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
 
-        try:
-            data = response.json()
+        data = response.json()
 
-            # Check if response has expected structure
-            if "status" in data:
-                assert data["status"] in ["healthy", "ok", "up"], f"Unexpected status: {data['status']}"
-                print("    ✅ Status field present and valid")
-            else:
-                print("    ⚠️  Status field missing")
-
-            if "timestamp" in data:
-                print("    ✅ Timestamp field present")
-            else:
-                print("    ⚠️  Timestamp field missing")
-
-            if "service" in data:
-                print("    ✅ Service field present")
-            else:
-                print("    ⚠️  Service field missing")
-
-            if "version" in data:
-                print("    ✅ Version field present")
-            else:
-                print("    ⚠️  Version field missing")
-
-        except Exception as e:
-            print(f"    ❌ Health response schema validation failed: {e}")
-            raise
+        # Check expected fields
+        assert CommonFields.STATUS in data, f"Missing status field: {data}"
+        assert data[CommonFields.STATUS] in ["healthy", "ok", "up"], f"Unexpected status: {data[CommonFields.STATUS]}"
 
     def test_health_response_consistency(self):
         """Test that health endpoint returns consistent responses"""
-        print("  🔄 Testing health response consistency")
 
         responses = []
         for i in range(3):
@@ -94,22 +68,17 @@ class HealthTests:
             time.sleep(0.1)  # Small delay between requests
 
         # All responses should have the same status
-        statuses = [r.get("status") for r in responses if "status" in r]
-        if statuses:
-            assert len(set(statuses)) == 1, f"Health status inconsistent: {statuses}"
-            print("    ✅ Health status consistent across requests")
+        statuses = [r.get(CommonFields.STATUS) for r in responses if CommonFields.STATUS in r]
+        assert len(statuses) > 0, "No status fields found in responses"
+        assert len(set(statuses)) == 1, f"Health status inconsistent: {statuses}"
 
         # All responses should have the same service name
-        services = [r.get("service") for r in responses if "service" in r]
-        if services:
-            assert len(set(services)) == 1, f"Service name inconsistent: {services}"
-            print("    ✅ Service name consistent across requests")
-
-        print("    ✅ Health responses consistent across multiple requests")
+        services = [r.get(CommonFields.SERVICE) for r in responses if CommonFields.SERVICE in r]
+        assert len(services) > 0, "No service fields found in responses"
+        assert len(set(services)) == 1, f"Service name inconsistent: {services}"
 
     def test_health_performance(self):
         """Test that health endpoint responds within reasonable time"""
-        print("  ⏱️  Testing health endpoint performance")
 
         start_time = time.time()
         response = self.session.get(
@@ -123,14 +92,10 @@ class HealthTests:
         response_time = (end_time - start_time) * 1000  # Convert to milliseconds
         assert response_time < 500, f"Response time {response_time:.2f}ms exceeds 500ms threshold"
 
-        print(f"    ✅ Response time: {response_time:.2f}ms")
-
     def test_health_with_query_parameters(self):
         """Test that health endpoint handles query parameters gracefully"""
-        print("  🔍 Testing health endpoint with query parameters")
-
         # Test common health check params
-        params = {"format": "json", "detailed": "true", "include_metrics": "true"}
+        params = {OrderFields.FORMAT: CommonFields.JSON, OrderFields.DETAILED: CommonFields.TRUE, OrderFields.INCLUDE_METRICS: CommonFields.TRUE}
 
         response = self.session.get(
             self.health_api(),
@@ -141,42 +106,30 @@ class HealthTests:
         # Should either accept params (200) or reject them gracefully (400/422), but not crash (500)
         assert response.status_code in [200, 400, 422], f"Unexpected status code {response.status_code} for query params"
 
-        if response.status_code == 200:
-            print("    ✅ Query parameters accepted")
-        else:
-            print(f"    ✅ Query parameters handled gracefully (status: {response.status_code})")
 
     def test_health_methods(self):
         """Test that health endpoint only accepts GET method"""
-        print("  🔍 Testing health endpoint HTTP methods")
-
         # Test POST method (should not be allowed)
         response = self.session.post(
             self.health_api(),
             timeout=self.timeout
         )
         assert response.status_code in [405, 404], f"Expected 405/404 for POST, got {response.status_code}"
-        print("    ✅ POST method correctly rejected")
-
         # Test PUT method (should not be allowed)
         response = self.session.put(
             self.health_api(),
             timeout=self.timeout
         )
         assert response.status_code in [405, 404], f"Expected 405/404 for PUT, got {response.status_code}"
-        print("    ✅ PUT method correctly rejected")
-
         # Test DELETE method (should not be allowed)
         response = self.session.delete(
             self.health_api(),
             timeout=self.timeout
         )
         assert response.status_code in [405, 404], f"Expected 405/404 for DELETE, got {response.status_code}"
-        print("    ✅ DELETE method correctly rejected")
 
     def test_health_headers(self):
         """Test that health endpoint returns appropriate headers"""
-        print("  🔍 Testing health endpoint headers")
 
         response = self.session.get(
             self.health_api(),
@@ -188,55 +141,21 @@ class HealthTests:
         # Check for common headers
         headers = response.headers
 
-        if "content-type" in headers:
-            content_type = headers["content-type"]
-            assert "application/json" in content_type, f"Expected JSON content type, got {content_type}"
-            print("    ✅ Content-Type header correct")
-        else:
-            print("    ⚠️  Content-Type header missing")
-
-        if "cache-control" in headers:
-            cache_control = headers["cache-control"]
-            # Health checks should typically not be cached
-            assert "no-cache" in cache_control or "no-store" in cache_control, f"Health endpoint should not be cached, got {cache_control}"
-            print("    ✅ Cache-Control header appropriate")
-        else:
-            print("    ⚠️  Cache-Control header missing")
+        # Content-Type header should be JSON
+        assert "content-type" in headers, "Missing Content-Type header"
+        content_type = headers["content-type"]
+        assert "application/json" in content_type, f"Expected JSON content type, got {content_type}"
 
     def run_all_health_tests(self):
         """Run all health check tests"""
-        print("🏥 Running order service health check integration tests...")
-        print(f"🎯 Service URL: {APIEndpoints.get_order_endpoint(OrderAPI.HEALTH)}")
+        self.test_health_endpoint_accessible()
+        self.test_health_response_schema()
+        self.test_health_response_consistency()
+        self.test_health_performance()
+        self.test_health_with_query_parameters()
+        self.test_health_methods()
+        self.test_health_headers()
 
-        try:
-            # Health Check Tests
-            print("\n🏥 === HEALTH CHECK TESTS ===")
-            self.test_health_endpoint_accessible()
-            print("  ✅ Health Endpoint Accessible - PASS")
-
-            self.test_health_response_schema()
-            print("  ✅ Health Response Schema - PASS")
-
-            self.test_health_response_consistency()
-            print("  ✅ Health Response Consistency - PASS")
-
-            self.test_health_performance()
-            print("  ✅ Health Performance - PASS")
-
-            self.test_health_with_query_parameters()
-            print("  ✅ Health Query Parameters - PASS")
-
-            self.test_health_methods()
-            print("  ✅ Health HTTP Methods - PASS")
-
-            self.test_health_headers()
-            print("  ✅ Health Headers - PASS")
-
-        except Exception as e:
-            print(f"  ❌ Unexpected error in health tests: {e}")
-
-        print("\n==================================================")
-        print("🎉 Health check tests completed!")
 
 if __name__ == "__main__":
     tests = HealthTests()

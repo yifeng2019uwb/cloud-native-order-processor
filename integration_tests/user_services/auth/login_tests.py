@@ -14,6 +14,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from test_data import TestDataManager
 from api_endpoints import APIEndpoints, UserAPI
+from test_constants import UserFields, TestValues, CommonFields
 
 class UserLoginTests:
     """Integration tests for user login API with comprehensive validation"""
@@ -31,32 +32,30 @@ class UserLoginTests:
 
     def setup_test_user(self):
         """Create a test user for login tests"""
-        if not self.test_user:
-            self.test_user = {
-                'username': f'testuser_{uuid.uuid4().hex[:8]}',
-                'email': f'test_{uuid.uuid4().hex[:8]}@example.com',
-                'password': 'TestPassword123!',
-                'first_name': 'Integration',
-                'last_name': 'Test'
-            }
+        self.test_user = {
+            UserFields.USERNAME: f'testuser_{uuid.uuid4().hex[:8]}',
+            UserFields.EMAIL: f'test_{uuid.uuid4().hex[:8]}@example.com',
+            UserFields.PASSWORD: 'TestPassword123!',
+            UserFields.FIRST_NAME: 'Integration',
+            UserFields.LAST_NAME: 'Test'
+        }
 
-            # Register the user
-            response = self.session.post(
-                self.user_api(UserAPI.REGISTER),
-                json=self.test_user,
-                timeout=self.timeout
-            )
+        # Register the user
+        response = self.session.post(
+            self.user_api(UserAPI.REGISTER),
+            json=self.test_user,
+            timeout=self.timeout
+        )
 
-            if response.status_code not in [200, 201]:
-                raise Exception(f"Failed to create test user: {response.status_code}")
+        assert response.status_code in [200, 201], f"Failed to create test user: {response.status_code}: {response.text}"
 
     def test_login_success(self):
         """Test successful user login"""
         self.setup_test_user()
 
         login_data = {
-            'username': self.test_user['username'],
-            'password': self.test_user['password']
+            UserFields.USERNAME: self.test_user['username'],
+            UserFields.PASSWORD: self.test_user['password']
         }
 
         response = self.session.post(
@@ -69,19 +68,12 @@ class UserLoginTests:
 
         data = response.json()
 
-        # Check if response has nested data structure
-        if 'data' in data:
-            token_data = data['data']
-            assert 'access_token' in token_data
-            assert 'token_type' in token_data
-            assert token_data['token_type'] == 'bearer'
-            self.access_token = token_data['access_token']
-        else:
-            # Direct structure
-            assert 'access_token' in data
-            assert 'token_type' in data
-            assert data['token_type'] == 'bearer'
-            self.access_token = data['access_token']
+        # Extract token from either nested or direct structure
+        token_data = data.get(UserFields.DATA, data)
+        assert UserFields.ACCESS_TOKEN in token_data, f"Missing access_token in response: {data}"
+        assert UserFields.TOKEN_TYPE in token_data, f"Missing token_type in response: {data}"
+        assert token_data[UserFields.TOKEN_TYPE] == 'bearer', f"Expected bearer token, got {token_data[UserFields.TOKEN_TYPE]}"
+        self.access_token = token_data[UserFields.ACCESS_TOKEN]
 
         return data
 
@@ -90,8 +82,8 @@ class UserLoginTests:
         self.setup_test_user()
 
         login_data = {
-            'username': f"  {self.test_user['username']}  ",  # Extra whitespace
-            'password': f"  {self.test_user['password']}  "   # Extra whitespace
+            UserFields.USERNAME: f"  {self.test_user['username']}  ",  # Extra whitespace
+            UserFields.PASSWORD: f"  {self.test_user['password']}  "   # Extra whitespace
         }
 
         response = self.session.post(
@@ -106,8 +98,8 @@ class UserLoginTests:
     def test_login_username_too_short(self):
         """Test login with username too short (< 6 chars)"""
         login_data = {
-            'username': 'abc',  # Too short
-            'password': 'TestPassword123!'
+            UserFields.USERNAME: 'abc',  # Too short
+            UserFields.PASSWORD: 'TestPassword123!'
         }
 
         response = self.session.post(
@@ -121,8 +113,8 @@ class UserLoginTests:
     def test_login_username_too_long(self):
         """Test login with username too long (> 30 chars)"""
         login_data = {
-            'username': 'a' * 31,  # Too long
-            'password': 'TestPassword123!'
+            UserFields.USERNAME: 'a' * 31,  # Too long
+            UserFields.PASSWORD: 'TestPassword123!'
         }
 
         response = self.session.post(
@@ -137,8 +129,8 @@ class UserLoginTests:
         """Test login with username containing invalid characters"""
 
         login_data = {
-            'username': 'test-user@123',  # Contains hyphens and @
-            'password': 'TestPassword123!'
+            UserFields.USERNAME: 'test-user@123',  # Contains hyphens and @
+            UserFields.PASSWORD: 'TestPassword123!'
         }
 
         response = self.session.post(
@@ -153,8 +145,8 @@ class UserLoginTests:
         """Test login with username containing suspicious content"""
 
         login_data = {
-            'username': '<script>alert("xss")</script>',  # XSS attempt
-            'password': 'TestPassword123!'
+            UserFields.USERNAME: '<script>alert("xss")</script>',  # XSS attempt
+            UserFields.PASSWORD: 'TestPassword123!'
         }
 
         response = self.session.post(
@@ -169,8 +161,8 @@ class UserLoginTests:
         """Test login with empty username"""
 
         login_data = {
-            'username': '',  # Empty
-            'password': 'TestPassword123!'
+            UserFields.USERNAME: '',  # Empty
+            UserFields.PASSWORD: 'TestPassword123!'
         }
 
         response = self.session.post(
@@ -185,8 +177,8 @@ class UserLoginTests:
         """Test login with username containing only whitespace"""
 
         login_data = {
-            'username': '   ',  # Whitespace only
-            'password': 'TestPassword123!'
+            UserFields.USERNAME: '   ',  # Whitespace only
+            UserFields.PASSWORD: 'TestPassword123!'
         }
 
         response = self.session.post(
@@ -202,8 +194,8 @@ class UserLoginTests:
         """Test login with password too short (< 12 chars)"""
 
         login_data = {
-            'username': 'testuser123',
-            'password': 'Short1!'  # Too short
+            UserFields.USERNAME: 'testuser123',
+            UserFields.PASSWORD: 'Short1!'  # Too short
         }
 
         response = self.session.post(
@@ -218,8 +210,8 @@ class UserLoginTests:
         """Test login with password too long (> 20 chars)"""
 
         login_data = {
-            'username': 'testuser123',
-            'password': 'VeryLongPassword123!Extra'  # 25 chars - too long
+            UserFields.USERNAME: 'testuser123',
+            UserFields.PASSWORD: 'VeryLongPassword123!Extra'  # 25 chars - too long
         }
 
         response = self.session.post(
@@ -234,8 +226,8 @@ class UserLoginTests:
         """Test login with password missing uppercase letter"""
 
         login_data = {
-            'username': 'testuser123',
-            'password': 'lowercase123!'  # No uppercase
+            UserFields.USERNAME: 'testuser123',
+            UserFields.PASSWORD: 'lowercase123!'  # No uppercase
         }
 
         response = self.session.post(
@@ -250,8 +242,8 @@ class UserLoginTests:
         """Test login with password missing lowercase letter"""
 
         login_data = {
-            'username': 'testuser123',
-            'password': 'UPPERCASE123!'  # No lowercase
+            UserFields.USERNAME: 'testuser123',
+            UserFields.PASSWORD: 'UPPERCASE123!'  # No lowercase
         }
 
         response = self.session.post(
@@ -266,8 +258,8 @@ class UserLoginTests:
         """Test login with password missing number"""
 
         login_data = {
-            'username': 'testuser123',
-            'password': 'PasswordOnly!'  # No number
+            UserFields.USERNAME: 'testuser123',
+            UserFields.PASSWORD: 'PasswordOnly!'  # No number
         }
 
         response = self.session.post(
@@ -282,8 +274,8 @@ class UserLoginTests:
         """Test login with password missing special character"""
 
         login_data = {
-            'username': 'testuser123',
-            'password': 'Password123'  # No special char
+            UserFields.USERNAME: 'testuser123',
+            UserFields.PASSWORD: 'Password123'  # No special char
         }
 
         response = self.session.post(
@@ -298,8 +290,8 @@ class UserLoginTests:
         """Test login with empty password"""
 
         login_data = {
-            'username': 'testuser123',
-            'password': ''  # Empty
+            UserFields.USERNAME: 'testuser123',
+            UserFields.PASSWORD: ''  # Empty
         }
 
         response = self.session.post(
@@ -314,8 +306,8 @@ class UserLoginTests:
         """Test login with password containing only whitespace"""
 
         login_data = {
-            'username': 'testuser123',
-            'password': '   '  # Whitespace only
+            UserFields.USERNAME: 'testuser123',
+            UserFields.PASSWORD: '   '  # Whitespace only
         }
 
         response = self.session.post(
@@ -330,8 +322,8 @@ class UserLoginTests:
         """Test login with password containing suspicious content"""
 
         login_data = {
-            'username': 'testuser123',
-            'password': '<script>alert("xss")</script>'  # XSS attempt
+            UserFields.USERNAME: 'testuser123',
+            UserFields.PASSWORD: '<script>alert("xss")</script>'  # XSS attempt
         }
 
         response = self.session.post(
@@ -347,8 +339,8 @@ class UserLoginTests:
         """Test login with invalid username (should fail)"""
 
         login_data = {
-            'username': 'nonexistent_user',
-            'password': 'TestPassword123!'
+            UserFields.USERNAME: 'nonexistent_user',
+            UserFields.PASSWORD: 'TestPassword123!'
         }
 
         response = self.session.post(
@@ -366,8 +358,8 @@ class UserLoginTests:
 
 
         login_data = {
-            'username': self.test_user['username'],
-            'password': 'WrongPassword123!'
+            UserFields.USERNAME: self.test_user['username'],
+            UserFields.PASSWORD: 'WrongPassword123!'
         }
 
         response = self.session.post(
@@ -383,10 +375,9 @@ class UserLoginTests:
         """Test login with case-sensitive username (should fail if different case)"""
         self.setup_test_user()
 
-
         login_data = {
-            'username': self.test_user['username'].upper(),  # Different case
-            'password': self.test_user['password']
+            UserFields.USERNAME: self.test_user['username'].upper(),  # Different case
+            UserFields.PASSWORD: self.test_user['password']
         }
 
         response = self.session.post(
@@ -395,24 +386,19 @@ class UserLoginTests:
             timeout=self.timeout
         )
 
-        # Check if username is case-sensitive or case-insensitive
-        if response.status_code == 200:
-            pass  # Username is case-insensitive
-        else:
-            # Should fail with invalid credentials (username is case-sensitive)
-            assert response.status_code in [400, 401, 422], f"Expected 4xx, got {response.status_code}"
+        # Username can be case-insensitive (200) or case-sensitive (400/401/422)
+        assert response.status_code in [200, 400, 401, 422], f"Expected 200/4xx, got {response.status_code}: {response.text}"
 
     def test_login_case_sensitive_password(self):
         """Test login with case-sensitive password (should fail if different case)"""
         self.setup_test_user()
 
-
         # Create a password with different case
         wrong_password = self.test_user['password'].swapcase()  # Swap case
 
         login_data = {
-            'username': self.test_user['username'],
-            'password': wrong_password
+            UserFields.USERNAME: self.test_user['username'],
+            UserFields.PASSWORD: wrong_password
         }
 
         response = self.session.post(
@@ -430,7 +416,7 @@ class UserLoginTests:
 
         response = self.session.post(
             self.user_api(UserAPI.LOGIN),
-            json={'password': 'TestPassword123!'},
+            json={UserFields.PASSWORD: 'TestPassword123!'},
             timeout=self.timeout
         )
         assert response.status_code in [400, 422], f"Expected 400/422, got {response.status_code}"
@@ -440,7 +426,7 @@ class UserLoginTests:
 
         response = self.session.post(
             self.user_api(UserAPI.LOGIN),
-            json={'username': 'testuser'},
+            json={UserFields.USERNAME: 'testuser'},
             timeout=self.timeout
         )
         assert response.status_code in [400, 422], f"Expected 400/422, got {response.status_code}"
@@ -460,8 +446,8 @@ class UserLoginTests:
         """Test login with null values"""
 
         login_data = {
-            'username': None,
-            'password': None
+            UserFields.USERNAME: None,
+            UserFields.PASSWORD: None
         }
 
         response = self.session.post(
@@ -476,8 +462,8 @@ class UserLoginTests:
         """Test login with extremely long inputs"""
 
         login_data = {
-            'username': 'a' * 1000,  # Very long
-            'password': 'b' * 1000   # Very long
+            UserFields.USERNAME: 'a' * 1000,  # Very long
+            UserFields.PASSWORD: 'b' * 1000   # Very long
         }
 
         response = self.session.post(
@@ -492,8 +478,8 @@ class UserLoginTests:
         """Test login with special characters in username/password"""
 
         login_data = {
-            'username': 'user!@#$%^&*()',
-            'password': 'pass!@#$%^&*()'
+            UserFields.USERNAME: 'user!@#$%^&*()',
+            UserFields.PASSWORD: 'pass!@#$%^&*()'
         }
 
         response = self.session.post(
@@ -506,56 +492,34 @@ class UserLoginTests:
 
     def run_all_login_tests(self):
         """Run all user login tests"""
-        try:
-            # Success Cases
-            self.test_login_success()
-            self.test_login_success_with_whitespace_trimming()
-
-            # Username Validation
-            self.test_login_username_too_short()
-            self.test_login_username_too_long()
-            self.test_login_username_invalid_chars()
-            self.test_login_username_suspicious_content()
-            self.test_login_username_empty()
-            self.test_login_username_whitespace_only()
-
-            # Password Validation
-            self.test_login_password_too_short()
-            self.test_login_password_too_long()
-            self.test_login_password_no_uppercase()
-            self.test_login_password_no_lowercase()
-            self.test_login_password_no_number()
-            self.test_login_password_no_special_char()
-            self.test_login_password_empty()
-            self.test_login_password_whitespace_only()
-            self.test_login_password_suspicious_content()
-
-            # Authentication Tests
-            self.test_login_invalid_username()
-            self.test_login_invalid_password()
-            self.test_login_case_sensitive_username()
-            self.test_login_case_sensitive_password()
-
-            # Missing Fields Tests
-            self.test_login_missing_username()
-            self.test_login_missing_password()
-            self.test_login_missing_both_fields()
-
-            # Edge Cases
-            self.test_login_with_null_values()
-            self.test_login_with_very_long_inputs()
-            self.test_login_with_special_characters()
-
-        except Exception as e:
-            raise
+        self.test_login_success()
+        self.test_login_success_with_whitespace_trimming()
+        self.test_login_username_too_short()
+        self.test_login_username_too_long()
+        self.test_login_username_invalid_chars()
+        self.test_login_username_suspicious_content()
+        self.test_login_username_empty()
+        self.test_login_username_whitespace_only()
+        self.test_login_password_too_short()
+        self.test_login_password_too_long()
+        self.test_login_password_no_uppercase()
+        self.test_login_password_no_lowercase()
+        self.test_login_password_no_number()
+        self.test_login_password_no_special_char()
+        self.test_login_password_empty()
+        self.test_login_password_whitespace_only()
+        self.test_login_password_suspicious_content()
+        self.test_login_invalid_username()
+        self.test_login_invalid_password()
+        self.test_login_case_sensitive_username()
+        self.test_login_case_sensitive_password()
+        self.test_login_missing_username()
+        self.test_login_missing_password()
+        self.test_login_missing_both_fields()
+        self.test_login_with_null_values()
+        self.test_login_with_very_long_inputs()
+        self.test_login_with_special_characters()
 
 if __name__ == "__main__":
-    # Run user login tests
     tests = UserLoginTests()
-    try:
-        tests.run_all_login_tests()
-        print("🎉 All user login integration tests completed successfully!")
-        sys.exit(0)
-    except Exception as e:
-        print(f"❌ User login tests failed: {e}")
-        sys.exit(1)
+    tests.run_all_login_tests()

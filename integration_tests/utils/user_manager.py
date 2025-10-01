@@ -6,6 +6,7 @@ import uuid
 import requests
 from typing import Dict, Tuple
 from api_endpoints import APIEndpoints, UserAPI
+from test_constants import UserFields, TestValues, CommonFields
 
 class TestUserManager:
     """Manages test users for integration tests"""
@@ -29,11 +30,11 @@ class TestUserManager:
         # Generate unique user data
         user_id = str(uuid.uuid4().hex[:8])
         user_data = {
-            'username': f'testuser_{user_id}',
-            'email': f'test_{user_id}@example.com',
-            'password': 'TestPassword123!',
-            'first_name': 'Integration',
-            'last_name': 'Test'
+            UserFields.USERNAME: f'testuser_{user_id}',
+            UserFields.EMAIL: f'test_{user_id}@example.com',
+            UserFields.PASSWORD: 'TestPassword123!',
+            UserFields.FIRST_NAME: 'Integration',
+            UserFields.LAST_NAME: 'Test'
         }
 
         # Register the user
@@ -48,8 +49,8 @@ class TestUserManager:
 
         # Login to get access token
         login_data = {
-            'username': user_data['username'],
-            'password': user_data['password']
+            UserFields.USERNAME: user_data['username'],
+            UserFields.PASSWORD: user_data['password']
         }
 
         response = session.post(
@@ -61,10 +62,10 @@ class TestUserManager:
         if response.status_code == 200:
             data = response.json()
             # Handle different response structures
-            if 'data' in data and 'access_token' in data['data']:
-                access_token = data['data']['access_token']
-            elif 'access_token' in data:
-                access_token = data['access_token']
+            if UserFields.DATA in data and UserFields.ACCESS_TOKEN in data[UserFields.DATA]:
+                access_token = data[UserFields.DATA][UserFields.ACCESS_TOKEN]
+            elif UserFields.ACCESS_TOKEN in data:
+                access_token = data[UserFields.ACCESS_TOKEN]
             else:
                 raise Exception(f"No access_token found in login response: {data}")
 

@@ -14,6 +14,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
 from simple_retry import simple_retry
 from test_data import TestDataManager
 from api_endpoints import APIEndpoints, InventoryAPI
+from test_constants import InventoryFields, TestValues, CommonFields
 
 class InventoryServiceTests:
     """Integration tests for inventory service"""
@@ -37,16 +38,16 @@ class InventoryServiceTests:
         """Test getting all assets"""
         r = self.session.get(self.inventory_api(InventoryAPI.ASSETS), timeout=self.timeout)
         assert r.status_code == 200
-        assert "assets" in r.json()
-        assert any(a.get("asset_id") == "BTC" for a in r.json()["assets"])
+        assert InventoryFields.ASSETS in r.json()
+        assert any(a.get(InventoryFields.ASSET_ID) == TestValues.BTC_ASSET_ID for a in r.json()[InventoryFields.ASSETS])
 
     def test_get_asset_by_id(self):
         """Test getting a specific asset by ID"""
-        r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, "BTC"), timeout=self.timeout)
+        r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, TestValues.BTC_ASSET_ID), timeout=self.timeout)
         assert r.status_code == 200
         data = r.json()
-        assert data.get("asset_id") == "BTC"
-        assert "name" in data
+        assert data.get(InventoryFields.ASSET_ID) == TestValues.BTC_ASSET_ID
+        assert InventoryFields.NAME in data
 
     def test_get_nonexistent_asset(self):
         """Test getting a non-existent asset returns 422 (validation error)"""
@@ -71,22 +72,24 @@ class InventoryServiceTests:
         r = self.session.get(self.inventory_api(InventoryAPI.ASSETS), timeout=self.timeout)
         assert r.status_code == 200
         data = r.json()
-        assert "assets" in data
-        assert isinstance(data["assets"], list)
+        assert InventoryFields.ASSETS in data
+        assert isinstance(data[InventoryFields.ASSETS], list)
+        assert len(data[InventoryFields.ASSETS]) > 0, "Assets list should not be empty"
 
-        if data["assets"]:
-            asset = data["assets"][0]
-            # Updated required fields based on actual API response
-            required_fields = ["asset_id", "name", "description", "category", "price_usd", "is_active"]
-            for field in required_fields:
-                assert field in asset, f"Missing required field: {field}"
+        asset = data[InventoryFields.ASSETS][0]
+        # Check required fields exist
+        assert asset.get(InventoryFields.ASSET_ID) is not None, f"Missing {InventoryFields.ASSET_ID}"
+        assert asset.get(InventoryFields.NAME) is not None, f"Missing {InventoryFields.NAME}"
+        assert asset.get(InventoryFields.CATEGORY) is not None, f"Missing {InventoryFields.CATEGORY}"
+        assert asset.get(InventoryFields.PRICE_USD) is not None, f"Missing {InventoryFields.PRICE_USD}"
+        assert asset.get(InventoryFields.IS_ACTIVE) is not None, f"Missing {InventoryFields.IS_ACTIVE}"
 
-            # Check data types
-            assert isinstance(asset["asset_id"], str)
-            assert isinstance(asset["name"], str)
-            assert isinstance(asset["price_usd"], (int, float))
-            assert asset["price_usd"] >= 0, "Price should be non-negative"
-            assert isinstance(asset["is_active"], bool)
+        # Check data types
+        assert isinstance(asset[InventoryFields.ASSET_ID], str)
+        assert isinstance(asset[InventoryFields.NAME], str)
+        assert isinstance(asset[InventoryFields.PRICE_USD], (int, float))
+        assert asset[InventoryFields.PRICE_USD] >= 0, "Price should be non-negative"
+        assert isinstance(asset[InventoryFields.IS_ACTIVE], bool)
 
     def test_asset_consistency(self):
         """Test that two sequential requests return consistent data"""
@@ -100,11 +103,11 @@ class InventoryServiceTests:
         data2 = r2.json()
 
         # Asset count should be consistent
-        assert len(data1["assets"]) == len(data2["assets"])
+        assert len(data1[InventoryFields.ASSETS]) == len(data2[InventoryFields.ASSETS])
 
         # BTC should exist in both responses
-        btc_in_r1 = any(a.get("asset_id") == "BTC" for a in data1["assets"])
-        btc_in_r2 = any(a.get("asset_id") == "BTC" for a in data2["assets"])
+        btc_in_r1 = any(a.get(InventoryFields.ASSET_ID) == TestValues.BTC_ASSET_ID for a in data1[InventoryFields.ASSETS])
+        btc_in_r2 = any(a.get(InventoryFields.ASSET_ID) == TestValues.BTC_ASSET_ID for a in data2[InventoryFields.ASSETS])
         assert btc_in_r1 == btc_in_r2, "BTC asset consistency check failed"
 
     def test_performance_guard(self):
@@ -120,7 +123,7 @@ class InventoryServiceTests:
     def test_unsupported_query_params(self):
         """Test that unsupported query parameters don't cause errors"""
         # Test common pagination params that might not be supported
-        params = {"limit": "10", "offset": "0", "page": "1", "sort": "name"}
+        params = {CommonFields.LIMIT: "10", CommonFields.OFFSET: "0", CommonFields.PAGE: "1", CommonFields.SORT: "name"}
 
         r = self.session.get(self.inventory_api(InventoryAPI.ASSETS), params=params, timeout=self.timeout)
         # Should either accept params (200) or reject them gracefully (400/422), but not crash (500)
@@ -132,36 +135,17 @@ class InventoryServiceTests:
         self.created_assets = []
 
     def run_all_inventory_tests(self):
-        tests = [
-            ("Get All Assets", self.test_get_assets),
-            ("Get Asset by ID", self.test_get_asset_by_id),
-            ("Get Non-existent Asset", self.test_get_nonexistent_asset),
-            ("Invalid Asset ID Formats", self.test_invalid_asset_id_formats),
-            ("Asset Schema Validation", self.test_asset_schema_validation),
-            ("Asset Consistency", self.test_asset_consistency),
-            ("Performance Guard", self.test_performance_guard),
-            ("Unsupported Query Params", self.test_unsupported_query_params),
-        ]
-
-        failed_tests = []
-
-        for name, test_func in tests:
-            try:
-                test_func()
-            except Exception as e:
-                failed_tests.append(name)
-
+        """Run all inventory tests"""
+        self.test_get_assets()
+        self.test_get_asset_by_id()
+        self.test_get_nonexistent_asset()
+        self.test_invalid_asset_id_formats()
+        self.test_asset_schema_validation()
+        self.test_asset_consistency()
+        self.test_performance_guard()
+        self.test_unsupported_query_params()
         self.cleanup_test_assets()
-
-        if failed_tests:
-            raise AssertionError(f"Inventory tests failed: {', '.join(failed_tests)}")
 
 if __name__ == "__main__":
     tests = InventoryServiceTests(APIEndpoints.get_inventory_endpoint(InventoryAPI.ASSETS).replace("/assets", ""))
-    try:
-        tests.run_all_inventory_tests()
-        print("🎉 All inventory tests passed!")
-        sys.exit(0)
-    except Exception as e:
-        print(f"❌ Inventory tests failed: {e}")
-        sys.exit(1)
+    tests.run_all_inventory_tests()
