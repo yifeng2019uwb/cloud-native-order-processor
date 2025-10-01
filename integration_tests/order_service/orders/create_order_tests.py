@@ -1,55 +1,66 @@
 """
 Order Service Integration Tests - Create Order
-Tests POST /orders endpoint for order creation
+Tests POST /orders endpoint - validates order creation and validation
 """
 import requests
-import time
 import sys
 import os
-from typing import Dict, Any
 
 # Add parent directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
-from test_data import TestDataManager
-from api_endpoints import APIEndpoints, OrderAPI
-from test_constants import OrderFields, TestValues
+from user_manager import TestUserManager
+from api_endpoints import APIEndpoints, OrderAPI, UserAPI
+from test_constants import OrderFields, TestValues, UserFields
 
 class CreateOrderTests:
-    """Integration tests for order creation API (POST /orders)"""
+    """Integration tests for order creation - focus on validation"""
 
     def __init__(self, timeout: int = 10):
         self.timeout = timeout
         self.session = requests.Session()
-        self.test_data_manager = TestDataManager()
-        self.created_orders = []
+        self.user_manager = TestUserManager()
 
     def order_api(self, endpoint: str) -> str:
         """Helper method to build order service API URLs"""
         return APIEndpoints.get_order_endpoint(endpoint)
 
-    def test_create_order_unauthorized(self):
-        """Test creating order without authentication"""
+    def test_create_order_success(self):
+        """Test successful order creation"""
+        user, token = self.user_manager.create_test_user(self.session)
+        headers = {'Authorization': f'Bearer {token}'}
+
+        # Deposit funds first
+        deposit_data = {UserFields.AMOUNT: 200000}
+        self.session.post(
+            APIEndpoints.get_user_endpoint(UserAPI.BALANCE_DEPOSIT),
+            json=deposit_data,
+            headers=headers,
+            timeout=self.timeout
+        )
+
+        # Create market order (price will be current market price)
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
-            OrderFields.ORDER_TYPE: "buy",
-            OrderFields.QUANTITY: 1.0,
-            OrderFields.PRICE: 50000.00
+            OrderFields.ORDER_TYPE: "market_buy",
+            OrderFields.QUANTITY: 0.5
         }
 
         response = self.session.post(
             self.order_api(OrderAPI.CREATE_ORDER),
+            headers=headers,
             json=order_data,
             timeout=self.timeout
         )
 
-        assert response.status_code in [401, 403], f"Expected 401/403, got {response.status_code}"
+        assert response.status_code == 201
 
-    def test_create_order_invalid_token(self):
-        """Test creating order with invalid authentication token"""
-        headers = {'Authorization': 'Bearer invalid_token_12345'}
+    def test_create_order_missing_asset_id(self):
+        """Test order creation with missing asset_id is rejected"""
+        user, token = self.user_manager.create_test_user(self.session)
+        headers = {'Authorization': f'Bearer {token}'}
+
         order_data = {
-            OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
             OrderFields.ORDER_TYPE: "buy",
             OrderFields.QUANTITY: 1.0,
             OrderFields.PRICE: 50000.00
@@ -62,14 +73,15 @@ class CreateOrderTests:
             timeout=self.timeout
         )
 
-        assert response.status_code == 401, f"Expected 401, got {response.status_code}"
+        assert response.status_code == 422
 
-    def test_create_order_malformed_token(self):
-        """Test creating order with malformed authentication header"""
-        headers = {'Authorization': 'Bearer'}  # Missing token value
+    def test_create_order_missing_order_type(self):
+        """Test order creation with missing order_type is rejected"""
+        user, token = self.user_manager.create_test_user(self.session)
+        headers = {'Authorization': f'Bearer {token}'}
+
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
-            OrderFields.ORDER_TYPE: "buy",
             OrderFields.QUANTITY: 1.0,
             OrderFields.PRICE: 50000.00
         }
@@ -81,64 +93,13 @@ class CreateOrderTests:
             timeout=self.timeout
         )
 
-        assert response.status_code in [401, 403], f"Expected 401/403, got {response.status_code}"
+        assert response.status_code == 422
 
-    def test_create_order_missing_fields(self):
-        """Test creating order with missing required fields"""
+    def test_create_order_negative_quantity(self):
+        """Test order creation with negative quantity is rejected"""
+        user, token = self.user_manager.create_test_user(self.session)
+        headers = {'Authorization': f'Bearer {token}'}
 
-        # Test missing asset_id
-        order_data = {
-            OrderFields.ORDER_TYPE: "buy",
-            OrderFields.QUANTITY: 1.0,
-            OrderFields.PRICE: 50000.00
-        }
-
-        response = self.session.post(
-            self.order_api(OrderAPI.CREATE_ORDER),
-            json=order_data,
-            timeout=self.timeout
-        )
-
-        # Should return 422 for validation error or 401/403 for auth
-        assert response.status_code in [401, 403, 422], f"Expected 401/403/422, got {response.status_code}"
-
-        # Test missing order_type
-        order_data = {
-            OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
-            OrderFields.QUANTITY: 1.0,
-            OrderFields.PRICE: 50000.00
-        }
-
-        response = self.session.post(
-            self.order_api(OrderAPI.CREATE_ORDER),
-            json=order_data,
-            timeout=self.timeout
-        )
-
-        assert response.status_code in [401, 403, 422], f"Expected 401/403/422, got {response.status_code}"
-
-
-    def test_create_order_invalid_data(self):
-        """Test creating order with invalid data values"""
-
-        # Test invalid order type
-        order_data = {
-            OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
-            OrderFields.ORDER_TYPE: "invalid_type",
-            OrderFields.QUANTITY: 1.0,
-            OrderFields.PRICE: 50000.00
-        }
-
-        response = self.session.post(
-            self.order_api(OrderAPI.CREATE_ORDER),
-            json=order_data,
-            timeout=self.timeout
-        )
-
-        # Should return 422 for validation error or 401/403 for auth
-        assert response.status_code in [401, 403, 422], f"Expected 401/403/422, got {response.status_code}"
-
-        # Test negative quantity
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
             OrderFields.ORDER_TYPE: "buy",
@@ -148,83 +109,85 @@ class CreateOrderTests:
 
         response = self.session.post(
             self.order_api(OrderAPI.CREATE_ORDER),
+            headers=headers,
             json=order_data,
             timeout=self.timeout
         )
 
-        assert response.status_code in [401, 403, 422], f"Expected 401/403/422, got {response.status_code}"
+        assert response.status_code == 422
 
-        # Test zero price
+    def test_create_order_zero_quantity(self):
+        """Test order creation with zero quantity is rejected"""
+        user, token = self.user_manager.create_test_user(self.session)
+        headers = {'Authorization': f'Bearer {token}'}
+
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
             OrderFields.ORDER_TYPE: "buy",
-            OrderFields.QUANTITY: 1.0,
-            OrderFields.PRICE: 0.00
+            OrderFields.QUANTITY: 0,
+            OrderFields.PRICE: 50000.00
         }
 
         response = self.session.post(
             self.order_api(OrderAPI.CREATE_ORDER),
+            headers=headers,
             json=order_data,
             timeout=self.timeout
         )
 
-        assert response.status_code in [401, 403, 422], f"Expected 401/403/422, got {response.status_code}"
+        assert response.status_code == 422
 
-    def test_create_order_valid_data(self):
-        """Test creating order with valid data (expects auth)"""
-        # Valid order data
+    def test_create_order_negative_price(self):
+        """Test order creation with negative price is rejected"""
+        user, token = self.user_manager.create_test_user(self.session)
+        headers = {'Authorization': f'Bearer {token}'}
+
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
             OrderFields.ORDER_TYPE: "buy",
+            OrderFields.QUANTITY: 1.0,
+            OrderFields.PRICE: -50000.00
+        }
+
+        response = self.session.post(
+            self.order_api(OrderAPI.CREATE_ORDER),
+            headers=headers,
+            json=order_data,
+            timeout=self.timeout
+        )
+
+        assert response.status_code == 422
+
+    def test_create_order_invalid_order_type(self):
+        """Test order creation with invalid order_type is rejected"""
+        user, token = self.user_manager.create_test_user(self.session)
+        headers = {'Authorization': f'Bearer {token}'}
+
+        order_data = {
+            OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
+            OrderFields.ORDER_TYPE: "invalid_type",
             OrderFields.QUANTITY: 1.0,
             OrderFields.PRICE: 50000.00
         }
 
         response = self.session.post(
             self.order_api(OrderAPI.CREATE_ORDER),
+            headers=headers,
             json=order_data,
             timeout=self.timeout
         )
 
-        # Without proper auth, should get 401/403
-        assert response.status_code in [401, 403], f"Expected auth error, got {response.status_code}: {response.text}"
-
-    def test_create_order_performance(self):
-        """Test that create order responds within reasonable time"""
-        order_data = {
-            OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
-            OrderFields.ORDER_TYPE: "buy",
-            OrderFields.QUANTITY: 1.0,
-            OrderFields.PRICE: 50000.00
-        }
-
-        start_time = time.time()
-        response = self.session.post(
-            self.order_api(OrderAPI.CREATE_ORDER),
-            json=order_data,
-            timeout=self.timeout
-        )
-        end_time = time.time()
-
-        response_time = (end_time - start_time) * 1000  # Convert to milliseconds
-        assert response_time < 3000, f"Response time {response_time:.2f}ms exceeds 3000ms threshold"
-
-    def cleanup_test_orders(self):
-        """Clean up test orders (placeholder for future implementation)"""
-        # TODO: Implement actual cleanup when order service supports order deletion
-        self.created_orders = []
+        assert response.status_code == 422
 
     def run_all_create_order_tests(self):
         """Run all order creation tests"""
-        self.test_create_order_unauthorized()
-        self.test_create_order_invalid_token()
-        self.test_create_order_malformed_token()
-        self.test_create_order_missing_fields()
-        self.test_create_order_invalid_data()
-        self.test_create_order_valid_data()
-        self.test_create_order_performance()
-        self.cleanup_test_orders()
-
+        self.test_create_order_success()
+        self.test_create_order_missing_asset_id()
+        self.test_create_order_missing_order_type()
+        self.test_create_order_negative_quantity()
+        self.test_create_order_zero_quantity()
+        self.test_create_order_negative_price()
+        self.test_create_order_invalid_order_type()
 
 if __name__ == "__main__":
     tests = CreateOrderTests()

@@ -25,8 +25,9 @@ install_prerequisites() {
 }
 
 show_usage() {
-    echo "Usage: $0 [all|smoke|inventory|user|order]"
+    echo "Usage: $0 [all|auth|smoke|inventory|user|order]"
     echo "  all       - Run all tests (default)"
+    echo "  auth      - Run only auth requirement tests"
     echo "  smoke     - Run only smoke tests"
     echo "  inventory - Run only inventory service tests"
     echo "  user      - Run only user service tests"
@@ -34,6 +35,7 @@ show_usage() {
     echo ""
     echo "Examples:"
     echo "  $0          # Run all tests"
+    echo "  $0 auth     # Run only auth tests"
     echo "  $0 smoke    # Run only smoke tests"
     echo "  $0 inventory # Run only inventory tests"
     echo "  $0 order    # Run only order service tests"
@@ -56,6 +58,10 @@ run_test_suite() {
         echo "✅ $test_name completed successfully"
         return 0
     fi
+}
+
+run_auth_tests() {
+    run_test_suite "auth requirement tests" "python3 auth/test_gateway_auth.py"
 }
 
 run_smoke_tests() {
@@ -136,11 +142,17 @@ source venv/bin/activate
 case $ARG in
     "all")
         echo "=== Running All Tests ==="
+        run_auth_tests
         run_smoke_tests
         run_inventory_tests
         run_user_tests
         run_order_tests
         echo "=== All tests completed ==="
+        ;;
+    "auth")
+        echo "=== Running Auth Tests ==="
+        run_auth_tests
+        echo "=== Auth tests completed ==="
         ;;
     "smoke")
         echo "=== Running Smoke Tests ==="

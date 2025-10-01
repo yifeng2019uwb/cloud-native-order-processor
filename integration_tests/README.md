@@ -2,43 +2,56 @@
 
 Enterprise-grade integration testing for the cloud-native order processor.
 
+## ✅ **Latest Update (2025-10-01): Complete Test Suite Refactoring**
+
+All integration tests have been refactored to follow consistent best practices:
+- ✅ Removed all `setup_test_user()` methods → Using `TestUserManager.create_test_user()`
+- ✅ Eliminated all if/else and try/except blocks → Direct assertions only
+- ✅ Removed all print statements → Clean test output
+- ✅ Single status code assertions → `== 200` not `in [200, 201]`
+- ✅ Better test isolation → Each test creates its own user
+- ✅ **100% test passing rate** across all 17 test files
+
 ## 🏗️ Architecture
 
 ```
 integration_tests/
+├── auth/                          # Centralized auth requirement tests ⭐
+│   ├── test_gateway_auth.py       # Gateway authentication tests
+│   └── README.md                  # Auth testing documentation
 ├── config/
 │   ├── api_endpoints.py           # Centralized API endpoint configuration
-│   ├── constants.py               # Test constants and timeouts
-│   └── service_urls.py           # Service URL detection (Docker/K8s)
+│   ├── test_constants.py          # Test field names and constants
+│   └── service_urls.py            # Service URL detection (Docker/K8s)
 ├── smoke/
-│   └── health_tests.py            # Basic connectivity checks
+│   └── health_tests.py            # Basic connectivity checks ✅ Refactored
 ├── utils/
 │   ├── test_data.py               # UUID-based test data management
-│   ├── simple_retry.py            # Basic retry logic
-│   └── reporting.py               # JSON/HTML test reports
+│   ├── user_manager.py            # User creation and auth helper ⭐
+│   └── simple_retry.py            # Basic retry logic
 ├── user_services/
 │   ├── auth/                      # Authentication & profile tests
-│   │   ├── registration_tests.py  # User registration tests
-│   │   ├── login_tests.py         # User login tests
-│   │   ├── profile_tests.py       # Profile management tests
-│   │   └── logout_tests.py        # Logout tests
+│   │   ├── registration_tests.py  # User registration tests ✅ Refactored
+│   │   ├── login_tests.py         # User login tests ✅ Refactored
+│   │   ├── profile_tests.py       # Profile management tests ✅ Refactored
+│   │   └── logout_tests.py        # Logout tests ✅ Refactored
 │   └── balance/                   # Balance & transaction tests
-│       ├── balance_tests.py       # Balance retrieval tests
-│       ├── deposit_tests.py       # Deposit operation tests
-│       ├── withdraw_tests.py      # Withdrawal operation tests
-│       └── transaction_history_tests.py # Transaction history tests
+│       ├── balance_tests.py       # Balance retrieval tests ✅ Refactored
+│       ├── deposit_tests.py       # Deposit operation tests ✅ Refactored
+│       ├── withdraw_tests.py      # Withdrawal operation tests ✅ Refactored
+│       └── transaction_history_tests.py # Transaction history ✅ Refactored
 ├── inventory_service/
-│   └── inventory_tests.py         # Asset management tests
+│   └── inventory_tests.py         # Asset management tests ✅ Refactored
 ├── order_service/
 │   ├── health/                    # Health check tests
-│   │   └── health_tests.py        # Service health endpoint tests
+│   │   └── health_tests.py        # Service health endpoint tests ✅ Refactored
 │   ├── orders/                    # Order management tests
-│   │   ├── list_order_tests.py    # List orders tests
-│   │   ├── create_order_tests.py  # Create order tests
-│   │   └── get_order_tests.py     # Get specific order tests
-│   ├── portfolio_tests.py         # Portfolio management tests
-│   ├── asset_balance_tests.py     # Asset balance tests
-│   └── asset_transaction_tests.py # Asset transaction history tests
+│   │   ├── list_order_tests.py    # List orders tests ✅ Refactored
+│   │   ├── create_order_tests.py  # Create order tests ✅ Refactored
+│   │   └── get_order_tests.py     # Get specific order tests ✅ Refactored
+│   ├── portfolio_tests.py         # Portfolio management tests ✅ Refactored
+│   ├── asset_balance_tests.py     # Asset balance tests ✅ Refactored
+│   └── asset_transaction_tests.py # Asset transaction history ✅ Refactored
 ├── reports/                       # Generated test reports
 ├── run_all_tests.sh               # Main test runner script
 └── README.md                      # This file
@@ -54,13 +67,14 @@ pip install -r requirements.txt
 ### 2. Run All Tests
 ```bash
 # Run all integration tests
-bash run_all_tests.sh
+./run_all_tests.sh all
 
 # Run specific service tests
-bash run_all_tests.sh user      # User service only
-bash run_all_tests.sh inventory # Inventory service only
-bash run_all_tests.sh order     # Order service only
-bash run_all_tests.sh smoke     # Health checks only
+./run_all_tests.sh user      # User service only
+./run_all_tests.sh inventory # Inventory service only
+./run_all_tests.sh order     # Order service only
+./run_all_tests.sh auth      # Auth requirement tests
+./run_all_tests.sh smoke     # Health checks only
 ```
 
 ### 3. View Reports

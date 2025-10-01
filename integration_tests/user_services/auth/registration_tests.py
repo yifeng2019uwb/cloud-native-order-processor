@@ -47,7 +47,7 @@ class UserRegistrationTests:
             timeout=self.timeout
         )
 
-        assert response.status_code in [200, 201], f"Expected 200/201, got {response.status_code}: {response.text}"
+        assert response.status_code == 201
         data = response.json()
         assert UserFields.SUCCESS in data
         assert data[UserFields.SUCCESS] == True
@@ -69,7 +69,7 @@ class UserRegistrationTests:
             timeout=self.timeout
         )
 
-        assert response.status_code in [200, 201], f"Expected 200/201, got {response.status_code}: {response.text}"
+        assert response.status_code == 201
         data = response.json()
         assert UserFields.SUCCESS in data
         assert data[UserFields.SUCCESS] == True

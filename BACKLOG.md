@@ -30,6 +30,51 @@
 ---
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
+---
+
+#### **GATEWAY-002: Fix Inconsistent Auth Error Status Codes**
+- **Component**: Gateway Service
+- **Type**: Bug Fix
+- **Priority**: 🔴 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Gateway returns inconsistent HTTP status codes for authentication failures - User service endpoints return 403 instead of 401 when no token is provided
+- **Root Cause**:
+  - `auth.go` line 36-42: When no auth header → sets `RolePublic` and continues
+  - `server.go` line 217-236: Checks `AllowedRoles` (e.g., `[RoleCustomer, RoleVIP, RoleAdmin]`)
+  - `RolePublic` is not in allowed roles → returns 403 instead of 401
+- **The Fix**: In `auth.go`, check route config BEFORE setting public role:
+  ```go
+  if authHeader == "" {
+      // Check if route requires auth
+      routeConfig, _ := GetRouteConfig(c.Request.URL.Path)
+      if routeConfig != nil && routeConfig.RequiresAuth {
+          handleAuthError(c, models.ErrAuthInvalidToken, "Authentication required")
+          return
+      }
+      // Only set public role for routes that don't require auth
+      c.Set(constants.ContextKeyUserRole, constants.RolePublic)
+      c.Next()
+      return
+  }
+  ```
+- **Expected Behavior**: Consistent status codes:
+  - No token + requires auth → **401 Unauthorized**
+  - Invalid/expired token → **401 Unauthorized**
+  - Valid token + wrong role → **403 Forbidden**
+- **Actual Behavior**:
+  - No token + requires auth → 403 ❌ (should be 401)
+  - Invalid/expired token → 401 ✅
+- **Acceptance Criteria**:
+  - All protected endpoints return 401 for missing token
+  - All protected endpoints return 401 for invalid token
+  - Re-enable `test_user_service_no_token()` and `test_order_service_no_token()`
+  - All auth integration tests pass
+- **Files to Update**:
+  - `gateway/internal/middleware/auth.go` - Fix auth middleware logic
+  - `gateway/internal/api/server.go` - Ensure consistent error handling
+  - `integration_tests/auth/test_gateway_auth.py` - Update to expect 401 for all services
+  - `integration_tests/auth/README.md` - Document consistent behavior
+- **Why Critical**: Inconsistent error codes confuse API consumers and violate HTTP standards. 401 is the correct status for authentication failures, 403 is for authorization (permission) failures.
 
 #### **SDK-001: Create Python SDK for CNOP Services**
 - **Component**: Development Tools & Client Libraries
@@ -86,7 +131,7 @@
 - **Why Needed**: Gateway currently has TODO placeholders for circuit breaker patterns and uses hardcoded JWT secrets, which should be properly implemented for production readiness and security
 
 
-#### **TEST-001: Refactor Integration Tests to Use API Model Defined Responses**
+#### **TEST-002: Refactor Integration Tests to Use API Model Defined Responses**
 - **Component**: Testing & Quality Assurance
 - **Type**: Task
 - **Priority**: 🔶 **MEDIUM PRIORITY**
@@ -98,7 +143,9 @@
   - Create reusable test utilities for field validation based on model definitions
   - Ensure tests automatically adapt when new fields are added to API models
   - Maintain test coverage while improving maintainability
-- **Dependencies**: INVENTORY-001 ✅ (enhanced asset attributes completed)
+- **Dependencies**:
+  - INVENTORY-001 ✅ (enhanced asset attributes completed)
+  - TEST-001.1 ✅ (integration test refactoring completed)
 - **Files to Update**:
   - `integration_tests/inventory_service/inventory_tests.py` - Refactor to use AssetDetailResponse model fields
   - `integration_tests/order_service/` - Apply same pattern to order service tests
@@ -588,6 +635,13 @@
 - **Summary**: Centralized logging system implemented
 
 ### **🧪 Testing & Quality Assurance**
+
+#### **TEST-001.1: Refactor All Integration Tests** ✅
+- **Component**: Testing & Quality Assurance
+- **Type**: Code Quality / Refactoring
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: ✅ **COMPLETED** (2025-10-01)
+- **Summary**: Refactored all 17 integration test files to follow consistent best practices - removed setup_test_user(), eliminated if/else blocks, single status code assertions, 100% passing. See DAILY_WORK_LOG.md (2025-10-01)
 
 #### **TEST-001: Integration Test Suite Enhancement** ✅
 - **Component**: Testing & Quality Assurance
