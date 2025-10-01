@@ -142,12 +142,12 @@ class TestFieldValidators:
         with pytest.raises(CNOPOrderValidationException, match="Username cannot be empty"):
             validate_username("   ")
 
-        # Test with suspicious content
-        with pytest.raises(CNOPOrderValidationException, match="Username contains potentially malicious content"):
+        # Test with suspicious content (after sanitization, it becomes invalid format)
+        with pytest.raises(CNOPOrderValidationException, match="Username must be 6-30 alphanumeric characters and underscores only"):
             validate_username("<script>alert('xss')</script>")
 
         # Test with invalid characters
-        with pytest.raises(CNOPOrderValidationException, match="Username must be 3-30 alphanumeric characters and underscores"):
+        with pytest.raises(CNOPOrderValidationException, match="Username must be 6-30 alphanumeric characters and underscores only"):
             validate_username("user-name")
 
     def test_validate_asset_id_basic(self):

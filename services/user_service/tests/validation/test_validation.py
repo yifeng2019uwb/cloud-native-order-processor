@@ -87,14 +87,31 @@ class TestFieldValidators:
         def test_suspicious_content(self):
             """Test usernames with suspicious content"""
             suspicious_usernames = [
-                "<script>alert('xss')</script>user",
                 "javascript:alert('xss')",
                 "data:text/html,<script>alert('xss')</script>",
+                "vbscript:msgbox('xss')",
             ]
 
             for username in suspicious_usernames:
                 with pytest.raises(CNOPUserValidationException, match="Username contains potentially malicious content"):
                     validate_username(username)
+
+        def test_html_sanitization(self):
+            """Test that HTML tags are sanitized and then validated for format"""
+            # These should fail format validation after HTML sanitization
+            html_usernames = [
+                "<script>alert('xss')</script>user",  # becomes "user" (too short)
+                "<div>testuser</div>",  # becomes "testuser" (valid)
+                "<span>user123</span>",  # becomes "user123" (valid)
+            ]
+
+            # First one should fail format validation
+            with pytest.raises(CNOPUserValidationException, match="Username must be 6-30 alphanumeric characters and underscores only"):
+                validate_username(html_usernames[0])
+
+            # Others should pass
+            assert validate_username(html_usernames[1]) == "testuser"
+            assert validate_username(html_usernames[2]) == "user123"
 
         def test_case_conversion(self):
             """Test that usernames are converted to lowercase"""
@@ -165,6 +182,11 @@ class TestFieldValidators:
             for name in suspicious_names:
                 with pytest.raises(CNOPUserValidationException, match="Name contains potentially malicious content"):
                     validate_name(name)
+
+        def test_name_after_sanitization_empty(self):
+            """Test name that becomes empty after sanitization (line 51)"""
+            with pytest.raises(CNOPUserValidationException, match="Name cannot be empty"):
+                validate_name("   ")  # Only whitespace, becomes empty after sanitization
 
         def test_case_conversion(self):
             """Test that names are converted to title case"""

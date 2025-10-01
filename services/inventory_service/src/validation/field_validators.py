@@ -10,45 +10,14 @@ import re
 # Import proper exceptions
 from inventory_exceptions import CNOPAssetValidationException
 
-
-def sanitize_string(value: str, max_length: int = None) -> str:
-    """Basic string sanitization - removes HTML tags, trim whitespace"""
-    if not isinstance(value, str):
-        return str(value)
-
-    # Remove HTML tags first
-    value = re.sub(r'<[^>]+>', '', value)
-
-    # Trim whitespace
-    value = value.strip()
-
-    # Length limit
-    if max_length and len(value) > max_length:
-        value = value[:max_length]
-
-    return value
+# Import shared validation functions from common module
+from common.core.validation.shared_validators import (
+    sanitize_string,
+    is_suspicious
+)
 
 
-def is_suspicious(value: str) -> bool:
-    """Check for potentially malicious content"""
-    if not isinstance(value, str):
-        return False
-
-    # Check for common attack patterns
-    suspicious_patterns = [
-        r'<script', r'javascript:', r'vbscript:', r'data:', r'<iframe',
-        r'<object', r'<embed', r'<form', r'<input', r'<textarea',
-        r'<select', r'<button', r'<link', r'<meta', r'<style',
-        r'<base', r'<bgsound', r'<xmp', r'<plaintext', r'<listing',
-        r'<marquee', r'<applet', r'<isindex', r'<dir', r'<menu',
-        r'<nobr', r'<noembed', r'<noframes', r'<noscript', r'<wbr',
-    ]
-
-    for pattern in suspicious_patterns:
-        if re.search(pattern, value, re.IGNORECASE):
-            return True
-
-    return False
+# sanitize_string and is_suspicious are now imported from common module
 
 
 def validate_asset_id(v: str) -> str:

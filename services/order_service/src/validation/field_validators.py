@@ -13,45 +13,15 @@ from datetime import datetime
 from order_exceptions import CNOPOrderValidationException
 from common.data.entities.order.enums import OrderType, OrderStatus
 
-
-def sanitize_string(value: str, max_length: int = None) -> str:
-    """Basic string sanitization - removes HTML tags, trims whitespace"""
-    if not isinstance(value, str):
-        return str(value)
-
-    # Remove HTML tags first
-    value = re.sub(r'<[^>]+>', '', value)
-
-    # Trim whitespace
-    value = value.strip()
-
-    # Length limit
-    if max_length and len(value) > max_length:
-        value = value[:max_length]
-
-    return value
+# Import shared validation functions from common module
+from common.core.validation.shared_validators import (
+    sanitize_string,
+    is_suspicious,
+    validate_username as shared_validate_username
+)
 
 
-def is_suspicious(value: str) -> bool:
-    """Check for potentially malicious content"""
-    if not isinstance(value, str):
-        return False
-
-    # Check for common attack patterns
-    suspicious_patterns = [
-        r'<script', r'javascript:', r'vbscript:', r'data:', r'<iframe',
-        r'<object', r'<embed', r'<form', r'<input', r'<textarea',
-        r'<select', r'<button', r'<link', r'<meta', r'<style',
-        r'<base', r'<bgsound', r'<xmp', r'<plaintext', r'<listing',
-        r'<marquee', r'<applet', r'<isindex', r'<dir', r'<menu',
-        r'<nobr', r'<noembed', r'<noframes', r'<noscript', r'<wbr',
-    ]
-
-    for pattern in suspicious_patterns:
-        if re.search(pattern, value, re.IGNORECASE):
-            return True
-
-    return False
+# sanitize_string and is_suspicious are now imported from common module
 
 
 def validate_order_id(v: str) -> str:
@@ -83,28 +53,13 @@ def validate_order_id(v: str) -> str:
 def validate_username(v: str) -> str:
     """
     Order service: username validation (references user service)
-    Combines sanitization + format validation
+    Uses shared validation logic with service-specific exception handling
     """
-    if not v:
-        raise CNOPOrderValidationException("Username cannot be empty")
-
-    # 1. Check for suspicious content first
-    if is_suspicious(v):
-        raise CNOPOrderValidationException("Username contains potentially malicious content")
-
-    # 2. Basic sanitization (remove HTML tags, trim whitespace)
-    v = sanitize_string(v)
-
-    # 3. Check for empty after sanitization
-    if not v:
-        raise CNOPOrderValidationException("Username cannot be empty")
-
-    # 4. Format validation - usernames should be alphanumeric with underscores, 3-30 chars
-    if not re.match(r'^[a-zA-Z0-9_]{3,30}$', v):
-        raise CNOPOrderValidationException("Username must be 3-30 alphanumeric characters and underscores")
-
-    # 5. Convert to lowercase for consistency
-    return v.lower()
+    try:
+        return shared_validate_username(v)
+    except ValueError as e:
+        # Convert ValueError to service-specific exception
+        raise CNOPOrderValidationException(str(e))
 
 
 def validate_asset_id(v: str) -> str:
