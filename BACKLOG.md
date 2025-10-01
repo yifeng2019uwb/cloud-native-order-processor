@@ -127,32 +127,38 @@
 - **Status**: 🚧 **IN PROGRESS**
 - **Description**: Ensure complete data model consistency across all services and consolidate duplicate code into common package
 
-#### **PERF-003: Implement Batch Asset Operations for Performance Optimization**
-- **Component**: Performance & Asset Management
-- **Type**: Task
-- **Priority**: 🔥 **HIGH PRIORITY**
+
+
+#### **PERF-004: Consolidate Asset Balance API into Portfolio API**
+- **Component**: API Consolidation & Frontend Integration
+- **Type**: Refactoring
+- **Priority**: 🔶 **MEDIUM PRIORITY**
 - **Status**: 📋 **To Do**
-- **Description**: Implement batch operations for asset retrieval to eliminate N+1 query patterns in portfolio operations
+- **Description**: Remove asset balance API endpoints and consolidate all portfolio functionality into the single Portfolio API for consistency and better performance
 - **Acceptance Criteria**:
-  - Add `get_assets_by_ids(asset_ids: List[str])` method to AssetDAO
-  - Add `get_market_prices_batch(asset_ids: List[str])` method for efficient price lookup
-  - Update portfolio operations to use batch retrieval instead of individual calls
-  - Update asset balance operations to use batch retrieval
-  - Add comprehensive tests for batch operations
-  - Maintain backward compatibility with existing single-asset methods
-- **Dependencies**: INFRA-001 ✅
+  - Remove `GET /api/v1/assets/balances` endpoint
+  - Remove `GET /api/v1/assets/{asset_id}/balance` endpoint
+  - Update frontend to use Portfolio API instead of Asset Balance API
+  - Update Portfolio API to include individual asset balance data if needed
+  - Update all frontend components (Dashboard, Portfolio, Trading) to use Portfolio API
+  - Remove asset balance API service from frontend
+  - Update API documentation to reflect consolidated endpoints
+  - Ensure all existing functionality is preserved
+- **Dependencies**: PERF-003 ✅
 - **Files to Update**:
-  - `services/common/src/data/dao/inventory/asset_dao.py` - Add batch methods
-  - `services/order_service/src/controllers/portfolio.py` - Use batch operations
-  - `services/order_service/src/controllers/asset_balance.py` - Use batch operations
-  - `services/order_service/src/controllers/dependencies.py` - Add batch price lookup
-  - All related test files - Add batch operation tests
+  - `services/order_service/src/controllers/asset_balance.py` - Remove endpoints
+  - `frontend/src/services/assetBalanceApi.ts` - Remove service
+  - `frontend/src/components/Dashboard/Dashboard.tsx` - Use Portfolio API
+  - `frontend/src/components/Portfolio/PortfolioPage.tsx` - Use Portfolio API
+  - `frontend/src/components/Trading/TradingPage.tsx` - Use Portfolio API
+  - `frontend/src/constants/api.ts` - Remove asset balance URLs
+  - Update all related tests and documentation
 - **Technical Approach**:
-  - Use DynamoDB `batch_get_item` for efficient multi-asset retrieval
-  - Implement batch price lookup using single query instead of N+1 pattern
-  - Add proper error handling for partial batch failures
-  - Optimize for common use cases (portfolio loading, asset balance display)
-- **Why Critical**: Current portfolio operations use N+1 query pattern - if user has 10 assets, makes 10 separate DB calls. This causes significant performance degradation and increased costs.
+  - Portfolio API already provides all necessary data (asset balances, prices, totals, percentages)
+  - Frontend currently calculates portfolio data manually - move this logic to server-side
+  - Single API call instead of multiple calls for better performance
+  - Consistent calculations across all clients
+- **Why Important**: Eliminates API duplication, ensures consistent calculations, improves performance, and simplifies frontend code
 
 
 #### **DOCS-001: Comprehensive Documentation Cleanup and Consolidation**
@@ -618,6 +624,19 @@
 ## 📚 **DAILY WORK**
 
 ### **✅ COMPLETED TASKS**
+
+#### **PERF-003: Implement Batch Asset Operations for Performance Optimization** *(Completed: 10/01/2025)*
+- **Status**: ✅ **COMPLETED**
+- **Summary**: Successfully implemented batch asset operations to eliminate N+1 query patterns and improve performance
+- **Key Achievements**:
+  - Added `get_assets_by_ids()` method to AssetDAO using DynamoDB `batch_get_item`
+  - Implemented proper DynamoDB low-level to high-level type conversion
+  - Updated portfolio and asset balance operations to use batch retrieval
+  - Added comprehensive unit tests covering all batch operation scenarios
+  - Maintained backward compatibility with existing single-asset methods
+  - All integration tests passing, confirming performance improvements
+- **Files Updated**: `services/common/src/data/dao/inventory/asset_dao.py`, `services/order_service/src/controllers/portfolio.py`, `services/order_service/src/controllers/asset_balance.py`
+- **Files Created**: Comprehensive unit tests for batch operations and DynamoDB type conversion
 
 #### **INFRA-005.1: Move Truly Shared Validation Functions to Common Package** *(Completed: 1/8/2025)*
 - **Status**: ✅ **COMPLETED**

@@ -118,14 +118,22 @@ def get_user_portfolio(
         # Get all asset balances
         asset_balances = asset_balance_dao.get_all_asset_balances(username)
 
+        # Batch retrieve all assets for market data
+        asset_ids = [balance.asset_id for balance in asset_balances]
+        assets = asset_dao.get_assets_by_ids(asset_ids)
+
         # Calculate portfolio data
         portfolio_assets = []
         total_asset_value = Decimal('0')
 
         for asset_balance in asset_balances:
-            # Get current market price from real-time service
-            from controllers.dependencies import get_current_market_price
-            current_price = get_current_market_price(asset_balance.asset_id, asset_dao)
+            # Get asset data from batch retrieval
+            asset = assets.get(asset_balance.asset_id)
+            if asset:
+                current_price = Decimal(str(asset.price_usd))
+            else:
+                # Fallback for missing assets
+                current_price = Decimal('0')
 
             # Calculate market value
             market_value = asset_balance.quantity * current_price

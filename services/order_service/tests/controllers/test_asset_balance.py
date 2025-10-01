@@ -40,6 +40,7 @@ USER_DAO_SPEC = [
 
 ASSET_DAO_SPEC = [
     'get_asset_by_id',
+    'get_assets_by_ids',
     'get_all_assets',
     'save_asset',
     'update_asset',
@@ -121,10 +122,13 @@ class TestAssetBalanceController:
 
         # Mock asset object
         mock_asset = Mock()
+        mock_asset.asset_id = "BTC"
         mock_asset.name = "Bitcoin"
         mock_asset.price_usd = Decimal("45000.50")
 
+        # Mock both methods for backward compatibility
         dao.get_asset_by_id.return_value = mock_asset
+        dao.get_assets_by_ids.return_value = {"BTC": mock_asset}
 
         return dao
 
@@ -184,7 +188,7 @@ class TestAssetBalanceController:
 
         # Verify DAO calls
         mock_asset_balance_dao.get_all_asset_balances.assert_called_once_with("testuser")
-        mock_asset_dao.get_asset_by_id.assert_called_once_with("BTC")
+        mock_asset_dao.get_assets_by_ids.assert_called_once_with(["BTC"])
 
         # Verify response
         assert result.success is True
@@ -341,13 +345,15 @@ class TestAssetBalanceController:
 
         # Mock different asset data for ETH
         mock_eth_asset = Mock()
+        mock_eth_asset.asset_id = "ETH"
         mock_eth_asset.name = "Ethereum"
         mock_eth_asset.price_usd = Decimal("3000.00")
 
-        mock_asset_dao.get_asset_by_id.side_effect = [
-            mock_asset_dao.get_asset_by_id.return_value,  # BTC
-            mock_eth_asset  # ETH
-        ]
+        # Mock batch method to return both assets
+        mock_asset_dao.get_assets_by_ids.return_value = {
+            "BTC": mock_asset_dao.get_asset_by_id.return_value,
+            "ETH": mock_eth_asset
+        }
 
         result = get_user_asset_balances(
             request=mock_request,
@@ -377,6 +383,7 @@ class TestAssetBalanceController:
                                                      mock_asset_dao, mock_validate_user_permissions):
         """Test get_user_asset_balances with no assets"""
         mock_asset_balance_dao.get_all_asset_balances.return_value = []
+        mock_asset_dao.get_assets_by_ids.return_value = {}
 
         result = get_user_asset_balances(
             request=mock_request,

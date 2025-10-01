@@ -40,6 +40,7 @@ USER_DAO_SPEC = [
 
 ASSET_DAO_SPEC = [
     'get_asset_by_id',
+    'get_assets_by_ids',
     'get_all_assets',
     'save_asset',
     'update_asset',
@@ -141,9 +142,11 @@ class TestPortfolioController:
 
         # Mock asset objects with price_usd
         mock_btc_asset = Mock()
+        mock_btc_asset.asset_id = "BTC"
         mock_btc_asset.price_usd = Decimal("45000.00")
 
         mock_eth_asset = Mock()
+        mock_eth_asset.asset_id = "ETH"
         mock_eth_asset.price_usd = Decimal("3000.00")
 
         def mock_get_asset_by_id(asset_id):
@@ -154,7 +157,17 @@ class TestPortfolioController:
             else:
                 return None
 
+        def mock_get_assets_by_ids(asset_ids):
+            result = {}
+            for asset_id in asset_ids:
+                if asset_id == "BTC":
+                    result[asset_id] = mock_btc_asset
+                elif asset_id == "ETH":
+                    result[asset_id] = mock_eth_asset
+            return result
+
         dao.get_asset_by_id.side_effect = mock_get_asset_by_id
+        dao.get_assets_by_ids.side_effect = mock_get_assets_by_ids
 
         return dao
 
@@ -379,13 +392,14 @@ class TestPortfolioController:
         mock_precise_asset.price_usd = Decimal("45000.12345")
 
         # Override the side_effect for this specific test
-        def mock_get_asset_by_id_precise(asset_id):
-            if asset_id == "BTC":
-                return mock_precise_asset
-            else:
-                return None
+        def mock_get_assets_by_ids_precise(asset_ids):
+            result = {}
+            for asset_id in asset_ids:
+                if asset_id == "BTC":
+                    result[asset_id] = mock_precise_asset
+            return result
 
-        mock_asset_dao.get_asset_by_id.side_effect = mock_get_asset_by_id_precise
+        mock_asset_dao.get_assets_by_ids.side_effect = mock_get_assets_by_ids_precise
 
         result = get_user_portfolio(
             username="testuser",

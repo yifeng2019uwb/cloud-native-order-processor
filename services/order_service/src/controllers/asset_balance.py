@@ -129,13 +129,23 @@ def get_user_asset_balances(
         # Get all asset balances for user
         asset_balances = asset_balance_dao.get_all_asset_balances(current_user["username"])
 
+        # Batch retrieve all assets for market data
+        asset_ids = [balance.asset_id for balance in asset_balances]
+        assets = asset_dao.get_assets_by_ids(asset_ids)
+
         # Convert to API response format with real market data
         balance_data_list = []
         for balance in asset_balances:
-            # Get real market data from database
-            market_data = get_real_market_data(asset_dao, balance.asset_id)
-            asset_name = market_data["asset_name"]
-            current_price = market_data["current_price"]
+            # Get asset data from batch retrieval
+            asset = assets.get(balance.asset_id)
+            if asset:
+                asset_name = asset.name
+                current_price = float(asset.price_usd)
+            else:
+                # Fallback for missing assets
+                asset_name = balance.asset_id
+                current_price = 0.0
+
             total_value = float(balance.quantity) * current_price
 
             balance_data = AssetBalanceData(
@@ -259,8 +269,7 @@ def get_user_asset_balance(
         # Get specific asset balance for user
         asset_balance = asset_balance_dao.get_asset_balance(current_user["username"], validated_asset_id)
 
-        # Convert to API response format with real market data
-        # Get real market data from database
+        # Get real market data from database (single asset - use original method)
         market_data = get_real_market_data(asset_dao, asset_balance.asset_id)
         asset_name = market_data["asset_name"]
         current_price = market_data["current_price"]

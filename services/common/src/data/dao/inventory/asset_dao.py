@@ -3,6 +3,7 @@ from datetime import datetime, UTC
 from boto3.dynamodb.conditions import Attr
 import sys
 import os
+import boto3
 
 # Path setup for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -13,6 +14,7 @@ from ...entities.entity_constants import AssetFields, TimestampFields
 from ...exceptions import CNOPDatabaseOperationException
 from ....exceptions.shared_exceptions import CNOPAssetNotFoundException
 from ....shared.logging import BaseLogger, Loggers, LogActions
+from ...database.dynamodb_connection import get_dynamodb_manager
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
@@ -25,6 +27,8 @@ class AssetDAO(BaseDAO):
         super().__init__(db_connection)
         # Table reference
         self.table = self.db.inventory_table
+        # Get DynamoDB client for batch operations
+        self.client = get_dynamodb_manager().get_client()
 
 
     def create_asset(self, asset: Asset) -> Asset:
@@ -105,6 +109,82 @@ class AssetDAO(BaseDAO):
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving all assets: {str(e)}")
 
+    def get_assets_by_ids(self, asset_ids: List[str]) -> Dict[str, Asset]:
+        """
+        Batch retrieve multiple assets by their IDs using DynamoDB batch_get_item
+
+        Args:
+            asset_ids: List of asset IDs to retrieve
+
+        Returns:
+            Dictionary mapping asset_id -> Asset object
+            Missing assets are not included in the result
+
+        Raises:
+            CNOPDatabaseOperationException: If batch operation fails
+        """
+        if not asset_ids:
+            return {}
+
+        try:
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Batch retrieving {len(asset_ids)} assets"
+            )
+
+            # Prepare keys for batch_get_item (DynamoDB low-level API format)
+            keys = [{AssetFields.PRODUCT_ID: {'S': asset_id}} for asset_id in asset_ids]
+
+            # Use DynamoDB client's batch_get_item method
+            response = self.client.batch_get_item(
+                RequestItems={
+                    self.table.table_name: {
+                        'Keys': keys
+                    }
+                }
+            )
+
+            # Extract items from response
+            items = response.get('Responses', {}).get(self.table.table_name, [])
+
+            # Handle unprocessed keys (retry once if needed)
+            unprocessed_keys = response.get('UnprocessedKeys', {})
+            if unprocessed_keys and self.table.table_name in unprocessed_keys:
+                logger.warning(
+                    action=LogActions.DB_OPERATION,
+                    message=f"Retrying {len(unprocessed_keys[self.table.table_name]['Keys'])} unprocessed keys"
+                )
+                retry_response = self.client.batch_get_item(
+                    RequestItems={
+                        self.table.table_name: {
+                            'Keys': unprocessed_keys[self.table.table_name]['Keys']
+                        }
+                    }
+                )
+                items.extend(retry_response.get('Responses', {}).get(self.table.table_name, []))
+
+            # Convert to Asset entities and create mapping
+            assets = {}
+            for item in items:
+                # Convert DynamoDB low-level format to high-level format
+                converted_item = self._convert_dynamodb_item(item)
+                asset = AssetItem(**converted_item).to_entity()
+                assets[asset.asset_id] = asset
+
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Successfully retrieved {len(assets)} out of {len(asset_ids)} requested assets"
+            )
+
+            return assets
+
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to batch retrieve assets: {e}"
+            )
+            raise CNOPDatabaseOperationException(f"Database operation failed while batch retrieving assets: {str(e)}")
+
     def update_asset(self, asset: Asset) -> Asset:
         try:
             # Get existing asset to preserve created_at
@@ -162,3 +242,30 @@ class AssetDAO(BaseDAO):
                 message=f"Failed to update asset '{asset.asset_id}': {e}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while updating asset '{asset.asset_id}': {str(e)}")
+
+    def _convert_dynamodb_item(self, item: dict) -> dict:
+        """
+        Convert DynamoDB low-level format to high-level format for AssetItem
+
+        Args:
+            item: DynamoDB item in low-level format
+
+        Returns:
+            Converted item in high-level format
+        """
+        converted = {}
+        for key, value in item.items():
+            if isinstance(value, dict):
+                if 'S' in value:
+                    converted[key] = value['S']
+                elif 'N' in value:
+                    converted[key] = value['N']
+                elif 'BOOL' in value:
+                    converted[key] = value['BOOL']
+                elif 'NULL' in value:
+                    converted[key] = None
+                else:
+                    converted[key] = value
+            else:
+                converted[key] = value
+        return converted

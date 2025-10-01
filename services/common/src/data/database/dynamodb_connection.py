@@ -100,6 +100,10 @@ class DynamoDBManager:
         """Get DynamoDB connection wrapper"""
         return DynamoDBConnection(self.users_table, self.orders_table, self.inventory_table)
 
+    def get_client(self):
+        """Get DynamoDB client for batch operations"""
+        return self.client
+
 
 class DynamoDBConnection:
     """

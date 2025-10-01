@@ -747,3 +747,317 @@ class TestAssetDAO:
         assert result.amount == Decimal("999999999.99999999")
         assert result.price_usd == Decimal("999999.99")
         assert len(result.description) == 500
+
+    # ==================== BATCH GET ASSETS BY IDS TESTS ====================
+
+    def test_get_assets_by_ids_empty_list(self, asset_dao):
+        """Test get_assets_by_ids with empty list returns empty dict"""
+        result = asset_dao.get_assets_by_ids([])
+        assert result == {}
+
+    def test_get_assets_by_ids_success(self, asset_dao, mock_db_connection):
+        """Test successful batch retrieval of assets"""
+        # Mock DynamoDB client
+        mock_client = Mock()
+        asset_dao.client = mock_client
+
+        # Mock table name
+        asset_dao.table.table_name = 'test-inventory-table'
+
+        # Mock DynamoDB low-level response format
+        dynamodb_response = {
+            'Responses': {
+                'test-inventory-table': [
+                    {
+                        'product_id': {'S': 'BTC'},
+                        'asset_id': {'S': 'BTC'},
+                        'name': {'S': 'Bitcoin'},
+                        'description': {'S': 'Digital currency'},
+                        'category': {'S': 'major'},
+                        'amount': {'N': '10.5'},
+                        'price_usd': {'N': '45000.0'},
+                        'is_active': {'BOOL': True},
+                        'created_at': {'S': '2023-01-01T00:00:00Z'},
+                        'updated_at': {'S': '2023-01-01T00:00:00Z'}
+                    },
+                    {
+                        'product_id': {'S': 'ETH'},
+                        'asset_id': {'S': 'ETH'},
+                        'name': {'S': 'Ethereum'},
+                        'description': {'S': 'Smart contract platform'},
+                        'category': {'S': 'altcoin'},
+                        'amount': {'N': '100.0'},
+                        'price_usd': {'N': '3000.0'},
+                        'is_active': {'BOOL': True},
+                        'created_at': {'S': '2023-01-01T00:00:00Z'},
+                        'updated_at': {'S': '2023-01-01T00:00:00Z'}
+                    }
+                ]
+            },
+            'UnprocessedKeys': {}
+        }
+        mock_client.batch_get_item.return_value = dynamodb_response
+
+        # Test batch retrieval
+        result = asset_dao.get_assets_by_ids(['BTC', 'ETH'])
+
+        # Verify result
+        assert len(result) == 2
+        assert 'BTC' in result
+        assert 'ETH' in result
+        assert isinstance(result['BTC'], Asset)
+        assert isinstance(result['ETH'], Asset)
+        assert result['BTC'].name == 'Bitcoin'
+        assert result['ETH'].name == 'Ethereum'
+
+        # Verify client was called correctly
+        mock_client.batch_get_item.assert_called_once()
+        call_args = mock_client.batch_get_item.call_args[1]
+        assert 'RequestItems' in call_args
+        assert 'test-inventory-table' in call_args['RequestItems']
+
+    def test_get_assets_by_ids_with_unprocessed_keys(self, asset_dao, mock_db_connection):
+        """Test batch retrieval with unprocessed keys retry"""
+        # Mock DynamoDB client
+        mock_client = Mock()
+        asset_dao.client = mock_client
+
+        # Mock table name
+        asset_dao.table.table_name = 'test-inventory-table'
+
+        # First response with unprocessed keys
+        first_response = {
+            'Responses': {
+                'test-inventory-table': [
+                    {
+                        'product_id': {'S': 'BTC'},
+                        'asset_id': {'S': 'BTC'},
+                        'name': {'S': 'Bitcoin'},
+                        'description': {'S': 'Digital currency'},
+                        'category': {'S': 'major'},
+                        'amount': {'N': '10.5'},
+                        'price_usd': {'N': '45000.0'},
+                        'is_active': {'BOOL': True},
+                        'created_at': {'S': '2023-01-01T00:00:00Z'},
+                        'updated_at': {'S': '2023-01-01T00:00:00Z'}
+                    }
+                ]
+            },
+            'UnprocessedKeys': {
+                'test-inventory-table': {
+                    'Keys': [
+                        {'product_id': {'S': 'ETH'}}
+                    ]
+                }
+            }
+        }
+
+        # Retry response
+        retry_response = {
+            'Responses': {
+                'test-inventory-table': [
+                    {
+                        'product_id': {'S': 'ETH'},
+                        'asset_id': {'S': 'ETH'},
+                        'name': {'S': 'Ethereum'},
+                        'description': {'S': 'Smart contract platform'},
+                        'category': {'S': 'altcoin'},
+                        'amount': {'N': '100.0'},
+                        'price_usd': {'N': '3000.0'},
+                        'is_active': {'BOOL': True},
+                        'created_at': {'S': '2023-01-01T00:00:00Z'},
+                        'updated_at': {'S': '2023-01-01T00:00:00Z'}
+                    }
+                ]
+            },
+            'UnprocessedKeys': {}
+        }
+
+        mock_client.batch_get_item.side_effect = [first_response, retry_response]
+
+        # Test batch retrieval
+        result = asset_dao.get_assets_by_ids(['BTC', 'ETH'])
+
+        # Verify result
+        assert len(result) == 2
+        assert 'BTC' in result
+        assert 'ETH' in result
+
+        # Verify client was called twice (initial + retry)
+        assert mock_client.batch_get_item.call_count == 2
+
+    def test_get_assets_by_ids_missing_assets(self, asset_dao, mock_db_connection):
+        """Test batch retrieval when some assets are missing"""
+        # Mock DynamoDB client
+        mock_client = Mock()
+        asset_dao.client = mock_client
+
+        # Mock table name
+        asset_dao.table.table_name = 'test-inventory-table'
+
+        # Response with only one asset (other is missing)
+        dynamodb_response = {
+            'Responses': {
+                'test-inventory-table': [
+                    {
+                        'product_id': {'S': 'BTC'},
+                        'asset_id': {'S': 'BTC'},
+                        'name': {'S': 'Bitcoin'},
+                        'description': {'S': 'Digital currency'},
+                        'category': {'S': 'major'},
+                        'amount': {'N': '10.5'},
+                        'price_usd': {'N': '45000.0'},
+                        'is_active': {'BOOL': True},
+                        'created_at': {'S': '2023-01-01T00:00:00Z'},
+                        'updated_at': {'S': '2023-01-01T00:00:00Z'}
+                    }
+                ]
+            },
+            'UnprocessedKeys': {}
+        }
+        mock_client.batch_get_item.return_value = dynamodb_response
+
+        # Test batch retrieval
+        result = asset_dao.get_assets_by_ids(['BTC', 'MISSING'])
+
+        # Verify result - only found assets are returned
+        assert len(result) == 1
+        assert 'BTC' in result
+        assert 'MISSING' not in result
+
+    def test_get_assets_by_ids_database_error(self, asset_dao, mock_db_connection):
+        """Test batch retrieval with database error"""
+        # Mock DynamoDB client
+        mock_client = Mock()
+        asset_dao.client = mock_client
+
+        # Mock table name
+        asset_dao.table.table_name = 'test-inventory-table'
+
+        # Mock database error
+        mock_client.batch_get_item.side_effect = Exception("Database error")
+
+        # Should raise CNOPDatabaseOperationException
+        with pytest.raises(CNOPDatabaseOperationException) as exc_info:
+            asset_dao.get_assets_by_ids(['BTC', 'ETH'])
+
+        assert "Database error" in str(exc_info.value)
+
+    # ==================== DYNAMODB TYPE CONVERSION TESTS ====================
+
+    def test_convert_dynamodb_item_string(self, asset_dao):
+        """Test conversion of DynamoDB string type"""
+        dynamodb_item = {
+            'product_id': {'S': 'BTC'},
+            'name': {'S': 'Bitcoin'},
+            'description': {'S': 'Digital currency'}
+        }
+
+        result = asset_dao._convert_dynamodb_item(dynamodb_item)
+
+        assert result == {
+            'product_id': 'BTC',
+            'name': 'Bitcoin',
+            'description': 'Digital currency'
+        }
+
+    def test_convert_dynamodb_item_number(self, asset_dao):
+        """Test conversion of DynamoDB number type"""
+        dynamodb_item = {
+            'amount': {'N': '10.5'},
+            'price_usd': {'N': '45000.0'},
+            'market_cap_rank': {'N': '1'}
+        }
+
+        result = asset_dao._convert_dynamodb_item(dynamodb_item)
+
+        assert result == {
+            'amount': '10.5',
+            'price_usd': '45000.0',
+            'market_cap_rank': '1'
+        }
+
+    def test_convert_dynamodb_item_boolean(self, asset_dao):
+        """Test conversion of DynamoDB boolean type"""
+        dynamodb_item = {
+            'is_active': {'BOOL': True},
+            'is_trading': {'BOOL': False}
+        }
+
+        result = asset_dao._convert_dynamodb_item(dynamodb_item)
+
+        assert result == {
+            'is_active': True,
+            'is_trading': False
+        }
+
+    def test_convert_dynamodb_item_null(self, asset_dao):
+        """Test conversion of DynamoDB null type"""
+        dynamodb_item = {
+            'description': {'NULL': True},
+            'optional_field': {'NULL': True}
+        }
+
+        result = asset_dao._convert_dynamodb_item(dynamodb_item)
+
+        assert result == {
+            'description': None,
+            'optional_field': None
+        }
+
+    def test_convert_dynamodb_item_mixed_types(self, asset_dao):
+        """Test conversion of DynamoDB item with mixed types"""
+        dynamodb_item = {
+            'product_id': {'S': 'BTC'},
+            'amount': {'N': '10.5'},
+            'is_active': {'BOOL': True},
+            'description': {'NULL': True},
+            'metadata': {'M': {'key': {'S': 'value'}}},  # Map type
+            'tags': {'L': [{'S': 'crypto'}, {'S': 'digital'}]}  # List type
+        }
+
+        result = asset_dao._convert_dynamodb_item(dynamodb_item)
+
+        assert result == {
+            'product_id': 'BTC',
+            'amount': '10.5',
+            'is_active': True,
+            'description': None,
+            'metadata': {'M': {'key': {'S': 'value'}}},  # Unhandled types passed through
+            'tags': {'L': [{'S': 'crypto'}, {'S': 'digital'}]}  # Unhandled types passed through
+        }
+
+    def test_convert_dynamodb_item_non_dict_values(self, asset_dao):
+        """Test conversion of DynamoDB item with non-dict values"""
+        dynamodb_item = {
+            'product_id': 'BTC',  # Already converted
+            'name': {'S': 'Bitcoin'},  # Needs conversion
+            'amount': 10.5  # Already converted
+        }
+
+        result = asset_dao._convert_dynamodb_item(dynamodb_item)
+
+        assert result == {
+            'product_id': 'BTC',
+            'name': 'Bitcoin',
+            'amount': 10.5
+        }
+
+    def test_convert_dynamodb_item_empty(self, asset_dao):
+        """Test conversion of empty DynamoDB item"""
+        result = asset_dao._convert_dynamodb_item({})
+        assert result == {}
+
+    def test_convert_dynamodb_item_unknown_type(self, asset_dao):
+        """Test conversion of DynamoDB item with unknown type"""
+        dynamodb_item = {
+            'known_field': {'S': 'value'},
+            'unknown_field': {'UNKNOWN': 'value'}  # Unknown type
+        }
+
+        result = asset_dao._convert_dynamodb_item(dynamodb_item)
+
+        assert result == {
+            'known_field': 'value',
+            'unknown_field': {'UNKNOWN': 'value'}  # Passed through unchanged
+        }

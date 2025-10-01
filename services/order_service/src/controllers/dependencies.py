@@ -21,6 +21,7 @@ from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from common.data.dao.asset.asset_transaction_dao import AssetTransactionDAO
 from common.core.utils.transaction_manager import TransactionManager
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from order_exceptions import CNOPOrderValidationException
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.ORDER)
