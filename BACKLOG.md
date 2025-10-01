@@ -88,32 +88,12 @@
 - **Why Needed**: Gateway currently has TODO placeholders for circuit breaker patterns and uses hardcoded JWT secrets, which should be properly implemented for production readiness and security
 
 
-#### **TEST-002: Refactor Integration Tests to Use API Model Defined Responses**
+#### **TEST-002: CANCELLED - Current Test Constant Pattern is Correct**
 - **Component**: Testing & Quality Assurance
 - **Type**: Task
-- **Priority**: 🔶 **MEDIUM PRIORITY**
-- **Status**: 📋 **To Do**
-- **Description**: Refactor integration tests to dynamically use API model defined responses instead of hardcoded field names
-- **Acceptance Criteria**:
-  - Replace hardcoded field names in integration tests with dynamic field extraction from API models
-  - Use AssetDetailResponse.model_fields to automatically stay in sync with API changes
-  - Create reusable test utilities for field validation based on model definitions
-  - Ensure tests automatically adapt when new fields are added to API models
-  - Maintain test coverage while improving maintainability
-- **Dependencies**:
-  - INVENTORY-001 ✅ (enhanced asset attributes completed)
-  - TEST-001.1 ✅ (integration test refactoring completed)
-- **Files to Update**:
-  - `integration_tests/inventory_service/inventory_tests.py` - Refactor to use AssetDetailResponse model fields
-  - `integration_tests/order_service/` - Apply same pattern to order service tests
-  - `integration_tests/user_services/` - Apply same pattern to user service tests
-- **Technical Approach**:
-  - Import API models into integration tests
-  - Use model.model_fields to dynamically get available fields
-  - Create field validation functions that work with any API model
-  - Implement field type checking based on model field definitions
-  - Add field presence validation without hardcoding field names
-- **Why Needed**: Current integration tests use hardcoded field names which makes them brittle and requires manual updates when API models change. Using the actual API models ensures tests automatically stay synchronized with API changes and improves maintainability.
+- **Priority**: ❌ **CANCELLED**
+- **Status**: ❌ **CANCELLED**
+- **Reason**: Integration tests already use centralized `test_constants.py` for field names, which is the correct black-box testing pattern. Using backend Pydantic models would break test independence and violate black-box testing principles. Tests should validate API contract, not implementation details.
 
 ### **🌐 Frontend & User Experience**
 
@@ -140,65 +120,44 @@
 
 ### **🔧 Infrastructure & DevOps**
 
-#### **INFRA-003: Data Model Consistency & Common Package Standardization**
+#### **INFRA-005: Data Model Consistency & Common Package Standardization**
 - **Component**: Infrastructure & Common Package
 - **Type**: Epic
 - **Priority**: 🔥 **HIGH PRIORITY**
 - **Status**: 🚧 **IN PROGRESS**
 - **Description**: Ensure complete data model consistency across all services and consolidate duplicate code into common package
 
-##### **INFRA-003.1: Consolidate Security Validation Functions**
-- **Component**: Common Package & Security
+##### **INFRA-005.1: Move Truly Shared Validation Functions to Common Package**
+- **Component**: Common Package & Validation
 - **Type**: Subtask
 - **Priority**: 🔥 **HIGH PRIORITY**
 - **Status**: 📋 **To Do**
-- **Description**: Move duplicate `is_suspicious` method from all services to common package with enhanced security patterns
+- **Description**: Move only truly shared utility functions to common package while preserving service autonomy
 - **Acceptance Criteria**:
-  - Create centralized `is_suspicious` method in common package
-  - Include SQL injection, XSS, and path traversal patterns
-  - Remove duplicate implementations from all services
-  - Update all services to import from common package
-  - Add comprehensive tests for security patterns
+  - Move `is_suspicious()` to `services/common/src/core/validation/security.py`
+  - Move `sanitize_string()` to `services/common/src/core/validation/sanitizers.py`
+  - Move `validate_username()` to `services/common/src/core/validation/common_validators.py` (enforce 6-30 chars)
+  - Remove duplicates from all 3 services
+  - Update all services to import from common
+  - Add comprehensive tests for shared validators
+  - Keep service-specific validators in each service
 - **Dependencies**: INFRA-001 ✅
+- **Files to Create**:
+  - `services/common/src/core/validation/security.py` - Security validation (is_suspicious)
+  - `services/common/src/core/validation/sanitizers.py` - String sanitization (sanitize_string)
+  - `services/common/src/core/validation/common_validators.py` - Cross-service validators (validate_username)
+  - `services/common/tests/core/validation/` - Tests for shared validators
 - **Files to Update**:
-  - `services/common/src/validation/security_validators.py` - Create centralized security validation
-  - `services/user_service/src/validation/field_validators.py` - Remove duplicate, import from common
-  - `services/order_service/src/validation/field_validators.py` - Remove duplicate, import from common
-  - `services/inventory_service/src/validation/field_validators.py` - Remove duplicate, import from common
-- **Technical Approach**:
-  - Create enhanced `is_suspicious` method with SQL injection, XSS, and path traversal patterns
-  - Use regex patterns for comprehensive security validation
-  - Maintain backward compatibility with existing validation logic
-  - Add unit tests for all security patterns
-- **Current Status**: ❌ **NOT COMPLETED** - Duplicate `is_suspicious` methods still exist in all 3 services
-- **Evidence**: Found identical `is_suspicious` implementations in:
-  - `services/user_service/src/validation/field_validators.py` (lines 33-52)
-  - `services/order_service/src/validation/field_validators.py` (lines 35-54)
-  - `services/inventory_service/src/validation/field_validators.py` (lines 32-51)
-- **Why Needed**: Currently `is_suspicious` is duplicated across 3 services, creating maintenance overhead and potential security inconsistencies
-
-##### **INFRA-003.2: Standardize Field Validators Across Services**
-- **Component**: Common Package & Validation
-- **Type**: Subtask
-- **Priority**: 🔶 **MEDIUM PRIORITY**
-- **Status**: 📋 **To Do**
-- **Description**: Consolidate common field validation functions into shared common package
-- **Acceptance Criteria**:
-  - Identify duplicate validation functions across services
-  - Move common validators to common package
-  - Standardize validation patterns and error messages
-  - Update all services to use centralized validators
-- **Dependencies**: INFRA-003.1 ✅
-- **Files to Update**:
-  - `services/common/src/validation/` - Create centralized validation package
-  - All service validation files - Update imports and remove duplicates
-- **Current Status**: ❌ **NOT COMPLETED** - Duplicate field validators exist across all services
-- **Evidence**: Found duplicate validation functions in all services:
-  - `sanitize_string()`: Identical implementation in user, order, and inventory services
-  - `is_suspicious()`: Identical implementation in all 3 services
-  - Inconsistent validation patterns (e.g., username: 6-30 vs 3-30 chars)
-  - Different exception types per service (CNOPUserValidationException, CNOPOrderValidationException, CNOPAssetValidationException)
-  - No centralized validation package exists (`services/common/src/core/validation/` is empty)
+  - `services/user_service/src/validation/field_validators.py` - Remove duplicates, import from common
+  - `services/order_service/src/validation/field_validators.py` - Remove duplicates, import from common, fix username to 6-30
+  - `services/inventory_service/src/validation/field_validators.py` - Remove duplicates, import from common
+- **What Stays in Services** (Preserve Service Autonomy):
+  - `validate_password()` - User service only
+  - `validate_email()` - User service only
+  - `validate_order_id()` - Order service only
+  - `validate_asset_id()` - Inventory service only
+  - All business validators - Service specific
+- **Why Needed**: `is_suspicious`, `sanitize_string`, and `validate_username` are truly shared utilities that must be identical across services. Username validation inconsistency (6-30 vs 3-30) causes bugs.
 
 #### **PERF-003: Implement Batch Asset Operations for Performance Optimization**
 - **Component**: Performance & Asset Management
@@ -227,34 +186,6 @@
   - Optimize for common use cases (portfolio loading, asset balance display)
 - **Why Critical**: Current portfolio operations use N+1 query pattern - if user has 10 assets, makes 10 separate DB calls. This causes significant performance degradation and increased costs.
 
-#### **INFRA-018: Activate Rate Limiting in Gateway with Metrics**
-- **Component**: Infrastructure & Security (Gateway)
-- **Type**: Task
-- **Priority**: 🔥 **HIGH PRIORITY**
-- **Status**: 📋 **To Do**
-- **Description**: Activate existing rate limiting middleware in gateway and add comprehensive rate limiting metrics for monitoring
-- **Acceptance Criteria**:
-  - Activate rate limiting middleware in gateway server.go (currently commented out)
-  - Add Prometheus metrics for rate limiting (violations, requests, limits)
-  - Add `/metrics` endpoint to gateway for Prometheus scraping
-  - Add rate limit headers to responses (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)
-  - Configure different rate limits for different endpoints (auth vs public)
-  - Add rate limiting metrics to Grafana dashboards
-  - Test rate limiting functionality with load testing
-- **Dependencies**: INFRA-001 ✅, MON-001 (for dashboard integration)
-- **Files to Update**:
-  - `gateway/internal/api/server.go` - Activate rate limiting middleware
-  - `gateway/internal/middleware/rate_limit.go` - Add metrics collection
-  - `gateway/pkg/metrics/` - Create Prometheus metrics package
-  - `gateway/internal/api/server.go` - Add /metrics endpoint
-  - `monitoring/grafana/dashboards/` - Add rate limiting dashboard
-- **Technical Approach**:
-  - Use existing Redis-based rate limiting with metrics enhancement
-  - Add Prometheus client library to Go gateway
-  - Implement rate limiting metrics: requests_total, rate_limit_violations_total, rate_limit_remaining
-  - Add endpoint-specific rate limiting (auth: 5/min, public: 100/min)
-  - Integrate with existing monitoring infrastructure
-- **Why Critical**: Rate limiting code exists but is inactive. This provides immediate security improvement and monitoring visibility for production deployment.
 
 #### **DOCS-001: Comprehensive Documentation Cleanup and Consolidation**
 - **Component**: Documentation & Project Maintenance
@@ -271,7 +202,7 @@
   - Standardize documentation format and structure
   - Update main README.md to reflect current system state
   - Remove TODO/FIXME comments from documentation
-- **Dependencies**: INFRA-003 ✅ (after package restructuring is complete)
+- **Dependencies**: INFRA-005 ✅ (after package restructuring is complete)
 - **Files to Review/Update**:
   - `docs/README.md` - Main documentation hub
   - `docs/migration/` - Remove completed migration docs
@@ -289,78 +220,8 @@
   - Standardize documentation templates and formats
 - **Why Needed**: Personal project should have clean, accurate documentation. Outdated docs cause confusion and maintenance overhead. Current docs have references to old package structures and completed migrations that are no longer relevant.
 
-#### **DEPLOY-001: AWS EKS Test Deployment with Integration Testing**
-- **Component**: Infrastructure & Testing
-- **Type**: Task
-- **Priority**: 🔥 **HIGH PRIORITY**
-- **Status**: 📋 **To Do**
-- **Description**: Create fully automated AWS EKS deployment, integration testing, and cleanup system with comprehensive monitoring and reporting
-- **Acceptance Criteria**:
-  - Create automated deployment script (`scripts/aws-test-deploy.sh`)
-  - Create automated cleanup script (`scripts/aws-test-cleanup.sh`)
-  - Create EKS-specific integration test configuration
-  - Deploy complete infrastructure to AWS EKS using Terraform
-  - Build and push all container images to ECR automatically
-  - Deploy all services to EKS cluster with health checks
-  - Run full integration test suite against AWS deployment
-  - Generate comprehensive test reports with AWS-specific metrics
-  - Monitor costs and destroy resources automatically after testing
-  - Create detailed deployment report with findings and recommendations
-  - Support both manual execution and CI/CD integration
-- **Dependencies**: INFRA-001 ✅, INFRA-017 ✅ (request ID propagation for proper testing)
-- **Files to Create/Update**:
-  - `scripts/aws-test-deploy.sh` - Main deployment automation script
-  - `scripts/aws-test-cleanup.sh` - Automated cleanup script
-  - `scripts/build-and-push-images.sh` - ECR image building script
-  - `integration_tests/config/aws_constants.py` - AWS-specific test configuration
-  - `integration_tests/aws_test_runner.py` - EKS-specific test runner
-  - `integration_tests/reports/aws_deployment_report.py` - AWS deployment reporting
-  - `kubernetes/prod/aws-kustomization.yaml` - AWS-specific K8s configuration
-- **Technical Approach**:
-  - **Phase 1**: Infrastructure deployment with Terraform
-  - **Phase 2**: Container image building and ECR push
-  - **Phase 3**: Kubernetes deployment with health checks
-  - **Phase 4**: Integration testing with AWS endpoint detection
-  - **Phase 5**: Automated cleanup and cost monitoring
-  - **Phase 6**: Comprehensive reporting and documentation
-- **Automation Features**:
-  - One-command deployment: `./scripts/aws-test-deploy.sh`
-  - One-command cleanup: `./scripts/aws-test-cleanup.sh`
-  - Automatic cost monitoring and alerts
-  - Health check validation before testing
-  - Automatic retry logic for failed deployments
-  - Comprehensive logging and error reporting
-  - Integration test result analysis and reporting
-- **Why Critical**: Need to validate production deployment works correctly before considering it production-ready. This is essential for understanding real-world performance and identifying any AWS-specific issues. Automation ensures consistent, repeatable testing with minimal manual intervention.
 
-#### **INFRA-005: API & Function Sync/Async Consistency Review**
-- **Component**: Infrastructure & Code Quality
-- **Type**: Epic
-- **Priority**: 🔥 **HIGH PRIORITY**
-- **Status**: 📋 **To Do**
-- **Description**: Review and fix all API endpoints and functions for async/await consistency
-- **Acceptance Criteria**:
-  - Remove unnecessary `async` keywords from handlers that don't perform async operations
-  - Keep `async` only for handlers that actually use `await`
-  - Ensure middleware functions remain `async` (they need to call `await call_next()`)
-  - Fix exception handlers to be synchronous when they just return responses
-  - Fix event handlers to be synchronous when they just do logging
-  - Maintain FastAPI compatibility and best practices
-- **Dependencies**: INFRA-001 ✅
-- **Files to Update**:
-  - `services/*/src/main.py` - Fix async/sync handlers
-  - `services/*/src/controllers/*.py` - Review endpoint handlers
-  - All exception handlers and middleware functions
-- **Why Needed**: Many handlers are marked `async` unnecessarily, causing performance overhead and unclear code intent
-
-#### **INFRA-006: Docker Production-Ready Refactoring**
-- **Component**: Infrastructure & Docker
-- **Type**: Epic
-- **Priority**: 🔥 **HIGH PRIORITY**
-- **Status**: 🚧 **IN PROGRESS - Auth Service COMPLETED**
-- **Description**: Refactor all service Dockerfiles to use production-ready patterns
-
-#### **INFRA-006: Service Architecture Cleanup - Move Portfolio Logic**
+#### **INFRA-020: Service Architecture Cleanup - Move Portfolio Logic**
 - **Component**: Infrastructure & Service Architecture
 - **Type**: Task
 - **Priority**: Medium
@@ -498,6 +359,27 @@
 ## ✅ **COMPLETED TASKS**
 
 ### **🏗️ Infrastructure & Development Tools**
+
+#### **DEPLOY-001: AWS EKS Test Deployment with Integration Testing** ✅
+- **Component**: Infrastructure & Testing
+- **Type**: Task
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: ✅ **COMPLETED** (9/27/2025)
+- **Summary**: Successfully deployed all services to AWS EKS with 95% functionality, comprehensive integration testing, and zero ongoing costs. See DAILY_WORK_LOG.md (9/27/2025)
+
+#### **INFRA-019: Docker Production-Ready Refactoring** ✅
+- **Component**: Infrastructure & Docker
+- **Type**: Epic
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: ✅ **COMPLETED**
+- **Summary**: All Python services use standard Dockerfile pattern with PYTHONPATH, health checks, and production-ready configurations
+
+#### **INFRA-018: Activate Rate Limiting in Gateway with Metrics** ✅
+- **Component**: Infrastructure & Security (Gateway)
+- **Type**: Task
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: ✅ **COMPLETED**
+- **Summary**: Rate limiting middleware active with Prometheus metrics exposed at /metrics endpoint
 
 #### **INFRA-004: Enhance dev.sh Build Validation** ✅
 - **Component**: Infrastructure & Development Tools
