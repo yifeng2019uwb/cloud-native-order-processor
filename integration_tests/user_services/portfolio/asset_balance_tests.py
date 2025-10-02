@@ -1,48 +1,45 @@
 """
-Order Service Integration Tests - Portfolio
-Tests GET /portfolio/{user_id} endpoint - validates portfolio aggregation
+User Service Integration Tests - Asset Balances
+Tests GET /assets/balances endpoint - validates asset balance queries
 """
 import requests
 import sys
 import os
 
 # Add parent directory to path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, OrderAPI, UserAPI
-from test_constants import OrderFields, TestValues, UserFields, CommonFields
+from test_constants import OrderFields, TestValues, UserFields
 
-class PortfolioTests:
-    """Integration tests for portfolio API - focus on portfolio data accuracy"""
+class AssetBalanceTests:
+    """Integration tests for asset balance API"""
 
     def __init__(self, timeout: int = 10):
         self.timeout = timeout
         self.session = requests.Session()
         self.user_manager = TestUserManager()
 
-    def portfolio_api(self, username: str) -> str:
-        """Helper method to build portfolio API URLs"""
-        return APIEndpoints.get_order_endpoint(OrderAPI.PORTFOLIO, username=username)
+    def asset_balance_api(self, asset_id: str) -> str:
+        """Helper method to build asset balance API URLs"""
+        return APIEndpoints.get_user_endpoint(UserAPI.GET_ASSET_BALANCE_BY_ID).replace('{asset_id}', asset_id)
 
-    def test_empty_portfolio(self):
-        """Test new user has empty portfolio"""
+    def test_empty_asset_balances(self):
+        """Test new user has no asset balances"""
         user, token = self.user_manager.create_test_user(self.session)
         headers = {'Authorization': f'Bearer {token}'}
 
         response = self.session.get(
-            self.portfolio_api(user[UserFields.USERNAME]),
+            self.asset_balance_api(TestValues.BTC_ASSET_ID),
             headers=headers,
             timeout=self.timeout
         )
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data['success'] == True
-        assert data['data']['asset_count'] == 0
+        assert response.status_code == 404
 
-    def test_portfolio_after_order(self):
-        """Test portfolio contains assets after placing an order"""
+    def test_asset_balances_after_order(self):
+        """Test asset balances contain BTC after buy order"""
         user, token = self.user_manager.create_test_user(self.session)
         headers = {'Authorization': f'Bearer {token}'}
 
@@ -61,17 +58,16 @@ class PortfolioTests:
             OrderFields.ORDER_TYPE: "market_buy",
             OrderFields.QUANTITY: 0.5
         }
-        order_response = self.session.post(
+        self.session.post(
             APIEndpoints.get_order_endpoint(OrderAPI.CREATE_ORDER),
             headers=headers,
             json=order_data,
             timeout=self.timeout
         )
-        assert order_response.status_code == 201
 
-        # Get portfolio - should now contain BTC
+        # Get asset balances
         response = self.session.get(
-            self.portfolio_api(user[UserFields.USERNAME]),
+            self.asset_balance_api(TestValues.BTC_ASSET_ID),
             headers=headers,
             timeout=self.timeout
         )
@@ -79,13 +75,13 @@ class PortfolioTests:
         assert response.status_code == 200
         data = response.json()
         assert data['success'] == True
-        assert data['data']['asset_count'] >= 1
+        assert data['data']['asset_id'] == TestValues.BTC_ASSET_ID
 
-    def run_all_portfolio_tests(self):
-        """Run all portfolio tests"""
-        self.test_empty_portfolio()
-        self.test_portfolio_after_order()
+    def run_all_asset_balance_tests(self):
+        """Run all asset balance tests"""
+        self.test_empty_asset_balances()
+        self.test_asset_balances_after_order()
 
 if __name__ == "__main__":
-    tests = PortfolioTests()
-    tests.run_all_portfolio_tests()
+    tests = AssetBalanceTests()
+    tests.run_all_asset_balance_tests()

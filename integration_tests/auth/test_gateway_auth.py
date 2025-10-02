@@ -33,6 +33,8 @@ class GatewayAuthTests:
             (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_DEPOSIT), 'POST'),
             (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_WITHDRAW), 'POST'),
             (APIEndpoints.get_user_endpoint(UserAPI.LOGOUT), 'POST'),
+            (APIEndpoints.get_user_endpoint(UserAPI.PORTFOLIO), 'GET'),
+            (APIEndpoints.get_user_endpoint(UserAPI.GET_ASSET_BALANCE_BY_ID).replace('{asset_id}', 'BTC'), 'GET'),
         ]
 
         for endpoint, method in endpoints:
@@ -52,6 +54,8 @@ class GatewayAuthTests:
             (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_DEPOSIT), 'POST'),
             (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_WITHDRAW), 'POST'),
             (APIEndpoints.get_user_endpoint(UserAPI.LOGOUT), 'POST'),
+            (APIEndpoints.get_user_endpoint(UserAPI.PORTFOLIO), 'GET'),
+            (APIEndpoints.get_user_endpoint(UserAPI.GET_ASSET_BALANCE_BY_ID).replace('{asset_id}', 'BTC'), 'GET'),
         ]
 
         for endpoint, method in endpoints:
@@ -67,9 +71,7 @@ class GatewayAuthTests:
             (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), 'GET'),
             (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), 'POST'),
             (APIEndpoints.get_order_endpoint(OrderAPI.ORDER_BY_ID).replace('{id}', '123'), 'GET'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.PORTFOLIO).replace('{username}', 'testuser'), 'GET'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.ASSET_BALANCES), 'GET'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.ASSET_TRANSACTIONS).replace('{asset_id}', 'BTC'), 'GET'),
+            (APIEndpoints.get_order_endpoint(OrderAPI.GET_ASSET_TRANSACTIONS_BY_ID).replace('{asset_id}', 'BTC'), 'GET'),
         ]
 
         for endpoint, method in endpoints:
@@ -86,9 +88,7 @@ class GatewayAuthTests:
             (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), 'GET'),
             (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), 'POST'),
             (APIEndpoints.get_order_endpoint(OrderAPI.ORDER_BY_ID).replace('{id}', '123'), 'GET'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.PORTFOLIO).replace('{username}', 'testuser'), 'GET'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.ASSET_BALANCES), 'GET'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.ASSET_TRANSACTIONS).replace('{asset_id}', 'BTC'), 'GET'),
+            (APIEndpoints.get_order_endpoint(OrderAPI.GET_ASSET_TRANSACTIONS_BY_ID).replace('{asset_id}', 'BTC'), 'GET'),
         ]
 
         for endpoint, method in endpoints:

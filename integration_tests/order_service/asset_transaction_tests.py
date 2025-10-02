@@ -24,7 +24,7 @@ class AssetTransactionTests:
 
     def asset_transaction_api(self, asset_id: str) -> str:
         """Helper method to build asset transaction API URLs"""
-        return APIEndpoints.get_order_endpoint(OrderAPI.ASSET_TRANSACTIONS, asset_id=asset_id)
+        return APIEndpoints.get_order_endpoint(OrderAPI.GET_ASSET_TRANSACTIONS_BY_ID, asset_id=asset_id)
 
     def test_empty_transactions(self):
         """Test new user has no asset transactions"""
@@ -37,6 +37,8 @@ class AssetTransactionTests:
             timeout=self.timeout
         )
 
+        print(f"Response status: {response.status_code}")
+        print(f"Response body: {response.text}")
         assert response.status_code == 200
 
     def test_transactions_after_buy(self):

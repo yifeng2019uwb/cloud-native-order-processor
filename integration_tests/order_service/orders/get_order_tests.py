@@ -37,8 +37,7 @@ class GetOrderTests:
             timeout=self.timeout
         )
 
-        # TODO: Should return 404, but currently returns 500 (backend bug)
-        assert response.status_code == 500
+        assert response.status_code == 404
 
     def test_get_order_invalid_id_format(self):
         """Test getting order with invalid ID format"""
@@ -50,8 +49,8 @@ class GetOrderTests:
             headers=headers,
             timeout=self.timeout
         )
-        # Invalid ID format returns 500 (backend bug - should be 400)
-        assert response.status_code == 500
+
+        assert response.status_code == 404
 
     def test_get_order_performance(self):
         """Test that get order responds within reasonable time"""

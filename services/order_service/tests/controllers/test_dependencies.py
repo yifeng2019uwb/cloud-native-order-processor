@@ -74,7 +74,6 @@ from src.controllers.dependencies import (
     get_user_dao_dependency,
     get_balance_dao_dependency,
     get_asset_dao_dependency,
-    get_asset_balance_dao_dependency,
     get_asset_transaction_dao_dependency,
     get_transaction_manager,
     get_current_user,
@@ -137,24 +136,6 @@ class TestDependencies:
             assert result == mock_dao
             mock_get_asset_dao.assert_called_once()
 
-    def test_get_asset_balance_dao_dependency(self):
-        """Test get_asset_balance_dao_dependency"""
-        with patch('src.controllers.dependencies.get_dynamodb_manager') as mock_get_manager, \
-             patch('src.controllers.dependencies.AssetBalanceDAO') as mock_asset_balance_dao_class:
-
-            mock_connection = Mock()
-            mock_manager = MagicMock()
-            mock_manager.get_connection.return_value = mock_connection
-            mock_get_manager.return_value = mock_manager
-
-            mock_dao = Mock(spec=ASSET_BALANCE_DAO_SPEC)
-            mock_asset_balance_dao_class.return_value = mock_dao
-
-            result = get_asset_balance_dao_dependency()
-
-            assert result == mock_dao
-            mock_manager.get_connection.assert_called_once()
-            mock_asset_balance_dao_class.assert_called_once_with(mock_connection)
 
     def test_get_asset_transaction_dao_dependency(self):
         """Test get_asset_transaction_dao_dependency"""

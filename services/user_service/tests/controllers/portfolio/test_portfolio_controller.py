@@ -26,8 +26,8 @@ def create_mock_request(request_id="test-request-id"):
     return mock_request
 
 # Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'common', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'common', 'src'))
 
 # At the top of your test file, define the DAO interface
 USER_DAO_SPEC = [
@@ -62,22 +62,8 @@ ASSET_BALANCE_DAO_SPEC = [
     'get_all_asset_balances'
 ]
 
-# Mock dependencies before importing
-with patch('src.controllers.portfolio.get_current_user', create=True), \
-     patch('src.controllers.portfolio.get_balance_dao_dependency', create=True), \
-     patch('src.controllers.portfolio.get_asset_balance_dao_dependency', create=True), \
-     patch('src.controllers.portfolio.get_user_dao_dependency', create=True), \
-     patch('src.controllers.portfolio.get_asset_dao_dependency', create=True), \
-     patch('src.controllers.portfolio.validate_user_permissions', create=True), \
-     patch('src.controllers.portfolio.BalanceDAO', create=True), \
-     patch('src.controllers.portfolio.AssetBalanceDAO', create=True), \
-     patch('src.controllers.portfolio.UserDAO', create=True), \
-     patch('src.controllers.portfolio.AssetDAO', create=True), \
-     patch('src.controllers.portfolio.CNOPDatabaseOperationException', create=True), \
-     patch('src.controllers.portfolio.CNOPInternalServerException', create=True), \
-     patch('src.controllers.portfolio.CNOPOrderValidationException', create=True):
-
-    from src.controllers.portfolio import get_user_portfolio
+# Import the function directly - we'll mock dependencies in individual tests
+from src.controllers.portfolio.portfolio_controller import get_user_portfolio
 
 
 class TestPortfolioController:
@@ -95,7 +81,15 @@ class TestPortfolioController:
     @pytest.fixture
     def mock_current_user(self):
         """Mock current user"""
-        return {"username": "testuser"}
+        from common.data.entities.user import User
+        return User(
+            username="testuser",
+            email="test@example.com",
+            password="hashed_password",
+            first_name="Test",
+            last_name="User",
+            role="customer"
+        )
 
     @pytest.fixture
     def mock_balance_dao(self):
@@ -171,19 +165,14 @@ class TestPortfolioController:
 
         return dao
 
-    @pytest.fixture
-    def mock_validate_user_permissions(self):
-        """Mock user permissions validation"""
-        with patch('src.controllers.portfolio.validate_user_permissions') as mock:
-            yield mock
 
 
-    def test_get_user_portfolio_success(self, mock_request, mock_current_user,
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_success(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                             mock_balance_dao, mock_asset_balance_dao,
-                                            mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+                                            mock_user_dao, mock_asset_dao):
         """Test successful retrieval of user portfolio"""
         result = get_user_portfolio(
-            username="testuser",
             request=mock_request,
             current_user=mock_current_user,
             balance_dao=mock_balance_dao,
@@ -242,15 +231,18 @@ class TestPortfolioController:
         assert 27.0 < eth_percentage < 28.0  # 30000/107500 ≈ 27.91%
 
 
-    def test_get_user_portfolio_unauthorized_access(self, mock_request, mock_current_user,
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_unauthorized_access(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                                         mock_balance_dao, mock_asset_balance_dao,
-                                                        mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+                                                        mock_user_dao, mock_asset_dao):
         """Test get_user_portfolio with unauthorized access attempt"""
-        from src.controllers.portfolio import CNOPOrderValidationException
+        from user_exceptions import CNOPUserValidationException
 
-        with pytest.raises(CNOPOrderValidationException, match="You can only view your own portfolio"):
+        # Mock validation to raise exception
+        mock_validate_user_permissions.side_effect = CNOPUserValidationException("User not found")
+
+        with pytest.raises(CNOPUserValidationException, match="User not found"):
             get_user_portfolio(
-                username="otheruser",  # Different username
                 request=mock_request,
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao,
@@ -260,15 +252,15 @@ class TestPortfolioController:
             )
 
 
-    def test_get_user_portfolio_no_usd_balance(self, mock_request, mock_current_user,
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_no_usd_balance(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                                     mock_balance_dao, mock_asset_balance_dao,
-                                                    mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+                                                    mock_user_dao, mock_asset_dao):
         """Test get_user_portfolio when user has no USD balance"""
         # Mock no USD balance
         mock_balance_dao.get_balance.return_value = None
 
         result = get_user_portfolio(
-            username="testuser",
             request=mock_request,
             current_user=mock_current_user,
             balance_dao=mock_balance_dao,
@@ -284,15 +276,15 @@ class TestPortfolioController:
         assert portfolio_data["total_portfolio_value"] == Decimal("97500.00")  # Only asset value
 
 
-    def test_get_user_portfolio_no_assets(self, mock_request, mock_current_user,
-                                               mock_balance_dao, mock_asset_balance_dao,
-                                               mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_no_assets(self, mock_validate_user_permissions, mock_request, mock_current_user,
+                                            mock_balance_dao, mock_asset_balance_dao,
+                                            mock_user_dao, mock_asset_dao):
         """Test get_user_portfolio when user has no assets"""
         # Mock no asset balances
         mock_asset_balance_dao.get_all_asset_balances.return_value = []
 
         result = get_user_portfolio(
-            username="testuser",
             request=mock_request,
             current_user=mock_current_user,
             balance_dao=mock_balance_dao,
@@ -310,16 +302,16 @@ class TestPortfolioController:
         assert portfolio_data["total_portfolio_value"] == Decimal("10000.00")  # Only USD balance
 
 
-    def test_get_user_portfolio_zero_total_value(self, mock_request, mock_current_user,
-                                                     mock_balance_dao, mock_asset_balance_dao,
-                                                     mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_zero_total_value(self, mock_validate_user_permissions, mock_request, mock_current_user,
+                                                    mock_balance_dao, mock_asset_balance_dao,
+                                                    mock_user_dao, mock_asset_dao):
         """Test get_user_portfolio when total portfolio value is zero"""
         # Mock zero USD balance and no assets
         mock_balance_dao.get_balance.return_value = None
         mock_asset_balance_dao.get_all_asset_balances.return_value = []
 
         result = get_user_portfolio(
-            username="testuser",
             request=mock_request,
             current_user=mock_current_user,
             balance_dao=mock_balance_dao,
@@ -338,16 +330,16 @@ class TestPortfolioController:
         assert len(assets) == 0
 
 
-    def test_get_user_portfolio_database_error(self, mock_request, mock_current_user,
-                                                    mock_balance_dao, mock_asset_balance_dao,
-                                                    mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_database_error(self, mock_validate_user_permissions, mock_request, mock_current_user,
+                                                mock_balance_dao, mock_asset_balance_dao,
+                                                mock_user_dao, mock_asset_dao):
         """Test get_user_portfolio with database operation exception"""
 
         mock_balance_dao.get_balance.side_effect = CNOPDatabaseOperationException("DB error")
 
         with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             get_user_portfolio(
-                username="testuser",
                 request=mock_request,
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao,
@@ -357,16 +349,16 @@ class TestPortfolioController:
             )
 
 
-    def test_get_user_portfolio_unexpected_error(self, mock_request, mock_current_user,
-                                                     mock_balance_dao, mock_asset_balance_dao,
-                                                     mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_unexpected_error(self, mock_validate_user_permissions, mock_request, mock_current_user,
+                                                    mock_balance_dao, mock_asset_balance_dao,
+                                                    mock_user_dao, mock_asset_dao):
         """Test get_user_portfolio with unexpected exception"""
 
         mock_balance_dao.get_balance.side_effect = Exception("Unexpected error")
 
         with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
             get_user_portfolio(
-                username="testuser",
                 request=mock_request,
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao,
@@ -376,9 +368,10 @@ class TestPortfolioController:
             )
 
 
-    def test_get_user_portfolio_with_high_precision_values(self, mock_request, mock_current_user,
-                                                               mock_balance_dao, mock_asset_balance_dao,
-                                                               mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_with_high_precision_values(self, mock_validate_user_permissions, mock_request, mock_current_user,
+                                                            mock_balance_dao, mock_asset_balance_dao,
+                                                            mock_user_dao, mock_asset_dao):
         """Test get_user_portfolio with high precision quantity and price values"""
         # Mock high precision asset balance
         mock_precise_balance = Mock()
@@ -402,7 +395,6 @@ class TestPortfolioController:
         mock_asset_dao.get_assets_by_ids.side_effect = mock_get_assets_by_ids_precise
 
         result = get_user_portfolio(
-            username="testuser",
             request=mock_request,
             current_user=mock_current_user,
             balance_dao=mock_balance_dao,
@@ -426,13 +418,13 @@ class TestPortfolioController:
         assert btc_asset.market_value == expected_market_value
 
 
-    def test_get_user_portfolio_logging(self, mock_request, mock_current_user,
-                                            mock_balance_dao, mock_asset_balance_dao,
-                                            mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_logging(self, mock_validate_user_permissions, mock_request, mock_current_user,
+                                        mock_balance_dao, mock_asset_balance_dao,
+                                        mock_user_dao, mock_asset_dao):
         """Test that logging is performed correctly in get_user_portfolio"""
-        with patch('src.controllers.portfolio.logger') as mock_logger:
+        with patch('src.controllers.portfolio.portfolio_controller.logger') as mock_logger:
             get_user_portfolio(
-                username="testuser",
                 request=mock_request,
                 current_user=mock_current_user,
                 balance_dao=mock_balance_dao,
@@ -449,14 +441,23 @@ class TestPortfolioController:
             assert any("Portfolio retrieved successfully" in call for call in success_calls)
 
 
-    def test_get_user_portfolio_unauthorized_logging(self, mock_request, mock_current_user,
-                                                         mock_balance_dao, mock_asset_balance_dao,
-                                                         mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_unauthorized_logging(self, mock_validate_user_permissions, mock_request, mock_current_user,
+                                                        mock_balance_dao, mock_asset_balance_dao,
+                                                        mock_user_dao, mock_asset_dao):
         """Test that unauthorized access logging is performed correctly"""
-        with patch('src.controllers.portfolio.logger') as mock_logger:
-            try:
+        from user_exceptions import CNOPUserValidationException
+        from src.validation.business_validators import validate_user_permissions
+
+        # Mock user_dao to return None (user not found)
+        mock_user_dao.get_user_by_username.return_value = None
+
+        # Make the mock call the real function
+        mock_validate_user_permissions.side_effect = lambda username, action, user_dao: validate_user_permissions(username, action, user_dao)
+
+        with patch('src.validation.business_validators.logger') as mock_logger:
+            with pytest.raises(CNOPUserValidationException):
                 get_user_portfolio(
-                    username="otheruser",
                     request=mock_request,
                     current_user=mock_current_user,
                     balance_dao=mock_balance_dao,
@@ -464,28 +465,26 @@ class TestPortfolioController:
                     user_dao=mock_user_dao,
                     asset_dao=mock_asset_dao
                 )
-            except:
-                pass
 
-            # Verify warning logging was called for unauthorized access
+            # Verify warning logging was called for validation error
             mock_logger.warning.assert_called()
 
-            # Check that the unauthorized access log was called
+            # Check that the validation error log was called
             warning_calls = [call[1]["message"] for call in mock_logger.warning.call_args_list]
-            assert any("Unauthorized portfolio access attempt" in call for call in warning_calls)
+            assert any("User not found for permission check" in call for call in warning_calls)
 
 
-    def test_get_user_portfolio_error_logging(self, mock_request, mock_current_user,
-                                                  mock_balance_dao, mock_asset_balance_dao,
-                                                  mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_error_logging(self, mock_validate_user_permissions, mock_request, mock_current_user,
+                                                mock_balance_dao, mock_asset_balance_dao,
+                                                mock_user_dao, mock_asset_dao):
         """Test that error logging is performed correctly in get_user_portfolio"""
 
         mock_balance_dao.get_balance.side_effect = CNOPDatabaseOperationException("DB error")
 
-        with patch('src.controllers.portfolio.logger') as mock_logger:
+        with patch('src.controllers.portfolio.portfolio_controller.logger') as mock_logger:
             try:
                 get_user_portfolio(
-                    username="testuser",
                     request=mock_request,
                     current_user=mock_current_user,
                     balance_dao=mock_balance_dao,
@@ -504,9 +503,10 @@ class TestPortfolioController:
             assert any("Database operation failed for portfolio" in call for call in error_calls)
 
 
-    def test_get_user_portfolio_with_single_asset(self, mock_request, mock_current_user,
-                                                      mock_balance_dao, mock_asset_balance_dao,
-                                                      mock_user_dao, mock_asset_dao, mock_validate_user_permissions):
+    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    def test_get_user_portfolio_with_single_asset(self, mock_validate_user_permissions, mock_request, mock_current_user,
+                                                    mock_balance_dao, mock_asset_balance_dao,
+                                                    mock_user_dao, mock_asset_dao):
         """Test get_user_portfolio with single asset (100% allocation)"""
         # Mock single asset balance
         mock_single_balance = Mock()
@@ -519,7 +519,6 @@ class TestPortfolioController:
         mock_balance_dao.get_balance.return_value = None
 
         result = get_user_portfolio(
-            username="testuser",
             request=mock_request,
             current_user=mock_current_user,
             balance_dao=mock_balance_dao,

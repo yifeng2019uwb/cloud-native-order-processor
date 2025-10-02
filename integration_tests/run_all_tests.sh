@@ -86,6 +86,10 @@ run_user_tests() {
     run_test_suite "user deposit tests" "python3 user_services/balance/deposit_tests.py"
     run_test_suite "user withdraw tests" "python3 user_services/balance/withdraw_tests.py"
     run_test_suite "user transaction history tests" "python3 user_services/balance/transaction_history_tests.py"
+
+    echo "=== Running User Service Portfolio Tests ==="
+    run_test_suite "user portfolio tests" "python3 user_services/portfolio/portfolio_tests.py"
+    run_test_suite "user asset balance tests" "python3 user_services/portfolio/asset_balance_tests.py"
 }
 
 run_order_tests() {
@@ -98,12 +102,6 @@ run_order_tests() {
     run_test_suite "order list tests" "python3 order_service/orders/list_order_tests.py"
     run_test_suite "order create tests" "python3 order_service/orders/create_order_tests.py"
     run_test_suite "order get tests" "python3 order_service/orders/get_order_tests.py"
-
-    echo "=== Running Order Service Portfolio Tests ==="
-    run_test_suite "order portfolio tests" "python3 order_service/portfolio_tests.py"
-
-    echo "=== Running Order Service Asset Balance Tests ==="
-    run_test_suite "order asset balance tests" "python3 order_service/asset_balance_tests.py"
 
     echo "=== Running Order Service Asset Transaction Tests ==="
     run_test_suite "order asset transaction tests" "python3 order_service/asset_transaction_tests.py"

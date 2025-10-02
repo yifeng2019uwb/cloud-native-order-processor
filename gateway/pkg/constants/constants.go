@@ -123,8 +123,7 @@ const (
 	APIV1OrderByID = "/api/v1/orders/:id"
 
 	// Portfolio service paths
-	APIV1PortfolioPath   = "/api/v1/portfolio"
-	APIV1PortfolioByUser = "/api/v1/portfolio/:username"
+	APIV1PortfolioPath = "/api/v1/portfolio"
 
 	// Balance service paths
 	APIV1BalancePath         = "/api/v1/balance"
@@ -132,11 +131,10 @@ const (
 	APIV1BalanceDeposit      = "/api/v1/balance/deposit"
 	APIV1BalanceWithdraw     = "/api/v1/balance/withdraw"
 	APIV1BalanceTransactions = "/api/v1/balance/transactions"
+	APIV1AssetBalanceByID    = "/api/v1/balance/asset/:asset_id"
 
-	// Asset balance service paths
+	// Asset service paths
 	APIV1AssetPath             = "/api/v1/assets"
-	APIV1AssetBalances         = "/api/v1/assets/balances"
-	APIV1AssetBalanceByID      = "/api/v1/assets/:asset_id/balance"
 	APIV1AssetTransactionsByID = "/api/v1/assets/:asset_id/transactions"
 )
 
@@ -314,8 +312,8 @@ var (
 		},
 
 		// Portfolio service routes (all require auth)
-		APIV1PortfolioByUser: {
-			Path:         APIV1PortfolioByUser,
+		APIV1PortfolioPath: {
+			Path:         APIV1PortfolioPath,
 			RequiresAuth: true,
 			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
@@ -343,11 +341,6 @@ var (
 		},
 
 		// Asset balance service routes (all require auth)
-		APIV1AssetBalances: {
-			Path:         APIV1AssetBalances,
-			RequiresAuth: true,
-			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
-		},
 		APIV1AssetBalanceByID: {
 			Path:         APIV1AssetBalanceByID,
 			RequiresAuth: true,

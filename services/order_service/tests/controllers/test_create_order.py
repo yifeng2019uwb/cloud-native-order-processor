@@ -132,10 +132,6 @@ class TestCreateOrder:
         """Mock balance DAO"""
         return MagicMock(spec=BALANCE_DAO_SPEC)
 
-    @pytest.fixture
-    def mock_asset_balance_dao(self):
-        """Mock asset balance DAO"""
-        return MagicMock(spec=ASSET_BALANCE_DAO_SPEC)
 
     @pytest.mark.asyncio
     async def test_create_order_market_buy_success(
@@ -147,7 +143,6 @@ class TestCreateOrder:
         mock_asset_dao,
         mock_user_dao,
         mock_balance_dao,
-        mock_asset_balance_dao
     ):
         """Test successful market buy order creation"""
         with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
@@ -184,7 +179,6 @@ class TestCreateOrder:
                 asset_dao=mock_asset_dao,
                 user_dao=mock_user_dao,
                 balance_dao=mock_balance_dao,
-                asset_balance_dao=mock_asset_balance_dao
             )
 
             # Verify result
@@ -220,7 +214,6 @@ class TestCreateOrder:
         mock_asset_dao,
         mock_user_dao,
         mock_balance_dao,
-        mock_asset_balance_dao
     ):
         """Test successful market sell order creation"""
         # Create sell order request
@@ -265,7 +258,6 @@ class TestCreateOrder:
                 asset_dao=mock_asset_dao,
                 user_dao=mock_user_dao,
                 balance_dao=mock_balance_dao,
-                asset_balance_dao=mock_asset_balance_dao
             )
 
             # Verify result
@@ -293,7 +285,6 @@ class TestCreateOrder:
         mock_asset_dao,
         mock_user_dao,
         mock_balance_dao,
-        mock_asset_balance_dao
     ):
         """Test order creation with insufficient balance"""
         with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
@@ -312,7 +303,6 @@ class TestCreateOrder:
                     asset_dao=mock_asset_dao,
                     user_dao=mock_user_dao,
                     balance_dao=mock_balance_dao,
-                    asset_balance_dao=mock_asset_balance_dao
                 )
 
             # Verify logging
@@ -328,7 +318,6 @@ class TestCreateOrder:
         mock_asset_dao,
         mock_user_dao,
         mock_balance_dao,
-        mock_asset_balance_dao
     ):
         """Test order creation when lock acquisition fails"""
         with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
@@ -347,7 +336,6 @@ class TestCreateOrder:
                     asset_dao=mock_asset_dao,
                     user_dao=mock_user_dao,
                     balance_dao=mock_balance_dao,
-                    asset_balance_dao=mock_asset_balance_dao
                 )
 
             # Verify logging
@@ -363,7 +351,6 @@ class TestCreateOrder:
         mock_asset_dao,
         mock_user_dao,
         mock_balance_dao,
-        mock_asset_balance_dao
     ):
         """Test order creation when database operation fails"""
         with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
@@ -382,7 +369,6 @@ class TestCreateOrder:
                     asset_dao=mock_asset_dao,
                     user_dao=mock_user_dao,
                     balance_dao=mock_balance_dao,
-                    asset_balance_dao=mock_asset_balance_dao
                 )
 
             # Verify logging
@@ -398,7 +384,6 @@ class TestCreateOrder:
         mock_asset_dao,
         mock_user_dao,
         mock_balance_dao,
-        mock_asset_balance_dao
     ):
         """Test order creation when validation fails"""
         with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
@@ -417,7 +402,6 @@ class TestCreateOrder:
                     asset_dao=mock_asset_dao,
                     user_dao=mock_user_dao,
                     balance_dao=mock_balance_dao,
-                    asset_balance_dao=mock_asset_balance_dao
                 )
 
             # Verify logging
@@ -433,7 +417,6 @@ class TestCreateOrder:
         mock_asset_dao,
         mock_user_dao,
         mock_balance_dao,
-        mock_asset_balance_dao
     ):
         """Test order creation when unexpected error occurs"""
         with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
@@ -452,7 +435,6 @@ class TestCreateOrder:
                     asset_dao=mock_asset_dao,
                     user_dao=mock_user_dao,
                     balance_dao=mock_balance_dao,
-                    asset_balance_dao=mock_asset_balance_dao
                 )
 
             # Verify logging
@@ -467,7 +449,6 @@ class TestCreateOrder:
         mock_asset_dao,
         mock_user_dao,
         mock_balance_dao,
-        mock_asset_balance_dao
     ):
         """Test order creation with unsupported order type"""
         # Since all order types (MARKET_BUY, MARKET_SELL, LIMIT_BUY, LIMIT_SELL) are supported,
@@ -504,7 +485,6 @@ class TestCreateOrder:
                     asset_dao=mock_asset_dao,
                     user_dao=mock_user_dao,
                     balance_dao=mock_balance_dao,
-                    asset_balance_dao=mock_asset_balance_dao
                 )
 
     @pytest.mark.asyncio
@@ -517,7 +497,6 @@ class TestCreateOrder:
         mock_asset_dao,
         mock_user_dao,
         mock_balance_dao,
-        mock_asset_balance_dao
     ):
         """Test order creation logging and metrics recording"""
         with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
@@ -554,7 +533,6 @@ class TestCreateOrder:
                 asset_dao=mock_asset_dao,
                 user_dao=mock_user_dao,
                 balance_dao=mock_balance_dao,
-                asset_balance_dao=mock_asset_balance_dao
             )
 
             # Verify logging was called for order creation attempt

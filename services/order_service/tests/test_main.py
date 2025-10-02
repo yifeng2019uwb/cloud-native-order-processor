@@ -40,14 +40,6 @@ class TestMainApplication:
         orders_routes = [route for route in app.routes if hasattr(route, 'path') and '/orders' in str(route.path)]
         assert len(orders_routes) > 0
 
-        # Check if portfolio router is included
-        portfolio_routes = [route for route in app.routes if hasattr(route, 'path') and '/portfolio' in str(route.path)]
-        assert len(portfolio_routes) > 0
-
-        # Check if asset balance router is included
-        asset_balance_routes = [route for route in app.routes if hasattr(route, 'path') and '/assets/balances' in str(route.path)]
-        assert len(asset_balance_routes) > 0
-
         # Check if asset transaction router is included
         asset_transaction_routes = [route for route in app.routes if hasattr(route, 'path') and '/assets' in str(route.path)]
         assert len(asset_transaction_routes) > 0

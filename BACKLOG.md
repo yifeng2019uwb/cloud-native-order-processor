@@ -129,36 +129,6 @@
 
 
 
-#### **PERF-004: Consolidate Asset Balance API into Portfolio API**
-- **Component**: API Consolidation & Frontend Integration
-- **Type**: Refactoring
-- **Priority**: 🔶 **MEDIUM PRIORITY**
-- **Status**: 📋 **To Do**
-- **Description**: Remove asset balance API endpoints and consolidate all portfolio functionality into the single Portfolio API for consistency and better performance
-- **Acceptance Criteria**:
-  - Remove `GET /api/v1/assets/balances` endpoint
-  - Remove `GET /api/v1/assets/{asset_id}/balance` endpoint
-  - Update frontend to use Portfolio API instead of Asset Balance API
-  - Update Portfolio API to include individual asset balance data if needed
-  - Update all frontend components (Dashboard, Portfolio, Trading) to use Portfolio API
-  - Remove asset balance API service from frontend
-  - Update API documentation to reflect consolidated endpoints
-  - Ensure all existing functionality is preserved
-- **Dependencies**: PERF-003 ✅
-- **Files to Update**:
-  - `services/order_service/src/controllers/asset_balance.py` - Remove endpoints
-  - `frontend/src/services/assetBalanceApi.ts` - Remove service
-  - `frontend/src/components/Dashboard/Dashboard.tsx` - Use Portfolio API
-  - `frontend/src/components/Portfolio/PortfolioPage.tsx` - Use Portfolio API
-  - `frontend/src/components/Trading/TradingPage.tsx` - Use Portfolio API
-  - `frontend/src/constants/api.ts` - Remove asset balance URLs
-  - Update all related tests and documentation
-- **Technical Approach**:
-  - Portfolio API already provides all necessary data (asset balances, prices, totals, percentages)
-  - Frontend currently calculates portfolio data manually - move this logic to server-side
-  - Single API call instead of multiple calls for better performance
-  - Consistent calculations across all clients
-- **Why Important**: Eliminates API duplication, ensures consistent calculations, improves performance, and simplifies frontend code
 
 
 #### **DOCS-001: Comprehensive Documentation Cleanup and Consolidation**
@@ -195,12 +165,47 @@
 - **Why Needed**: Personal project should have clean, accurate documentation. Outdated docs cause confusion and maintenance overhead. Current docs have references to old package structures and completed migrations that are no longer relevant.
 
 
-#### **INFRA-020: Service Architecture Cleanup - Move Portfolio Logic**
+#### **INFRA-020: Service Architecture Cleanup - Move & Consolidate Portfolio/Asset Balance APIs**
 - **Component**: Infrastructure & Service Architecture
-- **Type**: Task
-- **Priority**: Medium
+- **Type**: Epic
+- **Priority**: 🔥 **HIGH PRIORITY**
 - **Status**: 📋 **To Do**
-- **Description**: Move portfolio functionality from order_service to user_service
+- **Description**: Move portfolio and asset balance functionality from order_service to user_service while consolidating APIs for better performance and architecture
+- **Acceptance Criteria**:
+  - Move all portfolio-related endpoints from order_service to user_service
+  - Move all asset balance-related endpoints from order_service to user_service
+  - Consolidate asset balance API into portfolio API (eliminate duplication)
+  - Update frontend to use consolidated portfolio API from user_service
+  - Remove asset balance API service from frontend
+  - Update all API Gateway routes to point to user_service
+  - Update all related tests and documentation
+  - Ensure all existing functionality is preserved
+- **Dependencies**: PERF-003 ✅ (batch operations completed)
+- **Files to Move**:
+  - `services/order_service/src/controllers/portfolio.py` → `services/user_service/src/controllers/portfolio.py`
+  - `services/order_service/src/controllers/asset_balance.py` → `services/user_service/src/controllers/asset_balance.py` (temporarily)
+- **Files to Update**:
+  - `services/user_service/src/controllers/portfolio.py` - Consolidate asset balance endpoints into portfolio
+  - `services/user_service/src/controllers/asset_balance.py` - Remove (consolidated into portfolio)
+  - `services/user_service/src/main.py` - Add portfolio routes
+  - `gateway/pkg/constants/constants.go` - Update API routes to point to user_service
+  - `frontend/src/services/assetBalanceApi.ts` - Remove service
+  - `frontend/src/components/Dashboard/Dashboard.tsx` - Use Portfolio API from user_service
+  - `frontend/src/components/Portfolio/PortfolioPage.tsx` - Use Portfolio API from user_service
+  - `frontend/src/components/Trading/TradingPage.tsx` - Use Portfolio API from user_service
+  - `frontend/src/constants/api.ts` - Update URLs to user_service
+  - All related test files - Update to test user_service endpoints
+- **Technical Approach**:
+  - **Phase 1**: Move portfolio and asset balance controllers to user_service
+  - **Phase 2**: Consolidate asset balance endpoints into portfolio API
+  - **Phase 3**: Update frontend to use consolidated portfolio API from user_service
+  - **Phase 4**: Update API Gateway routes and remove old endpoints
+  - **Phase 5**: Clean up and remove asset balance API entirely
+- **Why Important**:
+  - **Better Architecture**: Portfolio data is user-specific, belongs in user_service
+  - **Performance**: Single API call instead of multiple calls
+  - **Consistency**: Eliminates API duplication and ensures consistent calculations
+  - **Maintainability**: Centralized portfolio logic in user_service
 
 ### **🧪 Testing & Quality Assurance**
 

@@ -1,15 +1,16 @@
 """
 Portfolio Management Controller
-Path: services/order_service/src/controllers/portfolio.py
+Path: services/user_service/src/controllers/portfolio.py
 
 Handles portfolio management endpoints with calculated market values
-- GET /portfolio/{username} - Get user's complete portfolio
+- GET /portfolio- Get user's complete portfolio
 """
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Union
 from fastapi import APIRouter, Depends, status, Request
-from api_models.asset import GetPortfolioRequest, GetPortfolioResponse, PortfolioAssetData
+from common.data.entities.user import User
+from api_models.portfolio.portfolio_models import GetPortfolioRequest, GetPortfolioResponse, PortfolioAssetData
 from api_models.shared.common import ErrorResponse
 from common.data.dao.user.balance_dao import BalanceDAO
 from common.data.dao.user.user_dao import UserDAO
@@ -21,21 +22,26 @@ from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from order_exceptions import CNOPOrderValidationException
+from user_exceptions import CNOPUserValidationException
+from constants import (
+    TAG_PORTFOLIO, API_ENDPOINT_PORTFOLIO, ACTION_VIEW_PORTFOLIO,
+    SUCCESS_PORTFOLIO_RETRIEVED, HEADER_USER_AGENT, DEFAULT_USER_AGENT
+)
+from controllers.auth.dependencies import get_current_user
 from controllers.dependencies import (
-    get_current_user, get_balance_dao_dependency,
+    get_balance_dao_dependency,
     get_asset_balance_dao_dependency, get_user_dao_dependency,
     get_asset_dao_dependency, get_request_id_from_request
 )
 from validation.business_validators import validate_user_permissions
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.ORDER)
-router = APIRouter(tags=["portfolio"])
+logger = BaseLogger(Loggers.USER)
+router = APIRouter(tags=[TAG_PORTFOLIO])
 
 
 @router.get(
-    "/portfolio/{username}",
+    API_ENDPOINT_PORTFOLIO,
     response_model=Union[GetPortfolioResponse, ErrorResponse],
     responses={
         200: {
@@ -61,9 +67,8 @@ router = APIRouter(tags=["portfolio"])
     }
 )
 def get_user_portfolio(
-    username: str,
     request: Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     balance_dao: BalanceDAO = Depends(get_balance_dao_dependency),
     asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency),
     user_dao: UserDAO = Depends(get_user_dao_dependency),
@@ -79,16 +84,16 @@ def get_user_portfolio(
     """
     # Extract request_id from headers using existing method
     request_id = get_request_id_from_request(request)
+    username = current_user.username
 
     # Log portfolio request
     logger.info(
         action=LogActions.REQUEST_START,
         message=f"Portfolio request from {request.client.host if request.client else 'unknown'}",
-        user=current_user["username"],
+        user=username,
         request_id=request_id,
         extra={
-            "requested_username": username,
-            "user_agent": request.headers.get("user-agent", "unknown"),
+            "user_agent": request.headers.get(HEADER_USER_AGENT, DEFAULT_USER_AGENT),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     )
@@ -97,19 +102,9 @@ def get_user_portfolio(
         # Business validation (Layer 2)
         validate_user_permissions(
             username=username,
-            action="view_portfolio",
+            action=ACTION_VIEW_PORTFOLIO,
             user_dao=user_dao
         )
-
-        # Validate user access (users can only view their own portfolio)
-        if current_user["username"] != username:
-            logger.warning(
-                action=LogActions.ACCESS_DENIED,
-                message=f"Unauthorized portfolio access attempt: tried to access {username}'s portfolio",
-                user=current_user['username'],
-                request_id=request_id
-            )
-            raise CNOPOrderValidationException("You can only view your own portfolio")
 
         # Get USD balance
         usd_balance = balance_dao.get_balance(username)
@@ -177,12 +172,12 @@ def get_user_portfolio(
 
         return GetPortfolioResponse(
             success=True,
-            message="Portfolio retrieved successfully",
+            message=SUCCESS_PORTFOLIO_RETRIEVED,
             data=portfolio_data,
             timestamp=datetime.utcnow()
         )
 
-    except CNOPOrderValidationException:
+    except CNOPUserValidationException:
         # Re-raise validation exceptions
         raise
     except CNOPDatabaseOperationException as e:

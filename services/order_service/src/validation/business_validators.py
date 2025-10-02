@@ -18,7 +18,6 @@ from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.dao.order.order_dao import OrderDAO
 from common.data.dao.user.user_dao import UserDAO
 from common.data.dao.user.balance_dao import BalanceDAO
-from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 
 
 def _validate_username_exists_and_active(username: str, user_dao: UserDAO) -> None:
@@ -117,30 +116,6 @@ def _validate_user_balance_for_buy_order(
         raise CNOPOrderValidationException(f"Unable to verify user balance: {str(e)}")
 
 
-def _validate_user_asset_quantity_for_sell_order(
-    username: str,
-    asset_id: str,
-    quantity: Decimal,
-    asset_balance_dao: AssetBalanceDAO
-) -> None:
-    """
-    Private method to validate user has sufficient asset quantity for sell orders
-
-    Args:
-        username: Username to check asset balance for
-        asset_id: Asset ID to check
-        quantity: Order quantity
-        asset_balance_dao: Asset balance DAO instance
-
-    Raises:
-        OrderValidationException: If insufficient asset quantity
-    """
-    try:
-        asset_balance = asset_balance_dao.get_asset_balance(username, asset_id)
-        if asset_balance.quantity < quantity:
-            raise CNOPOrderValidationException(f"Insufficient {asset_id} quantity for this sell order. Required: {quantity}, Available: {asset_balance.quantity}")
-    except Exception as e:
-        raise CNOPOrderValidationException(f"Insufficient {asset_id} quantity for this sell order")
 
 
 def validate_order_creation_business_rules(
@@ -153,7 +128,6 @@ def validate_order_creation_business_rules(
     asset_dao: AssetDAO,
     user_dao: UserDAO,
     balance_dao: BalanceDAO,
-    asset_balance_dao: AssetBalanceDAO,
 ) -> None:
     """
     Layer 2: Business validation for order creation
@@ -186,8 +160,8 @@ def validate_order_creation_business_rules(
     if order_type in [OrderType.MARKET_BUY, OrderType.LIMIT_BUY]:
         _validate_user_balance_for_buy_order(username, quantity, order_price, balance_dao, asset_dao, asset_id)
 
-    if order_type in [OrderType.MARKET_SELL, OrderType.LIMIT_SELL]:
-        _validate_user_asset_quantity_for_sell_order(username, asset_id, quantity, asset_balance_dao)
+    # Note: Sell order validation (asset balance check) is handled by user service
+    # The order service no longer validates asset balances directly
 
 
 def validate_order_cancellation_business_rules(
@@ -245,7 +219,7 @@ def validate_order_retrieval_business_rules(
         if order.username != username:
             raise CNOPOrderValidationException("You can only view your own orders")
     except CNOPOrderNotFoundException:
-        raise CNOPOrderValidationException(f"Order {order_id} not found")
+        raise CNOPOrderNotFoundException(f"Order {order_id} not found")
 
 
 def validate_order_listing_business_rules(

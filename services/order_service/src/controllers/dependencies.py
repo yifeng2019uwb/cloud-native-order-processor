@@ -17,8 +17,8 @@ from common.data.dao.order.order_dao import OrderDAO
 from common.data.dao.user.user_dao import UserDAO
 from common.data.dao.user.balance_dao import BalanceDAO
 from common.data.dao.inventory.asset_dao import AssetDAO
-from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from common.data.dao.asset.asset_transaction_dao import AssetTransactionDAO
+from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from common.core.utils.transaction_manager import TransactionManager
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from order_exceptions import CNOPOrderValidationException
@@ -47,14 +47,14 @@ def get_asset_dao_dependency() -> AssetDAO:
     return get_asset_dao()
 
 
-def get_asset_balance_dao_dependency() -> AssetBalanceDAO:
-    """Get AssetBalanceDAO instance for asset balance operations"""
-    return AssetBalanceDAO(get_dynamodb_manager().get_connection())
-
-
 def get_asset_transaction_dao_dependency() -> AssetTransactionDAO:
     """Get AssetTransactionDAO instance for asset transaction operations"""
     return AssetTransactionDAO(get_dynamodb_manager().get_connection())
+
+
+def get_asset_balance_dao_dependency() -> AssetBalanceDAO:
+    """Get AssetBalanceDAO instance for asset balance operations"""
+    return AssetBalanceDAO(get_dynamodb_manager().get_connection())
 
 
 def get_transaction_manager() -> TransactionManager:

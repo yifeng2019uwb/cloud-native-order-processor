@@ -17,6 +17,44 @@ from user_exceptions import CNOPUserAlreadyExistsException, CNOPUserValidationEx
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)
 
+
+def validate_user_permissions(username: str, action: str, user_dao: Any) -> bool:
+    """
+    Validate user permissions for portfolio operations
+
+    Args:
+        username: Username to validate
+        action: Action being performed (e.g., "view_portfolio")
+        user_dao: User DAO instance
+
+    Returns:
+        True if user has permission
+
+    Raises:
+        CNOPUserValidationException: If user doesn't have permission
+    """
+    try:
+        # Check if user exists
+        user = user_dao.get_user_by_username(username)
+        if not user:
+            logger.warning(
+                action=LogActions.VALIDATION_ERROR,
+                message=f"User not found for permission check: {username}"
+            )
+            raise CNOPUserValidationException("User not found")
+
+        return True
+
+    except CNOPUserValidationException:
+        # Re-raise validation exceptions
+        raise
+    except Exception as e:
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Error validating user permissions: {str(e)}"
+        )
+        raise CNOPUserValidationException("Permission validation failed")
+
 def validate_username_uniqueness(username: str, user_dao: Any, exclude_username: Optional[str] = None) -> bool:
     """
     Validate that username is unique in the system

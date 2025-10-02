@@ -16,6 +16,7 @@ from common.exceptions.shared_exceptions import (
     CNOPOrderNotFoundException,
     CNOPInternalServerException
 )
+from order_exceptions.exceptions import CNOPOrderValidationException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from controllers.dependencies import (
     get_current_user, get_order_dao_dependency,
@@ -112,6 +113,8 @@ def get_order(
         )
 
     except CNOPOrderNotFoundException:
+        raise
+    except CNOPOrderValidationException:
         raise
     except Exception as e:
         logger.error(

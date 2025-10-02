@@ -59,7 +59,7 @@ class APIEndpoints:
     ORDERS_CREATE = "/orders"
     ORDERS_GET_BY_ID = "/orders/{order_id}"
     ORDERS_LIST = "/orders"
-    PORTFOLIO_GET = "/portfolio/{username}"
+    PORTFOLIO_GET = "/portfolio"
 
     # Balance Service Endpoints
     BALANCE_GET = "/balance"
@@ -68,9 +68,8 @@ class APIEndpoints:
     BALANCE_TRANSACTIONS = "/balance/transactions"
 
     # Asset Balance Service Endpoints
-    ASSETS_BALANCES = "/assets/balances"
-    ASSET_BALANCE_BY_ID = "/assets/{asset_id}/balance"
-    ASSET_TRANSACTIONS_BY_ID = "/assets/{asset_id}/transactions"
+    GET_ASSET_BALANCE_BY_ID = "/balance/asset/{asset_id}"  # Get specific asset balance by ID
+    GET_ASSET_TRANSACTIONS_BY_ID = "/assets/{asset_id}/transactions"  # Get asset transaction history
 
 # Test Data Constants
 class TestData:

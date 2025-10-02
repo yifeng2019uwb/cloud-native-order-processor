@@ -15,7 +15,6 @@ from src.validation.business_validators import (
     _validate_asset_exists_and_tradeable,
     _validate_asset_exists,
     _validate_user_balance_for_buy_order,
-    _validate_user_asset_quantity_for_sell_order,
     validate_order_creation_business_rules,
     validate_order_cancellation_business_rules,
     validate_order_retrieval_business_rules,
@@ -185,33 +184,6 @@ class TestBusinessValidators:
                     "BTC"
                 )
 
-    def test_validate_user_asset_quantity_for_sell_order(self):
-        """Test _validate_user_asset_quantity_for_sell_order function"""
-        # Define AssetBalanceDAO interface
-        ASSET_BALANCE_DAO_SPEC = [
-            'get_asset_balance',
-            'save_asset_balance',
-            'update_asset_balance'
-        ]
-
-        # Create mock DAO with spec
-        mock_asset_balance_dao = Mock(spec=ASSET_BALANCE_DAO_SPEC)
-
-        # Test successful case - user has sufficient asset quantity
-        mock_asset_balance = Mock()
-        mock_asset_balance.quantity = Decimal("10.0")
-        mock_asset_balance_dao.get_asset_balance.return_value = mock_asset_balance
-
-        # Should not raise exception when user has sufficient asset quantity
-        _validate_user_asset_quantity_for_sell_order("testuser", "BTC", Decimal("5.0"), mock_asset_balance_dao)
-
-        # Verify the DAO method was called
-        mock_asset_balance_dao.get_asset_balance.assert_called_once_with("testuser", "BTC")
-
-        # Test case where asset balance lookup fails
-        mock_asset_balance_dao.get_asset_balance.side_effect = Exception("Database connection failed")
-        with pytest.raises(CNOPOrderValidationException, match="Insufficient BTC quantity for this sell order"):
-            _validate_user_asset_quantity_for_sell_order("testuser", "BTC", Decimal("5.0"), mock_asset_balance_dao)
 
     def test_validate_order_creation_business_rules(self):
         """Test validate_order_creation_business_rules function"""
@@ -219,7 +191,6 @@ class TestBusinessValidators:
         mock_user_dao = Mock(spec=USER_DAO_SPEC)
         mock_asset_dao = Mock(spec=ASSET_DAO_SPEC)
         mock_balance_dao = Mock(spec=['get_balance', 'save_balance', 'update_balance'])
-        mock_asset_balance_dao = Mock(spec=['get_asset_balance', 'save_asset_balance', 'update_asset_balance'])
 
         # Mock successful validations
         mock_user_dao.get_user_by_username.return_value = Mock()
@@ -237,7 +208,6 @@ class TestBusinessValidators:
             mock_asset_dao,
             mock_user_dao,
             mock_balance_dao,
-            mock_asset_balance_dao
         )
 
         # Test limit order without order_price
@@ -252,7 +222,6 @@ class TestBusinessValidators:
                 mock_asset_dao,
                 mock_user_dao,
                 mock_balance_dao,
-                mock_asset_balance_dao
             )
 
         # Test limit order without expires_at
@@ -267,7 +236,6 @@ class TestBusinessValidators:
                 mock_asset_dao,
                 mock_user_dao,
                 mock_balance_dao,
-                mock_asset_balance_dao
             )
 
         # Test quantity below minimum threshold
@@ -282,7 +250,6 @@ class TestBusinessValidators:
                 mock_asset_dao,
                 mock_user_dao,
                 mock_balance_dao,
-                mock_asset_balance_dao
             )
 
         # Test quantity above maximum threshold
@@ -297,7 +264,6 @@ class TestBusinessValidators:
                 mock_asset_dao,
                 mock_user_dao,
                 mock_balance_dao,
-                mock_asset_balance_dao
             )
 
     def test_validate_order_cancellation_business_rules(self):
@@ -379,7 +345,7 @@ class TestBusinessValidators:
 
         # Test case where order is not found
         mock_order_dao.get_order.side_effect = CNOPOrderNotFoundException("Order not found")
-        with pytest.raises(CNOPOrderValidationException, match="Order order123 not found"):
+        with pytest.raises(CNOPOrderNotFoundException, match="Order order123 not found"):
             validate_order_retrieval_business_rules("order123", "testuser", mock_order_dao, mock_user_dao)
 
     def test_validate_order_listing_business_rules(self):
@@ -478,13 +444,11 @@ class TestBusinessValidators:
         mock_user_dao = Mock(spec=USER_DAO_SPEC)
         mock_asset_dao = Mock(spec=ASSET_DAO_SPEC)
         mock_balance_dao = Mock(spec=['get_balance', 'save_balance', 'update_balance'])
-        mock_asset_balance_dao = Mock(spec=['get_asset_balance', 'save_asset_balance', 'update_asset_balance'])
 
         # Mock successful validations
         mock_user_dao.get_user_by_username.return_value = Mock()
         mock_asset_dao.get_asset_by_id.return_value = Mock(is_active=True)
-        mock_asset_balance_dao.get_asset_balance.return_value = Mock(quantity=Decimal("10.0"))
-        # Test sell order case - should trigger line 203
+        # Test sell order case - no longer validates asset balance (moved to user service)
         validate_order_creation_business_rules(
             OrderType.MARKET_SELL,
             "BTC",
@@ -495,8 +459,4 @@ class TestBusinessValidators:
             mock_asset_dao,
             mock_user_dao,
             mock_balance_dao,
-            mock_asset_balance_dao
         )
-
-        # Verify the sell order validation was called
-        mock_asset_balance_dao.get_asset_balance.assert_called_once_with("testuser", "BTC")

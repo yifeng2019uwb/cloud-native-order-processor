@@ -242,7 +242,9 @@ func (p *ProxyService) GetTargetService(path string) string {
 	case strings.HasPrefix(path, constants.APIV1OrderPath):
 		return constants.OrderService
 	case strings.HasPrefix(path, constants.APIV1PortfolioPath):
-		return constants.OrderService // Portfolio is handled by order service
+		return constants.UserService // Portfolio is handled by user service
+	case strings.HasPrefix(path, constants.APIV1AssetBalanceByID):
+		return constants.UserService // Asset balance is handled by user service
 	case strings.HasPrefix(path, constants.APIV1BalancePath):
 		return constants.UserService // Balance is handled by user service
 	case strings.HasPrefix(path, constants.APIV1AssetPath):

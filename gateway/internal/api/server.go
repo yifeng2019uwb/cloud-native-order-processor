@@ -114,23 +114,23 @@ func (s *Server) setupRoutes() {
 		// Portfolio service routes (require auth)
 		portfolio := api.Group("/portfolio")
 		{
-			portfolio.GET("/:username", s.handleProxyRequest) // Get user portfolio
+			portfolio.GET("", s.handleProxyRequest) // Get user portfolio
 		}
 
 		// Balance service routes (all require auth)
 		balance := api.Group("/balance")
 		{
-			balance.GET("", s.handleProxyRequest)              // Get balance
-			balance.POST("/deposit", s.handleProxyRequest)     // Deposit funds
-			balance.POST("/withdraw", s.handleProxyRequest)    // Withdraw funds
-			balance.GET("/transactions", s.handleProxyRequest) // Transaction history
+			balance.GET("", s.handleProxyRequest)                 // Get balance
+			balance.POST("/deposit", s.handleProxyRequest)        // Deposit funds
+			balance.POST("/withdraw", s.handleProxyRequest)       // Withdraw funds
+			balance.GET("/transactions", s.handleProxyRequest)    // Transaction history
+			balance.GET("/asset/:asset_id", s.handleProxyRequest) // Get specific asset balance
 		}
 
-		// Asset balance service routes (all require auth)
+		// Asset service routes (all require auth)
 		assets := api.Group("/assets")
 		{
 			assets.GET("/balances", s.handleProxyRequest)               // Get all asset balances
-			assets.GET("/:asset_id/balance", s.handleProxyRequest)      // Get specific asset balance
 			assets.GET("/:asset_id/transactions", s.handleProxyRequest) // Get asset transactions
 		}
 	}
@@ -409,6 +409,17 @@ func (s *Server) getBasePath(path string) string {
 		if len(parts) == 6 { // /api/v1/inventory/assets/{id}
 			result := "/api/v1/inventory/assets/:id"
 			s.logger.Info(logging.REQUEST_END, "Inventory asset by ID pattern matched", "", map[string]interface{}{
+				"result": result,
+			})
+			return result
+		}
+
+	case strings.HasPrefix(path, "/api/v1/balance/asset/"):
+		// /api/v1/balance/asset/BTC -> /api/v1/balance/asset/:asset_id
+		parts := strings.Split(path, "/")
+		if len(parts) == 6 { // /api/v1/balance/asset/{asset_id}
+			result := "/api/v1/balance/asset/:asset_id"
+			s.logger.Info(logging.REQUEST_END, "Asset balance by ID pattern matched", "", map[string]interface{}{
 				"result": result,
 			})
 			return result

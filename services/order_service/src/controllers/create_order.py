@@ -16,7 +16,6 @@ from common.core.utils.transaction_manager import TransactionManager
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.dao.user.user_dao import UserDAO
 from common.data.dao.user.balance_dao import BalanceDAO
-from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from common.exceptions import (
     CNOPInsufficientBalanceException,
     CNOPDatabaseOperationException,
@@ -28,7 +27,7 @@ from order_exceptions import CNOPOrderValidationException
 from controllers.dependencies import (
     get_current_user, get_transaction_manager,
     get_asset_dao_dependency, get_user_dao_dependency,
-    get_balance_dao_dependency, get_asset_balance_dao_dependency,
+    get_balance_dao_dependency,
     get_request_id_from_request
 )
 from validation.business_validators import validate_order_creation_business_rules
@@ -77,7 +76,6 @@ async def create_order(
     asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
     user_dao: UserDAO = Depends(get_user_dao_dependency),
     balance_dao: BalanceDAO = Depends(get_balance_dao_dependency),
-    asset_balance_dao: AssetBalanceDAO = Depends(get_asset_balance_dao_dependency)
 ) -> OrderCreateResponse:
     """
     Create a new order with atomic operations using TransactionManager
@@ -117,7 +115,6 @@ async def create_order(
             asset_dao=asset_dao,
             user_dao=user_dao,
             balance_dao=balance_dao,
-            asset_balance_dao=asset_balance_dao
         )
 
         # Calculate total amount for the order using current market price

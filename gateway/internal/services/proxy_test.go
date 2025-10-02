@@ -200,17 +200,17 @@ func TestGetTargetService(t *testing.T) {
 	targetService = service.GetTargetService(constants.APIV1Orders)
 	assert.Equal(t, constants.OrderService, targetService)
 
-	// Test portfolio service routing (handled by order service)
-	targetService = service.GetTargetService(constants.APIV1PortfolioByUser)
-	assert.Equal(t, constants.OrderService, targetService)
+	// Test portfolio service routing (handled by user service)
+	targetService = service.GetTargetService(constants.APIV1PortfolioPath)
+	assert.Equal(t, constants.UserService, targetService)
 
 	// Test balance service routing (handled by user service)
 	targetService = service.GetTargetService(constants.APIV1BalanceGet)
 	assert.Equal(t, constants.UserService, targetService)
 
-	// Test asset service routing (handled by order service)
-	targetService = service.GetTargetService(constants.APIV1AssetBalances)
-	assert.Equal(t, constants.OrderService, targetService)
+	// Test asset balance routing (handled by user service)
+	targetService = service.GetTargetService(constants.APIV1AssetBalanceByID)
+	assert.Equal(t, constants.UserService, targetService)
 
 	// Test unknown path
 	targetService = service.GetTargetService("/unknown")
