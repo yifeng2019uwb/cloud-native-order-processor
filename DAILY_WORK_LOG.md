@@ -9,6 +9,54 @@
 
 ## 📊 Progress Summary
 
+### **2025-10-02: INFRA-020: Migrate Portfolio and Asset Balance APIs from Order Service to User Service** ✅ **COMPLETED**
+
+**Task**: Migrate portfolio and asset balance functionality from order service to user service to consolidate user-related APIs
+
+**Key Achievements**:
+- Successfully moved portfolio and asset balance controllers, models, and tests from order service to user service
+- Created separate asset balance API within portfolio module structure for better organization
+- Updated API Gateway routing to point portfolio and asset balance endpoints to user service
+- Fixed all LogActions constants issues (replaced non-existent API_REQUEST with REQUEST_START)
+- Fixed DAO method naming inconsistency (get_user_asset_balance → get_asset_balance)
+- Added proper exception handling for CNOPAssetBalanceNotFoundException to return 404 status
+- Updated integration tests to use correct API endpoints and expectations
+- Removed obsolete portfolio and asset balance code from order service
+- All unit and integration tests passing, confirming successful migration
+
+**Technical Details**:
+- **Files Moved**:
+  - `services/order_service/src/controllers/portfolio.py` → `services/user_service/src/controllers/portfolio/portfolio_controller.py`
+  - `services/order_service/src/controllers/asset_balance.py` → `services/user_service/src/controllers/portfolio/asset_balance_controller.py`
+  - `services/order_service/src/api_models/portfolio.py` → `services/user_service/src/api_models/portfolio/`
+  - `services/order_service/src/api_models/asset_balance.py` → `services/user_service/src/api_models/portfolio/asset_balance_models.py`
+  - All corresponding unit tests moved to user service
+- **Files Updated**:
+  - `gateway/internal/services/proxy.go` - Updated routing to point portfolio/asset balance to user service
+  - `integration_tests/run_all_tests.sh` - Updated test runner to use correct service endpoints
+  - `integration_tests/user_services/portfolio/` - Created new test files for user service portfolio APIs
+  - `services/user_service/src/controllers/portfolio/asset_balance_controller.py` - Fixed LogActions constants and exception handling
+  - `services/order_service/` - Removed obsolete portfolio and asset balance code
+- **Files Created**:
+  - `services/user_service/src/controllers/portfolio/` - New portfolio module structure
+  - `services/user_service/src/api_models/portfolio/` - New portfolio API models structure
+  - `integration_tests/user_services/portfolio/` - New integration tests for user service portfolio APIs
+
+**Evidence of Success**:
+- All unit tests passing in user service for portfolio and asset balance functionality
+- All integration tests passing for both order and user services
+- API Gateway correctly routing portfolio and asset balance requests to user service
+- Order service successfully cleaned up with no portfolio/asset balance dependencies
+- User service properly handling 404 responses for non-existent asset balances
+- No regressions detected in existing functionality
+
+**Impact**:
+- **Architecture**: Better separation of concerns - user-related APIs now consolidated in user service
+- **Maintainability**: Cleaner code organization with portfolio functionality properly grouped
+- **API Consistency**: Portfolio and asset balance APIs now follow user service patterns
+- **Testing**: Comprehensive test coverage for migrated functionality
+- **Performance**: No performance impact, maintained existing functionality
+
 ### **2025-01-10: PERF-003: Implement Batch Asset Operations for Performance Optimization** ✅ **COMPLETED**
 
 **Task**: Implement batch operations for asset retrieval to eliminate N+1 query patterns in portfolio operations
