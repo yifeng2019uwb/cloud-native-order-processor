@@ -7,6 +7,7 @@ omit =
     */venv/*
     */env/*
     */__init__.py
+    */_archived_boto3/*
 
 [report]
 exclude_lines =

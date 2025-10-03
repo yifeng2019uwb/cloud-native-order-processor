@@ -32,6 +32,25 @@
 ## 🚀 **ACTIVE & PLANNED TASKS**
 ---
 
+#### **PERF-001: Fix Inventory Service Performance Test Threshold**
+- **Component**: Inventory Service
+- **Type**: Bug Fix
+- **Priority**: 🔵 **LOW PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Inventory service performance test fails with 1147.47ms response time, exceeding the 1000ms threshold
+- **Acceptance Criteria**:
+  - Investigate why asset listing takes >1000ms (currently 1147.47ms)
+  - Optimize database query performance for 245 assets
+  - Either fix performance or adjust test threshold to realistic value
+  - Ensure all integration tests pass
+- **Dependencies**: None
+- **Files to Update**:
+  - `integration_tests/inventory_service/inventory_tests.py` (test_performance_guard method)
+  - `services/inventory_service/src/dao/inventory/asset_dao.py` (if optimization needed)
+- **Notes**: This is a test threshold issue, not a service failure. Service works correctly but is slower than arbitrary test limit.
+
+---
+
 #### **SDK-001: Create Python SDK for CNOP Services**
 - **Component**: Development Tools & Client Libraries
 - **Type**: Task
@@ -128,6 +147,44 @@
 **Remaining Subtasks**:
 - **INFRA-005.4**: Standardize database field naming and entity structure
 - **INFRA-005.5**: Create unified configuration management for all services
+
+#### **INFRA-005.6: Migrate from boto3 to PynamoDB ORM** 🔥 **HIGH PRIORITY**
+- **Component**: Infrastructure & Database
+- **Type**: Epic
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Migrate from raw boto3 DynamoDB operations to PynamoDB ORM to eliminate hardcoded strings, improve type safety, and enhance maintainability across all services
+- **Acceptance Criteria**:
+  - Install and configure PynamoDB across all services
+  - Create PynamoDB models for all entities (User, Balance, Order, Asset, etc.)
+  - Implement PynamoDB DAOs for all database operations
+  - Migrate all controllers to use PynamoDB instead of raw boto3
+  - Eliminate all hardcoded database field names
+  - Add comprehensive type safety with Pydantic models
+  - Maintain 100% backward compatibility during migration
+  - Achieve zero performance degradation
+  - Complete migration for all services (User, Order, Inventory, Auth)
+  - Remove all boto3 DynamoDB code after migration
+- **Dependencies**: INFRA-005.4 (database field naming standardization)
+- **Files to Update**:
+  - All service DAO files (user_dao.py, balance_dao.py, order_dao.py, etc.)
+  - All service controller files
+  - All service business logic files
+  - All service test files
+  - requirements.txt files for all services
+- **Migration Strategy**:
+  - **Incremental approach**: One entity at a time
+  - **Parallel implementation**: Keep boto3 working during migration
+  - **Full testing**: Unit tests + integration tests after each entity
+  - **Performance validation**: Benchmark before and after migration
+- **Benefits**:
+  - Eliminate hardcoded strings throughout codebase
+  - Improve type safety and developer experience
+  - Reduce code duplication and maintenance overhead
+  - Better error handling and validation
+  - Easier to add new fields and features
+- **Timeline**: 6 weeks (1 week per phase)
+- **Documentation**: See `INFRA-005.6_BOTO3_TO_PYNAMODB_MIGRATION_PLAN.md`
 
 
 #### **INFRA-006.2: Create Well-Defined Metrics Object for All Services**
