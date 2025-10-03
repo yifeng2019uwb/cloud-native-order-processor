@@ -84,7 +84,7 @@ def get_profile(
         logger.error(action=LogActions.ERROR, message=f"Failed to get profile for user {current_user.username}: {str(e)}", request_id=request_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve profile"
+            detail=ErrorMessages.INTERNAL_SERVER_ERROR
         )
 
 
@@ -177,5 +177,5 @@ def update_profile(
         logger.error(action=LogActions.ERROR, message=f"Profile update failed for user {current_user.username}: {str(e)}", request_id=request_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update profile"
+            detail=ErrorMessages.INTERNAL_SERVER_ERROR
         )

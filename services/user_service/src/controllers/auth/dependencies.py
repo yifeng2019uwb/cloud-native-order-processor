@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, Request, Header
 from common.shared.constants.http_status import HTTPStatus
 from common.shared.constants.request_headers import RequestHeaders
 from common.shared.constants.service_names import ServiceValidation
+from common.shared.constants.error_messages import ErrorMessages
 from common.data.entities.user import User
 from common.data.dao.user.user_dao import UserDAO
 from common.data.database.dependencies import get_user_dao as get_common_user_dao
@@ -41,14 +42,14 @@ def verify_gateway_headers(
         logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid source header: {x_source}")
         raise HTTPException(
             status_code=HTTPStatus.FORBIDDEN,
-            detail="Invalid request source"
+            detail=ErrorMessages.VALIDATION_ERROR
         )
 
     if not x_auth_service or x_auth_service != ServiceValidation.EXPECTED_AUTH_SERVICE:
         logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid auth service header: {x_auth_service}")
         raise HTTPException(
             status_code=HTTPStatus.FORBIDDEN,
-            detail="Invalid authentication service"
+            detail=ErrorMessages.VALIDATION_ERROR
         )
 
     # Extract user information from headers
@@ -56,7 +57,7 @@ def verify_gateway_headers(
         logger.warning(action=LogActions.ACCESS_DENIED, message="Missing user ID header")
         raise HTTPException(
             status_code=HTTPStatus.UNAUTHORIZED,
-            detail="User authentication required"
+            detail=ErrorMessages.AUTHENTICATION_FAILED
         )
 
     logger.info(action=LogActions.AUTH_SUCCESS, message=f"Gateway headers verified for user: '{x_user_id}'")
@@ -90,7 +91,7 @@ def get_current_user(
             logger.warning(action=LogActions.AUTH_FAILED, message=f"User not found for username: '{username}'")
             raise HTTPException(
                 status_code=HTTPStatus.UNAUTHORIZED,
-                detail="User not found"
+                detail=ErrorMessages.USER_NOT_FOUND
             )
 
         return user
@@ -101,5 +102,5 @@ def get_current_user(
         logger.error(action=LogActions.ERROR, message=f"Error getting current user: {e}")
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            detail="Failed to get user information"
+            detail=ErrorMessages.INTERNAL_SERVER_ERROR
         )

@@ -5,6 +5,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
+from common.shared.constants.error_messages import ErrorMessages
 
 # Import the functions to test
 from src.controllers.auth.dependencies import (
@@ -14,6 +15,7 @@ from src.controllers.auth.dependencies import (
 
 # Import models
 from common.data.entities.user import User
+from common.shared.constants.error_messages import ErrorMessages
 
 
 def test_verify_gateway_headers_valid():
@@ -45,7 +47,7 @@ def test_verify_gateway_headers_invalid_source():
         )
 
     assert exc_info.value.status_code == 403
-    assert "Invalid request source" in str(exc_info.value.detail)
+    assert ErrorMessages.VALIDATION_ERROR in str(exc_info.value.detail)
 
 def test_verify_gateway_headers_invalid_auth_service():
     """Test invalid auth service header"""
@@ -61,7 +63,7 @@ def test_verify_gateway_headers_invalid_auth_service():
         )
 
     assert exc_info.value.status_code == 403
-    assert "Invalid authentication service" in str(exc_info.value.detail)
+    assert ErrorMessages.VALIDATION_ERROR in str(exc_info.value.detail)
 
 def test_verify_gateway_headers_missing_user_id():
     """Test missing user ID header"""
@@ -77,7 +79,7 @@ def test_verify_gateway_headers_missing_user_id():
         )
 
     assert exc_info.value.status_code == 401
-    assert "User authentication required" in str(exc_info.value.detail)
+    assert ErrorMessages.AUTHENTICATION_FAILED in str(exc_info.value.detail)
 
 def test_get_current_user_success():
     """Test successful user retrieval"""
@@ -113,7 +115,7 @@ def test_get_current_user_not_found():
         get_current_user(username="nonexistent", user_dao=mock_user_dao)
 
     assert exc_info.value.status_code == 401
-    assert "User not found" in str(exc_info.value.detail)
+    assert ErrorMessages.USER_NOT_FOUND in str(exc_info.value.detail)
 
 def test_get_current_user_database_error():
     """Test database error during user retrieval"""
@@ -124,4 +126,4 @@ def test_get_current_user_database_error():
         get_current_user(username="testuser", user_dao=mock_user_dao)
 
     assert exc_info.value.status_code == 500
-    assert "Failed to get user information" in str(exc_info.value.detail)
+    assert ErrorMessages.INTERNAL_SERVER_ERROR in str(exc_info.value.detail)

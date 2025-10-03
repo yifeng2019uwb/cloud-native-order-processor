@@ -2,12 +2,13 @@
 Health check controller for inventory service
 Path: services/inventory-service/src/controllers/health.py
 """
-from fastapi import APIRouter, status
+from fastapi import APIRouter
 from typing import Dict, Any
 
 # Import health components
 from common.shared.health import HealthChecker, HealthCheckResponse
 from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.health_paths import HealthPaths
 from api_info_enum import ApiTags, ApiPaths
 
 # Import our standardized logger
@@ -40,7 +41,7 @@ class InventoryServiceHealthChecker(HealthChecker):
 health_checker = InventoryServiceHealthChecker("inventory-service", "1.0.0")
 
 
-@router.get(ApiPaths.HEALTH.value)
+@router.get(HealthPaths.HEALTH.value)
 def health_check():
     """
     Basic health check endpoint for Kubernetes liveness probe
@@ -50,7 +51,7 @@ def health_check():
     return health_checker.basic_health_check()
 
 
-@router.get(ApiPaths.HEALTH_READY.value, status_code=HTTPStatus.OK)
+@router.get(HealthPaths.HEALTH_READY.value, status_code=HTTPStatus.OK)
 def readiness_check():
     """
     Readiness check endpoint for Kubernetes readiness probe
@@ -60,7 +61,7 @@ def readiness_check():
     return health_checker.readiness_check()
 
 
-@router.get(ApiPaths.HEALTH_LIVE.value, status_code=HTTPStatus.OK)
+@router.get(HealthPaths.HEALTH_LIVE.value, status_code=HTTPStatus.OK)
 def liveness_check():
     """
     Liveness check endpoint for Kubernetes liveness probe

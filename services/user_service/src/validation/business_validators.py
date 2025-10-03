@@ -12,6 +12,7 @@ from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInternalServerException
 )
+from common.shared.constants.error_messages import ErrorMessages
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from user_exceptions import CNOPUserAlreadyExistsException, CNOPUserValidationException
 
@@ -42,7 +43,7 @@ def validate_user_permissions(username: str, action: str, user_dao: Any) -> bool
                 action=LogActions.VALIDATION_ERROR,
                 message=f"User not found for permission check: {username}"
             )
-            raise CNOPUserValidationException("User not found")
+            raise CNOPUserValidationException(ErrorMessages.USER_NOT_FOUND)
 
         return True
 

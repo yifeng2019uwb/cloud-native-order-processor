@@ -9,6 +9,57 @@
 
 ## 📊 Progress Summary
 
+### **2025-10-03: INFRA-005.2 & INFRA-005.3: HTTP Status Codes, Error Messages, and API Paths Standardization** ✅ **COMPLETED**
+
+**Task**: Complete standardization of HTTP status codes, error messages, and API paths across all services
+
+**Key Achievements**:
+- ✅ **HTTP Status Codes**: All services now use `HTTPStatus` enum instead of hardcoded numbers
+- ✅ **Error Messages**: All services now use common `ErrorMessages` constants for consistent user-facing errors
+- ✅ **Health API Paths**: Created common `HealthPaths` enum for standardized health endpoints across all services
+- ✅ **API Response Descriptions**: Properly separated user-facing error messages from OpenAPI documentation descriptions
+- ✅ **Test Fixes**: Fixed all test failures caused by missing imports after standardization
+- ✅ **Import Cleanup**: Removed duplicate error message constants from service-specific files
+
+**Technical Details**:
+- **Files Created**:
+  - `services/common/src/shared/constants/health_paths.py` - Common health API paths enum
+- **Files Updated**:
+  - All service `metrics.py` files - Added HTTPStatus imports
+  - All service `main.py` files - Standardized exception handlers
+  - All service `health.py` files - Use common HealthPaths enum
+  - All service controller files - Use common ErrorMessages
+  - All service test files - Updated to use common constants
+  - `services/common/src/shared/constants/__init__.py` - Added HealthPaths export
+- **Constants Standardized**:
+  - `ErrorMessages.INTERNAL_SERVER_ERROR` - For server errors
+  - `ErrorMessages.SERVICE_UNAVAILABLE` - For service unavailability
+  - `ErrorMessages.AUTHENTICATION_FAILED` - For auth failures
+  - `ErrorMessages.ACCESS_DENIED` - For permission issues
+  - `ErrorMessages.USER_NOT_FOUND` - For user not found
+  - `ErrorMessages.RESOURCE_NOT_FOUND` - For resource not found
+  - `ErrorMessages.VALIDATION_ERROR` - For validation errors
+  - `HealthPaths.HEALTH` - Standardized health endpoints
+  - `HealthPaths.HEALTH_READY` - Readiness check endpoints
+  - `HealthPaths.HEALTH_LIVE` - Liveness check endpoints
+
+**Evidence of Success**:
+- ✅ All unit tests passing across all services
+- ✅ All integration tests passing
+- ✅ Consistent error message formats across all services
+- ✅ Standardized health API paths across all services
+- ✅ No hardcoded HTTP status codes remaining
+- ✅ Proper separation of concerns between user messages and API documentation
+
+**Impact**:
+- **Consistency**: All services now use identical error message formats and health endpoints
+- **Maintainability**: Centralized error message and path management
+- **User Experience**: Consistent error handling across all services
+- **Type Safety**: Using enums instead of hardcoded strings
+- **Documentation**: Clear separation between user-facing messages and API docs
+
+---
+
 ### **2025-10-02: INFRA-020: Migrate Portfolio and Asset Balance APIs from Order Service to User Service** ✅ **COMPLETED**
 
 **Task**: Migrate portfolio and asset balance functionality from order service to user service to consolidate user-related APIs

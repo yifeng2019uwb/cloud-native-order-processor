@@ -2,7 +2,9 @@
 Health check controller for user authentication service
 Path: services/user-service/src/controllers/health.py
 """
-from fastapi import APIRouter, status
+from fastapi import APIRouter
+from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.health_paths import HealthPaths
 from typing import Dict, Any
 
 from common.shared.health import HealthChecker, HealthCheckResponse
@@ -35,7 +37,7 @@ class UserServiceHealthChecker(HealthChecker):
 health_checker = UserServiceHealthChecker("user-auth-service", "1.0.0")
 
 
-@router.get("/health", status_code=status.HTTP_200_OK)
+@router.get(HealthPaths.HEALTH.value, status_code=HTTPStatus.OK)
 def basic_health_check():
     """
     Basic health check endpoint for Kubernetes liveness probe
@@ -45,7 +47,7 @@ def basic_health_check():
     return health_checker.basic_health_check()
 
 
-@router.get("/health/ready", status_code=status.HTTP_200_OK)
+@router.get(HealthPaths.HEALTH_READY.value, status_code=HTTPStatus.OK)
 def readiness_check():
     """
     Readiness check endpoint for Kubernetes readiness probe
@@ -55,7 +57,7 @@ def readiness_check():
     return health_checker.readiness_check()
 
 
-@router.get("/health/live", status_code=status.HTTP_200_OK)
+@router.get(HealthPaths.HEALTH_LIVE.value, status_code=HTTPStatus.OK)
 def liveness_check():
     """
     Liveness check endpoint for Kubernetes liveness probe

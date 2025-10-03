@@ -3,6 +3,7 @@ Unit tests for User Service Metrics functionality
 """
 import pytest
 from unittest.mock import patch, MagicMock
+from common.shared.constants.http_status import HTTPStatus
 
 @patch('prometheus_client.Info')
 @patch('prometheus_client.Counter')
@@ -105,7 +106,7 @@ def test_get_metrics_response_error_handling():
 
     with patch('src.metrics.metrics_collector.get_metrics', side_effect=Exception("Test error")):
         response = metrics.get_metrics_response()
-        assert response.status_code == 500
+        assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
         assert response.body == b"# Error\n"
 
 def test_metrics_middleware():

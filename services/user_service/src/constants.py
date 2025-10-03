@@ -20,7 +20,6 @@ MSG_SUCCESS_ASSET_BALANCE_RETRIEVED = "Asset balance retrieved successfully"
 # ERROR MESSAGES (Keep as constants - used in JSON responses)
 # =============================================================================
 MSG_ERROR_USER_EXISTS = "User already exists"
-MSG_ERROR_USER_NOT_FOUND = "User not found"
 MSG_ERROR_EMAIL_IN_USE = "Email already in use"
 MSG_ERROR_INVALID_UPDATE_DATA = "Invalid update data"
 MSG_ERROR_INSUFFICIENT_BALANCE = "Bad request - insufficient balance"

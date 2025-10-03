@@ -5,6 +5,7 @@ import time
 from prometheus_client import Counter, Histogram, Gauge, Info, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Response
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.http_status import HTTPStatus
 from api_info_enum import ServiceMetadata
 
 logger = BaseLogger(Loggers.INVENTORY)
@@ -78,7 +79,7 @@ def get_metrics_response() -> Response:
         )
     except Exception as e:
         logger.error(action=LogActions.ERROR, message=f"Metrics error: {e}")
-        return Response(content="# Error\n", status_code=500)
+        return Response(content="# Error\n", status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # Legacy functions for backward compatibility
 def get_metrics():

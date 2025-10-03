@@ -26,7 +26,7 @@ from user_exceptions import CNOPUserValidationException
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from validation_enums import ValidationActions
 from constants import (
-    MSG_SUCCESS_PORTFOLIO_RETRIEVED, MSG_SUCCESS_ASSET_BALANCE_RETRIEVED, MSG_ERROR_USER_NOT_FOUND
+    MSG_SUCCESS_PORTFOLIO_RETRIEVED, MSG_SUCCESS_ASSET_BALANCE_RETRIEVED
 )
 from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
 from common.shared.constants.api_responses import APIResponseDescriptions
@@ -58,7 +58,7 @@ router = APIRouter(tags=[ApiTags.PORTFOLIO.value])
             ApiResponseKeys.MODEL.value: ErrorResponse
         },
         HTTPStatus.NOT_FOUND: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_USER_NOT_FOUND,
+            ApiResponseKeys.DESCRIPTION.value: ErrorMessages.USER_NOT_FOUND,
             ApiResponseKeys.MODEL.value: ErrorResponse
         },
         HTTPStatus.UNPROCESSABLE_ENTITY: {

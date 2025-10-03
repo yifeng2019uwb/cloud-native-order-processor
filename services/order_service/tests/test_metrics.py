@@ -3,6 +3,7 @@ Unit tests for Order Service Metrics functionality
 """
 import pytest
 from unittest.mock import patch, MagicMock
+from common.shared.constants.http_status import HTTPStatus
 
 @patch('prometheus_client.Info')
 @patch('prometheus_client.Counter')

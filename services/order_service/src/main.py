@@ -115,7 +115,7 @@ def internal_server_exception_handler(request, exc):
 @app.exception_handler(Exception)
 def general_exception_handler(request, exc):
     logger.error(action=LogActions.ERROR, message=f"Unhandled error: {exc}")
-    return JSONResponse(status_code=500, content={"detail": ErrorMessages.INTERNAL_SERVER_ERROR})
+    return JSONResponse(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": ErrorMessages.INTERNAL_SERVER_ERROR})
 
 # Root endpoint
 @app.get("/")

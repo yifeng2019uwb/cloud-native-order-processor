@@ -18,7 +18,6 @@ from common.shared.constants.error_messages import ErrorMessages
 from common.shared.constants.api_responses import APIResponseDescriptions
 from common.shared.constants.http_status import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
-from constants import MSG_ERROR_USER_NOT_FOUND
 from controllers.auth.dependencies import get_current_user
 from controllers.dependencies import get_request_id_from_request
 
@@ -43,7 +42,7 @@ router = APIRouter(tags=[ApiTags.BALANCE.value])
             ApiResponseKeys.MODEL.value: ErrorResponse
         },
         HTTPStatus.NOT_FOUND: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_USER_NOT_FOUND,
+            ApiResponseKeys.DESCRIPTION.value: ErrorMessages.USER_NOT_FOUND,
             ApiResponseKeys.MODEL.value: ErrorResponse
         },
         HTTPStatus.SERVICE_UNAVAILABLE: {

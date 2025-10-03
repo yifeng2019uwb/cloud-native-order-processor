@@ -70,4 +70,4 @@ def get_metrics_response() -> Response:
         )
     except Exception as e:
         logger.error(action=LogActions.ERROR, message=f"Metrics error: {e}")
-        return Response(content="# Error\n", status_code=500)
+        return Response(content="# Error\n", status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
