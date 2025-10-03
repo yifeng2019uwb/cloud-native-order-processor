@@ -1,7 +1,10 @@
-import pytest
 from decimal import Decimal
-from src.data.entities.inventory import Asset, AssetItem
+
+import pytest
 from pydantic import ValidationError
+
+from src.data.entities.inventory import Asset, AssetItem
+
 
 def test_asset_create_all_fields():
     asset = Asset(

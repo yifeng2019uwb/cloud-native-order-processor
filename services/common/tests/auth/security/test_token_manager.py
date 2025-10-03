@@ -3,7 +3,7 @@ Unit tests for TokenManager class.
 """
 # Standard library imports
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Third-party imports
 import pytest
@@ -11,8 +11,9 @@ from jose import jwt
 
 # Local imports
 from src.auth.security.token_manager import TokenManager
-from src.exceptions.shared_exceptions import CNOPTokenExpiredException, CNOPTokenInvalidException
 from src.data.entities.user import DEFAULT_USER_ROLE
+from src.exceptions.shared_exceptions import (CNOPTokenExpiredException,
+                                              CNOPTokenInvalidException)
 
 
 class TestTokenManager:

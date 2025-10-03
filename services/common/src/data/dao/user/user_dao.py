@@ -1,196 +1,206 @@
-from typing import Optional
-from datetime import datetime
-from boto3.dynamodb.conditions import Key
-import sys
+"""User DAO for user operations using PynamoDB"""
 import os
+import sys
 
 # Path setup for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from ..base_dao import BaseDAO
-from ...entities.user import User, UserItem
-from ...entities.user import DEFAULT_USER_ROLE
-from ...entities.entity_constants import UserFields, TimestampFields
-from ....exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
+# Ignore warnings
 from ....auth.security import PasswordManager
-from ....shared.logging import BaseLogger, Loggers, LogActions
+from ....exceptions.shared_exceptions import (
+    CNOPInvalidCredentialsException,
+    CNOPUserNotFoundException
+)
+from ....shared.logging import BaseLogger, LogActions, Loggers
+from ...entities.entity_constants import UserFields
+from ...entities.user import User, UserItem
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
-class UserDAO(BaseDAO):
-    """Data Access Object for user operations"""
+class UserDAO:
+    """Data Access Object for user operations using PynamoDB"""
 
-    def __init__(self, db_connection):
-        """Initialize UserDAO with database connection and password manager"""
-        super().__init__(db_connection)
+    def __init__(self, db_connection=None):
+        """Initialize UserDAO with password manager (PynamoDB doesn't need db_connection)"""
         self.password_manager = PasswordManager()
-        # Table reference
-        self.table = self.db.users_table
 
     def create_user(self, user: User) -> User:
         """Create a new user"""
-        # Hash password
-        password_hash = self.password_manager.hash_password(user.password)
+        try:
+            # Hash password
+            password_hash = self.password_manager.hash_password(user.password)
 
-        # Convert User to UserItem
-        user_item = UserItem.from_user(user)
+            # Convert User to UserItem with PynamoDB
+            user_item = UserItem.from_user(user)
+            user_item.password_hash = password_hash
 
-        # Set the hashed password in the UserItem
-        user_item.password_hash = password_hash
+            # Save using PynamoDB (automatically handles timestamps)
+            user_item.save()
 
-        now = datetime.utcnow().isoformat()
-        user_item.created_at = now
-        user_item.updated_at = now
-        # Save to users table
-        created_item = self._safe_put_item(self.table, user_item.model_dump())
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"User created successfully: username={user.username}, email={user.email}"
+            )
 
-        logger.info(
-            action=LogActions.DB_OPERATION,
-            message=f"User created successfully: username={user.username}, email={user.email}"
-        )
+            # Convert back to User domain model
+            return user_item.to_user()
 
-        # Convert created item back to UserItem then to User
-        created_user_item = UserItem(**created_item)
-        user = created_user_item.to_user()
-        return user
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to create user {user.username}: {str(e)}"
+            )
+            raise
 
     def get_user_by_username(self, username: str) -> User:
         """Get user by username (Primary Key lookup)"""
-        logger.info(
-            action=LogActions.DB_OPERATION,
-            message=f"Looking up user by username: '{username}'"
-        )
+        try:
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Looking up user by username: '{username}'"
+            )
 
-        key = UserItem.get_key_for_username(username)
+            # Use PynamoDB to get user by primary key
+            user_item = UserItem.get(username, UserFields.SK_VALUE)
 
-        logger.info(
-            action=LogActions.DB_OPERATION,
-            message=f"Using key: {key}"
-        )
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"User found: {username}"
+            )
 
-        item = self._safe_get_item(self.table, key)
-        logger.info(
-            action=LogActions.DB_OPERATION,
-            message=f"Database returned item: {item}"
-        )
+            # Convert to User domain model
+            return user_item.to_user()
 
-        if not item:
+        except UserItem.DoesNotExist:
+            logger.warning(
+                action=LogActions.DB_OPERATION,
+                message=f"User not found: {username}"
+            )
             raise CNOPUserNotFoundException(f"User with username '{username}' not found")
-
-        # Convert dict to UserItem then to User
-        user_item = UserItem(**item)
-        user = user_item.to_user()
-        return user
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get user {username}: {str(e)}"
+            )
+            raise
 
     def get_user_by_email(self, email: str) -> User:
         """Get user by email (GSI lookup)"""
-        items = self._safe_query(
-            self.table,
-            Key(UserFields.EMAIL).eq(email),
-            index_name='EmailIndex'
-        )
+        try:
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Looking up user by email: '{email}'"
+            )
 
-        if not items:
+            # Use PynamoDB GSI to query by email
+            for user_item in UserItem.email_index.query(email):
+                logger.info(
+                    action=LogActions.DB_OPERATION,
+                    message=f"User found by email: {email}"
+                )
+                return user_item.to_user()
+
+            # No user found
+            logger.warning(
+                action=LogActions.DB_OPERATION,
+                message=f"User not found by email: {email}"
+            )
             raise CNOPUserNotFoundException(f"User with email '{email}' not found")
 
-        # Should only be one user per email
-        item = items[0]
-
-        # Convert dict to UserItem then to User
-        user_item = UserItem(**item)
-        user = user_item.to_user()
-        return user
+        except CNOPUserNotFoundException:
+            raise
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get user by email {email}: {str(e)}"
+            )
+            raise
 
     def authenticate_user(self, username: str, password: str) -> User:
         """Authenticate user with username and password"""
-        user = self.get_user_by_username(username)
+        try:
+            # Get user (this will raise CNOPUserNotFoundException if not found)
+            user = self.get_user_by_username(username)
 
-        # Get the stored password hash
-        key = UserItem.get_key_for_username(username)
-        item = self._safe_get_item(self.table, key)
+            # Get the stored password hash using PynamoDB
+            user_item = UserItem.get(username, UserFields.SK_VALUE)
+            stored_hash = user_item.password_hash
 
-        stored_hash = item.get(UserFields.PASSWORD_HASH)
-        if not stored_hash:
+            if not stored_hash:
+                logger.error(
+                    action=LogActions.ERROR,
+                    message=f"No password hash found for user {username}"
+                )
+                raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{username}'")
+
+            # Verify password
+            if self.password_manager.verify_password(password, stored_hash):
+                logger.info(
+                    action=LogActions.DB_OPERATION,
+                    message=f"User authenticated successfully: {username}"
+                )
+                return user
+            else:
+                logger.warning(
+                    action=LogActions.ERROR,
+                    message=f"Invalid password for user: {username}"
+                )
+                raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{username}'")
+
+        except CNOPUserNotFoundException:
+            raise
+        except CNOPInvalidCredentialsException:
+            raise
+        except Exception as e:
             logger.error(
                 action=LogActions.ERROR,
-                message=f"No password hash found for user {username}"
+                message=f"Failed to authenticate user {username}: {str(e)}"
             )
-            raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{username}'")
-
-        # Verify password
-        if self.password_manager.verify_password(password, stored_hash):
-            return user
-        else:
-            raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{username}'")
+            raise
 
     def update_user(self, user: User) -> User:
         """Update user information"""
-        # Check if user exists by getting from database directly
-        key = UserItem.get_key_for_username(user.username)
-        existing_item = self._safe_get_item(self.table, key)
-        if not existing_item:
-            raise CNOPUserNotFoundException(f"User with username '{user.username}' not found")
+        try:
+            # Get existing user item using PynamoDB
+            user_item = UserItem.get(user.username, UserFields.SK_VALUE)
 
-        # Build update expression and values
-        update_parts = []
-        expression_values = {}
-        expression_names = {}
+            # Update fields if they are provided (not None)
+            if user.email is not None:
+                user_item.email = user.email
+            if user.first_name is not None:
+                user_item.first_name = user.first_name
+            if user.last_name is not None:
+                user_item.last_name = user.last_name
+            if user.phone is not None:
+                user_item.phone = user.phone
+            if user.date_of_birth is not None:
+                user_item.date_of_birth = user.date_of_birth.isoformat() if user.date_of_birth else None
+            if user.marketing_emails_consent is not None:
+                user_item.marketing_emails_consent = user.marketing_emails_consent
+            if user.role is not None:
+                user_item.role = user.role
 
-        if user.email is not None:
-            update_parts.append(f"#{UserFields.EMAIL} = :{UserFields.EMAIL}")
-            expression_values[f":{UserFields.EMAIL}"] = user.email
-            expression_names[f"#{UserFields.EMAIL}"] = UserFields.EMAIL
+            # Save the updated item (PynamoDB will automatically update updated_at)
+            user_item.save()
 
-        if user.first_name is not None:
-            update_parts.append(f"#{UserFields.FIRST_NAME} = :{UserFields.FIRST_NAME}")
-            expression_values[f":{UserFields.FIRST_NAME}"] = user.first_name
-            expression_names[f"#{UserFields.FIRST_NAME}"] = UserFields.FIRST_NAME
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"User updated successfully: {user.username}"
+            )
 
-        if user.last_name is not None:
-            update_parts.append(f"#{UserFields.LAST_NAME} = :{UserFields.LAST_NAME}")
-            expression_values[f":{UserFields.LAST_NAME}"] = user.last_name
-            expression_names[f"#{UserFields.LAST_NAME}"] = UserFields.LAST_NAME
+            # Convert back to User domain model
+            return user_item.to_user()
 
-        if user.phone is not None:
-            update_parts.append(f"#{UserFields.PHONE} = :{UserFields.PHONE}")
-            expression_values[f":{UserFields.PHONE}"] = user.phone
-            expression_names[f"#{UserFields.PHONE}"] = UserFields.PHONE
-
-        # Always update the updated_at timestamp
-        update_parts.append(f"#{TimestampFields.UPDATED_AT} = :{TimestampFields.UPDATED_AT}")
-        expression_values[f":{TimestampFields.UPDATED_AT}"] = datetime.utcnow().isoformat()
-        expression_names[f"#{TimestampFields.UPDATED_AT}"] = TimestampFields.UPDATED_AT
-
-        if not update_parts:
+        except UserItem.DoesNotExist:
             logger.warning(
                 action=LogActions.ERROR,
-                message=f"No fields to update for user {user.username}"
+                message=f"User not found for update: {user.username}"
             )
-            # Return existing user with hidden password
-            existing_user_item = UserItem(**existing_item)
-            user = existing_user_item.to_user()
-            user.password = UserFields.HASHED_PASSWORD_MARKER
-            return user
-
-        update_expression = "SET " + ", ".join(update_parts)
-
-        # Perform the update
-        key = UserItem.get_key_for_username(user.username)
-        updated_item = self._safe_update_item(
-            self.table,
-            key,
-            update_expression,
-            expression_values,
-            expression_names
-        )
-
-        logger.info(
-            action=LogActions.DB_OPERATION,
-            message=f"User updated successfully: {user}"
-        )
-
-        # Convert updated item to UserItem then to User
-        user_item = UserItem(**updated_item)
-        user = user_item.to_user()
-        return user
+            raise CNOPUserNotFoundException(f"User with username '{user.username}' not found")
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to update user {user.username}: {str(e)}"
+            )
+            raise

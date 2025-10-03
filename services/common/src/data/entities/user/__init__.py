@@ -2,16 +2,15 @@
 User service entities.
 """
 
+from ..entity_constants import FieldConstraints, UserFields
+from .balance import (Balance, BalanceItem, BalanceTransaction,
+                      BalanceTransactionItem)
+from .balance_enums import (DEFAULT_TRANSACTION_STATUS,
+                            VALID_TRANSACTION_STATUSES,
+                            VALID_TRANSACTION_TYPES, TransactionStatus,
+                            TransactionType)
 from .user import User, UserItem
-from .user_enums import UserRole, DEFAULT_USER_ROLE, VALID_ROLES
-from ..entity_constants import UserFields, FieldConstraints
-from .balance_enums import TransactionType, TransactionStatus, DEFAULT_TRANSACTION_STATUS, VALID_TRANSACTION_TYPES, VALID_TRANSACTION_STATUSES
-from .balance import (
-    Balance,
-    BalanceTransaction,
-    BalanceItem,
-    BalanceTransactionItem
-)
+from .user_enums import DEFAULT_USER_ROLE, VALID_ROLES, UserRole
 
 __all__ = [
     # User entities

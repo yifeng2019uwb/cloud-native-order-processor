@@ -13,7 +13,8 @@ Responsibilities:
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from ...shared.logging import BaseLogger, LogActions, Loggers
 
 # Create logger instance for security events

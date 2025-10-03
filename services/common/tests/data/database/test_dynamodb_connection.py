@@ -1,8 +1,9 @@
-import pytest
 import os
 import sys
-from unittest.mock import Mock, patch, MagicMock, call
 from contextlib import asynccontextmanager
+from unittest.mock import MagicMock, Mock, call, patch
+
+import pytest
 
 # Add the common directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -15,7 +16,9 @@ os.environ.setdefault('AWS_REGION', 'us-west-2')
 
 # Mock boto3 before any imports
 with patch('boto3.resource'), patch('boto3.client'):
-    from src.data.database.dynamodb_connection import DynamoDBManager, DynamoDBConnection, get_dynamodb_manager
+    from src.data.database.dynamodb_connection import (DynamoDBConnection,
+                                                       DynamoDBManager,
+                                                       get_dynamodb_manager)
     from src.exceptions.shared_exceptions import CNOPInternalServerException
 
 

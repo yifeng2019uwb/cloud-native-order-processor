@@ -1,8 +1,9 @@
+"""Base Data Access Object with common DynamoDB operations"""
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
+from ...shared.logging import BaseLogger, LogActions, Loggers
 from ..exceptions import CNOPDatabaseOperationException
-from ...shared.logging import BaseLogger, Loggers, LogActions
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 

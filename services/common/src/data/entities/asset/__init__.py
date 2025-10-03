@@ -7,7 +7,7 @@ for managing asset balances and transactions in the multi-asset portfolio system
 
 from .asset_balance import AssetBalance, AssetBalanceItem
 from .asset_transaction import AssetTransaction, AssetTransactionItem
-from .enums import AssetTransactionType, AssetTransactionStatus
+from .enums import AssetTransactionStatus, AssetTransactionType
 
 __all__ = [
     "AssetBalance",

@@ -2,24 +2,21 @@
 Unit tests for Redis connection management
 """
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
 import redis
-from unittest.mock import Mock, patch, MagicMock
-from redis.exceptions import RedisError, ConnectionError, TimeoutError
 from redis.connection import ConnectionPool
+from redis.exceptions import ConnectionError, RedisError, TimeoutError
 
-from src.data.database.redis_connection import (
-    RedisConnectionManager,
-    get_redis_manager,
-    get_redis_client,
-    test_redis_connection,
-    close_redis_connections,
-    redis_set,
-    redis_get,
-    redis_delete,
-    redis_exists
-)
 from src.data.database.redis_config import get_redis_connection_params
+from src.data.database.redis_connection import (RedisConnectionManager,
+                                                close_redis_connections,
+                                                get_redis_client,
+                                                get_redis_manager,
+                                                redis_delete, redis_exists,
+                                                redis_get, redis_set,
+                                                test_redis_connection)
 
 
 class TestRedisConnectionManager:

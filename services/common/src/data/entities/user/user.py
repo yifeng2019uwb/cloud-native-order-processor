@@ -1,9 +1,21 @@
+"""User entity models"""
+
 from __future__ import annotations
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+
+import os
 from datetime import date, datetime
-from .user_enums import UserRole, DEFAULT_USER_ROLE, VALID_ROLES
-from ..entity_constants import UserFields, FieldConstraints, DatabaseFields
+from typing import Optional
+
+from pydantic import BaseModel, Field
+from pynamodb.attributes import (BooleanAttribute, UnicodeAttribute,
+                                 UTCDateTimeAttribute)
+from pynamodb.indexes import AllProjection, GlobalSecondaryIndex
+from pynamodb.models import Model
+
+from ..entity_constants import (AWSConfig, DatabaseFields, FieldConstraints,
+                                TableNames, TimestampFields, UserConstants,
+                                UserFields)
+from .user_enums import DEFAULT_USER_ROLE
 
 
 class User(BaseModel):
@@ -21,21 +33,99 @@ class User(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
-class UserItem(BaseModel):
-    """User database model - includes DynamoDB fields (Pk, Sk)"""
-    Pk: str = Field(..., description="Primary key (username)")
-    Sk: str = Field(default=UserFields.SK_VALUE, description="Sort key (USER)")
-    username: str = Field(..., max_length=FieldConstraints.USERNAME_MAX_LENGTH, description="Username for easy access")
-    email: str = Field(..., max_length=FieldConstraints.EMAIL_MAX_LENGTH)
-    password_hash: str = Field(..., max_length=FieldConstraints.PASSWORD_MAX_LENGTH, description="Hashed password")
-    first_name: str = Field(..., max_length=FieldConstraints.FIRST_NAME_MAX_LENGTH)
-    last_name: str = Field(..., max_length=FieldConstraints.LAST_NAME_MAX_LENGTH)
-    phone: Optional[str] = Field(None, max_length=FieldConstraints.PHONE_MAX_LENGTH)
-    date_of_birth: Optional[date] = None
-    marketing_emails_consent: bool = False
-    role: str = Field(default=DEFAULT_USER_ROLE, max_length=FieldConstraints.ROLE_MAX_LENGTH)
-    created_at: datetime = Field(..., description="Creation timestamp")
-    updated_at: datetime = Field(..., description="Last update timestamp")
+# ==================== PYNAMODB MODEL ====================
+
+class EmailIndex(GlobalSecondaryIndex):
+    """Global Secondary Index for email lookups"""
+
+    class Meta:
+        """Meta class for EmailIndex"""
+        index_name = UserConstants.EMAIL_INDEX_NAME
+        read_capacity_units = 1
+        write_capacity_units = 1
+        projection = AllProjection()
+
+    email = UnicodeAttribute(hash_key=True)
+    username = UnicodeAttribute(range_key=True)
+
+
+class UserItem(Model):
+    """User PynamoDB model - handles DynamoDB operations"""
+
+    # ==================== METADATA ====================
+
+    class Meta:
+        """Meta class for UserItem"""
+        table_name = os.getenv(UserConstants.USERS_TABLE_ENV_VAR, TableNames.USERS)
+        region = os.getenv(AWSConfig.AWS_REGION_ENV_VAR, AWSConfig.DEFAULT_REGION)
+        billing_mode = AWSConfig.BILLING_MODE_PAY_PER_REQUEST
+
+    # ==================== ATTRIBUTES ====================
+
+    # Primary Key
+    Pk = UnicodeAttribute(hash_key=True)
+    Sk = UnicodeAttribute(range_key=True, default=UserFields.SK_VALUE)
+
+    # User fields
+    username = UnicodeAttribute()
+    email = UnicodeAttribute()
+    password_hash = UnicodeAttribute()
+    first_name = UnicodeAttribute()
+    last_name = UnicodeAttribute()
+    phone = UnicodeAttribute(null=True)
+    date_of_birth = UnicodeAttribute(null=True)
+    marketing_emails_consent = BooleanAttribute(default=False)
+    role = UnicodeAttribute(default=DEFAULT_USER_ROLE)
+
+    # Timestamps
+    created_at = UTCDateTimeAttribute(default=datetime.utcnow)
+    updated_at = UTCDateTimeAttribute(default=datetime.utcnow)
+
+    # Index
+    email_index = EmailIndex()
+
+    # ==================== CONVERSION ====================
+
+    @classmethod
+    def from_user(cls, user: User) -> UserItem:
+        """Create UserItem from User domain model"""
+        # Create PynamoDB model instance and set attributes explicitly
+        user_item = cls()
+        user_item.Pk = user.username
+        user_item.Sk = UserFields.SK_VALUE
+        user_item.username = user.username
+        user_item.email = user.email
+        user_item.password_hash = UserFields.HASHED_PASSWORD_MARKER  # Will be replaced with actual hash by DAO
+        user_item.first_name = user.first_name
+        user_item.last_name = user.last_name
+        user_item.phone = user.phone
+        user_item.date_of_birth = user.date_of_birth.isoformat() if user.date_of_birth else None
+        user_item.marketing_emails_consent = user.marketing_emails_consent
+        user_item.role = user.role
+        user_item.created_at = user.created_at
+        user_item.updated_at = user.updated_at
+        return user_item
+
+    def to_user(self) -> User:
+        """Convert UserItem to User domain model"""
+        # Convert PynamoDB attributes to dict, excluding database fields
+        user_data = {
+            UserFields.USERNAME: self.username,
+            UserFields.EMAIL: self.email,
+            UserFields.FIRST_NAME: self.first_name,
+            UserFields.LAST_NAME: self.last_name,
+            UserFields.PHONE: self.phone,
+            UserFields.DATE_OF_BIRTH: self.date_of_birth,
+            UserFields.MARKETING_EMAILS_CONSENT: self.marketing_emails_consent,
+            UserFields.ROLE: self.role,
+            TimestampFields.CREATED_AT: self.created_at,
+            TimestampFields.UPDATED_AT: self.updated_at
+        }
+        # Mark password as hashed - don't expose the actual hash
+        user_data[UserFields.PASSWORD] = UserFields.HASHED_PASSWORD_MARKER
+        return User(**user_data)
+
+    # ==================== DATABASE OPERATIONS ====================
 
     def get_key(self) -> dict:
         """Get database key for this user item"""
@@ -51,22 +141,9 @@ class UserItem(BaseModel):
             DatabaseFields.PK: username,
             DatabaseFields.SK: UserFields.SK_VALUE
         }
+    # ==================== LIFECYCLE ====================
 
-    @classmethod
-    def from_user(cls, user: User) -> UserItem:
-        """Create UserItem from User domain model"""
-        user_data = user.model_dump()
-        # Map password to password_hash for database storage
-        user_data[UserFields.PASSWORD_HASH] = user_data.pop(UserFields.PASSWORD)
-        return cls(
-            Pk=user.username,
-            Sk=UserFields.SK_VALUE,
-            **user_data
-        )
-
-    def to_user(self) -> User:
-        """Convert UserItem to User domain model"""
-        user_data = self.model_dump(exclude={DatabaseFields.PK, DatabaseFields.SK, UserFields.PASSWORD_HASH})
-        # Mark password as hashed - don't expose the actual hash
-        user_data[UserFields.PASSWORD] = UserFields.HASHED_PASSWORD_MARKER
-        return User(**user_data)
+    def save(self, condition=None, **kwargs):
+        """Override save to update timestamp"""
+        self.updated_at = datetime.utcnow()
+        return super().save(condition=condition, **kwargs)

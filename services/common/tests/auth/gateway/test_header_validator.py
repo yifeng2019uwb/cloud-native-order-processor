@@ -4,11 +4,12 @@ Unit tests for header validator
 Tests the HeaderValidator class for gateway authentication.
 """
 
-import pytest
-import sys
 import os
-from fastapi import HTTPException, status
+import sys
 from typing import Dict, Optional
+
+import pytest
+from fastapi import HTTPException, status
 
 # Add the common module to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))

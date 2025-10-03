@@ -2,17 +2,14 @@
 Unit tests for Redis configuration management
 """
 
-import pytest
 from unittest.mock import Mock, patch
-from src.data.database.redis_config import (
-    RedisConfig,
-    get_redis_config,
-    get_redis_url,
-    get_redis_connection_params,
-    is_production,
-    is_local_kubernetes,
-    get_redis_namespace
-)
+
+import pytest
+
+from src.data.database.redis_config import (RedisConfig, get_redis_config,
+                                            get_redis_connection_params,
+                                            get_redis_namespace, get_redis_url,
+                                            is_local_kubernetes, is_production)
 
 
 class TestRedisConfig:

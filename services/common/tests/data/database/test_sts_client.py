@@ -1,10 +1,12 @@
-import pytest
-from unittest.mock import Mock, patch, MagicMock
 import os
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from src.aws.sts_client import STSClient
 from src.exceptions.shared_exceptions import CNOPInternalServerException
+
 
 @pytest.fixture(autouse=True)
 def clear_env(monkeypatch):

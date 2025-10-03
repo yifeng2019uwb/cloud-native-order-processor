@@ -4,7 +4,7 @@ Tests for Order enums.
 
 import pytest
 
-from src.data.entities.order.enums import OrderType, OrderStatus
+from src.data.entities.order.enums import OrderStatus, OrderType
 
 
 class TestOrderEnums:

@@ -3,12 +3,13 @@ AWS STS Client for assuming roles
 Handles both local development and Kubernetes environments
 """
 import os
+from typing import Any, Dict, Optional
+
 import boto3
-from typing import Optional, Dict, Any
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from ..exceptions import CNOPInternalServerException
-from ..shared.logging import BaseLogger, Loggers, LogActions
+from ..shared.logging import BaseLogger, LogActions, Loggers
 
 logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
 

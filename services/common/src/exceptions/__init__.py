@@ -6,51 +6,25 @@ All exceptions use the CNOP prefix to avoid naming conflicts and provide clear o
 
 """
 
-from .base_exception import CNOPException, CNOPInternalException, CNOPClientException
-
-# Import shared exceptions (mapped to external error codes)
-from .shared_exceptions import (
-    # Authentication exceptions
-    CNOPInvalidCredentialsException,
-    CNOPTokenExpiredException,
-    CNOPTokenInvalidException,
-    # Authorization exceptions
-    CNOPAuthorizationException,
-    CNOPAccessDeniedException,
-    CNOPInsufficientPermissionsException,
-    # Resource exceptions
-    CNOPEntityNotFoundException,
-    CNOPEntityAlreadyExistsException,
-    CNOPUserNotFoundException,
-    CNOPOrderNotFoundException,
-    CNOPAssetNotFoundException,
-    CNOPBalanceNotFoundException,
-    CNOPAssetBalanceNotFoundException,
-    CNOPTransactionNotFoundException,
-    # Business logic exceptions
-    CNOPInsufficientBalanceException,
-    # Internal server exception
-    CNOPInternalServerException,
-)
-
+from .base_exception import (CNOPClientException, CNOPException,
+                             CNOPInternalException)
 # Import data exceptions (internal infrastructure only)
-from .exceptions import (
-    # Database exceptions
-    CNOPDatabaseConnectionException,
-    CNOPDatabaseOperationException,
-    # Configuration exceptions
-    CNOPConfigurationException,
-    # External service exceptions
-    CNOPAWSServiceException,
-    CNOPExternalServiceException,
-    # Locking exceptions
-    CNOPLockAcquisitionException,
-    CNOPLockTimeoutException,
-    # Generic validation exception (internal data validation only)
-    CNOPEntityValidationException,
-    # Generic common server exception
-    CNOPCommonServerException,
-)
+from .exceptions import (  # Database exceptions; Configuration exceptions; External service exceptions; Locking exceptions; Generic validation exception (internal data validation only); Generic common server exception
+    CNOPAWSServiceException, CNOPCommonServerException,
+    CNOPConfigurationException, CNOPDatabaseConnectionException,
+    CNOPDatabaseOperationException, CNOPEntityValidationException,
+    CNOPExternalServiceException, CNOPLockAcquisitionException,
+    CNOPLockTimeoutException)
+# Import shared exceptions (mapped to external error codes)
+from .shared_exceptions import (  # Authentication exceptions; Authorization exceptions; Resource exceptions; Business logic exceptions; Internal server exception
+    CNOPAccessDeniedException, CNOPAssetBalanceNotFoundException,
+    CNOPAssetNotFoundException, CNOPAuthorizationException,
+    CNOPBalanceNotFoundException, CNOPEntityAlreadyExistsException,
+    CNOPEntityNotFoundException, CNOPInsufficientBalanceException,
+    CNOPInsufficientPermissionsException, CNOPInternalServerException,
+    CNOPInvalidCredentialsException, CNOPOrderNotFoundException,
+    CNOPTokenExpiredException, CNOPTokenInvalidException,
+    CNOPTransactionNotFoundException, CNOPUserNotFoundException)
 
 # =============================================================================
 # JWT EXCEPTIONS REMOVED - NO LONGER NEEDED IN BACKEND SERVICES

@@ -3,16 +3,17 @@ Order utility functions and status management.
 Keeps order models clean by separating business logic.
 """
 
-import uuid
 import time
-from enum import Enum
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Set, Tuple
+import uuid
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from enum import Enum
+from typing import Dict, List, Optional, Set, Tuple
+
 from pydantic import BaseModel, Field
 
-from .enums import OrderStatus, OrderType
 from ....exceptions import CNOPEntityValidationException
+from .enums import OrderStatus, OrderType
 
 
 class OrderStatusTransition(BaseModel):

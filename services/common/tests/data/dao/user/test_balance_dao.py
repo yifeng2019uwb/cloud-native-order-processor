@@ -2,18 +2,21 @@
 Tests for Balance DAO
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, Mock
-from decimal import Decimal
 from datetime import datetime, timezone
+from decimal import Decimal
+from unittest.mock import MagicMock, Mock, patch
 from uuid import UUID
-from botocore.exceptions import ClientError
+
+import pytest
 from boto3.dynamodb.conditions import Key
+from botocore.exceptions import ClientError
 
 from src.data.dao.user.balance_dao import BalanceDAO
-from src.data.entities.user import Balance, BalanceTransaction, TransactionType, TransactionStatus
+from src.data.entities.user import (Balance, BalanceTransaction,
+                                    TransactionStatus, TransactionType)
 from src.data.exceptions import CNOPDatabaseOperationException
-from src.exceptions.shared_exceptions import CNOPBalanceNotFoundException, CNOPTransactionNotFoundException
+from src.exceptions.shared_exceptions import (CNOPBalanceNotFoundException,
+                                              CNOPTransactionNotFoundException)
 
 
 class TestBalanceDAO:

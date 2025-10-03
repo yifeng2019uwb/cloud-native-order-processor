@@ -1,26 +1,76 @@
 """
-Entity Constants
+Entity Constants - Minimal Version
 
-Centralized constants for all entity field names, values, and database schema definitions.
-This file contains all hardcoded string values used across entity classes to avoid
-magic strings and improve maintainability.
+Only contains truly shared constants that cannot live in entity models.
+All field-specific constants have been moved into their respective PynamoDB models.
 """
 
-# Database Field Names
+# ==================== SHARED DATABASE CONSTANTS ====================
+# These are used across ALL entities and cannot be in individual models
+
 class DatabaseFields:
-    """DynamoDB field names"""
+    """DynamoDB field names - shared across all entities"""
     PK = "Pk"
     SK = "Sk"
     GSI_PK = "GSI-PK"
     GSI_SK = "GSI-SK"
 
-# Timestamp Field Names
+
 class TimestampFields:
-    """Timestamp field names"""
+    """Timestamp field names - shared across all entities"""
     CREATED_AT = "created_at"
     UPDATED_AT = "updated_at"
 
-# User Entity Constants
+
+# ==================== CONFIGURATION CONSTANTS ====================
+# These are infrastructure/deployment configurations
+
+class TableNames:
+    """DynamoDB table names - from environment or config"""
+    USERS = "users"
+    ORDERS = "orders"
+    INVENTORY = "inventory"
+
+
+class AWSConfig:
+    """AWS configuration constants"""
+    DEFAULT_REGION = "us-east-1"
+    BILLING_MODE_PAY_PER_REQUEST = "PAY_PER_REQUEST"
+    BILLING_MODE_PROVISIONED = "PROVISIONED"
+    AWS_REGION_ENV_VAR = "AWS_REGION"
+
+
+# ==================== FIELD CONSTRAINTS ====================
+# Validation constraints used across multiple entities
+# Keep these here as they might be used in API validation too
+
+class FieldConstraints:
+    """Field validation constraints"""
+    USERNAME_MAX_LENGTH = 30
+    EMAIL_MAX_LENGTH = 255
+    PASSWORD_MAX_LENGTH = 128
+    FIRST_NAME_MAX_LENGTH = 50
+    LAST_NAME_MAX_LENGTH = 50
+    PHONE_MAX_LENGTH = 15
+    ROLE_MAX_LENGTH = 20
+
+    # Asset field constraints
+    ASSET_ID_MAX_LENGTH = 20
+    ASSET_NAME_MAX_LENGTH = 100
+    ASSET_DESCRIPTION_MAX_LENGTH = 500
+    ASSET_CATEGORY_MAX_LENGTH = 50
+    ASSET_SYMBOL_MAX_LENGTH = 20
+    ASSET_IMAGE_MAX_LENGTH = 500
+    ASSET_DATE_MAX_LENGTH = 50
+    ASSET_LAST_UPDATED_MAX_LENGTH = 50
+
+    # Order field constraints
+    ORDER_ID_MAX_LENGTH = 50
+
+
+# ==================== ENTITY-SPECIFIC CONSTANTS ====================
+# These are used by specific entities but need to be shared
+
 class UserFields:
     """User entity field names and values"""
     USERNAME = "username"
@@ -42,6 +92,13 @@ class UserFields:
 
     # Password Markers
     HASHED_PASSWORD_MARKER = "[HASHED]"
+
+
+class UserConstants:
+    """User entity specific constants"""
+    EMAIL_INDEX_NAME = "EmailIndex"
+    USERS_TABLE_ENV_VAR = "USERS_TABLE"
+
 
 # Balance Entity Constants
 class BalanceFields:
@@ -134,27 +191,3 @@ class OrderFields:
 
     # Sort Key Values
     SK_VALUE = "ORDER"
-
-# Field Length Constraints
-class FieldConstraints:
-    """Field length and validation constraints"""
-    USERNAME_MAX_LENGTH = 30
-    EMAIL_MAX_LENGTH = 255
-    PASSWORD_MAX_LENGTH = 128
-    FIRST_NAME_MAX_LENGTH = 50
-    LAST_NAME_MAX_LENGTH = 50
-    PHONE_MAX_LENGTH = 15
-    ROLE_MAX_LENGTH = 20
-
-    # Asset field constraints
-    ASSET_ID_MAX_LENGTH = 20
-    ASSET_NAME_MAX_LENGTH = 100
-    ASSET_DESCRIPTION_MAX_LENGTH = 500
-    ASSET_CATEGORY_MAX_LENGTH = 50
-    ASSET_SYMBOL_MAX_LENGTH = 20
-    ASSET_IMAGE_MAX_LENGTH = 500
-    ASSET_DATE_MAX_LENGTH = 50
-    ASSET_LAST_UPDATED_MAX_LENGTH = 50
-
-    # Order field constraints
-    ORDER_ID_MAX_LENGTH = 50

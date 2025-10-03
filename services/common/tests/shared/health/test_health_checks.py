@@ -3,19 +3,17 @@ Tests for Health Checks
 """
 
 # Standard library imports
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Third-party imports
 import pytest
 from fastapi import HTTPException
 
 # Local imports
-from src.shared.health.health_checks import (
-    HealthCheckResponse,
-    HealthChecker,
-    create_health_checker,
-    get_database_health
-)
+from src.shared.health.health_checks import (HealthChecker,
+                                             HealthCheckResponse,
+                                             create_health_checker,
+                                             get_database_health)
 
 
 class TestHealthCheckResponse:

@@ -9,14 +9,17 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Dict, Any, Optional, Callable
-from .lock_manager import UserLock, LOCK_TIMEOUTS
-from ...data.entities.user import BalanceTransaction, TransactionType, TransactionStatus
-from ...data.entities.order import Order, OrderStatus, OrderType
+from typing import Any, Callable, Dict, Optional
+
 from ...data.entities.asset import AssetTransaction, AssetTransactionType
-from ...data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException
+from ...data.entities.order import Order, OrderStatus, OrderType
+from ...data.entities.user import (BalanceTransaction, TransactionStatus,
+                                   TransactionType)
+from ...data.exceptions import (CNOPDatabaseOperationException,
+                                CNOPLockAcquisitionException)
 from ...exceptions.shared_exceptions import CNOPInsufficientBalanceException
-from ...shared.logging import BaseLogger, Loggers, LogActions
+from ...shared.logging import BaseLogger, LogActions, Loggers
+from .lock_manager import LOCK_TIMEOUTS, UserLock
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 

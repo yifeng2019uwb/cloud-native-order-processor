@@ -4,16 +4,18 @@ Balance DAO for user service database operations.
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional, List
+from typing import List, Optional
 from uuid import UUID
 
 from boto3.dynamodb.conditions import Key
 
-from ...entities.user import Balance, BalanceTransaction, BalanceItem, BalanceTransactionItem
+from ....exceptions.shared_exceptions import (CNOPBalanceNotFoundException,
+                                              CNOPTransactionNotFoundException)
+from ....shared.logging import BaseLogger, LogActions, Loggers
+from ...entities.user import (Balance, BalanceItem, BalanceTransaction,
+                              BalanceTransactionItem)
 from ...exceptions import CNOPDatabaseOperationException
-from ....exceptions.shared_exceptions import CNOPBalanceNotFoundException, CNOPTransactionNotFoundException
 from ..base_dao import BaseDAO
-from ....shared.logging import BaseLogger, Loggers, LogActions
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 

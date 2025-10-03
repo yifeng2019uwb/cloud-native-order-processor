@@ -4,18 +4,17 @@ Unit tests for shared validation functions
 Tests the common validation utilities used across all microservices.
 """
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Add the common module to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
-from src.core.validation.shared_validators import (
-    sanitize_string,
-    is_suspicious,
-    validate_username
-)
+from src.core.validation.shared_validators import (is_suspicious,
+                                                   sanitize_string,
+                                                   validate_username)
 
 
 class TestSanitizeString:

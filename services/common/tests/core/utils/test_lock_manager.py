@@ -2,9 +2,9 @@
 Tests for Lock Manager
 """
 
-# Standard library imports
-from datetime import datetime, timezone, timedelta
 import uuid
+# Standard library imports
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 # Third-party imports
@@ -12,10 +12,10 @@ import pytest
 from botocore.exceptions import ClientError
 
 # Local imports
-from src.core.utils.lock_manager import (
-    UserLock, acquire_lock, release_lock, LOCK_TIMEOUTS
-)
-from src.data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException
+from src.core.utils.lock_manager import (LOCK_TIMEOUTS, UserLock, acquire_lock,
+                                         release_lock)
+from src.data.exceptions import (CNOPDatabaseOperationException,
+                                 CNOPLockAcquisitionException)
 
 
 class TestUserLock:

@@ -5,25 +5,29 @@ Tests for TransactionManager class.
 # Standard library imports
 from datetime import datetime, timezone
 from decimal import Decimal
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
-from unittest.mock import MagicMock, patch, AsyncMock
 
 # Third-party imports
 import pytest
 
 # Local imports
-from src.core.utils.transaction_manager import TransactionManager, TransactionResult
-from src.data.dao.user.user_dao import UserDAO
-from src.data.dao.user.balance_dao import BalanceDAO
-from src.data.dao.order.order_dao import OrderDAO
-from src.data.dao.inventory.asset_dao import AssetDAO
+from src.core.utils.transaction_manager import (TransactionManager,
+                                                TransactionResult)
 from src.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from src.data.dao.asset.asset_transaction_dao import AssetTransactionDAO
-from src.data.entities.user import Balance, BalanceTransaction, TransactionType, TransactionStatus
+from src.data.dao.inventory.asset_dao import AssetDAO
+from src.data.dao.order.order_dao import OrderDAO
+from src.data.dao.user.balance_dao import BalanceDAO
+from src.data.dao.user.user_dao import UserDAO
 from src.data.entities.order import Order, OrderStatus, OrderType
-from src.data.exceptions import CNOPDatabaseOperationException, CNOPLockAcquisitionException
-from src.exceptions.shared_exceptions import CNOPEntityNotFoundException, CNOPInsufficientBalanceException
+from src.data.entities.user import (Balance, BalanceTransaction,
+                                    TransactionStatus, TransactionType)
+from src.data.exceptions import (CNOPDatabaseOperationException,
+                                 CNOPLockAcquisitionException)
 from src.exceptions import CNOPEntityValidationException
+from src.exceptions.shared_exceptions import (CNOPEntityNotFoundException,
+                                              CNOPInsufficientBalanceException)
 
 
 class TestTransactionManager:

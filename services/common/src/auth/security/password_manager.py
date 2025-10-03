@@ -12,7 +12,9 @@ Responsibilities:
 
 import re
 from typing import Optional
+
 import bcrypt
+
 from ...exceptions import CNOPEntityValidationException
 from ...shared.logging import BaseLogger, Loggers
 

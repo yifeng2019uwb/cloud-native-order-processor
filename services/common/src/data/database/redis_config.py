@@ -7,10 +7,12 @@ for all microservices.
 """
 
 import os
-from typing import Optional, Dict, Any
 from dataclasses import dataclass
-from ...shared.logging import BaseLogger, Loggers, LogActions
+from typing import Any, Dict, Optional
+
 import redis
+
+from ...shared.logging import BaseLogger, LogActions, Loggers
 
 logger = BaseLogger(Loggers.CACHE, log_to_file=True)
 

@@ -2,12 +2,13 @@
 Tests for Order entity model.
 """
 
-import pytest
-from decimal import Decimal
 from datetime import datetime, timezone
+from decimal import Decimal
 
+import pytest
+
+from src.data.entities.order.enums import OrderStatus, OrderType
 from src.data.entities.order.order import Order
-from src.data.entities.order.enums import OrderType, OrderStatus
 
 
 class TestOrder:

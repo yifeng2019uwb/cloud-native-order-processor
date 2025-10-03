@@ -9,9 +9,10 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-from .balance_enums import TransactionType, TransactionStatus, DEFAULT_TRANSACTION_STATUS
+from .balance_enums import (DEFAULT_TRANSACTION_STATUS, TransactionStatus,
+                            TransactionType)
 
 
 class Balance(BaseModel):

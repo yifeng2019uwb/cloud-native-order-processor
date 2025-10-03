@@ -1,5 +1,6 @@
 # Database configuration
 import os
+
 from ..exceptions import CNOPConfigurationException
 
 # DynamoDB Configuration

@@ -3,16 +3,22 @@ Unit tests for Order utilities.
 Tests cover OrderIdGenerator, OrderStatusManager, OrderValidationUtils, and OrderBusinessRules.
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'src')))
 
-import pytest
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from datetime import datetime, timezone, timedelta
 
-from src.data.entities.order.utils import OrderIdGenerator, OrderStatusManager, OrderValidationUtils, OrderBusinessRules, OrderStatusTransition
-from src.data.entities.order.enums import OrderType, OrderStatus
+import pytest
+
+from src.data.entities.order.enums import OrderStatus, OrderType
+from src.data.entities.order.utils import (OrderBusinessRules,
+                                           OrderIdGenerator,
+                                           OrderStatusManager,
+                                           OrderStatusTransition,
+                                           OrderValidationUtils)
 from src.exceptions import CNOPEntityValidationException
 
 

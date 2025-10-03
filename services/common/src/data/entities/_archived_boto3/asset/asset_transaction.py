@@ -6,13 +6,16 @@ in the multi-asset portfolio system.
 """
 
 from __future__ import annotations
-from pydantic import BaseModel, Field
-from typing import Optional
+
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import Optional
 
-from .enums import AssetTransactionType, AssetTransactionStatus
-from ..entity_constants import AssetTransactionFields, DatabaseFields, FieldConstraints
+from pydantic import BaseModel, Field
+
+from ..entity_constants import (AssetTransactionFields, DatabaseFields,
+                                FieldConstraints)
+from .enums import AssetTransactionStatus, AssetTransactionType
 
 
 class AssetTransaction(BaseModel):

@@ -1,9 +1,5 @@
 # services/common/src/__init__.py
-from . import data
-from . import exceptions
-from . import core
-from . import shared
-
+from . import core, data, exceptions, shared
 
 __all__ = [
     "data",

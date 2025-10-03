@@ -6,13 +6,16 @@ Provides centralized Redis connection management with connection pooling,
 retry logic, and health monitoring for all services.
 """
 
-from ...shared.logging import BaseLogger, Loggers, LogActions
-import redis
 import os
-from typing import Optional, Dict, Any
-from datetime import datetime
 from contextlib import contextmanager
-from .redis_config import RedisConfig, get_redis_config, get_redis_connection_params
+from datetime import datetime
+from typing import Any, Dict, Optional
+
+import redis
+
+from ...shared.logging import BaseLogger, LogActions, Loggers
+from .redis_config import (RedisConfig, get_redis_config,
+                           get_redis_connection_params)
 
 logger = BaseLogger(Loggers.CACHE, log_to_file=True)
 

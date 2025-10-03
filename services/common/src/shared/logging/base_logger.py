@@ -18,7 +18,7 @@ import sys
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any, Union
+from typing import Any, Dict, Optional, Union
 
 
 class BaseLogger:

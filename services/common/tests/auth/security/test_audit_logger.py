@@ -2,7 +2,7 @@
 Unit tests for AuditLogger class.
 """
 # Standard library imports
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Third-party imports
 import pytest

@@ -1,9 +1,13 @@
+"""User entity models"""
 from __future__ import annotations
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+
 from datetime import date, datetime
-from .user_enums import UserRole, DEFAULT_USER_ROLE, VALID_ROLES
-from ..entity_constants import UserFields, FieldConstraints, DatabaseFields
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+from ..entity_constants import DatabaseFields, FieldConstraints, UserFields
+from .user_enums import DEFAULT_USER_ROLE
 
 
 class User(BaseModel):

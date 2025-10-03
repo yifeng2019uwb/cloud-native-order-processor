@@ -4,12 +4,13 @@ Redis health check for services
 Provides health status and connection monitoring
 """
 
-from ...shared.logging import BaseLogger, Loggers, LogActions
 import time
-from typing import Dict, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, Optional
 
-from ...data.database.redis_connection import get_redis_manager, test_redis_connection
+from ...data.database.redis_connection import (get_redis_manager,
+                                               test_redis_connection)
+from ...shared.logging import BaseLogger, LogActions, Loggers
 
 logger = BaseLogger(Loggers.CACHE, log_to_file=True)
 

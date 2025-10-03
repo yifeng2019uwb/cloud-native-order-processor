@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import Mock
-import sys
 import os
+import sys
+from unittest.mock import Mock
+
+import pytest
 
 # Add the common directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -206,7 +207,7 @@ class TestBaseDAO:
 
     def test_safe_query_with_filter(self, base_dao, mock_db_connection):
         """Test query with filter condition"""
-        from boto3.dynamodb.conditions import Key, Attr
+        from boto3.dynamodb.conditions import Attr, Key
 
         key_condition = Key('PK').eq('test_user')
         filter_condition = Attr('status').eq('active')
@@ -274,7 +275,7 @@ class TestBaseDAO:
 
     def test_safe_query_with_all_options(self, base_dao, mock_db_connection):
         """Test query with all options"""
-        from boto3.dynamodb.conditions import Key, Attr
+        from boto3.dynamodb.conditions import Attr, Key
 
         key_condition = Key('email').eq('test@example.com')
         filter_condition = Attr('status').eq('active')

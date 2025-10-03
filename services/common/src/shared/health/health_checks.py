@@ -7,9 +7,11 @@ to ensure consistent health monitoring and Kubernetes probe support.
 
 import os
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from fastapi import HTTPException, status
-from ...shared.logging import BaseLogger, Loggers, LogActions
+
+from ...shared.logging import BaseLogger, LogActions, Loggers
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 

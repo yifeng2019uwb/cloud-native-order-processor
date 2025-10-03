@@ -5,12 +5,13 @@ Contains the main Order class and related models for database operations.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import Optional
 
-from .enums import OrderType, OrderStatus
+from pydantic import BaseModel, ConfigDict, Field
+
+from .enums import OrderStatus, OrderType
 
 
 class Order(BaseModel):

@@ -4,25 +4,22 @@ Unit tests for auth exceptions
 Tests the authentication-specific exceptions used across the CNOP system.
 """
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Add the common module to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
-# Import base exception
-from src.exceptions.base_exception import CNOPClientException
-
 # Import the actual exceptions from source files
 from src.auth.exceptions.exceptions import (
-    CNOPAuthInvalidCredentialsException,
-    CNOPAuthTokenExpiredException,
-    CNOPAuthTokenInvalidException,
-    CNOPAuthAuthorizationException,
-    CNOPAuthAccessDeniedException,
+    CNOPAuthAccessDeniedException, CNOPAuthAuthorizationException,
     CNOPAuthInsufficientPermissionsException,
-)
+    CNOPAuthInvalidCredentialsException, CNOPAuthTokenExpiredException,
+    CNOPAuthTokenInvalidException)
+# Import base exception
+from src.exceptions.base_exception import CNOPClientException
 
 
 class TestAuthExceptions:

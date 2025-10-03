@@ -13,10 +13,13 @@ Responsibilities:
 
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any
-from jose import jwt, JWTError
+from typing import Any, Dict, Optional
+
+from jose import JWTError, jwt
+
 from ...data.entities.user import DEFAULT_USER_ROLE
-from ...exceptions.shared_exceptions import CNOPTokenExpiredException, CNOPTokenInvalidException
+from ...exceptions.shared_exceptions import (CNOPTokenExpiredException,
+                                             CNOPTokenInvalidException)
 from ...shared.logging import BaseLogger, LogActions, Loggers
 
 # Create logger instance for token management

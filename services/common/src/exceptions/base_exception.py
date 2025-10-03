@@ -4,7 +4,8 @@ Path: services/common/src/exceptions/base_exception.py
 """
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from ..shared.logging import BaseLogger, LogActions, Loggers
 
 

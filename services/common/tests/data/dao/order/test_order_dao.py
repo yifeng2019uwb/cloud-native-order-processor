@@ -2,19 +2,21 @@
 Unit tests for OrderDAO
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'src')))
 
-import pytest
-from decimal import Decimal
 from datetime import datetime, timezone
+from decimal import Decimal
 from unittest.mock import Mock, patch
+
+import pytest
 from botocore.exceptions import ClientError
 
 from src.data.dao.order.order_dao import OrderDAO
 from src.data.entities.order import Order, OrderItem
-from src.data.entities.order.enums import OrderType, OrderStatus
+from src.data.entities.order.enums import OrderStatus, OrderType
 from src.data.exceptions import CNOPDatabaseOperationException
 from src.exceptions.shared_exceptions import CNOPOrderNotFoundException
 

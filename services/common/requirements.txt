@@ -1,19 +1,23 @@
-# Updated common/requirements.txt - use exact versions for stability
-pydantic==2.5.0
-boto3==1.29.7
-python-dotenv==1.0.0
-pyyaml==6.0.1
-email-validator==2.1.0
-fastapi==0.104.1
-bcrypt==4.0.1
+# Updated common/requirements.txt - Python 3.13 compatible versions
+pydantic>=2.8.0
+boto3>=1.34.0
+pynamodb>=6.1.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+email-validator>=2.1.0
+fastapi>=0.110.0
+bcrypt>=4.1.0
 
 # Redis support
-redis==5.0.1
+redis>=5.0.1
 
 # Security dependencies
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]>=3.3.0
 
 # Test dependencies
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+
+# Note: PynamoDB 6.1.0 supports Python 3.7+ and should work with Python 3.13
+# If compatibility issues arise, consider using PynamoDB 5.4.0 as fallback

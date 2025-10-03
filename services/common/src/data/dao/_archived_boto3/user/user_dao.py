@@ -1,19 +1,20 @@
-from typing import Optional
-from datetime import datetime
-from boto3.dynamodb.conditions import Key
-import sys
 import os
+import sys
+from datetime import datetime
+from typing import Optional
+
+from boto3.dynamodb.conditions import Key
 
 # Path setup for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from ..base_dao import BaseDAO
-from ...entities.user import User, UserItem
-from ...entities.user import DEFAULT_USER_ROLE
-from ...entities.entity_constants import UserFields, TimestampFields
-from ....exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
 from ....auth.security import PasswordManager
-from ....shared.logging import BaseLogger, Loggers, LogActions
+from ....exceptions.shared_exceptions import (CNOPInvalidCredentialsException,
+                                              CNOPUserNotFoundException)
+from ....shared.logging import BaseLogger, LogActions, Loggers
+from ...entities.entity_constants import TimestampFields, UserFields
+from ...entities.user import DEFAULT_USER_ROLE, User, UserItem
+from ..base_dao import BaseDAO
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 

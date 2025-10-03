@@ -11,7 +11,6 @@ Service-specific validation exceptions should be in their respective services.
 
 from .base_exception import CNOPClientException
 
-
 # ========================================
 # AUTHENTICATION EXCEPTIONS (401 scenarios)
 # ========================================

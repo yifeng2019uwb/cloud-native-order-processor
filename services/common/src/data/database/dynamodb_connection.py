@@ -5,13 +5,14 @@ Provides centralized DynamoDB connection management with connection pooling,
 retry logic, and health monitoring for all services.
 """
 
-from ...shared.logging import BaseLogger, Loggers, LogActions
-from typing import Optional
 import os
+from typing import Optional
+
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
-from ...exceptions.shared_exceptions import CNOPInternalServerException
 
+from ...exceptions.shared_exceptions import CNOPInternalServerException
+from ...shared.logging import BaseLogger, LogActions, Loggers
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 

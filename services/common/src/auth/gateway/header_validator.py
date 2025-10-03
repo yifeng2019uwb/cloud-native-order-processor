@@ -6,6 +6,7 @@ and extracting user information from incoming requests.
 """
 
 from typing import Dict, Optional
+
 from fastapi import HTTPException, status
 
 
