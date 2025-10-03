@@ -27,8 +27,8 @@ class TestValidateController:
 
     def test_validate_router_prefix(self):
         """Test that validate router has correct prefix."""
-        # Check router prefix
-        assert router.prefix == "/internal/auth"
+        # Check router prefix (now handled in main.py, so router has no prefix)
+        assert router.prefix == ""
 
 
 class TestValidateJWTTokenEndpoint:

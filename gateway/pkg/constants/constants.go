@@ -30,13 +30,16 @@ const (
 const (
 	StatusOK                  = 200
 	StatusCreated             = 201
+	StatusNoContent           = 204
 	StatusBadRequest          = 400
 	StatusUnauthorized        = 401
 	StatusForbidden           = 403
 	StatusNotFound            = 404
+	StatusConflict            = 409
+	StatusUnprocessableEntity = 422
 	StatusTooManyRequests     = 429
 	StatusInternalServerError = 500
-	StatusNoContent           = 204
+	StatusServiceUnavailable  = 503
 )
 
 // Gateway configuration
@@ -85,6 +88,7 @@ const (
 // API paths
 const (
 	HealthPath       = "/health"
+	MetricsPath      = "/metrics"
 	UserAPIPath      = "/api/users"
 	InventoryAPIPath = "/api/inventory"
 	APIV1Path        = "/api/v1"
@@ -136,6 +140,26 @@ const (
 	// Asset service paths
 	APIV1AssetPath             = "/api/v1/assets"
 	APIV1AssetTransactionsByID = "/api/v1/assets/:asset_id/transactions"
+)
+
+// Path patterns for dynamic route matching
+const (
+	// Asset patterns
+	AssetBalancesPattern     = "/api/v1/assets/balances"
+	AssetTransactionsPattern = "/api/v1/assets/:asset_id/transactions"
+	AssetBalancePattern      = "/api/v1/assets/:asset_id/balance"
+
+	// Order patterns
+	OrderByIDPattern = "/api/v1/orders/:id"
+
+	// Portfolio patterns
+	PortfolioByUserPattern = "/api/v1/portfolio/:username"
+
+	// Inventory patterns
+	InventoryAssetByIDPattern = "/api/v1/inventory/assets/:id"
+
+	// Balance patterns
+	BalanceAssetByIDPattern = "/api/v1/balance/asset/:asset_id"
 )
 
 // Phase 1: User roles and permissions
@@ -234,6 +258,17 @@ const (
 	ErrorRateLimitExceeded     = "Rate limit exceeded"
 	ErrorSessionInvalid        = "Invalid or expired session"
 	ErrorRedisConnectionFailed = "failed to connect to Redis:"
+
+	// Server error messages
+	ErrorRouteNotFound     = "Route not found"
+	ErrorRouteConfigNil    = "Route config is nil"
+	ErrorAuthRequired      = "Authentication required"
+	ErrorInsufficientPerms = "Insufficient permissions"
+	ErrorServiceNotFound   = "Service not found"
+	ErrorReadRequestBody   = "Failed to read request body"
+	ErrorInvalidJSONBody   = "Invalid JSON body"
+	ErrorReadResponseBody  = "Failed to read response body"
+	ErrorBackendService    = "Backend service error: %v"
 )
 
 // Redis key prefixes

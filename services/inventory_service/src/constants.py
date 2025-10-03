@@ -1,17 +1,23 @@
 """
-Inventory Service Constants
+Inventory Service Constants - Messages and configuration only
 Path: services/inventory-service/src/constants.py
 
 This file contains essential constant values used across the inventory service
 """
 
-# Service metadata
-SERVICE_NAME = "inventory-service"
-SERVICE_VERSION = "1.0.0"
-SERVICE_DESCRIPTION = "Inventory management service for crypto assets"
-
-# Metrics endpoint
-METRICS_ENDPOINT = "/internal/metrics"
+# =============================================================================
+# RESPONSE FIELD NAMES (Keep as constants - used in JSON responses)
+# =============================================================================
+RESPONSE_FIELD_SERVICE = "service"
+RESPONSE_FIELD_VERSION = "version"
+RESPONSE_FIELD_STATUS = "status"
+RESPONSE_FIELD_TIMESTAMP = "timestamp"
+RESPONSE_FIELD_ENDPOINTS = "endpoints"
+RESPONSE_FIELD_DOCS = "docs"
+RESPONSE_FIELD_HEALTH = "health"
+RESPONSE_FIELD_ASSETS = "assets"
+RESPONSE_FIELD_ASSET_DETAIL = "asset_detail"
+RESPONSE_FIELD_METRICS = "metrics"
 
 # CoinGecko API Configuration
 COINGECKO_API_URL = "https://api.coingecko.com/api/v3/coins/markets"

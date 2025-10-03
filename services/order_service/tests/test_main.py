@@ -41,7 +41,7 @@ class TestMainApplication:
         assert len(orders_routes) > 0
 
         # Check if asset transaction router is included
-        asset_transaction_routes = [route for route in app.routes if hasattr(route, 'path') and '/assets' in str(route.path)]
+        asset_transaction_routes = [route for route in app.routes if hasattr(route, 'path') and 'transactions' in str(route.path)]
         assert len(asset_transaction_routes) > 0
 
 

@@ -74,7 +74,7 @@ func (s *Server) setupRoutes() {
 	s.router.GET(constants.HealthPath, s.healthCheck)
 
 	// Metrics endpoint for Prometheus
-	s.router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	s.router.GET(constants.MetricsPath, gin.WrapH(promhttp.Handler()))
 
 	// API v1 routes
 	api := s.router.Group(constants.APIV1Path)
@@ -172,7 +172,7 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		routeConfig, exists = s.proxyService.GetRouteConfig(basePath)
 		if !exists {
 			s.logger.Info(logging.REQUEST_END, "Route not found, returning 404", "", nil)
-			s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, "Route not found")
+			s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, constants.ErrorRouteNotFound)
 			return
 		}
 	}
@@ -180,7 +180,7 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	// Check if routeConfig is nil before accessing its properties
 	if routeConfig == nil {
 		s.logger.Error(logging.AUTH_FAILURE, "Route config is nil", "", nil)
-		s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, "Route config is nil")
+		s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, constants.ErrorRouteConfigNil)
 		return
 	}
 
@@ -202,7 +202,7 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		})
 		if userRole == "" {
 			s.logger.Error(logging.AUTH_FAILURE, "No userRole, returning 401", "", nil)
-			s.handleError(c, http.StatusUnauthorized, models.ErrAuthInvalidToken, "Authentication required")
+			s.handleError(c, http.StatusUnauthorized, models.ErrAuthInvalidToken, constants.ErrorAuthRequired)
 			return
 		}
 	} else {
@@ -232,7 +232,7 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 				"user_role":     userRole,
 				"allowed_roles": routeConfig.AllowedRoles,
 			})
-			s.handleError(c, http.StatusForbidden, models.ErrPermInsufficient, "Insufficient permissions")
+			s.handleError(c, http.StatusForbidden, models.ErrPermInsufficient, constants.ErrorInsufficientPerms)
 			return
 		}
 		s.logger.Info(logging.REQUEST_END, "Permission granted", "", map[string]interface{}{
@@ -246,7 +246,7 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	// Determine target service
 	targetService := s.proxyService.GetTargetService(path)
 	if targetService == "" {
-		s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, "Service not found")
+		s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, constants.ErrorServiceNotFound)
 		return
 	}
 
@@ -255,13 +255,13 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	if c.Request.Body != nil {
 		bodyBytes, err := io.ReadAll(c.Request.Body)
 		if err != nil {
-			s.handleError(c, http.StatusBadRequest, models.ErrSvcUnavailable, "Failed to read request body")
+			s.handleError(c, http.StatusBadRequest, models.ErrSvcUnavailable, constants.ErrorReadRequestBody)
 			return
 		}
 		if len(bodyBytes) > 0 {
 			// Parse JSON body to preserve structure
 			if err := json.Unmarshal(bodyBytes, &body); err != nil {
-				s.handleError(c, http.StatusBadRequest, models.ErrSvcUnavailable, "Invalid JSON body")
+				s.handleError(c, http.StatusBadRequest, models.ErrSvcUnavailable, constants.ErrorInvalidJSONBody)
 				return
 			}
 		}
@@ -301,7 +301,7 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	// Forward request to backend service
 	resp, err := s.proxyService.ProxyRequest(c.Request.Context(), proxyReq)
 	if err != nil {
-		s.handleError(c, http.StatusServiceUnavailable, models.ErrSvcUnavailable, fmt.Sprintf("Backend service error: %v", err))
+		s.handleError(c, http.StatusServiceUnavailable, models.ErrSvcUnavailable, fmt.Sprintf(constants.ErrorBackendService, err))
 		return
 	}
 	defer resp.Body.Close()
@@ -316,7 +316,7 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	// Copy response body
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		s.handleError(c, http.StatusInternalServerError, models.ErrSvcUnavailable, "Failed to read response body")
+		s.handleError(c, http.StatusInternalServerError, models.ErrSvcUnavailable, constants.ErrorReadResponseBody)
 		return
 	}
 
@@ -351,74 +351,88 @@ func (s *Server) getUserContext(c *gin.Context) *models.UserContext {
 
 // getBasePath extracts the base path for dynamic routes
 func (s *Server) getBasePath(path string) string {
+	// Local constants for path processing
+	const pathSeparator = "/"
+
+	// Path prefixes for pattern matching
+	const (
+		apiV1AssetsPrefix    = "/api/v1/assets/"
+		apiV1OrdersPrefix    = "/api/v1/orders/"
+		apiV1PortfolioPrefix = "/api/v1/portfolio/"
+		apiV1InventoryPrefix = "/api/v1/inventory/assets/"
+		apiV1BalancePrefix   = "/api/v1/balance/asset/"
+		transactionsSuffix   = "/transactions"
+		balanceSuffix        = "/balance"
+	)
+
 	s.logger.Info(logging.REQUEST_START, "getBasePath processing", "", map[string]interface{}{
 		"input_path": path,
 	})
 
 	// Check for known dynamic route patterns
 	switch {
-	case strings.HasPrefix(path, "/api/v1/assets/balances"):
+	case strings.HasPrefix(path, constants.AssetBalancesPattern):
 		// /api/v1/assets/balances -> /api/v1/assets/balances (exact match)
-		result := "/api/v1/assets/balances"
+		result := constants.AssetBalancesPattern
 		s.logger.Info(logging.REQUEST_END, "Asset balances pattern matched", "", map[string]interface{}{
 			"result": result,
 		})
 		return result
 
-	case strings.HasPrefix(path, "/api/v1/assets/") && strings.HasSuffix(path, "/transactions"):
+	case strings.HasPrefix(path, apiV1AssetsPrefix) && strings.HasSuffix(path, transactionsSuffix):
 		// /api/v1/assets/AAVE/transactions -> /api/v1/assets/:asset_id/transactions
-		result := "/api/v1/assets/:asset_id/transactions"
+		result := constants.AssetTransactionsPattern
 		s.logger.Info(logging.REQUEST_END, "Asset transactions pattern matched", "", map[string]interface{}{
 			"result": result,
 		})
 		return result
 
-	case strings.HasPrefix(path, "/api/v1/assets/") && strings.HasSuffix(path, "/balance"):
+	case strings.HasPrefix(path, apiV1AssetsPrefix) && strings.HasSuffix(path, balanceSuffix):
 		// /api/v1/assets/AAVE/balance -> /api/v1/assets/:asset_id/balance
-		result := "/api/v1/assets/:asset_id/balance"
+		result := constants.AssetBalancePattern
 		s.logger.Info(logging.REQUEST_END, "Asset balance pattern matched", "", map[string]interface{}{
 			"result": result,
 		})
 		return result
 
-	case strings.HasPrefix(path, "/api/v1/orders/"):
+	case strings.HasPrefix(path, apiV1OrdersPrefix):
 		// /api/v1/orders/123 -> /api/v1/orders/:id
-		parts := strings.Split(path, "/")
+		parts := strings.Split(path, pathSeparator)
 		if len(parts) == 5 { // /api/v1/orders/{id}
-			result := "/api/v1/orders/:id"
+			result := constants.OrderByIDPattern
 			s.logger.Info(logging.REQUEST_END, "Order by ID pattern matched", "", map[string]interface{}{
 				"result": result,
 			})
 			return result
 		}
 
-	case strings.HasPrefix(path, "/api/v1/portfolio/"):
+	case strings.HasPrefix(path, apiV1PortfolioPrefix):
 		// /api/v1/portfolio/username -> /api/v1/portfolio/:username
-		parts := strings.Split(path, "/")
+		parts := strings.Split(path, pathSeparator)
 		if len(parts) == 5 { // /api/v1/portfolio/{username}
-			result := "/api/v1/portfolio/:username"
+			result := constants.PortfolioByUserPattern
 			s.logger.Info(logging.REQUEST_END, "Portfolio by user pattern matched", "", map[string]interface{}{
 				"result": result,
 			})
 			return result
 		}
 
-	case strings.HasPrefix(path, "/api/v1/inventory/assets/"):
+	case strings.HasPrefix(path, apiV1InventoryPrefix):
 		// /api/v1/inventory/assets/123 -> /api/v1/inventory/assets/:id
-		parts := strings.Split(path, "/")
+		parts := strings.Split(path, pathSeparator)
 		if len(parts) == 6 { // /api/v1/inventory/assets/{id}
-			result := "/api/v1/inventory/assets/:id"
+			result := constants.InventoryAssetByIDPattern
 			s.logger.Info(logging.REQUEST_END, "Inventory asset by ID pattern matched", "", map[string]interface{}{
 				"result": result,
 			})
 			return result
 		}
 
-	case strings.HasPrefix(path, "/api/v1/balance/asset/"):
+	case strings.HasPrefix(path, apiV1BalancePrefix):
 		// /api/v1/balance/asset/BTC -> /api/v1/balance/asset/:asset_id
-		parts := strings.Split(path, "/")
+		parts := strings.Split(path, pathSeparator)
 		if len(parts) == 6 { // /api/v1/balance/asset/{asset_id}
-			result := "/api/v1/balance/asset/:asset_id"
+			result := constants.BalanceAssetByIDPattern
 			s.logger.Info(logging.REQUEST_END, "Asset balance by ID pattern matched", "", map[string]interface{}{
 				"result": result,
 			})

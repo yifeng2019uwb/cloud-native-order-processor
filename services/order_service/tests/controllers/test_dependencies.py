@@ -225,7 +225,7 @@ class TestDependencies:
             )
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert exc_info.value.detail == "User authentication required"
+        assert exc_info.value.detail == "Authentication failed. Please check your credentials and try again."
 
     def test_get_current_user_invalid_source(self):
         """Test get_current_user with invalid source header"""
@@ -241,7 +241,7 @@ class TestDependencies:
             )
 
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-        assert exc_info.value.detail == "Invalid request source"
+        assert exc_info.value.detail == "Access denied. You don't have permission to perform this action."
 
     def test_get_current_user_invalid_auth_service(self):
         """Test get_current_user with invalid auth service header"""
@@ -257,7 +257,7 @@ class TestDependencies:
             )
 
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-        assert exc_info.value.detail == "Invalid authentication service"
+        assert exc_info.value.detail == "Access denied. You don't have permission to perform this action."
 
     def test_get_current_user_missing_source_header(self):
         """Test get_current_user with missing source header"""
@@ -273,7 +273,7 @@ class TestDependencies:
             )
 
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-        assert exc_info.value.detail == "Invalid request source"
+        assert exc_info.value.detail == "Access denied. You don't have permission to perform this action."
 
     def test_get_current_user_missing_auth_service_header(self):
         """Test get_current_user with missing auth service header"""
@@ -289,7 +289,7 @@ class TestDependencies:
             )
 
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-        assert exc_info.value.detail == "Invalid authentication service"
+        assert exc_info.value.detail == "Access denied. You don't have permission to perform this action."
 
     def test_get_current_user_default_role(self):
         """Test get_current_user with default role when not provided"""

@@ -16,6 +16,9 @@ from common.data.database.dependencies import get_asset_dao
 from controllers.dependencies import get_request_id_from_request
 from common.exceptions.shared_exceptions import CNOPAssetNotFoundException
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_responses import APIResponseDescriptions
+from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys, API_INVENTORY_ROOT, API_ASSETS, API_ASSET_BY_ID
 from inventory_exceptions import (
     CNOPAssetValidationException,
     CNOPInventoryServerException
@@ -29,7 +32,15 @@ except ImportError:
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.INVENTORY)
-router = APIRouter(prefix="/inventory", tags=["inventory"])
+router = APIRouter(prefix=API_INVENTORY_ROOT, tags=[ApiTags.INVENTORY.value])
+
+# Local constants for success messages
+MSG_SUCCESS_ASSETS_RETRIEVED = "Assets retrieved successfully"
+MSG_SUCCESS_ASSET_RETRIEVED = "Asset retrieved successfully"
+
+# Local constants for status values
+STATUS_AVAILABLE = "available"
+STATUS_UNAVAILABLE = "unavailable"
 
 def build_asset_list(assets: list, request_params, total_count: int) -> AssetListResponse:
     """Simple method to convert DAO dict results to AssetListResponse"""
@@ -64,18 +75,18 @@ def build_asset_list(assets: list, request_params, total_count: int) -> AssetLis
 
 
 @router.get(
-    "/assets",
+    API_ASSETS,
     response_model=AssetListResponse,
     responses={
-        200: {
-            "description": "Assets retrieved successfully",
-            "model": AssetListResponse
+        HTTPStatus.OK: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_ASSETS_RETRIEVED,
+            ApiResponseKeys.MODEL.value: AssetListResponse
         },
-        422: {
-            "description": "Invalid query parameters"
+        HTTPStatus.UNPROCESSABLE_ENTITY: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION
         },
-        500: {
-            "description": "Internal server error"
+        HTTPStatus.INTERNAL_SERVER_ERROR: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_INTERNAL_SERVER
         }
     }
 )
@@ -149,21 +160,21 @@ def list_assets(
 
 
 @router.get(
-    "/assets/{asset_id}",
+    API_ASSET_BY_ID,
     response_model=AssetDetailResponse,
     responses={
-        200: {
-            "description": "Asset retrieved successfully",
-            "model": AssetDetailResponse
+        HTTPStatus.OK: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_ASSET_RETRIEVED,
+            ApiResponseKeys.MODEL.value: AssetDetailResponse
         },
-        404: {
-            "description": "Asset not found"
+        HTTPStatus.NOT_FOUND: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_NOT_FOUND
         },
-        422: {
-            "description": "Validation error"
+        HTTPStatus.UNPROCESSABLE_ENTITY: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION
         },
-        500: {
-            "description": "Internal server error"
+        HTTPStatus.INTERNAL_SERVER_ERROR: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_INTERNAL_SERVER
         }
     }
 )
@@ -207,7 +218,7 @@ def get_asset_by_id(
             record_asset_detail_view(asset_id=validated_asset_id)
 
         # Convert to detailed response model with all comprehensive fields
-        availability_status = "available" if asset.is_active else "unavailable"
+        availability_status = STATUS_AVAILABLE if asset.is_active else STATUS_UNAVAILABLE
         last_updated = asset.last_updated or datetime.utcnow().isoformat()
 
         return AssetDetailResponse(

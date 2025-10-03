@@ -384,7 +384,7 @@ class TestListOrders:
             mock_validate.side_effect = Exception("Unexpected error")
 
             # Test that the exception is raised
-            with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
+            with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable"):
                 list_orders(
                     asset_id=None,
                     order_type=None,

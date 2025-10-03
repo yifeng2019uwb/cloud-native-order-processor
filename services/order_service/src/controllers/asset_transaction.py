@@ -22,6 +22,11 @@ from common.exceptions import (
 )
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_responses import APIResponseDescriptions
+from api_info_enum import ApiTags, ApiResponseKeys, API_ASSET_TRANSACTIONS
+from constants import MSG_SUCCESS_ASSET_TRANSACTIONS_RETRIEVED, MSG_ERROR_ASSET_NOT_FOUND
+from common.shared.constants.error_messages import ErrorMessages
 from controllers.dependencies import (
     get_current_user, get_asset_transaction_dao_dependency,
     get_asset_dao_dependency, get_user_dao_dependency,
@@ -31,32 +36,32 @@ from validation.business_validators import validate_order_history_business_rules
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.ORDER)
-router = APIRouter(tags=["asset-transactions"])
+router = APIRouter(tags=[ApiTags.ASSET_TRANSACTIONS.value])
 
 
 @router.get(
-    "/assets/{asset_id}/transactions",
+    API_ASSET_TRANSACTIONS,
     response_model=Union[GetAssetTransactionsResponse, ErrorResponse],
     responses={
-        200: {
-            "description": "Asset transactions retrieved successfully",
-            "model": GetAssetTransactionsResponse
+        HTTPStatus.OK: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_ASSET_TRANSACTIONS_RETRIEVED,
+            ApiResponseKeys.MODEL.value: GetAssetTransactionsResponse
         },
-        401: {
-            "description": "Unauthorized",
-            "model": ErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        404: {
-            "description": "Asset not found",
-            "model": ErrorResponse
+        HTTPStatus.NOT_FOUND: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_ASSET_NOT_FOUND,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        422: {
-            "description": "Invalid input data",
-            "model": ErrorResponse
+        HTTPStatus.UNPROCESSABLE_ENTITY: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        503: {
-            "description": "Service temporarily unavailable",
-            "model": ErrorResponse
+        HTTPStatus.SERVICE_UNAVAILABLE: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )
@@ -132,7 +137,7 @@ def get_asset_transactions(
 
         return GetAssetTransactionsResponse(
             success=True,
-            message="Asset transactions retrieved successfully",
+            message=MSG_SUCCESS_ASSET_TRANSACTIONS_RETRIEVED,
             data=transaction_data_list,
             has_more=has_more,
             timestamp=datetime.utcnow()
@@ -160,7 +165,7 @@ def get_asset_transactions(
             user=current_user['username'],
             request_id=request_id
         )
-        raise CNOPInternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
     except Exception as e:
         logger.error(
             action=LogActions.ERROR,
@@ -168,4 +173,4 @@ def get_asset_transactions(
             user=current_user['username'],
             request_id=request_id
         )
-        raise CNOPInternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)

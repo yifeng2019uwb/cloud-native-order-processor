@@ -14,6 +14,12 @@ from common.data.entities.order.enums import OrderType, OrderStatus
 from common.exceptions import CNOPAssetNotFoundException, CNOPOrderNotFoundException
 from order_exceptions import CNOPOrderValidationException
 
+# Local constants for validation messages (only used in this file)
+MSG_ERROR_INSUFFICIENT_BALANCE_DETAILED = "Insufficient balance for this order"
+MSG_ERROR_ORDER_PRICE_REQUIRED = "order_price is required"
+MSG_ERROR_EXPIRES_AT_REQUIRED = "expires_at is required for limit orders"
+MSG_ERROR_ORDER_CANNOT_BE_CANCELLED = "Order in this state cannot be cancelled"
+
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.dao.order.order_dao import OrderDAO
 from common.data.dao.user.user_dao import UserDAO
@@ -111,7 +117,7 @@ def _validate_user_balance_for_buy_order(
             required_amount = quantity * order_price
 
         if user_balance.current_balance < required_amount:
-            raise CNOPOrderValidationException(f"Insufficient balance for this order. Required: ${required_amount}, Available: ${user_balance.current_balance}")
+            raise CNOPOrderValidationException(f"{MSG_ERROR_INSUFFICIENT_BALANCE_DETAILED}. Required: ${required_amount}, Available: ${user_balance.current_balance}")
     except Exception as e:
         raise CNOPOrderValidationException(f"Unable to verify user balance: {str(e)}")
 
@@ -147,9 +153,9 @@ def validate_order_creation_business_rules(
 
     if order_type in [OrderType.LIMIT_BUY, OrderType.LIMIT_SELL]:
         if order_price is None:
-            raise CNOPOrderValidationException(f"order_price is required for {order_type.value} orders")
+            raise CNOPOrderValidationException(f"{MSG_ERROR_ORDER_PRICE_REQUIRED} for {order_type.value} orders")
         if expires_at is None:
-            raise CNOPOrderValidationException("expires_at is required for limit orders")
+            raise CNOPOrderValidationException(MSG_ERROR_EXPIRES_AT_REQUIRED)
 
     if quantity < Decimal("0.001"):
         raise CNOPOrderValidationException("Order quantity below minimum threshold (0.001)")
@@ -191,7 +197,7 @@ def validate_order_cancellation_business_rules(
             raise CNOPOrderValidationException("Market orders cannot be cancelled")
 
         if order.status not in [OrderStatus.PENDING, OrderStatus.QUEUED]:
-            raise CNOPOrderValidationException(f"Order in {order.status.value} state cannot be cancelled")
+            raise CNOPOrderValidationException(f"{MSG_ERROR_ORDER_CANNOT_BE_CANCELLED} in {order.status.value} state")
 
     except CNOPOrderNotFoundException:
         raise CNOPOrderValidationException(f"Order {order_id} not found")

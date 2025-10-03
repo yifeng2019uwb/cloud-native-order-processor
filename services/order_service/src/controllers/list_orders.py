@@ -16,6 +16,11 @@ from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.dao.user.user_dao import UserDAO
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_responses import APIResponseDescriptions
+from api_info_enum import ApiTags, ApiResponseKeys, API_ORDERS_ROOT
+from constants import MSG_SUCCESS_ORDERS_LISTED
+from common.shared.constants.error_messages import ErrorMessages
 from controllers.dependencies import (
     get_current_user, get_order_dao_dependency,
     get_asset_dao_dependency, get_user_dao_dependency,
@@ -25,24 +30,24 @@ from validation.business_validators import validate_order_listing_business_rules
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.ORDER)
-router = APIRouter(tags=["orders"])
+router = APIRouter(tags=[ApiTags.ORDERS.value])
 
 
 @router.get(
-    "/",
+    API_ORDERS_ROOT,
     response_model=Union[OrderListResponse, ErrorResponse],
     responses={
-        200: {
-            "description": "Orders retrieved successfully",
-            "model": OrderListResponse
+        HTTPStatus.OK: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_ORDERS_LISTED,
+            ApiResponseKeys.MODEL.value: OrderListResponse
         },
-        401: {
-            "description": "Unauthorized",
-            "model": ErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        500: {
-            "description": "Internal server error",
-            "model": ErrorResponse
+        HTTPStatus.INTERNAL_SERVER_ERROR: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_INTERNAL_SERVER,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )
@@ -117,7 +122,7 @@ def list_orders(
 
         return OrderListResponse(
             success=True,
-            message="Orders retrieved successfully",
+            message=MSG_SUCCESS_ORDERS_LISTED,
             data=order_summaries,
             has_more=has_more,
             timestamp=datetime.utcnow()
@@ -130,4 +135,4 @@ def list_orders(
             user=current_user['username'],
             request_id=request_id
         )
-        raise CNOPInternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)

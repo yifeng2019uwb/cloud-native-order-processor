@@ -309,7 +309,7 @@ class TestBusinessValidators:
         # Test case where order is in non-cancellable state
         mock_order.order_type = OrderType.LIMIT_BUY
         mock_order.status = OrderStatus.COMPLETED
-        with pytest.raises(CNOPOrderValidationException, match="Order in completed state cannot be cancelled"):
+        with pytest.raises(CNOPOrderValidationException, match="Order in this state cannot be cancelled in completed state"):
             validate_order_cancellation_business_rules("order123", "testuser", mock_order_dao, mock_user_dao)
 
         # Test case where order is not found

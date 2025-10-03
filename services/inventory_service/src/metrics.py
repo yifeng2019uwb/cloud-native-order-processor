@@ -5,7 +5,7 @@ import time
 from prometheus_client import Counter, Histogram, Gauge, Info, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Response
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from constants import SERVICE_NAME, SERVICE_VERSION
+from api_info_enum import ServiceMetadata
 
 logger = BaseLogger(Loggers.INVENTORY)
 
@@ -15,7 +15,7 @@ logger = BaseLogger(Loggers.INVENTORY)
 
 # Service info
 service_info = Info('inventory_service_info', 'Inventory service information')
-service_info.info({'version': SERVICE_VERSION, 'service': SERVICE_NAME})
+service_info.info({'version': ServiceMetadata.VERSION.value, 'service': ServiceMetadata.NAME.value})
 
 # Core counters
 inventory_requests_total = Counter('inventory_requests_total', 'Total inventory requests', ['status', 'endpoint'])

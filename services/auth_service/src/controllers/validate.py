@@ -9,8 +9,9 @@ from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, Val
 from common.auth.security import TokenManager
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from api_info_enum import ApiTags, ApiPaths
 
-router = APIRouter(prefix="/internal/auth", tags=["internal"])
+router = APIRouter(tags=[ApiTags.INTERNAL.value])
 logger = BaseLogger(Loggers.AUTH)
 
 

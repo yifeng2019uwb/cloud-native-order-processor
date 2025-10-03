@@ -14,7 +14,8 @@ from fastapi.testclient import TestClient
 def create_mock_request(request_id="test-request-id"):
     """Helper function to create a mock request object with headers"""
     mock_request = MagicMock()
-    mock_request.headers = {"X-Request-ID": request_id}
+    from common.shared.constants.request_headers import RequestHeaders
+    mock_request.headers = {RequestHeaders.REQUEST_ID: request_id}
     return mock_request
 
 # Add src to path for imports
@@ -327,7 +328,7 @@ class TestCreateOrder:
             mock_validate.side_effect = CNOPLockAcquisitionException("Lock acquisition failed")
 
             # Test that the exception is raised
-            with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable - please try again"):
+            with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable"):
                 await create_order(
                     order_data=mock_order_create_request,
                     request=mock_request,
@@ -360,7 +361,7 @@ class TestCreateOrder:
             mock_validate.side_effect = CNOPDatabaseOperationException("Database error")
 
             # Test that the exception is raised
-            with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
+            with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable"):
                 await create_order(
                     order_data=mock_order_create_request,
                     request=mock_request,
@@ -426,7 +427,7 @@ class TestCreateOrder:
             mock_validate.side_effect = Exception("Unexpected error")
 
             # Test that the exception is raised
-            with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
+            with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable"):
                 await create_order(
                     order_data=mock_order_create_request,
                     request=mock_request,

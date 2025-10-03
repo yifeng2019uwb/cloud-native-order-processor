@@ -7,13 +7,15 @@ from typing import Dict, Any
 
 # Import health components
 from common.shared.health import HealthChecker, HealthCheckResponse
+from common.shared.constants.http_status import HTTPStatus
+from api_info_enum import ApiTags, ApiPaths
 
 # Import our standardized logger
 from common.shared.logging import BaseLogger, Loggers, LogActions
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.INVENTORY)
-router = APIRouter(tags=["health"])
+router = APIRouter(tags=[ApiTags.HEALTH.value])
 
 # Create inventory service specific health checker
 class InventoryServiceHealthChecker(HealthChecker):
@@ -38,7 +40,7 @@ class InventoryServiceHealthChecker(HealthChecker):
 health_checker = InventoryServiceHealthChecker("inventory-service", "1.0.0")
 
 
-@router.get("/health")
+@router.get(ApiPaths.HEALTH.value)
 def health_check():
     """
     Basic health check endpoint for Kubernetes liveness probe
@@ -48,7 +50,7 @@ def health_check():
     return health_checker.basic_health_check()
 
 
-@router.get("/health/ready", status_code=status.HTTP_200_OK)
+@router.get(ApiPaths.HEALTH_READY.value, status_code=HTTPStatus.OK)
 def readiness_check():
     """
     Readiness check endpoint for Kubernetes readiness probe
@@ -58,7 +60,7 @@ def readiness_check():
     return health_checker.readiness_check()
 
 
-@router.get("/health/live", status_code=status.HTTP_200_OK)
+@router.get(ApiPaths.HEALTH_LIVE.value, status_code=HTTPStatus.OK)
 def liveness_check():
     """
     Liveness check endpoint for Kubernetes liveness probe

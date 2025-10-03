@@ -5,8 +5,8 @@ Unit tests for Auth Service Metrics functionality - Simplified
 import pytest
 import time
 
-# Import constants directly for testing
-from src.constants import SERVICE_NAME, SERVICE_VERSION, SERVICE_DESCRIPTION, METRICS_ENDPOINT
+# Import enums and constants for testing
+from src.api_info_enum import ServiceMetadata, ApiPaths
 
 
 class TestMetricsConstants:
@@ -14,7 +14,7 @@ class TestMetricsConstants:
 
     def test_service_metadata(self):
         """Test that service metadata constants are defined correctly"""
-        assert SERVICE_NAME == "auth-service"
-        assert SERVICE_VERSION == "1.0.0"
-        assert SERVICE_DESCRIPTION == "JWT validation service"
-        assert METRICS_ENDPOINT == "/internal/metrics"
+        assert ServiceMetadata.NAME.value == "auth-service"
+        assert ServiceMetadata.VERSION.value == "1.0.0"
+        assert ServiceMetadata.DESCRIPTION.value == "Independent JWT validation service"
+        assert ApiPaths.METRICS.value == "/internal/metrics"

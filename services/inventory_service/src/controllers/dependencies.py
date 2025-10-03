@@ -27,7 +27,8 @@ def get_request_id_from_request(request: Request) -> str:
     Returns:
         Request ID string for correlation across services
     """
-    return request.headers.get("X-Request-ID") or "no-request-id"
+    from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
+    return request.headers.get(RequestHeaders.REQUEST_ID) or RequestHeaderDefaults.REQUEST_ID_DEFAULT
 
 
 def get_asset_dao_dependency() -> AssetDAO:

@@ -23,6 +23,16 @@ from common.exceptions import (
 )
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_responses import APIResponseDescriptions
+from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys, API_ORDERS_ROOT
+from constants import (
+    MSG_SUCCESS_ORDER_CREATED, MSG_SUCCESS_MARKET_BUY_ORDER_CREATED, MSG_SUCCESS_MARKET_SELL_ORDER_CREATED,
+    MSG_ERROR_INSUFFICIENT_BALANCE, MSG_ERROR_ORDER_VALIDATION_FAILED, MSG_ERROR_ORDER_PROCESSING_FAILED,
+    MSG_ERROR_LOCK_ACQUISITION_FAILED, MSG_ERROR_UNEXPECTED_ERROR,
+    USER_AGENT_HEADER, UNKNOWN_VALUE
+)
+from common.shared.constants.error_messages import ErrorMessages
 from order_exceptions import CNOPOrderValidationException
 from controllers.dependencies import (
     get_current_user, get_transaction_manager,
@@ -34,37 +44,37 @@ from validation.business_validators import validate_order_creation_business_rule
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.ORDER)
-router = APIRouter(tags=["orders"])
+router = APIRouter(tags=[ApiTags.ORDERS.value])
 
 
 @router.post(
-    "/",
+    API_ORDERS_ROOT,
     response_model=Union[OrderCreateResponse, ErrorResponse],
     status_code=status.HTTP_201_CREATED,
     responses={
-        201: {
-            "description": "Order created successfully",
-            "model": OrderCreateResponse
+        HTTPStatus.CREATED: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_ORDER_CREATED,
+            ApiResponseKeys.MODEL.value: OrderCreateResponse
         },
-        400: {
-            "description": "Bad request - insufficient balance",
-            "model": ErrorResponse
+        HTTPStatus.BAD_REQUEST: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_INSUFFICIENT_BALANCE,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        401: {
-            "description": "Unauthorized",
-            "model": ErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        409: {
-            "description": "Operation is busy - try again",
-            "model": ErrorResponse
+        HTTPStatus.CONFLICT: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_LOCK_ACQUISITION_FAILED,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        422: {
-            "description": "Invalid input data",
-            "model": ErrorResponse
+        HTTPStatus.UNPROCESSABLE_ENTITY: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        503: {
-            "description": "Service temporarily unavailable",
-            "model": ErrorResponse
+        HTTPStatus.SERVICE_UNAVAILABLE: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )
@@ -98,7 +108,7 @@ async def create_order(
             "order_type": order_data.order_type.value,
             "asset_id": order_data.asset_id,
             "quantity": str(order_data.quantity),
-            "user_agent": request.headers.get("user-agent", "unknown"),
+            "user_agent": request.headers.get(USER_AGENT_HEADER, UNKNOWN_VALUE),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     )
@@ -181,9 +191,17 @@ async def create_order(
             created_at=created_order.created_at
         )
 
+        # Determine success message based on order type
+        if order_data.order_type == OrderType.MARKET_BUY:
+            success_message = MSG_SUCCESS_MARKET_BUY_ORDER_CREATED
+        elif order_data.order_type == OrderType.MARKET_SELL:
+            success_message = MSG_SUCCESS_MARKET_SELL_ORDER_CREATED
+        else:
+            success_message = MSG_SUCCESS_ORDER_CREATED
+
         return OrderCreateResponse(
             success=True,
-            message=f"{order_data.order_type.value.replace('_', ' ').title()} order created successfully",
+            message=success_message,
             data=order_data_response,
             timestamp=datetime.utcnow()
         )
@@ -206,7 +224,7 @@ async def create_order(
             user=current_user['username'],
             request_id=request_id
         )
-        raise CNOPInternalServerException("Service temporarily unavailable - please try again")
+        raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
 
     except CNOPDatabaseOperationException as e:
         logger.error(
@@ -215,7 +233,7 @@ async def create_order(
             user=current_user['username'],
             request_id=request_id
         )
-        raise CNOPInternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
 
     except CNOPOrderValidationException as e:
         logger.warning(
@@ -235,4 +253,4 @@ async def create_order(
             user=current_user['username'],
             request_id=request_id
         )
-        raise CNOPInternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)

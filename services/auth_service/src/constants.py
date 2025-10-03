@@ -1,11 +1,16 @@
 """
-Auth Service Constants - Simplified for Personal Project
+Auth Service Constants - Messages and configuration only
 """
 
-# Service metadata
-SERVICE_NAME = "auth-service"
-SERVICE_VERSION = "1.0.0"
-SERVICE_DESCRIPTION = "JWT validation service"
-
-# Metrics endpoint
-METRICS_ENDPOINT = "/internal/metrics"
+# =============================================================================
+# RESPONSE FIELD NAMES (Keep as constants - used in JSON responses)
+# =============================================================================
+RESPONSE_FIELD_SERVICE = "service"
+RESPONSE_FIELD_VERSION = "version"
+RESPONSE_FIELD_STATUS = "status"
+RESPONSE_FIELD_TIMESTAMP = "timestamp"
+RESPONSE_FIELD_ENDPOINTS = "endpoints"
+RESPONSE_FIELD_DOCS = "docs"
+RESPONSE_FIELD_HEALTH = "health"
+RESPONSE_FIELD_VALIDATE = "validate"
+RESPONSE_FIELD_METRICS = "metrics"

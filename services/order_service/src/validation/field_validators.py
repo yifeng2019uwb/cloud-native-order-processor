@@ -11,6 +11,13 @@ from datetime import datetime
 
 # Import proper exceptions
 from order_exceptions import CNOPOrderValidationException
+
+# Local constants for validation messages (only used in this file)
+MSG_ERROR_ORDER_ID_EMPTY = "Order ID cannot be empty"
+MSG_ERROR_ORDER_TYPE_EMPTY = "Order type cannot be empty"
+MSG_ERROR_ORDER_STATUS_EMPTY = "Order status cannot be empty"
+MSG_ERROR_INVALID_ORDER_TYPE = "Invalid order type"
+MSG_ERROR_INVALID_ORDER_STATUS = "Invalid order status"
 from common.data.entities.order.enums import OrderType, OrderStatus
 
 # Import shared validation functions from common module
@@ -30,7 +37,7 @@ def validate_order_id(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise CNOPOrderValidationException("Order ID cannot be empty")
+        raise CNOPOrderValidationException(MSG_ERROR_ORDER_ID_EMPTY)
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
@@ -41,7 +48,7 @@ def validate_order_id(v: str) -> str:
 
     # 3. Check for empty after sanitization
     if not v:
-        raise CNOPOrderValidationException("Order ID cannot be empty")
+        raise CNOPOrderValidationException(MSG_ERROR_ORDER_ID_EMPTY)
 
     # 4. Format validation - order IDs should be alphanumeric with underscores, 10-50 chars
     if not re.match(r'^[a-zA-Z0-9_]{10,50}$', v):
@@ -95,7 +102,7 @@ def validate_order_type(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise CNOPOrderValidationException("Order type cannot be empty")
+        raise CNOPOrderValidationException(MSG_ERROR_ORDER_TYPE_EMPTY)
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
@@ -106,12 +113,12 @@ def validate_order_type(v: str) -> str:
 
     # 3. Check for empty after sanitization
     if not v:
-        raise CNOPOrderValidationException("Order type cannot be empty")
+        raise CNOPOrderValidationException(MSG_ERROR_ORDER_TYPE_EMPTY)
 
     # 4. Format validation - check against valid order types
-    valid_types = ['market_buy', 'market_sell', 'limit_buy', 'limit_sell']
+    valid_types = [order_type.value for order_type in OrderType]
     if v.lower() not in valid_types:
-        raise CNOPOrderValidationException(f"Invalid order type. Must be one of: {valid_types}")
+        raise CNOPOrderValidationException(f"{MSG_ERROR_INVALID_ORDER_TYPE}. Must be one of: {valid_types}")
 
     # 5. Convert to lowercase for consistency
     return v.lower()
@@ -123,7 +130,7 @@ def validate_order_status(v: str) -> str:
     Combines sanitization + format validation
     """
     if not v:
-        raise CNOPOrderValidationException("Order status cannot be empty")
+        raise CNOPOrderValidationException(MSG_ERROR_ORDER_STATUS_EMPTY)
 
     # 1. Check for suspicious content first
     if is_suspicious(v):
@@ -134,12 +141,12 @@ def validate_order_status(v: str) -> str:
 
     # 3. Check for empty after sanitization
     if not v:
-        raise CNOPOrderValidationException("Order status cannot be empty")
+        raise CNOPOrderValidationException(MSG_ERROR_ORDER_STATUS_EMPTY)
 
     # 4. Format validation - check against valid order statuses
-    valid_statuses = ['pending', 'completed', 'cancelled', 'failed']
+    valid_statuses = [status.value for status in OrderStatus]
     if v.lower() not in valid_statuses:
-        raise CNOPOrderValidationException(f"Invalid order status. Must be one of: {valid_statuses}")
+        raise CNOPOrderValidationException(f"{MSG_ERROR_INVALID_ORDER_STATUS}. Must be one of: {valid_statuses}")
 
     # 5. Convert to lowercase for consistency
     return v.lower()

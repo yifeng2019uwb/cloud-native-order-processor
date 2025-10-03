@@ -18,6 +18,11 @@ from common.exceptions.shared_exceptions import (
 )
 from order_exceptions.exceptions import CNOPOrderValidationException
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_responses import APIResponseDescriptions
+from api_info_enum import ApiTags, ApiResponseKeys, API_ORDER_BY_ID
+from constants import MSG_SUCCESS_ORDER_RETRIEVED, MSG_ERROR_ORDER_NOT_FOUND
+from common.shared.constants.error_messages import ErrorMessages
 from controllers.dependencies import (
     get_current_user, get_order_dao_dependency,
     get_user_dao_dependency, get_request_id_from_request
@@ -26,28 +31,28 @@ from validation.business_validators import validate_order_retrieval_business_rul
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.ORDER)
-router = APIRouter(tags=["orders"])
+router = APIRouter(tags=[ApiTags.ORDERS.value])
 
 
 @router.get(
-    "/{order_id}",
+    API_ORDER_BY_ID,
     response_model=Union[GetOrderResponse, ErrorResponse],
     responses={
-        200: {
-            "description": "Order retrieved successfully",
-            "model": GetOrderResponse
+        HTTPStatus.OK: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_ORDER_RETRIEVED,
+            ApiResponseKeys.MODEL.value: GetOrderResponse
         },
-        401: {
-            "description": "Unauthorized",
-            "model": ErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        404: {
-            "description": "Order not found",
-            "model": ErrorResponse
+        HTTPStatus.NOT_FOUND: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_ORDER_NOT_FOUND,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        500: {
-            "description": "Internal server error",
-            "model": ErrorResponse
+        HTTPStatus.INTERNAL_SERVER_ERROR: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_INTERNAL_SERVER,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )
@@ -107,7 +112,7 @@ def get_order(
 
         return GetOrderResponse(
             success=True,
-            message="Order retrieved successfully",
+            message=MSG_SUCCESS_ORDER_RETRIEVED,
             data=order_data_response,
             timestamp=datetime.utcnow()
         )
@@ -123,4 +128,4 @@ def get_order(
             user=current_user['username'],
             request_id=request_id
         )
-        raise CNOPInternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)

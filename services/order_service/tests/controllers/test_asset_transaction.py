@@ -246,7 +246,7 @@ class TestAssetTransactionController:
 
         mock_asset_transaction_dao.get_user_asset_transactions.side_effect = CNOPDatabaseOperationException("DB error")
 
-        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable"):
              get_asset_transactions(
                 asset_id="BTC",
                 limit=50,
@@ -266,7 +266,7 @@ class TestAssetTransactionController:
 
         mock_asset_transaction_dao.get_user_asset_transactions.side_effect = Exception("Unexpected error")
 
-        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable"):
             get_asset_transactions(
                 asset_id="BTC",
                 limit=50,

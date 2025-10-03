@@ -158,4 +158,4 @@ class TestExceptionHandlers:
 
         # Verify response
         assert response.status_code == 500
-        assert response.body.decode() == '{"detail":"Internal server error"}'
+        assert response.body.decode() == '{"detail":"An internal server error occurred. Please try again later."}'

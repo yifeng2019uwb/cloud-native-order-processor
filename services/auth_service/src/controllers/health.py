@@ -8,26 +8,28 @@ from fastapi import APIRouter, status
 from typing import Dict, Any
 
 from common.shared.health import HealthChecker
+from common.shared.constants.http_status import HTTPStatus
+from api_info_enum import ApiTags, ApiPaths, ServiceMetadata
 
-router = APIRouter(tags=["health"])
+router = APIRouter(tags=[ApiTags.HEALTH.value])
 
 # Create auth service health checker instance
-health_checker = HealthChecker("auth-service", "1.0.0")
+health_checker = HealthChecker(ServiceMetadata.NAME.value, ServiceMetadata.VERSION.value)
 
 
-@router.get("/health", status_code=status.HTTP_200_OK)
+@router.get(ApiPaths.HEALTH.value, status_code=HTTPStatus.OK)
 def health_check():
     """Basic health check endpoint for Kubernetes liveness probe."""
     return health_checker.basic_health_check()
 
 
-@router.get("/health/ready", status_code=status.HTTP_200_OK)
+@router.get(ApiPaths.HEALTH_READY.value, status_code=HTTPStatus.OK)
 def readiness_check():
     """Readiness check endpoint for Kubernetes readiness probe."""
     return health_checker.readiness_check()
 
 
-@router.get("/health/live", status_code=status.HTTP_200_OK)
+@router.get(ApiPaths.HEALTH_LIVE.value, status_code=HTTPStatus.OK)
 def liveness_check():
     """Liveness check endpoint for Kubernetes liveness probe."""
     return health_checker.liveness_check()

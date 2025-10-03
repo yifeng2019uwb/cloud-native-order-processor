@@ -10,7 +10,11 @@ Provides dependency injection for:
 """
 from decimal import Decimal
 from typing import Optional
-from fastapi import HTTPException, status, Request, Header
+from fastapi import HTTPException, Request, Header
+from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
+from common.shared.constants.service_names import ServiceValidation
 from common.data.database.dependencies import get_order_dao, get_balance_dao, get_asset_dao, get_user_dao
 from common.data.database.dynamodb_connection import get_dynamodb_manager
 from common.data.dao.order.order_dao import OrderDAO
@@ -84,15 +88,15 @@ def get_request_id_from_request(request: Request) -> str:
     Returns:
         Request ID string for correlation across services
     """
-    return request.headers.get("X-Request-ID") or "no-request-id"
+    return request.headers.get(RequestHeaders.REQUEST_ID) or RequestHeaderDefaults.REQUEST_ID_DEFAULT
 
 
 def get_current_user(
     request: Request,
-    x_source: Optional[str] = Header(None, alias="X-Source"),
-    x_auth_service: Optional[str] = Header(None, alias="X-Auth-Service"),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_user_role: Optional[str] = Header(None, alias="X-User-Role")
+    x_source: Optional[str] = Header(None, alias=RequestHeaders.SOURCE),
+    x_auth_service: Optional[str] = Header(None, alias=RequestHeaders.AUTH_SERVICE),
+    x_user_id: Optional[str] = Header(None, alias=RequestHeaders.USER_ID),
+    x_user_role: Optional[str] = Header(None, alias=RequestHeaders.USER_ROLE)
 ) -> dict:
     """
     Get current user from Gateway headers (replaces JWT validation)
@@ -100,32 +104,32 @@ def get_current_user(
     This validates that requests come from the Gateway and extracts user context
     """
     # Validate source headers
-    if not x_source or x_source != "gateway":
+    if not x_source or x_source != ServiceValidation.EXPECTED_SOURCE:
         logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid source header: {x_source}")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid request source"
+            status_code=HTTPStatus.FORBIDDEN,
+            detail=ErrorMessages.ACCESS_DENIED
         )
 
-    if not x_auth_service or x_auth_service != "auth-service":
+    if not x_auth_service or x_auth_service != ServiceValidation.EXPECTED_AUTH_SERVICE:
         logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid auth service header: {x_auth_service}")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid authentication service"
+            status_code=HTTPStatus.FORBIDDEN,
+            detail=ErrorMessages.ACCESS_DENIED
         )
 
     # Extract user information from headers
     if not x_user_id:
         logger.warning(action=LogActions.ACCESS_DENIED, message="Missing user ID header")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User authentication required"
+            status_code=HTTPStatus.UNAUTHORIZED,
+            detail=ErrorMessages.AUTHENTICATION_FAILED
         )
 
     # Create user info with username as primary identifier
     user_info = {
         "username": x_user_id,
-        "role": x_user_role or "customer"  # Default role if not provided
+        "role": x_user_role or RequestHeaderDefaults.USER_ROLE_DEFAULT  # Default role if not provided
     }
 
     logger.info(action=LogActions.AUTH_SUCCESS, message=f"User authenticated via Gateway: {x_user_id}")
