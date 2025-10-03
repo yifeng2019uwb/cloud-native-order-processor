@@ -130,7 +130,7 @@ async def test_register_unexpected_error():
     )
     with pytest.raises(CNOPInternalServerException) as exc_info:
         await register_user(reg_data, request=mock_request, user_dao=mock_user_dao)
-    assert "Registration failed: Unexpected error" in str(exc_info.value)
+    assert "An internal server error occurred. Please try again later. during registration: Unexpected error" in str(exc_info.value)
 
 @pytest.mark.asyncio
 async def test_register_missing_input():

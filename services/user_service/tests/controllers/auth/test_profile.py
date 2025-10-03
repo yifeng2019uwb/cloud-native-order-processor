@@ -145,7 +145,7 @@ def test_update_profile_user_not_found():
     )
     with pytest.raises(CNOPEntityNotFoundException) as exc_info:
         update_profile(profile_data, request=create_mock_request(), current_user=mock_user, user_dao=mock_user_dao)
-    assert "User 'john_doe' not found" in str(exc_info.value)
+    assert "User not found." in str(exc_info.value)
 
 def test_update_profile_with_own_email():
     """Test that user can update profile with their own email (no uniqueness conflict)"""

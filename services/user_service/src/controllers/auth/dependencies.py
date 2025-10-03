@@ -2,7 +2,10 @@
 FastAPI dependencies for authentication
 """
 from typing import Optional
-from fastapi import Depends, HTTPException, status, Request, Header
+from fastapi import Depends, HTTPException, Request, Header
+from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.request_headers import RequestHeaders
+from common.shared.constants.service_names import ServiceValidation
 from common.data.entities.user import User
 from common.data.dao.user.user_dao import UserDAO
 from common.data.database.dependencies import get_user_dao as get_common_user_dao
@@ -12,18 +15,18 @@ logger = BaseLogger(Loggers.USER)
 
 def verify_gateway_headers(
     request: Request,
-    x_source: Optional[str] = Header(None, alias="X-Source"),
-    x_auth_service: Optional[str] = Header(None, alias="X-Auth-Service"),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_user_role: Optional[str] = Header(None, alias="X-User-Role")
+    x_source: Optional[str] = Header(None, alias=RequestHeaders.SOURCE),
+    x_auth_service: Optional[str] = Header(None, alias=RequestHeaders.AUTH_SERVICE),
+    x_user_id: Optional[str] = Header(None, alias=RequestHeaders.USER_ID),
+    x_user_role: Optional[str] = Header(None, alias=RequestHeaders.USER_ROLE)
 ) -> str:
     """
     Verify Gateway headers for authentication
 
     Args:
         request: FastAPI request object
-        x_source: Source header (should be "gateway")
-        x_auth_service: Auth service header (should be "auth-service")
+        x_source: Source header (should be ServiceValidation.EXPECTED_SOURCE)
+        x_auth_service: Auth service header (should be ServiceValidation.EXPECTED_AUTH_SERVICE)
         x_user_id: User ID header from Gateway
         x_user_role: User role header from Gateway
 
@@ -34,17 +37,17 @@ def verify_gateway_headers(
         HTTPException: If headers are invalid or missing
     """
     # Validate source headers
-    if not x_source or x_source != "gateway":
+    if not x_source or x_source != ServiceValidation.EXPECTED_SOURCE:
         logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid source header: {x_source}")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=HTTPStatus.FORBIDDEN,
             detail="Invalid request source"
         )
 
-    if not x_auth_service or x_auth_service != "auth-service":
+    if not x_auth_service or x_auth_service != ServiceValidation.EXPECTED_AUTH_SERVICE:
         logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid auth service header: {x_auth_service}")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=HTTPStatus.FORBIDDEN,
             detail="Invalid authentication service"
         )
 
@@ -52,7 +55,7 @@ def verify_gateway_headers(
     if not x_user_id:
         logger.warning(action=LogActions.ACCESS_DENIED, message="Missing user ID header")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=HTTPStatus.UNAUTHORIZED,
             detail="User authentication required"
         )
 
@@ -86,7 +89,7 @@ def get_current_user(
         if user is None:
             logger.warning(action=LogActions.AUTH_FAILED, message=f"User not found for username: '{username}'")
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=HTTPStatus.UNAUTHORIZED,
                 detail="User not found"
             )
 
@@ -97,66 +100,6 @@ def get_current_user(
     except Exception as e:
         logger.error(action=LogActions.ERROR, message=f"Error getting current user: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail="Failed to get user information"
         )
-
-
-def get_optional_current_user(
-    request: Request,
-    x_source: Optional[str] = Header(None, alias="X-Source"),
-    x_auth_service: Optional[str] = Header(None, alias="X-Auth-Service"),
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_user_role: Optional[str] = Header(None, alias="X-User-Role"),
-    user_dao: UserDAO = Depends(get_common_user_dao)
-) -> Optional[User]:
-    """
-    Get current user if Gateway headers are provided (optional authentication)
-
-    Args:
-        request: FastAPI request object
-        x_source: Source header (should be "gateway")
-        x_auth_service: Auth service header (should be "auth-service")
-        x_user_id: User ID header from Gateway
-        x_user_role: User role header from Gateway
-        user_dao: UserDAO instance
-
-    Returns:
-        Current user information if authenticated, None otherwise
-    """
-    if not all([x_source, x_auth_service, x_user_id]):
-        return None
-
-    try:
-        if x_source != "gateway" or x_auth_service != "auth-service":
-            return None
-
-        user = user_dao.get_user_by_username(x_user_id)
-        if user is None:
-            return None
-
-        return user
-
-    except Exception as e:
-        logger.debug(action=LogActions.AUTH_FAILED, message=f"Optional authentication failed: {e}")
-        return None
-
-
-def require_admin_user(
-    current_user: User = Depends(get_current_user)
-) -> User:
-    """
-    Require admin user (placeholder for future admin functionality)
-
-    Args:
-        current_user: Current authenticated user
-
-    Returns:
-        Current user if admin
-
-    Raises:
-        HTTPException: If user is not admin
-    """
-
-    logger.debug(action=LogActions.AUTH_SUCCESS, message=f"Admin access granted to user: {current_user.email}")
-    return current_user

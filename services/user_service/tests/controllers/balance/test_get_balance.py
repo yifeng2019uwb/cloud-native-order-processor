@@ -150,7 +150,7 @@ class TestGetUserBalance:
         """Test balance retrieval when generic exception occurs"""
         mock_balance_dao.get_balance.side_effect = Exception("Database connection failed")
 
-        with pytest.raises(CNOPInternalServerException, match="Failed to get balance: Database connection failed"):
+        with pytest.raises(CNOPInternalServerException, match="An internal server error occurred. Please try again later. while retrieving balance: Database connection failed"):
             get_user_balance(
                 request=create_mock_request(),
                 current_user=mock_current_user,
@@ -161,7 +161,7 @@ class TestGetUserBalance:
         """Test balance retrieval when database error occurs"""
         mock_balance_dao.get_balance.side_effect = Exception("Table does not exist")
 
-        with pytest.raises(CNOPInternalServerException, match="Failed to get balance: Table does not exist"):
+        with pytest.raises(CNOPInternalServerException, match="An internal server error occurred. Please try again later. while retrieving balance: Table does not exist"):
             get_user_balance(
                 request=create_mock_request(),
                 current_user=mock_current_user,
@@ -172,7 +172,7 @@ class TestGetUserBalance:
         """Test balance retrieval when network error occurs"""
         mock_balance_dao.get_balance.side_effect = Exception("Connection timeout")
 
-        with pytest.raises(CNOPInternalServerException, match="Failed to get balance: Connection timeout"):
+        with pytest.raises(CNOPInternalServerException, match="An internal server error occurred. Please try again later. while retrieving balance: Connection timeout"):
             get_user_balance(
                 request=create_mock_request(),
                 current_user=mock_current_user,

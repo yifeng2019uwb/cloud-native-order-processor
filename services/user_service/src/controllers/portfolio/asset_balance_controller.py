@@ -8,9 +8,11 @@ Only includes the single asset balance API (GET /balance/asset/{asset_id}).
 from datetime import datetime, UTC
 from decimal import Decimal
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from common.data.entities.user import User
+from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.error_messages import ErrorMessages
 
 from api_models.portfolio.portfolio_models import (
     GetAssetBalanceResponse,
@@ -27,19 +29,17 @@ from validation.business_validators import validate_user_permissions
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from user_exceptions import CNOPUserValidationException
 from common.exceptions.shared_exceptions import CNOPAssetBalanceNotFoundException
-from constants import (
-    TAG_ASSET_BALANCE, ACTION_GET_ASSET_BALANCE,
-    SUCCESS_ASSET_BALANCE_RETRIEVED, HTTP_STATUS_NOT_FOUND, HTTP_STATUS_FORBIDDEN,
-    HTTP_STATUS_INTERNAL_SERVER_ERROR, ERROR_INTERNAL_SERVER, API_ENDPOINT_ASSET_BALANCE
-)
+from api_info_enum import ApiTags, ApiPaths
+from validation_enums import ValidationActions
+from constants import MSG_SUCCESS_ASSET_BALANCE_RETRIEVED
 
 # Initialize logger
 logger = BaseLogger(Loggers.USER, log_to_file=True)
 
 # Create router
-router = APIRouter(tags=[TAG_ASSET_BALANCE])
+router = APIRouter(tags=[ApiTags.ASSET_BALANCE.value])
 
-@router.get(API_ENDPOINT_ASSET_BALANCE, response_model=GetAssetBalanceResponse)
+@router.get(ApiPaths.ASSET_BALANCE.value, response_model=GetAssetBalanceResponse)
 async def get_user_asset_balance(
     asset_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -69,7 +69,7 @@ async def get_user_asset_balance(
         username = current_user.username
 
         # Validate user permissions
-        validate_user_permissions(username, ACTION_GET_ASSET_BALANCE, user_dao)
+        validate_user_permissions(username, ValidationActions.GET_ASSET_BALANCE.value, user_dao)
 
         logger.info(
             action=LogActions.REQUEST_START,
@@ -84,8 +84,8 @@ async def get_user_asset_balance(
                 message=f"Asset balance not found for user '{username}', asset '{asset_id}'"
             )
             raise HTTPException(
-                status_code=HTTP_STATUS_NOT_FOUND,
-                detail=f"Asset balance not found for asset '{asset_id}'"
+                status_code=HTTPStatus.NOT_FOUND,
+                detail=ErrorMessages.RESOURCE_NOT_FOUND
             )
 
         # Get current market price for the asset
@@ -115,7 +115,7 @@ async def get_user_asset_balance(
 
         response = GetAssetBalanceResponse(
             success=True,
-            message=SUCCESS_ASSET_BALANCE_RETRIEVED,
+            message=MSG_SUCCESS_ASSET_BALANCE_RETRIEVED,
             data=balance_data,
             timestamp=datetime.now(UTC)
         )
@@ -133,7 +133,7 @@ async def get_user_asset_balance(
             message=f"Validation error getting asset balance: {e}"
         )
         raise HTTPException(
-            status_code=HTTP_STATUS_FORBIDDEN,
+            status_code=HTTPStatus.FORBIDDEN,
             detail=str(e)
         )
     except CNOPAssetBalanceNotFoundException as e:
@@ -142,8 +142,8 @@ async def get_user_asset_balance(
             message=f"Asset balance not found for user '{username}', asset '{asset_id}'"
         )
         raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"Asset balance not found for asset '{asset_id}'"
+            status_code=HTTPStatus.NOT_FOUND,
+            detail=ErrorMessages.RESOURCE_NOT_FOUND
         )
     except HTTPException:
         # Re-raise HTTP exceptions
@@ -154,6 +154,6 @@ async def get_user_asset_balance(
             message=f"Unexpected error getting asset balance for user '{username}', asset '{asset_id}': {e}"
         )
         raise HTTPException(
-            status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
-            detail=f"{ERROR_INTERNAL_SERVER} while retrieving asset balance"
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail=ErrorMessages.INTERNAL_SERVER_ERROR
         )

@@ -23,6 +23,11 @@ from common.exceptions.shared_exceptions import (
     CNOPInternalServerException
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.http_status import HTTPStatus
+from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
+from constants import MSG_SUCCESS_REGISTER, MSG_ERROR_USER_EXISTS
 from controllers.dependencies import get_request_id_from_request
 from user_exceptions.exceptions import (
     CNOPUserAlreadyExistsException,
@@ -36,29 +41,29 @@ from validation.business_validators import (
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)
-router = APIRouter(tags=["register"])
+router = APIRouter(tags=[ApiTags.AUTHENTICATION.value])
 
 
 @router.post(
-    "/register",
+    ApiPaths.REGISTER.value,
     response_model=Union[RegistrationSuccessResponse, RegistrationErrorResponse],
     status_code=status.HTTP_201_CREATED,
     responses={
-        201: {
-            "description": "User successfully registered",
-            "model": RegistrationSuccessResponse
+        HTTPStatus.CREATED: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_REGISTER,
+            ApiResponseKeys.MODEL.value: RegistrationSuccessResponse
         },
-        409: {
-            "description": "User already exists",
-            "model": RegistrationErrorResponse
+        HTTPStatus.CONFLICT: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_USER_EXISTS,
+            ApiResponseKeys.MODEL.value: RegistrationErrorResponse
         },
-        422: {
-            "description": "Invalid input data",
-            "model": ErrorResponse
+        HTTPStatus.UNPROCESSABLE_ENTITY: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        503: {
-            "description": "Service unavailable",
-            "model": ErrorResponse
+        HTTPStatus.SERVICE_UNAVAILABLE: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )
@@ -182,4 +187,4 @@ def register_user(
         )
         # Log unexpected errors and convert to internal server exception
         logger.error(action=LogActions.ERROR, message=f"Unexpected error during user registration: {str(e)}", request_id=request_id)
-        raise CNOPInternalServerException(f"Registration failed: {str(e)}")
+        raise CNOPInternalServerException(f"{ErrorMessages.INTERNAL_SERVER_ERROR} during registration: {str(e)}")

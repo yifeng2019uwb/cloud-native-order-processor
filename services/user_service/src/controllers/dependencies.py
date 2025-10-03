@@ -13,10 +13,7 @@ from common.data.dao.user.user_dao import UserDAO
 from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.core.utils import TransactionManager
-from constants import (
-    HEADER_REQUEST_ID, HEADER_USER_NAME, HEADER_USER_ID, HEADER_USER_ROLE,
-    DEFAULT_REQUEST_ID, DEFAULT_USERNAME, DEFAULT_USER_ID, DEFAULT_USER_ROLE
-)
+from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
 
 
 def get_request_id_from_request(request: Request) -> str:
@@ -29,7 +26,7 @@ def get_request_id_from_request(request: Request) -> str:
     Returns:
         Request ID string for correlation across services
     """
-    return request.headers.get(HEADER_REQUEST_ID) or DEFAULT_REQUEST_ID
+    return request.headers.get(RequestHeaders.REQUEST_ID) or RequestHeaderDefaults.REQUEST_ID_DEFAULT
 
 
 def get_transaction_manager() -> TransactionManager:

@@ -14,33 +14,38 @@ from common.data.database.dependencies import get_balance_dao
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.http_status import HTTPStatus
+from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
+from constants import MSG_SUCCESS_BALANCE_RETRIEVED, MSG_ERROR_USER_NOT_FOUND
 from controllers.auth.dependencies import get_current_user
 from controllers.dependencies import get_request_id_from_request
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)
-router = APIRouter(tags=["balance"])
+router = APIRouter(tags=[ApiTags.BALANCE.value])
 
 
 @router.get(
-    "/balance",
+    ApiPaths.BALANCE.value,
     response_model=Union[BalanceResponse, ErrorResponse],
     responses={
-        200: {
-            "description": "Balance retrieved successfully",
-            "model": BalanceResponse
+        HTTPStatus.OK: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_BALANCE_RETRIEVED,
+            ApiResponseKeys.MODEL.value: BalanceResponse
         },
-        401: {
-            "description": "Unauthorized",
-            "model": ErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_UNAUTHORIZED,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        404: {
-            "description": "User not found",
-            "model": ErrorResponse
+        HTTPStatus.NOT_FOUND: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_USER_NOT_FOUND,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        503: {
-            "description": "Service unavailable",
-            "model": ErrorResponse
+        HTTPStatus.SERVICE_UNAVAILABLE: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )
@@ -75,4 +80,4 @@ def get_user_balance(
         raise
     except Exception as e:
         logger.error(action=LogActions.ERROR, message=f"Failed to get balance for user {current_user.username}: {str(e)}", request_id=request_id)
-        raise CNOPInternalServerException(f"Failed to get balance: {str(e)}")
+        raise CNOPInternalServerException(f"{ErrorMessages.INTERNAL_SERVER_ERROR} while retrieving balance: {str(e)}")

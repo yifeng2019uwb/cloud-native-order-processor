@@ -20,6 +20,15 @@ from common.exceptions.shared_exceptions import (
     CNOPEntityNotFoundException as CNOPUserNotFoundException
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_responses import APIResponseDescriptions
+from api_info_enum import ApiResponseKeys
+from common.shared.constants.http_status import HTTPStatus
+from api_info_enum import ApiTags, ApiPaths
+from constants import (
+    MSG_SUCCESS_PROFILE_RETRIEVED, MSG_SUCCESS_PROFILE_UPDATED,
+    MSG_ERROR_EMAIL_IN_USE, MSG_ERROR_INVALID_UPDATE_DATA
+)
 from user_exceptions.exceptions import CNOPUserAlreadyExistsException, CNOPUserValidationException
 from validation.business_validators import (
     validate_email_uniqueness,
@@ -30,20 +39,20 @@ from controllers.dependencies import get_request_id_from_request
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)
-router = APIRouter(tags=["profile"])
+router = APIRouter(tags=[ApiTags.AUTHENTICATION.value])
 
 
 @router.get(
-    "/profile",
+    ApiPaths.PROFILE.value,
     response_model=UserProfileResponse,
     responses={
-        200: {
-            "description": "User profile retrieved successfully",
-            "model": UserProfileResponse
+        HTTPStatus.OK: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_PROFILE_RETRIEVED,
+            ApiResponseKeys.MODEL.value: UserProfileResponse
         },
-        401: {
-            "description": "Authentication failed",
-            "model": ErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )
@@ -80,24 +89,24 @@ def get_profile(
 
 
 @router.put(
-    "/profile",
+    ApiPaths.PROFILE.value,
     response_model=Union[ProfileUpdateSuccessResponse, ProfileUpdateErrorResponse],
     responses={
-        200: {
-            "description": "Profile updated successfully",
-            "model": ProfileUpdateSuccessResponse
+        HTTPStatus.OK: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_PROFILE_UPDATED,
+            ApiResponseKeys.MODEL.value: ProfileUpdateSuccessResponse
         },
-        400: {
-            "description": "Invalid update data",
-            "model": ProfileUpdateErrorResponse
+        HTTPStatus.BAD_REQUEST: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_INVALID_UPDATE_DATA,
+            ApiResponseKeys.MODEL.value: ProfileUpdateErrorResponse
         },
-        401: {
-            "description": "Authentication failed",
-            "model": ErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        409: {
-            "description": "Email already in use",
-            "model": ProfileUpdateErrorResponse
+        HTTPStatus.CONFLICT: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_EMAIL_IN_USE,
+            ApiResponseKeys.MODEL.value: ProfileUpdateErrorResponse
         }
     }
 )
@@ -144,7 +153,7 @@ def update_profile(
         updated_user = user_dao.update_user(User(**updated_user_data))
 
         if not updated_user:
-            raise CNOPUserNotFoundException(f"User '{current_user.username}' not found")
+            raise CNOPUserNotFoundException(f"{ErrorMessages.USER_NOT_FOUND}: '{current_user.username}'")
 
         logger.info(action=LogActions.REQUEST_END, message=f"Profile updated successfully for user: {current_user.username}", request_id=request_id)
 

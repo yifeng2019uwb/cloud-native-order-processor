@@ -22,42 +22,50 @@ from common.exceptions import (
     CNOPInsufficientBalanceException
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.http_status import HTTPStatus
+from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from user_exceptions import CNOPUserValidationException
 from controllers.dependencies import get_transaction_manager, get_request_id_from_request
 from controllers.auth.dependencies import get_current_user
+# Local constants for this controller only
+MSG_SUCCESS_WITHDRAW = "Withdrawal successful"
+MSG_ERROR_INSUFFICIENT_BALANCE = "Bad request - insufficient balance"
+MSG_ERROR_OPERATION_BUSY = "Operation is busy - try again"
+
 logger = BaseLogger(Loggers.USER)
-router = APIRouter(tags=["balance"])
+router = APIRouter(tags=[ApiTags.BALANCE.value])
 
 
 @router.post(
-    "/balance/withdraw",
+    ApiPaths.WITHDRAW.value,
     response_model=Union[WithdrawResponse, ErrorResponse],
     status_code=status.HTTP_201_CREATED,
     responses={
-        201: {
-            "description": "Withdrawal successful",
-            "model": WithdrawResponse
+        HTTPStatus.CREATED: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_WITHDRAW,
+            ApiResponseKeys.MODEL.value: WithdrawResponse
         },
-        400: {
-            "description": "Bad request - insufficient balance",
-            "model": ErrorResponse
+        HTTPStatus.BAD_REQUEST: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_INSUFFICIENT_BALANCE,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        401: {
-            "description": "Unauthorized",
-            "model": ErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_UNAUTHORIZED,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-
-        409: {
-            "description": "Operation is busy - try again",
-            "model": ErrorResponse
+        HTTPStatus.CONFLICT: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_OPERATION_BUSY,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        422: {
-            "description": "Invalid input data",
-            "model": ErrorResponse
+        HTTPStatus.UNPROCESSABLE_ENTITY: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        503: {
-            "description": "Service temporarily unavailable",
-            "model": ErrorResponse
+        HTTPStatus.SERVICE_UNAVAILABLE: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )
@@ -107,7 +115,7 @@ async def withdraw_funds(
 
     except CNOPLockAcquisitionException as e:
         logger.warning(action=LogActions.ERROR, message=f"Lock acquisition failed for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
-        raise CNOPInternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
 
     except CNOPInsufficientBalanceException as e:
         logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Insufficient balance for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
@@ -120,10 +128,10 @@ async def withdraw_funds(
     except CNOPDatabaseOperationException as e:
         if "User balance not found" in str(e):
             logger.error(action=LogActions.ERROR, message=f"System error - user balance not found for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
-            raise CNOPInternalServerException("System error - please contact support")
+            raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
         else:
             logger.error(action=LogActions.ERROR, message=f"Database operation failed for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
-            raise CNOPInternalServerException("Service temporarily unavailable")
+            raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
     except Exception as e:
         logger.error(action=LogActions.ERROR, message=f"Unexpected error during withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
-        raise CNOPInternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)

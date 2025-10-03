@@ -7,6 +7,7 @@ Handles uniqueness checks and business rules for registration.
 
 from datetime import date
 from typing import Optional, Any
+from validation_enums import ValidationActions
 from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInternalServerException
@@ -24,7 +25,7 @@ def validate_user_permissions(username: str, action: str, user_dao: Any) -> bool
 
     Args:
         username: Username to validate
-        action: Action being performed (e.g., "view_portfolio")
+        action: Action being performed (e.g., ValidationActions.VIEW_PORTFOLIO.value)
         user_dao: User DAO instance
 
     Returns:

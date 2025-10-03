@@ -22,7 +22,8 @@ from common.exceptions.shared_exceptions import (
 def create_mock_request(request_id="test-request-id"):
     """Helper function to create a mock request object with headers"""
     mock_request = MagicMock()
-    mock_request.headers = {"X-Request-ID": request_id}
+    from common.shared.constants.request_headers import RequestHeaders
+    mock_request.headers = {RequestHeaders.REQUEST_ID: request_id}
     return mock_request
 
 # Add src to path for imports
@@ -338,7 +339,7 @@ class TestPortfolioController:
 
         mock_balance_dao.get_balance.side_effect = CNOPDatabaseOperationException("DB error")
 
-        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable. Please try again later."):
             get_user_portfolio(
                 request=mock_request,
                 current_user=mock_current_user,
@@ -357,7 +358,7 @@ class TestPortfolioController:
 
         mock_balance_dao.get_balance.side_effect = Exception("Unexpected error")
 
-        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable. Please try again later."):
             get_user_portfolio(
                 request=mock_request,
                 current_user=mock_current_user,

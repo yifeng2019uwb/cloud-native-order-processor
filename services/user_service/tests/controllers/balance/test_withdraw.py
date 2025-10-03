@@ -131,7 +131,7 @@ class TestWithdrawFunds:
         """Test withdrawal with lock acquisition failure"""
         mock_transaction_manager.withdraw_funds.side_effect = CNOPLockAcquisitionException("Lock timeout")
 
-        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable. Please try again later."):
             await withdraw_funds(
                 withdraw_data=sample_withdraw_request,
                 request=mock_request,
@@ -233,7 +233,7 @@ class TestWithdrawFunds:
         """Test withdrawal with database operation error - user balance not found"""
         mock_transaction_manager.withdraw_funds.side_effect = CNOPDatabaseOperationException("User balance not found")
 
-        with pytest.raises(CNOPInternalServerException, match="System error - please contact support"):
+        with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable. Please try again later."):
             await withdraw_funds(
                 withdraw_data=sample_withdraw_request,
                 request=mock_request,
@@ -267,7 +267,7 @@ class TestWithdrawFunds:
         """Test withdrawal with general database operation error"""
         mock_transaction_manager.withdraw_funds.side_effect = CNOPDatabaseOperationException("Connection timeout")
 
-        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable. Please try again later."):
             await withdraw_funds(
                 withdraw_data=sample_withdraw_request,
                 request=mock_request,
@@ -301,7 +301,7 @@ class TestWithdrawFunds:
         """Test withdrawal with unexpected error"""
         mock_transaction_manager.withdraw_funds.side_effect = Exception("Unexpected system error")
 
-        with pytest.raises(CNOPInternalServerException, match="Service temporarily unavailable"):
+        with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable. Please try again later."):
             await withdraw_funds(
                 withdraw_data=sample_withdraw_request,
                 request=mock_request,

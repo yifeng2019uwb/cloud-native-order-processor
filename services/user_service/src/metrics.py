@@ -3,10 +3,50 @@ User Service Metrics - Simplified for Personal Project
 """
 
 import time
+from enum import Enum
 from prometheus_client import Counter, Histogram, Gauge, Info, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Response
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from constants import SERVICE_NAME, SERVICE_VERSION
+from api_info_enum import ServiceMetadata
+
+
+class MetricsMetadata(str, Enum):
+    """Prometheus metrics metadata - for type safety and validation"""
+    SERVICE_INFO = "user_service_info"
+    SERVICE_DESCRIPTION = "User service information"
+    USER_REQUESTS_TOTAL = "user_requests_total"
+    AUTH_OPERATIONS_TOTAL = "auth_operations_total"
+    BALANCE_OPERATIONS_TOTAL = "balance_operations_total"
+    REQUEST_DURATION = "user_request_duration_seconds"
+    AUTH_DURATION = "auth_operation_duration_seconds"
+    BALANCE_DURATION = "balance_operation_duration_seconds"
+    SERVICE_UPTIME = "user_service_uptime_seconds"
+
+
+# =============================================================================
+# METRICS MESSAGES (Local constants for descriptions)
+# =============================================================================
+MSG_TOTAL_USER_REQUESTS = "Total user requests"
+MSG_TOTAL_AUTH_OPERATIONS = "Total auth operations"
+MSG_TOTAL_BALANCE_OPERATIONS = "Total balance operations"
+MSG_REQUEST_DURATION = "Request duration"
+MSG_AUTH_OPERATION_DURATION = "Auth operation duration"
+MSG_BALANCE_OPERATION_DURATION = "Balance operation duration"
+MSG_SERVICE_UPTIME = "Service uptime"
+
+# =============================================================================
+# METRICS LABELS (Local constants for label names)
+# =============================================================================
+LABEL_STATUS = "status"
+LABEL_ENDPOINT = "endpoint"
+LABEL_OPERATION = "operation"
+LABEL_RESULT = "result"
+
+# =============================================================================
+# METRICS INFO KEYS (Local constants for info dictionary keys)
+# =============================================================================
+INFO_KEY_VERSION = "version"
+INFO_KEY_SERVICE = "service"
 
 logger = BaseLogger(Loggers.USER)
 
@@ -15,21 +55,21 @@ logger = BaseLogger(Loggers.USER)
 # ========================================
 
 # Service info
-service_info = Info('user_service_info', 'User service information')
-service_info.info({'version': SERVICE_VERSION, 'service': SERVICE_NAME})
+service_info = Info(MetricsMetadata.SERVICE_INFO.value, MetricsMetadata.SERVICE_DESCRIPTION.value)
+service_info.info({INFO_KEY_VERSION: ServiceMetadata.VERSION.value, INFO_KEY_SERVICE: ServiceMetadata.NAME.value})
 
 # Core counters
-user_requests_total = Counter('user_requests_total', 'Total user requests', ['status', 'endpoint'])
-auth_operations_total = Counter('auth_operations_total', 'Total auth operations', ['operation', 'result'])
-balance_operations_total = Counter('balance_operations_total', 'Total balance operations', ['operation', 'result'])
+user_requests_total = Counter(MetricsMetadata.USER_REQUESTS_TOTAL.value, MSG_TOTAL_USER_REQUESTS, [LABEL_STATUS, LABEL_ENDPOINT])
+auth_operations_total = Counter(MetricsMetadata.AUTH_OPERATIONS_TOTAL.value, MSG_TOTAL_AUTH_OPERATIONS, [LABEL_OPERATION, LABEL_RESULT])
+balance_operations_total = Counter(MetricsMetadata.BALANCE_OPERATIONS_TOTAL.value, MSG_TOTAL_BALANCE_OPERATIONS, [LABEL_OPERATION, LABEL_RESULT])
 
 # Simple histograms
-request_duration = Histogram('user_request_duration_seconds', 'Request duration', ['status', 'endpoint'])
-auth_duration = Histogram('auth_operation_duration_seconds', 'Auth operation duration', ['operation'])
-balance_duration = Histogram('balance_operation_duration_seconds', 'Balance operation duration', ['operation'])
+request_duration = Histogram(MetricsMetadata.REQUEST_DURATION.value, MSG_REQUEST_DURATION, [LABEL_STATUS, LABEL_ENDPOINT])
+auth_duration = Histogram(MetricsMetadata.AUTH_DURATION.value, MSG_AUTH_OPERATION_DURATION, [LABEL_OPERATION])
+balance_duration = Histogram(MetricsMetadata.BALANCE_DURATION.value, MSG_BALANCE_OPERATION_DURATION, [LABEL_OPERATION])
 
 # Uptime
-service_uptime = Gauge('user_service_uptime_seconds', 'Service uptime')
+service_uptime = Gauge(MetricsMetadata.SERVICE_UPTIME.value, MSG_SERVICE_UPTIME)
 _start_time = time.time()
 
 # ========================================
@@ -41,21 +81,21 @@ class SimpleMetricsCollector:
 
     def record_user_request(self, endpoint: str, status: str, duration: float = None):
         """Record user request"""
-        user_requests_total.labels(status=status, endpoint=endpoint).inc()
+        user_requests_total.labels(**{LABEL_STATUS: status, LABEL_ENDPOINT: endpoint}).inc()
         if duration:
-            request_duration.labels(status=status, endpoint=endpoint).observe(duration)
+            request_duration.labels(**{LABEL_STATUS: status, LABEL_ENDPOINT: endpoint}).observe(duration)
 
     def record_auth_operation(self, operation: str, result: str, duration: float = None):
         """Record auth operation"""
-        auth_operations_total.labels(operation=operation, result=result).inc()
+        auth_operations_total.labels(**{LABEL_OPERATION: operation, LABEL_RESULT: result}).inc()
         if duration:
-            auth_duration.labels(operation=operation).observe(duration)
+            auth_duration.labels(**{LABEL_OPERATION: operation}).observe(duration)
 
     def record_balance_operation(self, operation: str, result: str, duration: float = None):
         """Record balance operation"""
-        balance_operations_total.labels(operation=operation, result=result).inc()
+        balance_operations_total.labels(**{LABEL_OPERATION: operation, LABEL_RESULT: result}).inc()
         if duration:
-            balance_duration.labels(operation=operation).observe(duration)
+            balance_duration.labels(**{LABEL_OPERATION: operation}).observe(duration)
 
     def get_metrics(self) -> bytes:
         """Get metrics"""

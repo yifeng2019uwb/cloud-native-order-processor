@@ -23,10 +23,15 @@ from common.exceptions.shared_exceptions import (
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from user_exceptions import CNOPUserValidationException
+from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
+from validation_enums import ValidationActions
 from constants import (
-    TAG_PORTFOLIO, API_ENDPOINT_PORTFOLIO, ACTION_VIEW_PORTFOLIO,
-    SUCCESS_PORTFOLIO_RETRIEVED, HEADER_USER_AGENT, DEFAULT_USER_AGENT
+    MSG_SUCCESS_PORTFOLIO_RETRIEVED, MSG_SUCCESS_ASSET_BALANCE_RETRIEVED, MSG_ERROR_USER_NOT_FOUND
 )
+from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
+from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.error_messages import ErrorMessages
 from controllers.auth.dependencies import get_current_user
 from controllers.dependencies import (
     get_balance_dao_dependency,
@@ -37,32 +42,32 @@ from validation.business_validators import validate_user_permissions
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)
-router = APIRouter(tags=[TAG_PORTFOLIO])
+router = APIRouter(tags=[ApiTags.PORTFOLIO.value])
 
 
 @router.get(
-    API_ENDPOINT_PORTFOLIO,
+    ApiPaths.PORTFOLIO.value,
     response_model=Union[GetPortfolioResponse, ErrorResponse],
     responses={
-        200: {
-            "description": "Portfolio retrieved successfully",
-            "model": GetPortfolioResponse
+        HTTPStatus.OK: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_PORTFOLIO_RETRIEVED,
+            ApiResponseKeys.MODEL.value: GetPortfolioResponse
         },
-        401: {
-            "description": "Unauthorized",
-            "model": ErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_UNAUTHORIZED,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        404: {
-            "description": "User not found",
-            "model": ErrorResponse
+        HTTPStatus.NOT_FOUND: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_USER_NOT_FOUND,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        422: {
-            "description": "Invalid input data",
-            "model": ErrorResponse
+        HTTPStatus.UNPROCESSABLE_ENTITY: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        503: {
-            "description": "Service temporarily unavailable",
-            "model": ErrorResponse
+        HTTPStatus.SERVICE_UNAVAILABLE: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )
@@ -93,7 +98,7 @@ def get_user_portfolio(
         user=username,
         request_id=request_id,
         extra={
-            "user_agent": request.headers.get(HEADER_USER_AGENT, DEFAULT_USER_AGENT),
+            "user_agent": request.headers.get(RequestHeaders.USER_AGENT, RequestHeaderDefaults.USER_AGENT_DEFAULT),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     )
@@ -102,7 +107,7 @@ def get_user_portfolio(
         # Business validation (Layer 2)
         validate_user_permissions(
             username=username,
-            action=ACTION_VIEW_PORTFOLIO,
+            action=ValidationActions.VIEW_PORTFOLIO.value,
             user_dao=user_dao
         )
 
@@ -172,7 +177,7 @@ def get_user_portfolio(
 
         return GetPortfolioResponse(
             success=True,
-            message=SUCCESS_PORTFOLIO_RETRIEVED,
+            message=MSG_SUCCESS_PORTFOLIO_RETRIEVED,
             data=portfolio_data,
             timestamp=datetime.utcnow()
         )
@@ -187,7 +192,7 @@ def get_user_portfolio(
             user=username,
             request_id=request_id
         )
-        raise CNOPInternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
     except Exception as e:
         logger.error(
             action=LogActions.ERROR,
@@ -195,4 +200,4 @@ def get_user_portfolio(
             user=username,
             request_id=request_id
         )
-        raise CNOPInternalServerException("Service temporarily unavailable")
+        raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)

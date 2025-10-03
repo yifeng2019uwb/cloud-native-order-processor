@@ -13,28 +13,32 @@ from api_models.auth.logout import (
 from api_models.shared.common import ErrorResponse
 from common.auth.security import AuditLogger
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.http_status import HTTPStatus
+from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
+from constants import MSG_SUCCESS_LOGOUT
 from .dependencies import get_current_user
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)
-router = APIRouter(tags=["authentication"])
+router = APIRouter(tags=[ApiTags.AUTHENTICATION.value])
 
 
 @router.post(
-    "/logout",
+    ApiPaths.LOGOUT.value,
     response_model=Union[LogoutSuccessResponse, LogoutErrorResponse],
     responses={
-        200: {
-            "description": "Logout successful",
-            "model": LogoutSuccessResponse
+        HTTPStatus.OK: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_LOGOUT,
+            ApiResponseKeys.MODEL.value: LogoutSuccessResponse
         },
-        401: {
-            "description": "Unauthorized",
-            "model": LogoutErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_UNAUTHORIZED,
+            ApiResponseKeys.MODEL.value: LogoutErrorResponse
         },
-        422: {
-            "description": "Invalid input data",
-            "model": ErrorResponse
+        HTTPStatus.UNPROCESSABLE_ENTITY: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )
@@ -80,17 +84,3 @@ def logout_user(
             message="Logout failed. Please try again.",
             timestamp=datetime.now(timezone.utc)
         )
-
-
-@router.get("/logout/debug", status_code=status.HTTP_200_OK)
-def logout_debug(
-    current_user = Depends(get_current_user)
-):
-    """Debug endpoint to test token verification and user lookup"""
-    return {
-        "message": "Debug endpoint working!",
-        "user_found": True,
-        "user_email": current_user.email,
-        "user_name": current_user.name,
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }

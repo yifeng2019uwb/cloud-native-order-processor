@@ -18,44 +18,54 @@ from common.exceptions import (
     CNOPLockAcquisitionException
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.http_status import HTTPStatus
+from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from controllers.dependencies import get_transaction_manager, get_request_id_from_request
 from controllers.auth.dependencies import get_current_user
+# Local constants for this controller only
+MSG_SUCCESS_DEPOSIT = "Deposit successful"
+MSG_ERROR_INVALID_AMOUNT = "Bad request - invalid amount"
+MSG_ERROR_USER_BALANCE_NOT_FOUND = "User balance not found"
+MSG_ERROR_OPERATION_BUSY = "Operation is busy - try again"
+
 logger = BaseLogger(Loggers.USER)
-router = APIRouter(tags=["balance"])
+router = APIRouter(tags=[ApiTags.BALANCE.value])
 
 
 @router.post(
-    "/balance/deposit",
+    ApiPaths.DEPOSIT.value,
     response_model=Union[DepositResponse, ErrorResponse],
     status_code=status.HTTP_201_CREATED,
     responses={
-        201: {
-            "description": "Deposit successful",
-            "model": DepositResponse
+        HTTPStatus.CREATED: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_DEPOSIT,
+            ApiResponseKeys.MODEL.value: DepositResponse
         },
-        400: {
-            "description": "Bad request - invalid amount",
-            "model": ErrorResponse
+        HTTPStatus.BAD_REQUEST: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_INVALID_AMOUNT,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        401: {
-            "description": "Unauthorized",
-            "model": ErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_UNAUTHORIZED,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        404: {
-            "description": "User balance not found",
-            "model": ErrorResponse
+        HTTPStatus.NOT_FOUND: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_USER_BALANCE_NOT_FOUND,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        409: {
-            "description": "Operation is busy - try again",
-            "model": ErrorResponse
+        HTTPStatus.CONFLICT: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_OPERATION_BUSY,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        422: {
-            "description": "Invalid input data",
-            "model": ErrorResponse
+        HTTPStatus.UNPROCESSABLE_ENTITY: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         },
-        503: {
-            "description": "Service temporarily unavailable",
-            "model": ErrorResponse
+        HTTPStatus.SERVICE_UNAVAILABLE: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )

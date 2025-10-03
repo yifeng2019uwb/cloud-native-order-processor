@@ -18,31 +18,36 @@ from api_models.shared.common import ErrorResponse, UserBaseInfo
 from common.data.entities.user import User
 from common.data.database.dependencies import get_user_dao
 from common.auth.security import TokenManager, AuditLogger
+from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.http_status import HTTPStatus
 from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException, CNOPInternalServerException
 from user_exceptions import CNOPUserValidationException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from controllers.dependencies import get_request_id_from_request
+from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
+from constants import MSG_SUCCESS_LOGIN
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)
-router = APIRouter(tags=["authentication"])
+router = APIRouter(tags=[ApiTags.AUTHENTICATION.value])
 
 
 @router.post(
-    "/login",
+    ApiPaths.LOGIN.value,
     response_model=Union[LoginSuccessResponse, LoginErrorResponse],
     responses={
-        200: {
-            "description": "Login successful",
-            "model": LoginSuccessResponse
+        HTTPStatus.OK: {
+            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_LOGIN,
+            ApiResponseKeys.MODEL.value: LoginSuccessResponse
         },
-        401: {
-            "description": "Authentication failed",
-            "model": LoginErrorResponse
+        HTTPStatus.UNAUTHORIZED: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
+            ApiResponseKeys.MODEL.value: LoginErrorResponse
         },
-        422: {
-            "description": "Invalid input data",
-            "model": ErrorResponse
+        HTTPStatus.UNPROCESSABLE_ENTITY: {
+            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
+            ApiResponseKeys.MODEL.value: ErrorResponse
         }
     }
 )
@@ -112,4 +117,4 @@ def login_user(
     except Exception as e:
         # Log unexpected errors and re-raise as internal server error
         logger.error(action=LogActions.ERROR, message=f"Unexpected error during login: {e}", request_id=request_id)
-        raise CNOPInternalServerException(f"Internal server error during login: {e}")
+        raise CNOPInternalServerException(f"{ErrorMessages.INTERNAL_SERVER_ERROR} during login: {e}")
