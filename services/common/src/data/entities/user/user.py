@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -15,6 +15,7 @@ from pynamodb.models import Model
 from ..entity_constants import (AWSConfig, DatabaseFields, FieldConstraints,
                                 TableNames, TimestampFields, UserConstants,
                                 UserFields)
+from ..datetime_utils import get_current_utc
 from .user_enums import DEFAULT_USER_ROLE
 
 
@@ -29,8 +30,8 @@ class User(BaseModel):
     date_of_birth: Optional[date] = None
     marketing_emails_consent: bool = False
     role: str = Field(default=DEFAULT_USER_ROLE, max_length=FieldConstraints.ROLE_MAX_LENGTH)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=get_current_utc)
+    updated_at: datetime = Field(default_factory=get_current_utc)
 
 
 # ==================== PYNAMODB MODEL ====================
@@ -78,8 +79,8 @@ class UserItem(Model):
     role = UnicodeAttribute(default=DEFAULT_USER_ROLE)
 
     # Timestamps
-    created_at = UTCDateTimeAttribute(default=datetime.utcnow)
-    updated_at = UTCDateTimeAttribute(default=datetime.utcnow)
+    created_at = UTCDateTimeAttribute(default=lambda: datetime.now(timezone.utc))
+    updated_at = UTCDateTimeAttribute(default=lambda: datetime.now(timezone.utc))
 
     # Index
     email_index = EmailIndex()
@@ -102,8 +103,8 @@ class UserItem(Model):
         user_item.date_of_birth = user.date_of_birth.isoformat() if user.date_of_birth else None
         user_item.marketing_emails_consent = user.marketing_emails_consent
         user_item.role = user.role
-        user_item.created_at = user.created_at
-        user_item.updated_at = user.updated_at
+        user_item.created_at = user.created_at.replace(tzinfo=None)
+        user_item.updated_at = user.updated_at.replace(tzinfo=None)
         return user_item
 
     def to_user(self) -> User:
@@ -118,8 +119,8 @@ class UserItem(Model):
             UserFields.DATE_OF_BIRTH: self.date_of_birth,
             UserFields.MARKETING_EMAILS_CONSENT: self.marketing_emails_consent,
             UserFields.ROLE: self.role,
-            TimestampFields.CREATED_AT: self.created_at,
-            TimestampFields.UPDATED_AT: self.updated_at
+            TimestampFields.CREATED_AT: self.created_at.replace(tzinfo=timezone.utc),
+            TimestampFields.UPDATED_AT: self.updated_at.replace(tzinfo=timezone.utc)
         }
         # Mark password as hashed - don't expose the actual hash
         user_data[UserFields.PASSWORD] = UserFields.HASHED_PASSWORD_MARKER
@@ -145,5 +146,6 @@ class UserItem(Model):
 
     def save(self, condition=None, **kwargs):
         """Override save to update timestamp"""
-        self.updated_at = datetime.utcnow()
+        # Convert timezone-aware datetime to naive UTC for PynamoDB UTCDateTimeAttribute
+        self.updated_at = get_current_utc().replace(tzinfo=None)
         return super().save(condition=condition, **kwargs)

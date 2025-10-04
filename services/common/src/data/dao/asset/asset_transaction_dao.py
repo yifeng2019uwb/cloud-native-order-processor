@@ -2,29 +2,23 @@
 Asset Transaction DAO for managing asset transactions.
 """
 
-from datetime import datetime
-from decimal import Decimal
 from typing import List, Optional
-
-from boto3.dynamodb.conditions import Key
 
 from ....exceptions.shared_exceptions import CNOPTransactionNotFoundException
 from ....shared.logging import BaseLogger, LogActions, Loggers
-from ...entities.asset import AssetTransaction
+from ...entities.asset import AssetTransaction, AssetTransactionItem
+from ...entities.entity_constants import AssetTransactionFields
 from ...exceptions import CNOPDatabaseOperationException
-from ..base_dao import BaseDAO
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
-class AssetTransactionDAO(BaseDAO):
-    """Data Access Object for asset transaction operations"""
+class AssetTransactionDAO:
+    """Data Access Object for asset transaction operations using PynamoDB"""
 
-    def __init__(self, db_connection):
-        """Initialize AssetTransactionDAO with database connection"""
-        super().__init__(db_connection)
-        # Table reference
-        self.table = self.db.users_table
+    def __init__(self, db_connection=None):
+        """Initialize AssetTransactionDAO (PynamoDB doesn't need db_connection)"""
+        # PynamoDB models handle their own connection
 
     def create_asset_transaction(self, transaction: AssetTransaction) -> AssetTransaction:
         """Create a new asset transaction"""
@@ -35,96 +29,91 @@ class AssetTransactionDAO(BaseDAO):
                    f"quantity={transaction.quantity}, price={transaction.price}"
         )
 
-        now = datetime.utcnow().isoformat()
-        timestamp_iso = now.replace('+00:00', 'Z')
+        try:
+            # Create PynamoDB item from domain model
+            transaction_item = AssetTransactionItem.from_asset_transaction(transaction)
+            transaction_item.save()
 
-        transaction_item = {
-            'Pk': f"TRANS#{transaction.username}#{transaction.asset_id}",
-            'Sk': timestamp_iso,
-            'username': transaction.username,
-            'asset_id': transaction.asset_id,
-            'transaction_type': transaction.transaction_type.value,
-            'quantity': str(transaction.quantity),
-            'price': str(transaction.price),
-            'total_amount': str(transaction.quantity * transaction.price),
-            'order_id': transaction.order_id,
-            'status': 'COMPLETED',  # Default status
-            'created_at': now
-        }
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Asset transaction created successfully: user={transaction.username}, "
+                       f"asset={transaction.asset_id}, type={transaction.transaction_type.value}, "
+                       f"quantity={transaction.quantity}"
+            )
 
-        self._safe_put_item(self.table, transaction_item)
+            return transaction_item.to_asset_transaction()
 
-        logger.info(
-            action=LogActions.DB_OPERATION,
-            message=f"Asset transaction created successfully: user={transaction.username}, "
-                   f"asset={transaction.asset_id}, type={transaction.transaction_type.value}, "
-                   f"quantity={transaction.quantity}"
-        )
-
-        return AssetTransaction(
-            Pk=transaction_item['Pk'],
-            Sk=transaction_item['Sk'],
-            username=transaction_item['username'],
-            asset_id=transaction_item['asset_id'],
-            transaction_type=transaction.transaction_type,
-            quantity=Decimal(transaction_item['quantity']),
-            price=Decimal(transaction_item['price']),
-            total_amount=Decimal(transaction_item['total_amount']),
-            order_id=transaction_item.get('order_id'),
-            status=transaction_item['status'],
-            created_at=datetime.fromisoformat(transaction_item['created_at'])
-        )
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to create asset transaction: {str(e)}"
+            )
+            raise CNOPDatabaseOperationException(f"Database operation failed while creating asset transaction: {str(e)}") from e
 
     def get_asset_transaction(self, username: str, asset_id: str, timestamp: str) -> AssetTransaction:
         """Get specific asset transaction"""
-        key = {
-            'Pk': f"TRANS#{username}#{asset_id}",
-            'Sk': timestamp
-        }
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Getting asset transaction: user={username}, asset={asset_id}, timestamp={timestamp}"
+        )
 
-        item = self._safe_get_item(self.table, key)
+        try:
+            # Use PynamoDB get method
+            transaction_item = AssetTransactionItem.get(
+                f"TRANS#{username}#{asset_id}",
+                timestamp
+            )
 
-        if not item:
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Asset transaction found: user={username}, asset={asset_id}, timestamp={timestamp}"
+            )
+
+            return transaction_item.to_asset_transaction()
+
+        except AssetTransactionItem.DoesNotExist:
+            logger.warning(
+                action=LogActions.DB_OPERATION,
+                message=f"Asset transaction not found: user={username}, asset={asset_id}, timestamp={timestamp}"
+            )
             raise CNOPTransactionNotFoundException(f"Asset transaction not found for user '{username}', asset '{asset_id}', timestamp '{timestamp}'")
 
-        return AssetTransaction(
-            Pk=item['Pk'],
-            Sk=item['Sk'],
-            username=item['username'],
-            asset_id=item['asset_id'],
-            transaction_type=item['transaction_type'],
-            quantity=Decimal(item['quantity']),
-            price=Decimal(item['price']),
-            total_amount=Decimal(item['total_amount']),
-            order_id=item.get('order_id'),
-            status=item['status'],
-            created_at=datetime.fromisoformat(item['created_at'])
-        )
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get asset transaction: {str(e)}"
+            )
+            raise CNOPDatabaseOperationException(f"Database operation failed while getting asset transaction: {str(e)}") from e
 
     def get_user_asset_transactions(self, username: str, asset_id: str, limit: Optional[int] = None) -> List[AssetTransaction]:
         """Get all transactions for a user and specific asset"""
-        key_condition = Key('Pk').eq(f"TRANS#{username}#{asset_id}")
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Getting user asset transactions: user={username}, asset={asset_id}, limit={limit}"
+        )
 
-        items = self._safe_query(self.table, key_condition, limit=limit)
+        try:
+            # Use PynamoDB query method - query by hash key only
+            pk = f"{AssetTransactionFields.PK_PREFIX}{username}#{asset_id}"
+            query_result = AssetTransactionItem.query(pk, limit=limit)
 
-        transactions = []
-        for item in items:
-            transaction = AssetTransaction(
-                Pk=item['Pk'],
-                Sk=item['Sk'],
-                username=item['username'],
-                asset_id=item['asset_id'],
-                transaction_type=item['transaction_type'],
-                quantity=Decimal(item['quantity']),
-                price=Decimal(item['price']),
-                total_amount=Decimal(item['total_amount']),
-                order_id=item.get('order_id'),
-                status=item['status'],
-                created_at=datetime.fromisoformat(item['created_at'])
+            transactions = []
+            for item in query_result:
+                transactions.append(item.to_asset_transaction())
+
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Found {len(transactions)} asset transactions for user={username}, asset={asset_id}"
             )
-            transactions.append(transaction)
 
-        return transactions
+            return transactions
+
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get user asset transactions: {str(e)}"
+            )
+            raise CNOPDatabaseOperationException(f"Database operation failed while getting user asset transactions: {str(e)}") from e
 
     def get_user_transactions(self, username: str, limit: Optional[int] = None) -> List[AssetTransaction]:
         """Get all transactions for a user across all assets"""
@@ -139,17 +128,36 @@ class AssetTransactionDAO(BaseDAO):
 
     def delete_asset_transaction(self, username: str, asset_id: str, timestamp: str) -> bool:
         """Delete asset transaction"""
-        key = {
-            'Pk': f"TRANS#{username}#{asset_id}",
-            'Sk': timestamp
-        }
+        logger.info(
+            action=LogActions.DB_OPERATION,
+            message=f"Deleting asset transaction: user={username}, asset={asset_id}, timestamp={timestamp}"
+        )
 
-        success = self._safe_delete_item(self.table, key)
+        try:
+            # Use PynamoDB get and delete methods
+            transaction_item = AssetTransactionItem.get(
+                f"TRANS#{username}#{asset_id}",
+                timestamp
+            )
+            transaction_item.delete()
 
-        if success:
             logger.info(
                 action=LogActions.DB_OPERATION,
                 message=f"Asset transaction deleted successfully: user={username}, asset={asset_id}, timestamp={timestamp}"
             )
 
-        return success
+            return True
+
+        except AssetTransactionItem.DoesNotExist:
+            logger.warning(
+                action=LogActions.DB_OPERATION,
+                message=f"Asset transaction not found for deletion: user={username}, asset={asset_id}, timestamp={timestamp}"
+            )
+            return False
+
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to delete asset transaction: {str(e)}"
+            )
+            raise CNOPDatabaseOperationException(f"Database operation failed while deleting asset transaction: {str(e)}") from e

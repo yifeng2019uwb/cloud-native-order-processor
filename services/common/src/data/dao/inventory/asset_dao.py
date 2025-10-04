@@ -1,79 +1,79 @@
-import os
-import sys
-from datetime import UTC, datetime
-from typing import Any, Dict, List, Optional
-
-import boto3
-from boto3.dynamodb.conditions import Attr
-
-# Path setup for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from typing import Dict, List
 
 from ....exceptions.shared_exceptions import CNOPAssetNotFoundException
 from ....shared.logging import BaseLogger, LogActions, Loggers
-from ...database.dynamodb_connection import get_dynamodb_manager
-from ...entities.entity_constants import AssetFields, TimestampFields
-from ...entities.inventory import Asset, AssetItem
+# AssetFields no longer needed with product_id schema
+from ...entities.inventory.asset import Asset, AssetItem
 from ...exceptions import CNOPDatabaseOperationException
-from ..base_dao import BaseDAO
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
-class AssetDAO(BaseDAO):
-    """Data Access Object for asset operations"""
+class AssetDAO:
+    """Data Access Object for asset operations using PynamoDB"""
 
-    def __init__(self, db_connection):
-        """Initialize AssetDAO with database connection"""
-        super().__init__(db_connection)
-        # Table reference
-        self.table = self.db.inventory_table
-        # Get DynamoDB client for batch operations
-        self.client = get_dynamodb_manager().get_client()
+    def __init__(self, db_connection=None):
+        """Initialize AssetDAO (PynamoDB doesn't need db_connection)"""
+        # PynamoDB models handle their own connection
 
 
     def create_asset(self, asset: Asset) -> Asset:
+        """Create a new asset"""
         try:
-            # Convert Asset entity to AssetItem for database storage
-            asset_item = AssetItem.from_entity(asset)
-            asset_data = asset_item.model_dump()
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Creating asset: id={asset.asset_id}, name={asset.name}, category={asset.category}"
+            )
 
-            created_item = self._safe_put_item(self.table, asset_data)
+            # Convert Asset entity to AssetItem for database storage
+            asset_item = AssetItem.from_asset(asset)
+            asset_item.save()
 
             logger.info(
                 action=LogActions.DB_OPERATION,
                 message=f"Asset created successfully: id={asset.asset_id}, name={asset.name}, category={asset.category}"
             )
 
-            # Convert back to Asset from database response
-            return AssetItem(**created_item).to_entity()
+            # Convert back to Asset domain model
+            return asset_item.to_asset()
         except Exception as e:
             logger.error(
                 action=LogActions.ERROR,
                 message=f"Failed to create asset '{asset.asset_id}': {e}"
             )
-            raise CNOPDatabaseOperationException(f"Database operation failed while creating asset '{asset.asset_id}': {str(e)}")
+            raise CNOPDatabaseOperationException(f"Database operation failed while creating asset '{asset.asset_id}': {str(e)}") from e
 
     def get_asset_by_id(self, asset_id: str) -> Asset:
+        """Get an asset by its ID"""
         try:
-            key = {AssetFields.PRODUCT_ID: asset_id}
-            item = self._safe_get_item(self.table, key)
-            if not item:
-                logger.warning(
-                    action=LogActions.ERROR,
-                    message=f"Asset '{asset_id}' not found"
-                )
-                raise CNOPAssetNotFoundException(f"Asset '{asset_id}' not found")
-            return AssetItem(**item).to_entity()
-        except CNOPAssetNotFoundException:
-            # Re-raise asset not found exceptions directly
-            raise
-        except Exception as e:
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Getting asset by ID: {asset_id}"
+            )
+
+            # Use PynamoDB to get asset by primary key
+            asset_item = AssetItem.get(asset_id)
+
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Asset found: id={asset_id}, name={asset_item.name}"
+            )
+
+            # Convert to Asset domain model
+            return asset_item.to_asset()
+
+        except AssetItem.DoesNotExist:
+            logger.warning(
+                action=LogActions.ERROR,
+                message=f"Asset '{asset_id}' not found"
+            )
+            raise CNOPAssetNotFoundException(f"Asset '{asset_id}' not found")
+        except Exception as exc:
             logger.error(
                 action=LogActions.ERROR,
-                message=f"Failed to get asset '{asset_id}': {e}"
+                message=f"Failed to get asset '{asset_id}': {exc}"
             )
-            raise CNOPDatabaseOperationException(f"Database operation failed while retrieving asset '{asset_id}': {str(e)}")
+            raise CNOPDatabaseOperationException(f"Database operation failed while retrieving asset '{asset_id}': {str(exc)}") from exc
 
     def get_all_assets(self, active_only: bool = False) -> List[Asset]:
         """Get all assets, optionally filter by active status"""
@@ -83,24 +83,19 @@ class AssetDAO(BaseDAO):
                 message=f"Getting all assets, active_only: {active_only}"
             )
 
-            # Scan the inventory table
-            scan_kwargs = {}
+            # Use PynamoDB to scan all assets
             if active_only:
-                scan_kwargs['FilterExpression'] = Attr('is_active').eq(True)
-
-            response = self.table.scan(**scan_kwargs)
-            items = response.get('Items', [])
+                # Filter by is_active = True
+                assets = [asset_item.to_asset() for asset_item in AssetItem.scan(AssetItem.is_active == True)]
+            else:
+                # Get all assets
+                assets = [asset_item.to_asset() for asset_item in AssetItem.scan()]
 
             logger.info(
                 action=LogActions.DB_OPERATION,
-                message=f"Found {len(items)} assets"
+                message=f"Found {len(assets)} assets"
             )
 
-
-            # Convert each item to Asset entity
-            assets = []
-            for item in items:
-                assets.append(AssetItem(**item).to_entity())
             return assets
 
         except Exception as e:
@@ -108,11 +103,11 @@ class AssetDAO(BaseDAO):
                 action=LogActions.ERROR,
                 message=f"Failed to get all assets: {e}"
             )
-            raise CNOPDatabaseOperationException(f"Database operation failed while retrieving all assets: {str(e)}")
+            raise CNOPDatabaseOperationException(f"Database operation failed while retrieving all assets: {str(e)}") from e
 
     def get_assets_by_ids(self, asset_ids: List[str]) -> Dict[str, Asset]:
         """
-        Batch retrieve multiple assets by their IDs using DynamoDB batch_get_item
+        Batch retrieve multiple assets by their IDs using PynamoDB
 
         Args:
             asset_ids: List of asset IDs to retrieve
@@ -133,44 +128,19 @@ class AssetDAO(BaseDAO):
                 message=f"Batch retrieving {len(asset_ids)} assets"
             )
 
-            # Prepare keys for batch_get_item (DynamoDB low-level API format)
-            keys = [{AssetFields.PRODUCT_ID: {'S': asset_id}} for asset_id in asset_ids]
-
-            # Use DynamoDB client's batch_get_item method
-            response = self.client.batch_get_item(
-                RequestItems={
-                    self.table.table_name: {
-                        'Keys': keys
-                    }
-                }
-            )
-
-            # Extract items from response
-            items = response.get('Responses', {}).get(self.table.table_name, [])
-
-            # Handle unprocessed keys (retry once if needed)
-            unprocessed_keys = response.get('UnprocessedKeys', {})
-            if unprocessed_keys and self.table.table_name in unprocessed_keys:
-                logger.warning(
-                    action=LogActions.DB_OPERATION,
-                    message=f"Retrying {len(unprocessed_keys[self.table.table_name]['Keys'])} unprocessed keys"
-                )
-                retry_response = self.client.batch_get_item(
-                    RequestItems={
-                        self.table.table_name: {
-                            'Keys': unprocessed_keys[self.table.table_name]['Keys']
-                        }
-                    }
-                )
-                items.extend(retry_response.get('Responses', {}).get(self.table.table_name, []))
-
-            # Convert to Asset entities and create mapping
+            # Use PynamoDB batch_get to retrieve multiple assets
             assets = {}
-            for item in items:
-                # Convert DynamoDB low-level format to high-level format
-                converted_item = self._convert_dynamodb_item(item)
-                asset = AssetItem(**converted_item).to_entity()
-                assets[asset.asset_id] = asset
+            for asset_id in asset_ids:
+                try:
+                    asset_item = AssetItem.get(asset_id)
+                    assets[asset_id] = asset_item.to_asset()
+                except AssetItem.DoesNotExist:
+                    # Asset not found, skip it (as per original behavior)
+                    logger.warning(
+                        action=LogActions.DB_OPERATION,
+                        message=f"Asset '{asset_id}' not found, skipping"
+                    )
+                    continue
 
             logger.info(
                 action=LogActions.DB_OPERATION,
@@ -184,89 +154,48 @@ class AssetDAO(BaseDAO):
                 action=LogActions.ERROR,
                 message=f"Failed to batch retrieve assets: {e}"
             )
-            raise CNOPDatabaseOperationException(f"Database operation failed while batch retrieving assets: {str(e)}")
+            raise CNOPDatabaseOperationException(f"Database operation failed while batch retrieving assets: {str(e)}") from e
 
     def update_asset(self, asset: Asset) -> Asset:
+        """Update an asset"""
         try:
-            # Get existing asset to preserve created_at
-            existing_asset = self.get_asset_by_id(asset.asset_id)
-
-            # Convert Asset to AssetItem for database storage (handles float to Decimal conversion)
-            asset_item = AssetItem.from_entity(asset)
-            asset_data = asset_item.model_dump()
-
-            # Add product_id for database key
-            asset_data[AssetFields.PRODUCT_ID] = asset.asset_id
-
-            # Preserve original created_at, update updated_at
-            asset_data[TimestampFields.CREATED_AT] = existing_asset.created_at.isoformat()
-            asset_data[TimestampFields.UPDATED_AT] = datetime.utcnow().isoformat()
-
-            # Update the item in database
-            key = {AssetFields.PRODUCT_ID: asset.asset_id}
-            # Filter out product_id from update (it's the primary key)
-            update_data = {k: v for k, v in asset_data.items() if k != AssetFields.PRODUCT_ID}
-
-            # Handle reserved keyword "name" with expression attribute names
-            expression_names = {"#name": "name"} if "name" in update_data else {}
-            update_parts = []
-            expression_values = {}
-
-            for k, v in update_data.items():
-                if k == "name":
-                    update_parts.append("#name = :name")
-                    expression_values[":name"] = v
-                else:
-                    update_parts.append(f"{k} = :{k}")
-                    expression_values[f":{k}"] = v
-
-            updated_item = self._safe_update_item(
-                self.table,
-                key,
-                "SET " + ", ".join(update_parts),
-                expression_values,
-                expression_names
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Updating asset: id={asset.asset_id}, name={asset.name}"
             )
+
+            # Get existing asset to preserve created_at
+            existing_asset_item = AssetItem.get(asset.asset_id)
+
+            # Convert Asset to AssetItem for database storage
+            asset_item = AssetItem.from_asset(asset)
+
+            # Preserve original created_at
+            asset_item.created_at = existing_asset_item.created_at
+
+            # Business rule: if price is zero, asset should be inactive
+            if asset_item.price_usd == "0" or asset_item.price_usd == "0.0":
+                asset_item.is_active = False
+
+            # Save the updated asset (updated_at will be set automatically in save method)
+            asset_item.save()
 
             logger.info(
                 action=LogActions.DB_OPERATION,
                 message=f"Asset updated successfully: id={asset.asset_id}, name={asset.name}"
             )
 
-            return updated_item
-        except CNOPAssetNotFoundException:
-            # Re-raise asset not found exceptions directly
-            raise
-        except Exception as e:
+            # Convert back to Asset domain model
+            return asset_item.to_asset()
+        except AssetItem.DoesNotExist:
+            logger.warning(
+                action=LogActions.ERROR,
+                message=f"Asset '{asset.asset_id}' not found for update"
+            )
+            raise CNOPAssetNotFoundException(f"Asset '{asset.asset_id}' not found")
+        except Exception as exc:
             logger.error(
                 action=LogActions.ERROR,
-                message=f"Failed to update asset '{asset.asset_id}': {e}"
+                message=f"Failed to update asset '{asset.asset_id}': {exc}"
             )
-            raise CNOPDatabaseOperationException(f"Database operation failed while updating asset '{asset.asset_id}': {str(e)}")
-
-    def _convert_dynamodb_item(self, item: dict) -> dict:
-        """
-        Convert DynamoDB low-level format to high-level format for AssetItem
-
-        Args:
-            item: DynamoDB item in low-level format
-
-        Returns:
-            Converted item in high-level format
-        """
-        converted = {}
-        for key, value in item.items():
-            if isinstance(value, dict):
-                if 'S' in value:
-                    converted[key] = value['S']
-                elif 'N' in value:
-                    converted[key] = value['N']
-                elif 'BOOL' in value:
-                    converted[key] = value['BOOL']
-                elif 'NULL' in value:
-                    converted[key] = None
-                else:
-                    converted[key] = value
-            else:
-                converted[key] = value
-        return converted
+            raise CNOPDatabaseOperationException(f"Database operation failed while updating asset '{asset.asset_id}': {str(exc)}") from exc

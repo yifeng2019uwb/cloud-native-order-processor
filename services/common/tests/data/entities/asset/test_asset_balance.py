@@ -128,7 +128,7 @@ class TestAssetBalanceItem:
         assert balance_item.Sk == "ASSET#BTC"
         assert balance_item.username == "testuser123"
         assert balance_item.asset_id == "BTC"
-        assert balance_item.quantity == Decimal("10.5")
+        assert balance_item.quantity == "10.5"  # Stored as string in PynamoDB
 
     def test_asset_balance_item_to_entity(self):
         """Test converting AssetBalanceItem to AssetBalance entity"""
@@ -149,16 +149,14 @@ class TestAssetBalanceItem:
     def test_asset_balance_item_json_serialization(self):
         """Test asset balance item JSON serialization"""
         now = datetime.now(timezone.utc)
-        balance_item_data = {
-            "Pk": "testuser123",
-            "Sk": "ASSET#BTC",
-            "username": "testuser123",
-            "asset_id": "BTC",
-            "quantity": Decimal("10.5"),
-            "created_at": now.isoformat(),
-            "updated_at": now.isoformat()
-        }
-        balance_item = AssetBalanceItem(**balance_item_data)
+        balance_item = AssetBalanceItem()
+        balance_item.Pk = "testuser123"
+        balance_item.Sk = "ASSET#BTC"
+        balance_item.username = "testuser123"
+        balance_item.asset_id = "BTC"
+        balance_item.quantity = "10.5"  # String for PynamoDB
+        balance_item.created_at = now
+        balance_item.updated_at = now
 
         # Test model_dump
         json_data = balance_item.model_dump()
@@ -166,4 +164,4 @@ class TestAssetBalanceItem:
         assert json_data["Sk"] == "ASSET#BTC"
         assert json_data["username"] == "testuser123"
         assert json_data["asset_id"] == "BTC"
-        assert json_data["quantity"] == Decimal("10.5")
+        assert json_data["quantity"] == "10.5"  # String in PynamoDB

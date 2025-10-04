@@ -1,12 +1,10 @@
 """
 Order DAO for database operations.
-Handles CRUD operations for Order entities using DynamoDB.
+Handles CRUD operations for Order entities using PynamoDB.
 """
 
 from datetime import datetime, timezone
 from typing import List
-
-from boto3.dynamodb.conditions import Attr, Key
 
 from ....exceptions import CNOPEntityValidationException
 from ....exceptions.shared_exceptions import CNOPOrderNotFoundException
@@ -14,19 +12,17 @@ from ....shared.logging import BaseLogger, LogActions, Loggers
 from ...entities.order import Order, OrderItem
 from ...entities.order.enums import OrderStatus
 from ...exceptions import CNOPDatabaseOperationException
-from ..base_dao import BaseDAO
+from ...entities.entity_constants import OrderFields
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 
-class OrderDAO(BaseDAO):
+class OrderDAO:
     """Data Access Object for Order entities"""
 
-    def __init__(self, db_connection):
-        """Initialize Order DAO with DynamoDB connection"""
-        super().__init__(db_connection)
-        # Table reference
-        self.table = self.db.orders_table
+    def __init__(self):
+        """Initialize Order DAO"""
+        pass
 
     def create_order(self, order: Order) -> Order:
         """
@@ -43,19 +39,15 @@ class OrderDAO(BaseDAO):
         """
         try:
             # Convert Order entity to OrderItem for database storage
-            order_item = OrderItem.from_entity(order)
-            item = order_item.model_dump()
+            order_item = OrderItem.from_order(order)
 
-            # Add GSI attributes for UserOrdersIndex
-            item['GSI-PK'] = order.username
-            item['GSI-SK'] = order.asset_id
-
-            # Insert into DynamoDB
+            # Save to database
             logger.info(
                 action=LogActions.DB_OPERATION,
-                message=f"Order item prepared: {item}"
+                message=f"Creating order: id={order.order_id}, user={order.username}, "
+                       f"asset={order.asset_id}, type={order.order_type.value}"
             )
-            self.table.put_item(Item=item)
+            order_item.save()
 
             logger.info(
                 action=LogActions.DB_OPERATION,
@@ -69,7 +61,7 @@ class OrderDAO(BaseDAO):
                 action=LogActions.ERROR,
                 message=f"Failed to create order '{order.order_id}': {str(e)}"
             )
-            raise CNOPDatabaseOperationException(f"Database operation failed while creating order '{order.order_id}': {str(e)}")
+            raise CNOPDatabaseOperationException(f"Database operation failed while creating order '{order.order_id}': {str(e)}") from e
 
     def get_order(self, order_id: str) -> Order:
         """
@@ -85,15 +77,19 @@ class OrderDAO(BaseDAO):
             CNOPOrderNotFoundException: If order not found
             CNOPDatabaseOperationException: If database operation fails
         """
-        key = {'Pk': order_id, 'Sk': 'ORDER'}
-        item = self._safe_get_item(self.table, key)
+        try:
+            # Get order from database
+            order_item = OrderItem.get(order_id, OrderFields.SK_VALUE)
+            return order_item.to_order()
 
-        if not item:
+        except OrderItem.DoesNotExist:
             raise CNOPOrderNotFoundException(f"Order '{order_id}' not found")
-
-        # Convert database item to OrderItem and then to Order entity
-        order_item = OrderItem(**item)
-        return order_item.to_entity()
+        except Exception as e:
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to get order '{order_id}': {str(e)}"
+            )
+            raise CNOPDatabaseOperationException(f"Database operation failed while retrieving order '{order_id}': {str(e)}") from e
 
 
     def get_orders_by_user(self, username: str, limit: int = 50, offset: int = 0) -> List[Order]:
@@ -112,31 +108,38 @@ class OrderDAO(BaseDAO):
             CNOPDatabaseOperationException: If database operation fails
         """
         try:
-            response = self.table.query(
-                IndexName='UserOrdersIndex',
-                KeyConditionExpression=Key('GSI-PK').eq(username),
-                Limit=limit,
-                ScanIndexForward=False  # Most recent first
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Retrieving orders for user: username={username}, limit={limit}, offset={offset}"
             )
 
-            # Convert each item to OrderItem and then to Order entity
-            orders = []
-            for item in response.get('Items', []):
-                order_item = OrderItem(**item)
-                orders.append(order_item.to_entity())
+            # Query using GSI - query by username (GSI_PK) only
+            order_items = OrderItem.user_orders_index.query(
+                username,
+                scan_index_forward=False,  # Most recent first
+                limit=limit
+            )
 
-            # Apply offset (DynamoDB doesn't support offset directly)
+            # Convert to Order entities
+            orders = [order_item.to_order() for order_item in order_items]
+
+            # Apply offset (PynamoDB doesn't support offset directly)
             if offset > 0:
                 orders = orders[offset:]
+
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Retrieved {len(orders)} orders for user '{username}'"
+            )
 
             return orders
 
         except Exception as e:
             logger.error(
-            action=LogActions.ERROR,
-            message=f"Failed to get orders for user '{username}': {str(e)}"
-        )
-            raise CNOPDatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}': {str(e)}")
+                action=LogActions.ERROR,
+                message=f"Failed to get orders for user '{username}': {str(e)}"
+            )
+            raise CNOPDatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}': {str(e)}") from e
 
 
     def update_order_status(self, order_id: str, new_status: OrderStatus, reason: str = None) -> Order:
@@ -156,44 +159,42 @@ class OrderDAO(BaseDAO):
             CNOPDatabaseOperationException: If database operation fails
         """
         try:
-            # Prepare update expression
-            update_expression = "SET #status = :status, updated_at = :updated_at"
-            expression_values = {
-                ':status': new_status.value,
-                ':updated_at': datetime.now(timezone.utc).isoformat(),
-                '#status': 'status'
-            }
-
-            # Add reason if provided
-            if reason:
-                update_expression += ", status_reason = :reason"
-                expression_values[':reason'] = reason
-
-            # Perform update
-            response = self.table.update_item(
-                Key={'Pk': order_id, 'Sk': 'ORDER'},
-                UpdateExpression=update_expression,
-                ExpressionAttributeValues=expression_values,
-                ReturnValues='ALL_NEW'
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Updating order status: id={order_id}, new_status={new_status.value}, reason={reason or 'none'}"
             )
 
-            updated_item = response['Attributes']
+            # Get existing order
+            order_item = OrderItem.get(order_id, OrderFields.SK_VALUE)
+
+            # Update status and reason
+            order_item.status = new_status.value
+            if reason:
+                order_item.status_reason = reason
+
+            # Save with updated timestamp
+            order_item.save()
 
             logger.info(
                 action=LogActions.DB_OPERATION,
                 message=f"Order status updated successfully: id={order_id}, new_status={new_status.value}, reason={reason or 'none'}"
             )
 
-            # Convert database item to OrderItem and then to Order entity
-            order_item = OrderItem(**updated_item)
-            return order_item.to_entity()
+            return order_item.to_order()
+
+        except OrderItem.DoesNotExist:
+            logger.warning(
+                action=LogActions.ERROR,
+                message=f"Order '{order_id}' not found for status update"
+            )
+            raise CNOPOrderNotFoundException(f"Order '{order_id}' not found")
 
         except Exception as e:
             logger.error(
                 action=LogActions.ERROR,
                 message=f"Failed to update order status '{order_id}': {str(e)}"
             )
-            raise CNOPDatabaseOperationException(f"Database operation failed while updating order status for order '{order_id}': {str(e)}")
+            raise CNOPDatabaseOperationException(f"Database operation failed while updating order status for order '{order_id}': {str(e)}") from e
 
     def order_exists(self, order_id: str) -> bool:
         """
@@ -209,16 +210,21 @@ class OrderDAO(BaseDAO):
             CNOPDatabaseOperationException: If database operation fails
         """
         try:
-            response = self.table.get_item(
-                Key={'Pk': order_id, 'Sk': 'ORDER'},
-                ProjectionExpression='order_id'
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Checking if order exists: id={order_id}"
             )
 
-            return 'Item' in response
+            # Try to get the order
+            OrderItem.get(order_id, OrderFields.SK_VALUE)
+            return True
+
+        except OrderItem.DoesNotExist:
+            return False
 
         except Exception as e:
             logger.error(
                 action=LogActions.ERROR,
                 message=f"Failed to check if order '{order_id}' exists: {str(e)}"
             )
-            raise CNOPDatabaseOperationException(f"Database operation failed while checking existence of order '{order_id}': {str(e)}")
+            raise CNOPDatabaseOperationException(f"Database operation failed while checking existence of order '{order_id}': {str(e)}") from e

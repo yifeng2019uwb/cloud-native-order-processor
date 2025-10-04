@@ -3,18 +3,50 @@ Lock Manager for Transaction Atomicity
 Provides user-level locking to prevent race conditions in balance and order operations.
 """
 
+import os
 import uuid
-from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from ...data.database.dynamodb_connection import get_dynamodb_manager
+from pynamodb.models import Model
+from pynamodb.attributes import UnicodeAttribute, UTCDateTimeAttribute
+from pynamodb.exceptions import DeleteError
+
+from ...data.entities.entity_constants import (
+    AWSConfig, TableNames, UserConstants, LockFields)
 from ...data.exceptions import (CNOPDatabaseOperationException,
-                                CNOPLockAcquisitionException,
-                                CNOPLockTimeoutException)
+                                        CNOPLockAcquisitionException)
 from ...shared.logging import BaseLogger, LogActions, Loggers
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
+
+
+class UserLockItem(Model):
+    """PynamoDB model for user locks - uses same table as users but different key pattern"""
+
+    class Meta:
+        """Meta class for UserLockItem"""
+        table_name = os.getenv(UserConstants.USERS_TABLE_ENV_VAR, TableNames.USERS)
+        region = os.getenv(AWSConfig.AWS_REGION_ENV_VAR, AWSConfig.DEFAULT_REGION)
+        billing_mode = AWSConfig.BILLING_MODE_PAY_PER_REQUEST
+
+    # Primary key (different from UserItem)
+    Pk = UnicodeAttribute(hash_key=True)  # LockFields.PK_PREFIX + username
+    Sk = UnicodeAttribute(range_key=True, default=LockFields.SK_VALUE)
+
+    # Lock fields
+    lock_id = UnicodeAttribute()
+    expires_at = UTCDateTimeAttribute()
+    operation = UnicodeAttribute()
+    request_id = UnicodeAttribute()
+    created_at = UTCDateTimeAttribute(default=lambda: datetime.now(timezone.utc))
+    updated_at = UTCDateTimeAttribute(default=lambda: datetime.now(timezone.utc))
+    entity_type = UnicodeAttribute(default=LockFields.ENTITY_TYPE)
+
+    def save(self, condition=None, **kwargs):
+        """Override save to update timestamp"""
+        self.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        return super().save(condition=condition, **kwargs)
 
 
 class UserLock:
@@ -76,26 +108,36 @@ def acquire_lock(username: str, operation: str, timeout_seconds: int = 15) -> Op
     try:
         lock_id = f"lock_{uuid.uuid4().hex[:8]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=timeout_seconds)
+        now = datetime.now(timezone.utc)
 
-        # Use conditional write to acquire lock
-        # Only succeeds if no lock exists or existing lock is expired
-        get_dynamodb_manager().get_connection().users_table.put_item(
-            Item={
-                "Pk": f"USER#{username}",
-                "Sk": "LOCK",
-                "lock_id": lock_id,
-                "expires_at": expires_at.isoformat(),
-                "operation": operation,
-                "request_id": str(uuid.uuid4()),
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-                "entity_type": "user_lock"
-            },
-            ConditionExpression="attribute_not_exists(Pk) OR expires_at < :now",
-            ExpressionAttributeValues={
-                ":now": datetime.now(timezone.utc).isoformat()
-            }
-        )
+        # Check if lock already exists
+        try:
+            existing_lock = UserLockItem.get(f"{LockFields.PK_PREFIX}{username}", LockFields.SK_VALUE)
+            # If lock exists and is not expired, acquisition fails
+            if existing_lock.expires_at > now.replace(tzinfo=None):
+                logger.warning(
+                    action=LogActions.DB_OPERATION,
+                    message=f"Lock acquisition failed - lock already exists and not expired: user={username}, operation={operation}"
+                )
+                raise CNOPLockAcquisitionException(f"Could not acquire lock for user '{username}' - lock already exists and not expired")
+        except UserLockItem.DoesNotExist:
+            # No existing lock, proceed to create new one
+            pass
+
+        # Create UserLockItem for the lock
+        lock_item = UserLockItem()
+        lock_item.Pk = f"{LockFields.PK_PREFIX}{username}"
+        lock_item.Sk = LockFields.SK_VALUE
+        lock_item.lock_id = lock_id
+        lock_item.expires_at = expires_at.replace(tzinfo=None)  # Convert to naive UTC
+        lock_item.operation = operation
+        lock_item.request_id = str(uuid.uuid4())
+        lock_item.created_at = now.replace(tzinfo=None)
+        lock_item.updated_at = now.replace(tzinfo=None)
+        lock_item.entity_type = LockFields.ENTITY_TYPE
+
+        # Save the lock item
+        lock_item.save()
 
         logger.info(
             action=LogActions.DB_OPERATION,
@@ -104,18 +146,11 @@ def acquire_lock(username: str, operation: str, timeout_seconds: int = 15) -> Op
         return lock_id
 
     except Exception as e:
-        if "ConditionalCheckFailedException" in str(e):
-            logger.info(
-                action=LogActions.ERROR,
-                message=f"Lock acquisition failed - lock exists: user={username}, operation={operation}"
-            )
-            raise CNOPLockAcquisitionException(f"Lock acquisition failed for user {username}, operation {operation}")
-        else:
-            logger.error(
-                action=LogActions.ERROR,
-                message=f"Lock acquisition error: user={username}, operation={operation}, error={str(e)}"
-            )
-            raise CNOPDatabaseOperationException(f"Failed to acquire lock: {str(e)}")
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Failed to acquire lock: {str(e)}"
+        )
+        raise CNOPDatabaseOperationException(f"Database operation failed while acquiring lock: {str(e)}") from e
 
 
 def release_lock(username: str, lock_id: str) -> bool:
@@ -133,17 +168,25 @@ def release_lock(username: str, lock_id: str) -> bool:
         CNOPDatabaseOperationException: If database operation fails
     """
     try:
-        # Delete lock if it matches our lock_id
-        get_dynamodb_manager().get_connection().users_table.delete_item(
-            Key={
-                "Pk": f"USER#{username}",
-                "Sk": "LOCK"
-            },
-            ConditionExpression="lock_id = :lock_id",
-            ExpressionAttributeValues={
-                ":lock_id": lock_id
-            }
-        )
+
+    # Get the lock item first to check if it exists and matches
+        try:
+            lock_item = UserLockItem.get(f"{LockFields.PK_PREFIX}{username}", LockFields.SK_VALUE)
+            if lock_item.lock_id != lock_id:
+                logger.warning(
+                    action=LogActions.DB_OPERATION,
+                    message=f"Lock release failed - lock ID mismatch: user={username}, expected={lock_id}, actual={lock_item.lock_id}"
+                )
+                return False
+        except UserLockItem.DoesNotExist:
+            logger.warning(
+                action=LogActions.DB_OPERATION,
+                message=f"Lock release failed - lock not found: user={username}, lock_id={lock_id}"
+            )
+            return False
+
+        # Delete the lock with condition
+        lock_item.delete(condition=UserLockItem.lock_id == lock_id)
 
         logger.info(
             action=LogActions.DB_OPERATION,
@@ -151,22 +194,19 @@ def release_lock(username: str, lock_id: str) -> bool:
         )
         return True
 
+    except DeleteError:
+        logger.warning(
+            action=LogActions.DB_OPERATION,
+            message=f"Lock release failed - condition not met: user={username}, lock_id={lock_id}"
+        )
+        return False
+
     except Exception as e:
-        if "ConditionalCheckFailedException" in str(e):
-            logger.info(
-                action=LogActions.ERROR,
-                message=f"Lock release failed - lock was already released or changed: user={username}, lock_id={lock_id}"
-            )
-            return False
-        else:
-            logger.error(
-                action=LogActions.ERROR,
-                message=f"Lock release error: user={username}, lock_id={lock_id}, error={str(e)}"
-            )
-            raise CNOPDatabaseOperationException(f"Failed to release lock: {str(e)}")
-
-
-
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Failed to release lock: {str(e)}"
+        )
+        raise CNOPDatabaseOperationException(f"Database operation failed while releasing lock: {str(e)}") from e
 
 
 # Lock timeout configuration - Reduced for personal project with minimal traffic

@@ -4,14 +4,13 @@ Tests for Asset Balance DAO
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
-from boto3.dynamodb.conditions import Key
-from botocore.exceptions import ClientError
 
 from src.data.dao.asset.asset_balance_dao import AssetBalanceDAO
-from src.data.entities.asset import AssetBalance, AssetBalanceItem
+from src.data.entities.asset.asset_balance import AssetBalance, AssetBalanceItem
+from src.data.entities.entity_constants import AssetBalanceFields
 from src.data.exceptions import CNOPDatabaseOperationException
 from src.exceptions.shared_exceptions import CNOPAssetBalanceNotFoundException
 
@@ -20,187 +19,142 @@ class TestAssetBalanceDAO:
     """Test AssetBalanceDAO class"""
 
     @pytest.fixture
-    def mock_db_connection(self):
-        """Create mock database connection"""
-        mock_connection = MagicMock()
-        mock_users_table = MagicMock()
-        mock_connection.users_table = mock_users_table
-        return mock_connection
-
-    @pytest.fixture
-    def asset_balance_dao(self, mock_db_connection):
-        """Create AssetBalanceDAO instance with mock connection"""
-        return AssetBalanceDAO(mock_db_connection)
+    def asset_balance_dao(self):
+        """Create AssetBalanceDAO instance (PynamoDB doesn't need db_connection)"""
+        return AssetBalanceDAO()
 
     @pytest.fixture
     def sample_asset_balance(self):
         """Sample asset balance for testing"""
-        now = datetime.now(timezone.utc)
         return AssetBalance(
             username="testuser123",
             asset_id="BTC",
             quantity=Decimal('10.5'),
-            created_at=now,
-            updated_at=now
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
 
-    def test_upsert_asset_balance_update_existing(self, asset_balance_dao, sample_asset_balance, mock_db_connection):
+    # ==================== UPSERT ASSET BALANCE TESTS ====================
+
+    @patch.object(AssetBalanceItem, 'get')
+    @patch.object(AssetBalanceItem, 'save')
+    def test_upsert_asset_balance_update_existing(self, mock_save, mock_get, asset_balance_dao, sample_asset_balance):
         """Test successful asset balance update (existing item)"""
-        # Convert sample_asset_balance to AssetBalanceItem for database operations
-        sample_asset_balance_item = AssetBalanceItem.from_asset_balance(sample_asset_balance)
+        # Mock existing balance item
+        existing_balance_item = AssetBalanceItem(
+            username='testuser123',
+            asset_id='BTC',
+            quantity='5.0',
+            created_at=sample_asset_balance.created_at,
+            updated_at=sample_asset_balance.created_at
+        )
+        mock_get.return_value = existing_balance_item
+        mock_save.return_value = None
 
-        # Mock get_asset_balance to return existing balance
-        with patch.object(asset_balance_dao, 'get_asset_balance', return_value=sample_asset_balance):
-            # Mock database response for existing item (return AssetBalanceItem data)
-            mock_updated_item = {
-                'Pk': sample_asset_balance_item.Pk,
-                'Sk': sample_asset_balance_item.Sk,
-                'username': 'testuser123',
-                'asset_id': 'BTC',
-                'quantity': '15.5',
-                'created_at': sample_asset_balance_item.created_at,
-                'updated_at': '2024-01-01T12:00:00'
-            }
-            mock_db_connection.users_table.update_item.return_value = {'Attributes': mock_updated_item}
-
-            result = asset_balance_dao.upsert_asset_balance('testuser123', 'BTC', Decimal('15.5'))
+        result = asset_balance_dao.upsert_asset_balance('testuser123', 'BTC', Decimal('5.5'))
 
         # Verify result
         assert result is not None
         assert result.username == "testuser123"
         assert result.asset_id == "BTC"
-        assert result.quantity == Decimal('15.5')
+        assert result.quantity == Decimal('10.5')  # 5.0 + 5.5
 
-        # Verify database was called with correct parameters
-        mock_db_connection.users_table.update_item.assert_called_once()
-        call_args = mock_db_connection.users_table.update_item.call_args
-        assert call_args[1]['Key'] == {'Pk': 'testuser123', 'Sk': 'ASSET#BTC'}
-        assert 'SET #quantity = :quantity, updated_at = :updated_at' in call_args[1]['UpdateExpression']
+        # Verify get was called with correct parameters
+        mock_get.assert_called_once_with('testuser123', f"{AssetBalanceFields.SK_PREFIX}BTC")
+        # Verify save was called
+        assert mock_save.called
 
-    def test_upsert_asset_balance_create_new(self, asset_balance_dao, mock_db_connection):
+    @patch.object(AssetBalanceItem, 'get')
+    @patch.object(AssetBalanceItem, 'save')
+    def test_upsert_asset_balance_create_new(self, mock_save, mock_get, asset_balance_dao):
         """Test successful asset balance creation (new item)"""
-        # Create AssetBalance entity for test input
-        test_asset_balance = AssetBalance(
-            username="testuser123",
-            asset_id="ETH",
-            quantity=Decimal('5.0'),
-            created_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
-            updated_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-        )
+        # Mock get to raise DoesNotExist (no existing balance)
+        mock_get.side_effect = AssetBalanceItem.DoesNotExist()
+        mock_save.return_value = None
 
-        # Convert to AssetBalanceItem for database operations
-        test_asset_balance_item = AssetBalanceItem.from_asset_balance(test_asset_balance)
-
-        # Mock get_asset_balance to raise CNOPAssetBalanceNotFoundException
-        with patch.object(asset_balance_dao, 'get_asset_balance', side_effect=CNOPAssetBalanceNotFoundException("Not found")):
-            # Mock database response for new item (return the AssetBalanceItem data)
-            mock_created_item = {
-                'Pk': test_asset_balance_item.Pk,
-                'Sk': test_asset_balance_item.Sk,
-                'username': test_asset_balance_item.username,
-                'asset_id': test_asset_balance_item.asset_id,
-                'quantity': str(test_asset_balance_item.quantity),
-                'created_at': test_asset_balance_item.created_at,
-                'updated_at': test_asset_balance_item.updated_at
-            }
-
-            mock_db_connection.users_table.put_item.return_value = mock_created_item
-
-            result = asset_balance_dao.upsert_asset_balance('testuser123', 'ETH', Decimal('5.0'))
+        result = asset_balance_dao.upsert_asset_balance('testuser123', 'ETH', Decimal('2.0'))
 
         # Verify result
         assert result is not None
         assert result.username == "testuser123"
         assert result.asset_id == "ETH"
-        assert result.quantity == Decimal('5.0')
+        assert result.quantity == Decimal('2.0')
 
-        # Verify put_item was called for new item
-        mock_db_connection.users_table.put_item.assert_called_once()
+        # Verify get was called with correct parameters
+        mock_get.assert_called_once_with('testuser123', f"{AssetBalanceFields.SK_PREFIX}ETH")
+        # Verify save was called
+        assert mock_save.called
 
-    def test_upsert_asset_balance_zero_quantity(self, asset_balance_dao, mock_db_connection):
+    @patch.object(AssetBalanceItem, 'get')
+    @patch.object(AssetBalanceItem, 'save')
+    def test_upsert_asset_balance_zero_quantity(self, mock_save, mock_get, asset_balance_dao, sample_asset_balance):
         """Test asset balance upsert with zero quantity"""
-        # Create a sample balance with existing quantity
-        existing_balance = AssetBalance(
-            Pk='testuser123',
-            Sk='ASSET#BTC',
+        # Mock existing balance item
+        existing_balance_item = AssetBalanceItem(
             username='testuser123',
             asset_id='BTC',
-            quantity=Decimal('10.0'),
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
+            quantity='10.5',
+            created_at=sample_asset_balance.created_at,
+            updated_at=sample_asset_balance.created_at
         )
+        mock_get.return_value = existing_balance_item
+        mock_save.return_value = None
 
-        with patch.object(asset_balance_dao, 'get_asset_balance', return_value=existing_balance):
-            mock_updated_item = {
-                'Pk': 'testuser123',
-                'Sk': 'ASSET#BTC',
-                'username': 'testuser123',
-                'asset_id': 'BTC',
-                'quantity': '10.0',  # 10.0 + 0.00 = 10.0
-                'created_at': '2024-01-01T12:00:00',
-                'updated_at': '2024-01-01T12:00:00'
-            }
-            mock_db_connection.users_table.update_item.return_value = {'Attributes': mock_updated_item}
+        result = asset_balance_dao.upsert_asset_balance('testuser123', 'BTC', Decimal('0.0'))
 
-            result = asset_balance_dao.upsert_asset_balance('testuser123', 'BTC', Decimal('0.00'))
+        # Verify result (should remain the same)
+        assert result is not None
+        assert result.username == "testuser123"
+        assert result.asset_id == "BTC"
+        assert result.quantity == Decimal('10.5')  # 10.5 + 0.0
 
-        assert result.quantity == Decimal('10.0')  # Should remain the same when adding 0
+        # Verify get was called
+        mock_get.assert_called_once_with('testuser123', f"{AssetBalanceFields.SK_PREFIX}BTC")
+        # Verify save was called
+        assert mock_save.called
 
-    def test_upsert_asset_balance_negative_quantity(self, asset_balance_dao, mock_db_connection):
+    @patch.object(AssetBalanceItem, 'get')
+    @patch.object(AssetBalanceItem, 'save')
+    def test_upsert_asset_balance_negative_quantity(self, mock_save, mock_get, asset_balance_dao, sample_asset_balance):
         """Test asset balance upsert with negative quantity"""
-        # Create a sample balance with positive quantity
-        positive_balance = AssetBalance(
-            Pk='testuser123',
-            Sk='ASSET#BTC',
+        # Mock existing balance item
+        existing_balance_item = AssetBalanceItem(
             username='testuser123',
             asset_id='BTC',
-            quantity=Decimal('10.0'),
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
+            quantity='10.5',
+            created_at=sample_asset_balance.created_at,
+            updated_at=sample_asset_balance.created_at
         )
+        mock_get.return_value = existing_balance_item
+        mock_save.return_value = None
 
-        with patch.object(asset_balance_dao, 'get_asset_balance', return_value=positive_balance):
-            mock_updated_item = {
-                'Pk': 'testuser123',
-                'Sk': 'ASSET#BTC',
-                'username': 'testuser123',
-                'asset_id': 'BTC',
-                'quantity': '5.0',  # 10.0 + (-5.0) = 5.0
-                'created_at': '2024-01-01T12:00:00',
-                'updated_at': '2024-01-01T12:00:00'
-            }
-            mock_db_connection.users_table.update_item.return_value = {'Attributes': mock_updated_item}
+        result = asset_balance_dao.upsert_asset_balance('testuser123', 'BTC', Decimal('-2.0'))
 
-            result = asset_balance_dao.upsert_asset_balance('testuser123', 'BTC', Decimal('-5.0'))
+        # Verify result
+        assert result is not None
+        assert result.username == "testuser123"
+        assert result.asset_id == "BTC"
+        assert result.quantity == Decimal('8.5')  # 10.5 + (-2.0)
 
-        assert result.quantity == Decimal('5.0')  # Should be 10.0 - 5.0 = 5.0
+        # Verify get was called
+        mock_get.assert_called_once_with('testuser123', f"{AssetBalanceFields.SK_PREFIX}BTC")
+        # Verify save was called
+        assert mock_save.called
 
-    def test_upsert_asset_balance_database_error(self, asset_balance_dao, mock_db_connection):
-        """Test asset balance upsert with database error"""
-        # Mock get_asset_balance to raise CNOPAssetBalanceNotFoundException
-        with patch.object(asset_balance_dao, 'get_asset_balance', side_effect=CNOPAssetBalanceNotFoundException("Not found")):
-            # Mock database error for put operation
-            mock_db_connection.users_table.put_item.side_effect = ClientError(
-                {'Error': {'Code': 'InternalServerError', 'Message': 'Database error'}},
-                'PutItem'
-            )
+    # ==================== GET ASSET BALANCE TESTS ====================
 
-            with pytest.raises(CNOPDatabaseOperationException):
-                asset_balance_dao.upsert_asset_balance('testuser123', 'BTC', Decimal('10.0'))
-
-    def test_get_asset_balance_success(self, asset_balance_dao, sample_asset_balance, mock_db_connection):
+    @patch.object(AssetBalanceItem, 'get')
+    def test_get_asset_balance_success(self, mock_get, asset_balance_dao, sample_asset_balance):
         """Test successful asset balance retrieval"""
-        # Mock database response
-        mock_item = {
-            'Pk': 'testuser123',
-            'Sk': 'ASSET#BTC',
-            'username': 'testuser123',
-            'asset_id': 'BTC',
-            'quantity': '10.5',
-            'created_at': sample_asset_balance.created_at.isoformat(),
-            'updated_at': sample_asset_balance.updated_at.isoformat()
-        }
-        mock_db_connection.users_table.get_item.return_value = {'Item': mock_item}
+        # Mock AssetBalanceItem.get to return a real AssetBalanceItem
+        balance_item = AssetBalanceItem(
+            username='testuser123',
+            asset_id='BTC',
+            quantity='10.5',
+            created_at=sample_asset_balance.created_at,
+            updated_at=sample_asset_balance.updated_at
+        )
+        mock_get.return_value = balance_item
 
         result = asset_balance_dao.get_asset_balance('testuser123', 'BTC')
 
@@ -210,127 +164,149 @@ class TestAssetBalanceDAO:
         assert result.asset_id == "BTC"
         assert result.quantity == Decimal('10.5')
 
-        # Verify database was called
-        mock_db_connection.users_table.get_item.assert_called_once_with(
-            Key={'Pk': 'testuser123', 'Sk': 'ASSET#BTC'}
-        )
+        # Verify get was called with correct parameters
+        mock_get.assert_called_once_with('testuser123', f"{AssetBalanceFields.SK_PREFIX}BTC")
 
-    def test_get_asset_balance_not_found(self, asset_balance_dao, mock_db_connection):
+    @patch.object(AssetBalanceItem, 'get')
+    def test_get_asset_balance_not_found(self, mock_get, asset_balance_dao):
         """Test asset balance retrieval when not found"""
-        # Mock empty database response
-        mock_db_connection.users_table.get_item.return_value = {}
+        # Mock AssetBalanceItem.get to raise DoesNotExist exception
+        mock_get.side_effect = AssetBalanceItem.DoesNotExist()
 
-        # Should raise CNOPAssetBalanceNotFoundException
-        with pytest.raises(CNOPAssetBalanceNotFoundException):
+        with pytest.raises(CNOPAssetBalanceNotFoundException) as exc_info:
             asset_balance_dao.get_asset_balance('testuser123', 'BTC')
 
-    def test_get_asset_balance_database_error(self, asset_balance_dao, mock_db_connection):
-        """Test asset balance retrieval with database error"""
-        # Mock database error
-        mock_db_connection.users_table.get_item.side_effect = ClientError(
-            {'Error': {'Code': 'InternalServerError', 'Message': 'Database error'}},
-            'GetItem'
+        assert "Asset balance not found for user 'testuser123' and asset 'BTC'" in str(exc_info.value)
+        mock_get.assert_called_once_with('testuser123', f"{AssetBalanceFields.SK_PREFIX}BTC")
+
+    # ==================== GET ALL ASSET BALANCES TESTS ====================
+
+    @patch.object(AssetBalanceItem, 'query')
+    def test_get_all_asset_balances_success(self, mock_query, asset_balance_dao, sample_asset_balance):
+        """Test successful retrieval of all asset balances"""
+        # Mock query result with multiple asset balances
+        balance_item1 = AssetBalanceItem(
+            username='testuser123',
+            asset_id='BTC',
+            quantity='10.5',
+            created_at=sample_asset_balance.created_at,
+            updated_at=sample_asset_balance.updated_at
         )
-
-        with pytest.raises(CNOPDatabaseOperationException):
-            asset_balance_dao.get_asset_balance('testuser123', 'BTC')
-
-    def test_get_all_asset_balances_success(self, asset_balance_dao, mock_db_connection):
-        """Test successful retrieval of all asset balances for user"""
-        # Mock database response
-        mock_items = [
-            {
-                'Pk': 'testuser123',
-                'Sk': 'ASSET#BTC',
-                'username': 'testuser123',
-                'asset_id': 'BTC',
-                'quantity': '10.5',
-                'created_at': '2024-01-01T12:00:00',
-                'updated_at': '2024-01-01T12:00:00'
-            },
-            {
-                'Pk': 'testuser123',
-                'Sk': 'ASSET#ETH',
-                'username': 'testuser123',
-                'asset_id': 'ETH',
-                'quantity': '25.0',
-                'created_at': '2024-01-01T12:00:00',
-                'updated_at': '2024-01-01T12:00:00'
-            }
-        ]
-        mock_db_connection.users_table.query.return_value = {'Items': mock_items}
+        balance_item2 = AssetBalanceItem(
+            username='testuser123',
+            asset_id='ETH',
+            quantity='25.0',
+            created_at=sample_asset_balance.created_at,
+            updated_at=sample_asset_balance.updated_at
+        )
+        mock_query.return_value = [balance_item1, balance_item2]
 
         result = asset_balance_dao.get_all_asset_balances('testuser123')
 
         # Verify result
         assert len(result) == 2
+        assert result[0].username == "testuser123"
         assert result[0].asset_id == "BTC"
         assert result[0].quantity == Decimal('10.5')
+        assert result[1].username == "testuser123"
         assert result[1].asset_id == "ETH"
         assert result[1].quantity == Decimal('25.0')
 
-        # Verify database was called with correct query
-        mock_db_connection.users_table.query.assert_called_once()
-        call_args = mock_db_connection.users_table.query.call_args
-        assert 'KeyConditionExpression' in call_args[1]
+        # Verify query was called
+        mock_query.assert_called_once()
 
-    def test_get_all_asset_balances_empty(self, asset_balance_dao, mock_db_connection):
-        """Test retrieval of asset balances when user has none"""
-        # Mock empty database response
-        mock_db_connection.users_table.query.return_value = {'Items': []}
+    @patch.object(AssetBalanceItem, 'query')
+    def test_get_all_asset_balances_empty(self, mock_query, asset_balance_dao):
+        """Test retrieval of all asset balances when user has none"""
+        # Mock empty query result
+        mock_query.return_value = []
 
         result = asset_balance_dao.get_all_asset_balances('testuser123')
 
-        assert len(result) == 0
+        # Verify result
+        assert result == []
+        mock_query.assert_called_once()
 
-    def test_get_all_asset_balances_database_error(self, asset_balance_dao, mock_db_connection):
-        """Test retrieval of asset balances with database error"""
-        # Mock database error
-        mock_db_connection.users_table.query.side_effect = ClientError(
-            {'Error': {'Code': 'InternalServerError', 'Message': 'Database error'}},
-            'Query'
-        )
+    # ==================== DELETE ASSET BALANCE TESTS ====================
 
-        with pytest.raises(CNOPDatabaseOperationException):
-            asset_balance_dao.get_all_asset_balances('testuser123')
-
-    def test_delete_asset_balance_success(self, asset_balance_dao, mock_db_connection):
+    @patch.object(AssetBalanceItem, 'get')
+    @patch.object(AssetBalanceItem, 'delete')
+    def test_delete_asset_balance_success(self, mock_delete, mock_get, asset_balance_dao, sample_asset_balance):
         """Test successful asset balance deletion"""
-        # Mock successful deletion with Attributes returned
-        mock_db_connection.users_table.delete_item.return_value = {'Attributes': {'Pk': 'testuser123', 'Sk': 'ASSET#BTC'}}
+        # Mock AssetBalanceItem.get to return a real AssetBalanceItem
+        balance_item = AssetBalanceItem(
+            username='testuser123',
+            asset_id='BTC',
+            quantity='10.5',
+            created_at=sample_asset_balance.created_at,
+            updated_at=sample_asset_balance.updated_at
+        )
+        mock_get.return_value = balance_item
+        mock_delete.return_value = None
 
         result = asset_balance_dao.delete_asset_balance('testuser123', 'BTC')
 
         # Verify result
         assert result is True
 
-        # Verify database was called
-        mock_db_connection.users_table.delete_item.assert_called_once_with(
-            Key={'Pk': 'testuser123', 'Sk': 'ASSET#BTC'},
-            ReturnValues='ALL_OLD'
-        )
+        # Verify get and delete were called
+        mock_get.assert_called_once_with('testuser123', f"{AssetBalanceFields.SK_PREFIX}BTC")
+        mock_delete.assert_called_once()
 
-    def test_delete_asset_balance_database_error(self, asset_balance_dao, mock_db_connection):
-        """Test asset balance deletion with database error"""
+    @patch.object(AssetBalanceItem, 'get')
+    def test_delete_asset_balance_not_found(self, mock_get, asset_balance_dao):
+        """Test asset balance deletion when not found"""
+        # Mock AssetBalanceItem.get to raise DoesNotExist exception
+        mock_get.side_effect = AssetBalanceItem.DoesNotExist()
+
+        result = asset_balance_dao.delete_asset_balance('testuser123', 'BTC')
+
+        # Verify result
+        assert result is False
+        mock_get.assert_called_once_with('testuser123', f"{AssetBalanceFields.SK_PREFIX}BTC")
+
+    # ==================== ERROR HANDLING TESTS ====================
+
+    @patch.object(AssetBalanceItem, 'get')
+    def test_upsert_asset_balance_database_error(self, mock_get, asset_balance_dao):
+        """Test upsert asset balance with database error"""
         # Mock database error
-        mock_db_connection.users_table.delete_item.side_effect = ClientError(
-            {'Error': {'Code': 'InternalServerError', 'Message': 'Database error'}},
-            'DeleteItem'
-        )
+        mock_get.side_effect = Exception("Database connection failed")
 
-        with pytest.raises(CNOPDatabaseOperationException):
+        with pytest.raises(CNOPDatabaseOperationException) as exc_info:
+            asset_balance_dao.upsert_asset_balance('testuser123', 'BTC', Decimal('5.0'))
+
+        assert "Database operation failed while upserting asset balance" in str(exc_info.value)
+
+    @patch.object(AssetBalanceItem, 'get')
+    def test_get_asset_balance_database_error(self, mock_get, asset_balance_dao):
+        """Test get asset balance with database error"""
+        # Mock database error
+        mock_get.side_effect = Exception("Database connection failed")
+
+        with pytest.raises(CNOPDatabaseOperationException) as exc_info:
+            asset_balance_dao.get_asset_balance('testuser123', 'BTC')
+
+        assert "Database operation failed while getting asset balance" in str(exc_info.value)
+
+    @patch.object(AssetBalanceItem, 'query')
+    def test_get_all_asset_balances_database_error(self, mock_query, asset_balance_dao):
+        """Test get all asset balances with database error"""
+        # Mock database error
+        mock_query.side_effect = Exception("Database connection failed")
+
+        with pytest.raises(CNOPDatabaseOperationException) as exc_info:
+            asset_balance_dao.get_all_asset_balances('testuser123')
+
+        assert "Database operation failed while getting asset balances" in str(exc_info.value)
+
+    @patch.object(AssetBalanceItem, 'get')
+    def test_delete_asset_balance_database_error(self, mock_get, asset_balance_dao):
+        """Test delete asset balance with database error"""
+        # Mock database error
+        mock_get.side_effect = Exception("Database connection failed")
+
+        with pytest.raises(CNOPDatabaseOperationException) as exc_info:
             asset_balance_dao.delete_asset_balance('testuser123', 'BTC')
 
-    def test_asset_balance_dao_initialization(self, mock_db_connection):
-        """Test AssetBalanceDAO initialization"""
-        dao = AssetBalanceDAO(mock_db_connection)
-
-        assert dao.db == mock_db_connection
-        assert dao.table == mock_db_connection.users_table
-
-    def test_asset_balance_dao_table_reference(self, mock_db_connection):
-        """Test that AssetBalanceDAO uses correct table reference"""
-        dao = AssetBalanceDAO(mock_db_connection)
-
-        # Verify it uses users_table
-        assert dao.table == mock_db_connection.users_table
+        assert "Database operation failed while deleting asset balance" in str(exc_info.value)

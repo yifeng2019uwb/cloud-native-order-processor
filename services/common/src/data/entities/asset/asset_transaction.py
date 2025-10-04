@@ -7,14 +7,18 @@ in the multi-asset portfolio system.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+from pynamodb.models import Model
+from pynamodb.attributes import UnicodeAttribute, UTCDateTimeAttribute
 
-from ..entity_constants import (AssetTransactionFields, DatabaseFields,
-                                FieldConstraints)
+from ..entity_constants import (AssetTransactionFields, FieldConstraints,
+                                AWSConfig, TableNames)
+from ..datetime_utils import get_current_utc
 from .enums import AssetTransactionStatus, AssetTransactionType
 
 
@@ -28,46 +32,43 @@ class AssetTransaction(BaseModel):
     total_amount: Decimal = Field(..., description="Total transaction value")
     order_id: Optional[str] = Field(None, max_length=FieldConstraints.ORDER_ID_MAX_LENGTH, description="Reference to order")
     status: AssetTransactionStatus = Field(default=AssetTransactionStatus.COMPLETED, description="Transaction status")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=get_current_utc, description="Transaction creation timestamp")
+    updated_at: datetime = Field(default_factory=get_current_utc, description="Last update timestamp")
 
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             Decimal: lambda v: str(v)
         }
+    )
 
 
-class AssetTransactionItem(BaseModel):
-    """Asset Transaction database model - includes DynamoDB fields (Pk, Sk)"""
-    Pk: str = Field(..., description="Primary Key - TRANS#{username}#{asset_id}")
-    Sk: str = Field(..., description="Sort Key - timestamp (ISO format string)")
-    username: str = Field(..., max_length=FieldConstraints.USERNAME_MAX_LENGTH, description="Username for easy access")
-    asset_id: str = Field(..., max_length=FieldConstraints.ASSET_ID_MAX_LENGTH, description="Asset identifier")
-    transaction_type: AssetTransactionType = Field(..., description="Type of transaction (BUY/SELL)")
-    quantity: Decimal = Field(..., description="Transaction quantity")
-    price: Decimal = Field(..., description="Price per unit in USD")
-    total_amount: Decimal = Field(..., description="Total transaction value")
-    order_id: Optional[str] = Field(None, max_length=FieldConstraints.ORDER_ID_MAX_LENGTH, description="Reference to order")
-    status: AssetTransactionStatus = Field(default=AssetTransactionStatus.COMPLETED, description="Transaction status")
-    created_at: str = Field(..., description="Transaction creation timestamp (ISO string)")
+class AssetTransactionItem(Model):
+    """Asset Transaction PynamoDB model - handles DynamoDB operations"""
 
-    def get_key(self) -> dict:
-        """Get database key for this asset transaction item"""
-        return {
-            DatabaseFields.PK: self.Pk,
-            DatabaseFields.SK: self.Sk
-        }
+    class Meta:
+        """Meta class for AssetTransactionItem"""
+        table_name = os.getenv('USERS_TABLE', TableNames.USERS)
+        region = os.getenv(AWSConfig.AWS_REGION_ENV_VAR, AWSConfig.DEFAULT_REGION)
+        billing_mode = AWSConfig.BILLING_MODE_PAY_PER_REQUEST
 
-    @staticmethod
-    def get_key_for_user_asset(username: str, asset_id: str) -> dict:
-        """Get database key for a user's asset transactions (static method)"""
-        return {
-            DatabaseFields.PK: f"{AssetTransactionFields.PK_PREFIX}{username}#{asset_id}",
-            DatabaseFields.SK: ""  # Empty SK for querying all transactions
-        }
+    # Primary key
+    Pk = UnicodeAttribute(hash_key=True)
+    Sk = UnicodeAttribute(range_key=True)
+
+    # Transaction fields
+    username = UnicodeAttribute()
+    asset_id = UnicodeAttribute()
+    transaction_type = UnicodeAttribute()
+    quantity = UnicodeAttribute()  # Store as string for Decimal precision
+    price = UnicodeAttribute()     # Store as string for Decimal precision
+    total_amount = UnicodeAttribute()  # Store as string for Decimal precision
+    order_id = UnicodeAttribute(null=True)
+    status = UnicodeAttribute()
+    created_at = UTCDateTimeAttribute(default=lambda: datetime.now(timezone.utc))
 
     @classmethod
-    def from_asset_transaction(cls, asset_transaction: AssetTransaction) -> AssetTransactionItem:
+    def from_asset_transaction(cls, asset_transaction: AssetTransaction) -> 'AssetTransactionItem':
         """Create AssetTransactionItem from AssetTransaction domain model"""
         # Use created_at as sort key for chronological ordering
         sort_key = asset_transaction.created_at.isoformat()
@@ -76,13 +77,13 @@ class AssetTransactionItem(BaseModel):
             Sk=sort_key,
             username=asset_transaction.username,
             asset_id=asset_transaction.asset_id,
-            transaction_type=asset_transaction.transaction_type,
-            quantity=asset_transaction.quantity,
-            price=asset_transaction.price,
-            total_amount=asset_transaction.total_amount,
+            transaction_type=asset_transaction.transaction_type.value,
+            quantity=str(asset_transaction.quantity),
+            price=str(asset_transaction.price),
+            total_amount=str(asset_transaction.total_amount),
             order_id=asset_transaction.order_id,
-            status=asset_transaction.status,
-            created_at=asset_transaction.created_at.isoformat()
+            status=asset_transaction.status.value,
+            created_at=asset_transaction.created_at.replace(tzinfo=None)  # Convert to naive UTC for PynamoDB
         )
 
     def to_asset_transaction(self) -> AssetTransaction:
@@ -90,17 +91,11 @@ class AssetTransactionItem(BaseModel):
         return AssetTransaction(
             username=self.username,
             asset_id=self.asset_id,
-            transaction_type=self.transaction_type,
-            quantity=self.quantity,
-            price=self.price,
-            total_amount=self.total_amount,
+            transaction_type=AssetTransactionType(self.transaction_type),
+            quantity=Decimal(self.quantity),
+            price=Decimal(self.price),
+            total_amount=Decimal(self.total_amount),
             order_id=self.order_id,
-            status=self.status,
-            created_at=datetime.fromisoformat(self.created_at.replace('Z', '+00:00')) if self.created_at else datetime.utcnow()
+            status=AssetTransactionStatus(self.status),
+            created_at=self.created_at.replace(tzinfo=timezone.utc)  # Convert back to timezone-aware
         )
-
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v)
-        }

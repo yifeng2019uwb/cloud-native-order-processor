@@ -44,6 +44,13 @@ class AWSConfig:
 # Validation constraints used across multiple entities
 # Keep these here as they might be used in API validation too
 
+class LockFields:
+    """Lock-related field constants"""
+    PK_PREFIX = "USER#"
+    SK_VALUE = "LOCK"
+    ENTITY_TYPE = "user_lock"
+
+
 class FieldConstraints:
     """Field validation constraints"""
     USERNAME_MAX_LENGTH = 30
@@ -98,6 +105,7 @@ class UserConstants:
     """User entity specific constants"""
     EMAIL_INDEX_NAME = "EmailIndex"
     USERS_TABLE_ENV_VAR = "USERS_TABLE"
+    INVENTORY_TABLE_ENV_VAR = "INVENTORY_TABLE"
 
 
 # Balance Entity Constants
@@ -143,6 +151,31 @@ class AssetFields:
     PRICE_USD = "price_usd"
     IS_ACTIVE = "is_active"
 
+    # Additional asset fields
+    SYMBOL = "symbol"
+    IMAGE = "image"
+
+    # CoinGecko API fields
+    CURRENT_PRICE = "current_price"
+    HIGH_24H = "high_24h"
+    LOW_24H = "low_24h"
+    CIRCULATING_SUPPLY = "circulating_supply"
+    TOTAL_SUPPLY = "total_supply"
+    MAX_SUPPLY = "max_supply"
+    PRICE_CHANGE_24H = "price_change_24h"
+    PRICE_CHANGE_PERCENTAGE_24H = "price_change_percentage_24h"
+    PRICE_CHANGE_PERCENTAGE_7D = "price_change_percentage_7d"
+    PRICE_CHANGE_PERCENTAGE_30D = "price_change_percentage_30d"
+    MARKET_CAP = "market_cap"
+    MARKET_CAP_CHANGE_24H = "market_cap_change_24h"
+    MARKET_CAP_CHANGE_PERCENTAGE_24H = "market_cap_change_percentage_24h"
+    TOTAL_VOLUME_24H = "total_volume_24h"
+    VOLUME_CHANGE_24H = "volume_change_24h"
+    ATH = "ath"
+    ATH_CHANGE_PERCENTAGE = "ath_change_percentage"
+    ATL = "atl"
+    ATL_CHANGE_PERCENTAGE = "atl_change_percentage"
+
     # Sort Key Values
     SK_VALUE = "ASSET"
 
@@ -155,6 +188,10 @@ class AssetBalanceFields:
 
     # Sort Key Prefix
     SK_PREFIX = "ASSET#"
+    SK_VALUE = "ASSET#"
+
+    # Entity Type
+    DEFAULT_ENTITY_TYPE = "asset_balance"
 
 # Asset Transaction Entity Constants
 class AssetTransactionFields:

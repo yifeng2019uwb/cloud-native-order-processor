@@ -15,6 +15,7 @@ from ...data.entities.asset import AssetTransaction, AssetTransactionType
 from ...data.entities.order import Order, OrderStatus, OrderType
 from ...data.entities.user import (BalanceTransaction, TransactionStatus,
                                    TransactionType)
+from ...data.entities.entity_constants import TransactionFields
 from ...data.exceptions import (CNOPDatabaseOperationException,
                                 CNOPLockAcquisitionException)
 from ...exceptions.shared_exceptions import CNOPInsufficientBalanceException
@@ -73,7 +74,7 @@ class TransactionManager:
         try:
             async with UserLock(username, "deposit", LOCK_TIMEOUTS["deposit"]):
                 transaction = BalanceTransaction(
-                    Pk=f"TRANS#{username}",
+                    Pk=f"{TransactionFields.PK_PREFIX}{username}",
                     username=username,
                     Sk=datetime.utcnow().isoformat(),
                     transaction_type=TransactionType.DEPOSIT,
@@ -162,7 +163,7 @@ class TransactionManager:
                     )
 
                 transaction = BalanceTransaction(
-                    Pk=f"TRANS#{username}",
+                    Pk=f"{TransactionFields.PK_PREFIX}{username}",
                     username=username,
                     Sk=datetime.utcnow().isoformat(),
                     transaction_type=TransactionType.WITHDRAW,
@@ -286,7 +287,7 @@ class TransactionManager:
 
                 now_timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
                 transaction = BalanceTransaction(
-                    Pk=f"TRANS#{username}",
+                    Pk=f"{TransactionFields.PK_PREFIX}{username}",
                     username=username,
                     Sk=now_timestamp,
                     transaction_type=TransactionType.ORDER_PAYMENT,
@@ -407,7 +408,7 @@ class TransactionManager:
 
                 now_timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
                 transaction = BalanceTransaction(
-                    Pk=f"TRANS#{username}",
+                    Pk=f"{TransactionFields.PK_PREFIX}{username}",
                     username=username,
                     Sk=now_timestamp,
                     transaction_type=TransactionType.DEPOSIT,  # Use DEPOSIT for sell order receipt

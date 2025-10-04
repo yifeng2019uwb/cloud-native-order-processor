@@ -31,18 +31,18 @@ def get_balance_dao():
 
 
 def get_asset_dao():
-    """Get AssetDAO instance with database connection"""
-    return AssetDAO(get_dynamodb_manager().get_connection())
+    """Get AssetDAO instance (PynamoDB doesn't need db_connection)"""
+    return AssetDAO()
 
 
 def get_order_dao():
-    """Get OrderDAO instance with database connection"""
-    return OrderDAO(get_dynamodb_manager().get_connection())
+    """Get OrderDAO instance (PynamoDB doesn't need db_connection)"""
+    return OrderDAO()
 
 
 def get_asset_balance_dao():
-    """Get AssetBalanceDAO instance with database connection"""
-    return AssetBalanceDAO(get_dynamodb_manager().get_connection())
+    """Get AssetBalanceDAO instance (PynamoDB doesn't need db_connection)"""
+    return AssetBalanceDAO()
 
 
 def get_asset_transaction_dao():
