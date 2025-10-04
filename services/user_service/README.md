@@ -1,163 +1,56 @@
 # 👤 User Service
 
-> FastAPI microservice for user authentication, profile management, and balance operations
+> User management service for authentication, profile management, and balance operations
 
 ## 🚀 Quick Start
 - **Prerequisites**: Python 3.11+, pip, virtual environment
-- **Install**: `cd user_service && python -m pip install -e .`
-- **Test**: `python -m pytest`
-- **Run**: `python -m uvicorn src.main:app --reload --port 8000`
+- **Build & Test**: `./dev.sh` (builds and runs unit tests)
+- **Deploy**: `./deploy.sh` (deploy to Docker or K8s)
+- **Integration Tests**: `./integration_tests/run_all_tests.sh`
+- **Example**: `curl http://localhost:8000/health`
 
 ## ✨ Key Features
-- **JWT Authentication**: Secure token-based authentication system
-- **Balance Management**: Deposit, withdrawal, and transaction tracking
-- **Profile Management**: User registration, login, and profile updates
-- **Distributed Locking**: Redis-based atomic operations for consistency
-- **Security Integration**: Centralized password hashing and audit logging
-
-## 🔗 Quick Links
-- [Services Overview](../README.md)
-- [Build Script](../build.sh)
-- [API Documentation](#api-endpoints)
-
-## 📊 Status
-- **Current Status**: ✅ **PRODUCTION READY** - All features implemented and tested
-- **Last Updated**: August 20, 2025
-
-## 🎯 Current Status
-
-### ✅ **All Features Working**
-- **Authentication**: User registration, login, and JWT token management
-- **Profile Management**: User profile creation, retrieval, and updates
-- **Balance Operations**: Deposit, withdrawal, and transaction history
-- **Security**: Password hashing, audit logging, and input validation
-- **Integration**: Working with API Gateway and other services
-
----
+- User registration and authentication
+- Profile management and account operations
+- Balance management (deposits, withdrawals)
+- Password hashing and security
+- Audit logging and compliance
 
 ## 📁 Project Structure
-
 ```
 user_service/
 ├── src/
 │   ├── main.py                 # FastAPI application entry point
-│   ├── api_models/             # API request/response models
-│   │   ├── auth/              # Authentication models
-│   │   │   ├── login.py       # Login request/response models
-│   │   │   ├── logout.py      # Logout models
-│   │   │   ├── profile.py     # Profile models
-│   │   │   └── registration.py # Registration models
-│   │   ├── balance/           # Balance models
-│   │   │   └── balance_models.py # Balance operation models
-│   │   ├── errors/            # Error models
-│   │   │   └── exceptions.py  # Error exception models
-│   │   └── shared/            # Shared models
-│   │       └── common.py      # Common model utilities
-│   ├── controllers/            # Business logic controllers
-│   │   ├── auth/              # Authentication controllers
-│   │   │   ├── login.py       # Login logic
-│   │   │   ├── logout.py      # Logout logic
-│   │   │   ├── profile.py     # Profile management
-│   │   │   ├── register.py    # Registration logic
-│   │   │   └── dependencies.py # Auth dependencies
-│   │   ├── balance/           # Balance controllers
-│   │   │   ├── deposit.py     # Deposit operations
-│   │   │   ├── get_balance.py # Balance retrieval
-│   │   │   ├── transactions.py # Transaction history
-│   │   │   └── withdraw.py    # Withdrawal operations
-│   │   ├── health.py          # Health check controller
-│   │   └── dependencies.py    # Controller dependencies
-│   ├── user_exceptions/        # User-specific exceptions
-│   │   └── exceptions.py      # User exception definitions
-│   └── validation/            # Input validation and business rules
-│       ├── business_validators.py # Business logic validation
-│       └── field_validators.py # Field-level validation
-├── tests/                     # Test suite
+│   ├── controllers/            # API controllers and endpoints
+│   │   ├── auth_controller.py  # Authentication endpoints
+│   │   ├── user_controller.py  # User management endpoints
+│   │   └── balance_controller.py # Balance management endpoints
+│   ├── services/               # Business logic services
+│   │   ├── auth_service.py     # Authentication logic
+│   │   ├── user_service.py     # User management logic
+│   │   └── balance_service.py  # Balance operations logic
+│   ├── models/                 # Data models and schemas
+│   │   ├── user_models.py      # User request/response models
+│   │   └── balance_models.py   # Balance request/response models
+│   └── validation/             # Input validation
+│       └── validators.py       # Field and business validators
+├── tests/                      # Unit and integration tests
+│   ├── unit/                   # Unit tests
+│   └── integration/            # Integration tests
 ├── requirements.txt            # Python dependencies
-└── setup.py                   # Package configuration
+├── Dockerfile                  # Container configuration
+└── README.md                   # This file
 ```
 
-## 🔐 API Endpoints
+## 🔗 Quick Links
+- [Services Overview](../README.md)
+- [API Documentation](http://localhost:8000/docs)
+- [Common Package](../common/README.md)
 
-### **Authentication**
-```bash
-POST /auth/register        # Register new user
-POST /auth/login           # User login and JWT token
-POST /auth/logout          # User logout
-```
-
-### **User Management**
-```bash
-GET  /auth/profile         # Get user profile
-PUT  /auth/profile         # Update user profile
-```
-
-### **Balance Management**
-```bash
-GET  /balance              # Get current balance
-POST /balance/deposit      # Deposit funds
-POST /balance/withdraw     # Withdraw funds
-GET  /balance/transactions # Get transaction history
-```
-
-### **System**
-```bash
-GET  /health               # Service health status
-GET  /internal/metrics     # Prometheus metrics (internal monitoring)
-```
-
-## 🏗️ Architecture
-
-### **Database Design**
-- **Single Table Design**: DynamoDB with composite PK/SK
-- **User Entity**: PK=username, SK=USER
-- **Balance Entity**: PK=username, SK=BALANCE
-- **Transaction Entity**: PK=TRANS#username, SK=timestamp
-
-### **Integration Points**
-- **Order Service**: Balance validation before order creation
-- **Inventory Service**: Portfolio information for user assets
-- **API Gateway**: Authentication and request routing
-
-### **Security Integration**
-- **PasswordManager**: Centralized bcrypt password hashing
-- **TokenManager**: JWT token creation and validation
-- **AuditLogger**: Security event logging and audit trails
-
-## 🛠️ Technology Stack
-
-- **Framework**: FastAPI with async support
-- **Database**: AWS DynamoDB via common package
-- **Authentication**: JWT tokens with centralized management
-- **Validation**: Pydantic models and business validators
-- **Testing**: pytest with comprehensive coverage
-- **Monitoring**: Prometheus metrics, middleware tracking, and health checks
-- **Security**: Centralized security components
-- **Observability**: Request correlation, performance metrics, and business metrics
-
-## 🧪 Testing & Development
-
-```bash
-# Test this service
-../build.sh --test-only user_service
-
-# Test all services
-../build.sh --test-only
-```
-
-## 🔍 Troubleshooting
-
-```bash
-../build.sh --check-prerequisites user_service
-```
-
-## 📚 Related Documentation
-
-- **[Services Overview](../README.md)**: Complete services architecture
-- **[Common Package](../common/README.md)**: Shared utilities and DAOs
-- **[Exception Package](../exception/README.md)**: Error handling patterns
-- **[Build Script](../build.sh)**: Automated build and testing
+## 📊 Status
+- **Current Status**: ✅ **PRODUCTION READY** - User management and balance operations working
+- **Last Updated**: January 8, 2025
 
 ---
 
-**Note**: This service provides complete user authentication and balance management functionality. For system-wide information, see the main services README.
+**Note**: This is a focused README for quick start and essential information. For detailed technical information, see the design documents and guides.

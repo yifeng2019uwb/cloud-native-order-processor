@@ -12,6 +12,8 @@
 - 3-5 bullet points max
 - High-level overview
 
+## 📁 Project Structure
+
 ## 🔗 Quick Links
 - API docs
 - Design docs
@@ -20,16 +22,6 @@
 ## 📊 Status
 - Current status (1-2 lines)
 - Last updated
-
-## ⚠️ Common Issues
-
-### Issue 1: [Common Problem]
-**Symptoms**: Brief description of what you might see
-**Solution**: Quick fix or command
-
-### Issue 2: [Another Common Problem]
-**Symptoms**: Brief description
-**Solution**: Quick fix
 
 ---
 

@@ -1,32 +1,28 @@
 # 🔐 Cloud-Native Order Processor
 
-> **Enterprise-grade microservices platform** - JWT + RBAC, IAM role assumption, and defense-in-depth architecture
+> **Enterprise microservices platform** demonstrating production-ready security, monitoring, and resilience patterns
 
-🔐 **[Security Architecture](#-security-architecture)** | 🚀 **[Quick Start](#-quick-start)** | ☸️ **[Kubernetes](kubernetes/README.md)**
+## 🎯 What is CNOP?
 
----
+A comprehensive, production-ready microservices platform that demonstrates modern cloud-native architecture patterns with a **security-first approach**. Built for learning enterprise patterns while showcasing real-world trading platform capabilities.
 
-## 🎯 Enterprise Microservices Platform
-
-**Production-ready microservices architecture**:
-- 🔐 **JWT + RBAC**: Centralized authentication and role-based access control
-- 🛡️ **IAM Role Assumption**: Secure AWS access without hardcoded credentials
-- 🔒 **Defense-in-Depth**: Multiple security layers from gateway to database
-- 📊 **Security Monitoring**: Audit logging and compliance tracking
-
-**Built for**: Production deployment, enterprise security patterns, scalable architecture
+**Key Features:**
+- 🔐 **Enterprise Security** - JWT authentication, RBAC, rate limiting, circuit breakers
+- 🏗️ **Microservices Architecture** - 5 independent services with clear responsibilities
+- 📊 **Comprehensive Monitoring** - Prometheus, Grafana, structured logging, security analytics
+- 🛡️ **Resilience Patterns** - Circuit breakers, retry logic, distributed locking
+- ☸️ **Production Deployment** - Kubernetes, Docker, AWS integration
 
 ## 🏗️ System Architecture
 
-**New centralized authentication architecture** with dedicated Auth Service:
-
+**High-Level Architecture:**
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   API Gateway   │    │   Auth Service  │    │   Services      │
-│   (React)       │◄──►│   (Go/Gin)      │◄──►│   (Python)      │    │   (FastAPI)     │
+│   (React)       │◄──►│   (Go/Gin)      │◄──►│   (FastAPI)     │    │   (FastAPI)     │
 │                 │    │   - Routing     │    │   - JWT Val.    │    │   - User Mgmt   │
-│                 │    │   - Proxy       │    │   - User Ctx    │    │   - Business    │
-│                 │    │   - Security    │    │   - Security    │    │   - Data        │
+│                 │    │   - Rate Limit  │    │   - User Ctx    │    │   - Order Mgmt  │
+│                 │    │   - Circuit Br. │    │   - Security    │    │   - Inventory   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
                                 │                                              │
                                 │                                              │
@@ -39,243 +35,165 @@
                        └─────────────────┘
 ```
 
-**Key Patterns Demonstrated:**
-- **Service Discovery**: API Gateway routing with Auth Service integration
-- **Data Consistency**: Distributed transactions with atomic operations
-- **Security**: Centralized authentication via dedicated Auth Service
-- **Scalability**: Stateless services + independent Auth Service scaling
-- **Network Security**: Backend services isolated from external access
+## 🔄 Service Communication
+
+**Request Flow:**
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│    User     │    │   Frontend  │    │ API Gateway │    │Auth Service │
+│             │    │             │    │             │    │             │
+│ 1. Request  │───►│ 2. Send     │───►│ 3. Route    │───►│ 4. Validate │
+│             │    │ Request     │    │ + Rate Limit│    │ JWT Token   │
+│             │    │             │    │ + Circuit Br│    │ + User Ctx  │
+│ 8. Response │◄───│ 7. Display  │◄───│ 6. Forward  │◄───│ 5. Extract  │
+│             │    │ Response    │    │ Response    │    │ User Context│
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                                                              │
+                                                              ▼
+                                                   ┌─────────────┐
+                                                   │Backend      │
+                                                   │ Services    │
+                                                   │             │
+                                                   │ 5. Process  │
+                                                   │ Request     │
+                                                   │             │
+                                                   │ 6. Return   │
+                                                   │ Response    │
+                                                   └─────────────┘
+```
+
+## 🏗️ System Overview
+
+| **Service** | **Purpose** | **Port** | **Security Features** | **Status** |
+|-------------|-------------|----------|----------------------|------------|
+| **Frontend** | User Interface | 80 | JWT token management | ✅ Ready |
+| **API Gateway** | Routing & Security | 8080 | Rate limiting, circuit breakers, CORS | ✅ Ready |
+| **Auth Service** | JWT Validation | 8003 | Token validation, user context, security analytics | ✅ Ready |
+| **User Service** | User Management | 8000 | Password hashing, RBAC, audit logging | ✅ Ready |
+| **Order Service** | Order Processing | 8002 | Distributed locking, atomic transactions | ✅ Ready |
+| **Inventory Service** | Asset Management | 8001 | Public access, input validation | ✅ Ready |
 
 ## 🔐 Security Architecture
 
-**New centralized authentication architecture with enhanced security:**
-- 🔐 **Dedicated Auth Service**: JWT validation and user context extraction
-- 🏗️ **Gateway Security**: Pure routing with security header injection
-- 🛡️ **Network Security**: Kubernetes NetworkPolicies and IP whitelisting
-- 📊 **Security Monitoring**: Essential authentication metrics and alerts
-- 🔒 **Service Isolation**: Backend services only accessible via internal network
+**Enterprise Security Features:**
+- **JWT Authentication** - Centralized token validation with Auth Service
+- **Role-Based Access Control** - Public, customer, and admin roles
+- **Rate Limiting** - Per-IP and per-user request throttling
+- **Circuit Breakers** - Service failure protection and resilience
+- **Input Validation** - Comprehensive request validation and sanitization
+- **Audit Logging** - Security event tracking and compliance
+- **Distributed Locking** - Atomic operations across services
+- **Security Headers** - CORS, security headers, and source validation
 
-**Perfect for**: Production deployment, enterprise security patterns, scalable microservices architecture
-
-## 🛠️ System Overview
-
-| **Component** | **Technology** | **Purpose** | **Status** | **Deployment** |
-|---------------|----------------|-------------|------------|----------------|
-| **Frontend** | React 18 + TypeScript | User Interface | ✅ Production | Docker, K8s |
-| **API Gateway** | Go + Gin | Routing & Security | ✅ Production | Docker, K8s |
-| **Auth Service** | Python + FastAPI | JWT Validation & User Context | ✅ Production | Docker, K8s |
-| **User Service** | Python + FastAPI | User Management | ✅ Production | Docker, K8s |
-| **Order Service** | Python + FastAPI | Business Logic | ✅ Production | Docker, K8s |
-| **Inventory Service** | Python + FastAPI | Asset Management | ✅ Production | Docker, K8s |
-| **Database** | DynamoDB | Data Storage | ✅ Production | AWS |
-| **Cache** | Redis | Session Management | ✅ Production | Docker, K8s |
-| **Container** | Docker + K8s | Orchestration | ✅ Production | Local/Cloud |
-| **Monitoring** | Prometheus + Middleware | Comprehensive Metrics | ✅ Production | K8s |
-
-**Deployment**: Docker Compose (local dev) | Kind cluster (local K8s) | EKS (production)
-
-## 🚀 Quick Start
-
-### **Prerequisites**
-- Docker and Docker Compose
-- Kubernetes (Kind for local development)
-- AWS CLI configured
-- Node.js 18+ and Python 3.11+
-
-### **Start Everything Locally**
-
-**Quick commands:**
-```bash
-# Clone and start with Docker
-git clone https://github.com/yifeng2019uwb/cloud-native-order-processor
-cd cloud-native-order-processor
-./deploy.sh all dev
-```
-
-**For detailed setup and verification, see:**
-- **[Local Development Guide](docs/deployment-guide.md)** - Complete setup instructions
-- **[Kubernetes Setup](kubernetes/README.md)** - Local K8s deployment
-- **[Service Health Checks](docs/deployment-guide.md#verification)** - How to verify everything works
-
-## 🎮 Local Demo
-
-**Available now:**
-- Frontend: http://localhost:80 (after running deploy script)
-- Gateway: http://localhost:8080/health
-- Complete system running locally with Docker
-
-**Quick start:**
-```bash
-./deploy.sh all dev
-# Then visit http://localhost:80
-```
-
-## 🐳 Docker Deployment
-
-> **✅ Available** - Ready for local development and testing
-
-**Quick Start with Docker:**
-- **Single Command**: `./deploy.sh all dev`
-- **Access Services**: Frontend (80), Gateway (8080), Services (8000-8002)
-- **Full Stack**: Complete system running in containers
-- **Development Ready**: Hot reload, debugging, testing
-
-**Docker Compose Status**: Production ready with health checks and proper networking
-
-## 🚀 Security Testing
-
-**Test the security implementation:**
-```bash
-# Start the system
-./deploy.sh all dev
-
-# Test authentication and authorization
-curl http://localhost:8080/health
-```
-
-**For comprehensive security testing, see:**
-- **[Security Testing Guide](docs/centralized-authentication-architecture.md)** - Complete security validation
-- **[API Testing](integration_tests/README.md)** - Authentication and authorization tests
-- **[Security Patterns](docs/design-docs/)** - Detailed security implementation
-
-## 🔐 Security Implementation
-
-### **What's Implemented**
-- **Authentication**: JWT tokens with bcrypt password hashing
-- **Authorization**: Role-based access control (public, customer, admin)
-- **Input Validation**: Pydantic models with comprehensive validation
-- **Audit Logging**: Security events tracked across all services
-- **Secrets Management**: Environment-based configuration
-
-### **Security Testing**
-```bash
-# Run comprehensive security tests
-./scripts/test-local.sh --environment dev --all
-
-# Quick health checks
-./scripts/smoke-test.sh
-
-# API authentication testing
-./scripts/cli-client.sh login
-./scripts/cli-client.sh test
-```
-
-## ☸️ Kubernetes Deployment
-
-### **Local Kubernetes Setup**
-```bash
-# Check prerequisites first
-./scripts/prerequisites-checker.sh
-
-# Deploy with root deployment script
-./deploy.sh all dev
-
-# Check deployment status
-kubectl get pods -n order-processor
-kubectl get services -n order-processor
-
-# Access services (automatic port forwarding)
-./scripts/smoke-test.sh
-
-# Manual port forwarding if needed
-kubectl port-forward svc/frontend 30003:80 -n order-processor &
-kubectl port-forward svc/gateway 30002:8080 -n order-processor &
-kubectl port-forward svc/user-service 30004:8000 -n order-processor &
-kubectl port-forward svc/inventory-service 30005:8001 -n order-processor &
-kubectl port-forward svc/order-service 30006:8002 -n order-processor &
-```
-
-### **Kubernetes Features**
-- **Deployments**: Multi-replica service deployments
-- **Services**: ClusterIP, NodePort, LoadBalancer patterns
-- **ConfigMaps/Secrets**: Configuration management
-- **Namespaces**: Environment isolation
-- **Kustomize**: Environment-specific configurations
+**Security Monitoring:**
+- **Authentication Analytics** - Login patterns and failure analysis
+- **Authorization Tracking** - RBAC violations and permission usage
+- **Rate Limit Monitoring** - Throttling events and abuse detection
+- **Circuit Breaker States** - Service health and failure patterns
+- **Security Event Correlation** - Cross-service security event tracking
 
 ## 📊 Monitoring & Observability
 
-**Comprehensive monitoring implemented:**
-- ✅ **Middleware-Based Metrics**: Automatic request tracking across all services
-- ✅ **Prometheus Integration**: `/internal/metrics` endpoints for all services
-- ✅ **Health Checks**: Kubernetes-ready health and readiness probes
-- ✅ **Structured Logging**: JSON logging with request correlation IDs
-- ✅ **Performance Metrics**: Request duration, error rates, and throughput tracking
-- ✅ **Business Metrics**: Service-specific operations and success rates
+**Comprehensive Monitoring Stack:**
+- **Prometheus** - Metrics collection and storage
+- **Grafana** - Visualization and dashboards
+- **Loki** - Log aggregation and querying
+- **AlertManager** - Intelligent alerting and notifications
 
-**Metrics Collection:**
-- **Request Metrics**: HTTP method, status code, endpoint, duration
-- **Business Metrics**: Authentication, orders, assets, user operations
-- **System Metrics**: Service health, error rates, performance indicators
-- **Custom Metrics**: Service-specific counters and histograms
+**Monitoring Categories:**
+- **Security Monitoring** - Authentication, authorization, and security events
+- **Gateway Monitoring** - Routing, rate limiting, and circuit breaker states
+- **Service Performance** - Response times, error rates, and throughput
+- **Business Intelligence** - Trading operations and user analytics
+- **Infrastructure Health** - Kubernetes, AWS, and resource monitoring
 
-**For detailed monitoring design:** See [Monitoring Design](docs/design-docs/monitoring-design.md) and [Monitoring Guide](monitoring/README.md).
+**Key Metrics:**
+- **Security KPIs** - Authentication success rate, security violations, audit compliance
+- **Performance KPIs** - Response time percentiles, error rates, service availability
+- **Business KPIs** - Order success rate, user activity, trading volume
+- **Gateway KPIs** - Routing success rate, auth service integration, circuit breaker stability
 
-## 🔧 Development Workflow
+## 🛡️ Resilience Patterns
 
-**For detailed development workflow, see:**
-- **[Development Guide](docs/deployment-guide.md)** - Complete development workflow
-- **[Build Process](services/build.md)** - Build automation details
-- **[Testing Strategy](integration_tests/README.md)** - Testing approach and commands
+**Fault Tolerance:**
+- **Circuit Breakers** - Prevent cascade failures between services
+- **Retry Logic** - Automatic retry for transient failures
+- **Timeout Handling** - Request timeout and graceful degradation
+- **Health Checks** - Service health monitoring and automatic recovery
 
-## 💰 AWS Integration
+**Data Consistency:**
+- **Distributed Locking** - User-level locks for atomic operations
+- **Transaction Management** - Distributed transaction coordination
+- **Atomic Operations** - Database operations with rollback support
+- **Event Sourcing** - Audit trail and event replay capabilities
 
-**AWS services used:**
-- **DynamoDB**: User data, orders, assets
-- **IAM**: Service roles with assume role for production
-- **Infrastructure**: Terraform-managed with IAM role assumption
+## 🏗️ Data Architecture
 
-**For detailed setup, see:**
-- **[AWS Configuration](docs/deployment-guide.md)** - Complete setup guide
-- **[Terraform Infrastructure](terraform/README.md)** - Infrastructure details
+**Database Design:**
+- **DynamoDB** - Serverless NoSQL with single-table design
+- **PynamoDB ORM** - Type-safe database operations
+- **Redis** - Caching and session management
+- **Atomic Operations** - Distributed locking and transaction support
 
-## 📚 Documentation Structure
+**Data Models:**
+- **User Entities** - Authentication, profiles, and account management
+- **Order Entities** - Trading operations and order lifecycle
+- **Asset Entities** - Inventory management and market data
+- **Transaction Entities** - Audit trail and financial operations
 
-### **Architecture Documentation**
-- **[Architecture Decisions](docs/design-docs/)** - Technology choices and rationale
-- **[Build Process](services/build.md)** - Build automation and deployment
-- **[Integration Tests](integration_tests/README.md)** - API testing approach
-- **[Kubernetes Setup](kubernetes/README.md)** - Container orchestration
+## 🔄 Service Integration
 
-### **Implementation Guides**
-- **[Local Development](docs/deployment-guide.md)** - Getting started locally
-- **[Security Implementation](docs/centralized-authentication-architecture.md)** - Security patterns used
-- **[Testing Strategy](docs/testing/)** - Testing approach and coverage
+**Inter-Service Communication:**
+- **Synchronous HTTP** - REST API calls between services
+- **Centralized Authentication** - JWT validation through Auth Service
+- **Service Discovery** - API Gateway-based routing and load balancing
+- **Error Handling** - Consistent exception handling and error responses
 
-## 🎯 Technology Stack
+**Shared Components:**
+- **Common Package** - Shared utilities, data models, and security
+- **Exception Handling** - Standardized error responses with RFC 7807
+- **Structured Logging** - JSON logging with correlation IDs
+- **Monitoring Integration** - Prometheus metrics and health checks
 
-**Enterprise-grade technology stack:**
-- 🔐 **Security**: JWT, RBAC, IAM role assumption, defense-in-depth
-- 🏗️ **Microservices**: Secure inter-service communication and validation
-- 🛡️ **Infrastructure**: Kubernetes policies and AWS security patterns
-- 📊 **Monitoring**: Authentication metrics and alerts
+## 📚 Documentation
 
-**For detailed technology documentation, see:**
-- **[Security Documentation](docs/design-docs/)** - Complete security patterns
-- **[Architecture Decisions](docs/design-docs/)** - Technology choices and rationale
+- **[Services Overview](services/README.md)** - Service architecture and development
+- **[Common Package](services/common/README.md)** - Shared components and utilities
+- **[Architecture](docs/design-docs/)** - System design and patterns
+- **[Security](docs/design-docs/monitoring-design.md)** - Security monitoring and analytics
+- **[Kubernetes](kubernetes/README.md)** - Container orchestration
+- **[Testing](integration_tests/README.md)** - Testing strategy and implementation
 
-## ⚠️ Current Limitations
+## 🎯 Use Cases
 
-**Production considerations:**
-- 🏠 **Local Focus**: Primarily designed for local development and testing
-- 💰 **Cost Conscious**: Uses cost-effective AWS services (DynamoDB vs RDS)
-- 🔐 **Security Focus**: Enterprise security patterns and best practices
-- 📊 **Monitoring**: Essential monitoring with room for expansion
+**Perfect for:**
+- Learning enterprise microservices architecture
+- Understanding security-first design patterns
+- JWT authentication and RBAC implementation
+- Monitoring and observability in production
+- Resilience patterns and fault tolerance
+- Kubernetes deployment and scaling
+
+## ⚠️ Current Status
+
+- ✅ **Core Services** - All 5 services operational with security features
+- ✅ **Authentication** - JWT-based auth with centralized validation
+- ✅ **Security** - Rate limiting, circuit breakers, audit logging
+- ✅ **Monitoring** - Prometheus, Grafana, structured logging
+- ✅ **Database** - DynamoDB with PynamoDB ORM and distributed locking
+- ✅ **Deployment** - Docker, Kubernetes, and AWS integration
 
 ## 🚀 Getting Started
 
-1. **Quick Demo**: Follow the [Quick Start](#-quick-start) above
-2. **Detailed Setup**: [Local Development Guide](docs/deployment-guide.md)
-3. **New Auth Architecture**: [Centralized Authentication Design](docs/centralized-authentication-architecture.md)
-4. **Security Implementation**: [Security Documentation](docs/design-docs/)
-5. **Kubernetes Setup**: [Kubernetes Guide](kubernetes/README.md)
-6. **API Testing**: [Integration Tests](integration_tests/README.md)
+1. **Architecture**: Review [Services Overview](services/README.md) for service architecture
+2. **Security**: Check [Security Monitoring](docs/design-docs/monitoring-design.md) for security patterns
+3. **Development**: Follow [Local Development Guide](docs/deployment-guide.md) for detailed setup
+4. **Testing**: Use [Integration Tests](integration_tests/README.md) for testing approach
 
 ---
 
-**🔐 Enterprise-grade security architecture suitable for production environments**
+**🔐 Enterprise-grade microservices platform demonstrating production-ready security, monitoring, and resilience patterns**
 
-**🛡️ Perfect for**: Production deployment, enterprise security patterns, scalable microservices architecture
+**🛡️ Built with**: Python, FastAPI, Go, DynamoDB, Prometheus, Grafana, Docker, Kubernetes, and modern security patterns
 
-**🔒 Questions about implementation?** Check the [Security Documentation](docs/design-docs/) or open an issue
-
-*Built with security-first principles and production-ready patterns*
+**🔒 Questions?** Check the documentation or open an issue

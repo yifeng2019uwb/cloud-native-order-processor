@@ -1,162 +1,226 @@
-# 🐍 Services Component
+# 🏗️ Services Architecture
 
-> Microservices architecture with FastAPI-based backend services for authentication, order processing, and asset management
+> **Microservices platform** demonstrating enterprise patterns with security-first design
 
-## 🚀 Quick Start
-- **Prerequisites**: Python 3.11+, pip, virtual environment
-- **Build All**: `./build.sh`
-- **Build Specific**: `./build.sh user_service`
-- **Test Only**: `./build.sh --test-only`
-- **Build Only**: `./build.sh --build-only`
+## 🎯 Overview
 
-## ✨ Key Features
-- **Microservices Architecture**: Independent, scalable service design
-- **FastAPI Framework**: High-performance, async-capable Python web framework
-- **Centralized Security**: JWT authentication and role-based access control
-- **Distributed Locking**: Redis-based atomic operations for consistency
-- **Comprehensive Testing**: Unit and integration test coverage
+A comprehensive microservices platform showcasing production-ready patterns including centralized authentication, distributed locking, comprehensive monitoring, and enterprise security features.
 
-## 🔗 Quick Links
-- [Design Documentation](../docs/design-docs/services-design.md)
-- [Build & Test Scripts](build.md)
-- [User Service](user_service/README.md)
-- [Order Service](order_service/README.md)
-- [Inventory Service](inventory_service/README.md)
-- [Common Package](common/README.md)
-- [Exception Package](exception/README.md)
+## 🏗️ System Architecture
 
-## 📊 Status
-- **Current Status**: ✅ **PRODUCTION READY** - All services tested and working
-- **Last Updated**: August 20, 2025
+**High-Level Architecture:**
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   API Gateway   │    │   Auth Service  │    │   Services      │
+│   (React)       │◄──►│   (Go/Gin)      │◄──►│   (FastAPI)     │    │   (FastAPI)     │
+│                 │    │   - Routing     │    │   - JWT Val.    │    │   - User Mgmt   │
+│                 │    │   - Rate Limit  │    │   - User Ctx    │    │   - Order Mgmt  │
+│                 │    │   - Circuit Br. │    │   - Security    │    │   - Inventory   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │                                              │
+                                │                                              │
+                                ▼                                              │
+                       ┌─────────────────┐                                    │
+                       │   Request       │                                    │
+                       │   Forwarding    │────────────────────────────────────┘
+                       │   & Response    │
+                       │   Handling      │
+                       └─────────────────┘
+```
 
-## 🎯 Current Status
+## 🔄 Service Communication
 
-### ✅ **All Services Working**
-- **User Service**: Authentication, user management, balance operations
-- **Order Service**: Order processing, trading operations, portfolio management
-- **Inventory Service**: Asset management, public inventory data
-- **Common Package**: Shared utilities, DAOs, and business logic
-- **Exception Package**: Centralized error handling and domain exceptions
+**Request Flow:**
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│    User     │    │   Frontend  │    │ API Gateway │    │Auth Service │
+│             │    │             │    │             │    │             │
+│ 1. Request  │───►│ 2. Send     │───►│ 3. Route    │───►│ 4. Validate │
+│             │    │ Request     │    │ + Rate Limit│    │ JWT Token   │
+│             │    │             │    │ + Circuit Br│    │ + User Ctx  │
+│ 8. Response │◄───│ 7. Display  │◄───│ 6. Forward  │◄───│ 5. Extract  │
+│             │    │ Response    │    │ Response    │    │ User Context│
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                                                              │
+                                                              ▼
+                                                   ┌─────────────┐
+                                                   │Backend      │
+                                                   │ Services    │
+                                                   │             │
+                                                   │ 5. Process  │
+                                                   │ Request     │
+                                                   │             │
+                                                   │ 6. Return   │
+                                                   │ Response    │
+                                                   └─────────────┘
+```
 
-### 🚀 **Ready for Production**
-- **Security**: JWT authentication and role-based access control
-- **Integration**: All services communicating correctly via API Gateway
-- **Testing**: Comprehensive test coverage with automated builds
-- **Documentation**: Complete API documentation and usage guides
+**Order Processing Flow:**
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│    User     │    │Order Service│    │Transaction  │    │   Database  │
+│             │    │             │    │ Manager     │    │   (DynamoDB)│
+│ 1. Create   │───►│ 2. Validate │───►│ 3. Acquire  │───►│ 4. Atomic   │
+│ Order       │    │ Order Data  │    │ Lock        │    │ Operations  │
+│             │    │             │    │             │    │             │
+│ 5. Order    │◄───│ 6. Process  │◄───│ 7. Execute  │◄───│ 8. Update   │
+│ Confirmed   │    │ Order       │    │ Transaction │    │ Balances    │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+## 🔧 Service Responsibilities
+
+### **Auth Service**
+- **Responsibilities**:
+  - Validates JWT tokens from incoming requests
+  - Extracts user context and permissions
+  - Provides authentication middleware for other services
+  - Handles token expiration and refresh logic
+
+### **User Service**
+- **Responsibilities**:
+  - User registration and authentication
+  - Profile management and account operations
+  - Balance management (deposits, withdrawals)
+  - User data validation and security
+
+### **Order Service**
+- **Responsibilities**:
+  - Order creation and processing
+  - Portfolio management and calculations
+  - Order lifecycle management
+  - Trading operations coordination
+
+### **Inventory Service**
+- **Responsibilities**:
+  - Asset catalog management
+  - Market data integration
+  - Asset information and pricing
+  - Public asset browsing
+
+### **API Gateway**
+- **Responsibilities**:
+  - Request routing and load balancing
+  - Authentication and authorization
+  - Rate limiting and circuit breaking
+  - Security header management
+
+## 🔐 Security Architecture
+
+**Authentication:**
+- JWT-based token authentication
+- Centralized token validation through Auth Service
+- Stateless authentication design
+
+**Authorization:**
+- Role-based access control (Customer, Admin, Public)
+- Endpoint-level permission management
+- Service-to-service authentication
+
+**Security Features:**
+- Rate limiting and throttling
+- Circuit breaker patterns
+- Input validation and sanitization
+- Audit logging and security monitoring
+- Distributed locking for atomic operations
+
+## 🏗️ Data Architecture
+
+**Database Design:**
+- **DynamoDB** - Serverless NoSQL with single-table design
+- **PynamoDB ORM** - Type-safe database operations
+- **Redis** - Caching and session management
+- **Atomic Operations** - Distributed locking and transaction support
+
+**Data Models:**
+- **User Entities** - Authentication, profiles, and account management
+- **Order Entities** - Trading operations and order lifecycle
+- **Asset Entities** - Inventory management and market data
+- **Transaction Entities** - Audit trail and financial operations
+
+## 🔄 Service Integration
+
+**Inter-Service Communication:**
+- **Synchronous**: HTTP/REST API calls between services
+- **Authentication**: Centralized JWT validation through Auth Service
+- **Data Consistency**: Distributed transactions with locking
+- **Error Handling**: Consistent exception handling across services
+
+**Shared Components:**
+- **Common Package** - Shared utilities, data models, and security
+- **Exception Handling** - Standardized error responses with RFC 7807
+- **Structured Logging** - JSON logging with correlation IDs
+- **Monitoring Integration** - Prometheus metrics and health checks
+
+## 📊 Monitoring & Observability
+
+**Monitoring Stack:**
+- **Prometheus** - Metrics collection and storage
+- **Grafana** - Visualization and dashboards
+- **Loki** - Log aggregation and querying
+- **AlertManager** - Intelligent alerting and notifications
+
+**Key Metrics:**
+- **Security KPIs** - Authentication success rate, security violations
+- **Performance KPIs** - Response time percentiles, error rates
+- **Business KPIs** - Order success rate, user activity, trading volume
+- **Gateway KPIs** - Routing success rate, circuit breaker stability
+
+## 🛡️ Resilience Patterns
+
+**Fault Tolerance:**
+- Circuit breakers for service failure protection
+- Retry logic for transient failures
+- Timeout handling and graceful degradation
+- Health checks and automatic recovery
+
+**Data Consistency:**
+- Distributed locking for atomic operations
+- Transaction management with rollback support
+- Event sourcing for audit trails
+- Atomic database operations
+
+## 🚀 Deployment Architecture
+
+**Containerization:**
+- **Docker** - All services containerized
+- **Kubernetes** - Container orchestration and scaling
+- **Service Discovery** - Automatic service discovery and load balancing
+
+**AWS Integration:**
+- **DynamoDB** - Serverless database with AWS integration
+- **IAM Roles** - Service account permissions and role assumption
+- **Security** - Secure credential management and access control
+
+## 📚 Documentation
+
+- **[Common Package](common/README.md)** - Shared components and utilities
+- **[Architecture](docs/design-docs/)** - System design and patterns
+- **[Security](docs/design-docs/monitoring-design.md)** - Security monitoring and analytics
+- **[Kubernetes](kubernetes/README.md)** - Container orchestration
+- **[Testing](integration_tests/README.md)** - Testing strategy and implementation
+
+## 🎯 Use Cases
+
+**Perfect for:**
+- Learning enterprise microservices architecture
+- Understanding security-first design patterns
+- JWT authentication and RBAC implementation
+- Monitoring and observability in production
+- Resilience patterns and fault tolerance
+- Kubernetes deployment and scaling
+
+## ⚠️ Current Status
+
+- ✅ **Core Services** - All 5 services operational with security features
+- ✅ **Authentication** - JWT-based auth with centralized validation
+- ✅ **Security** - Rate limiting, circuit breakers, audit logging
+- ✅ **Monitoring** - Prometheus, Grafana, structured logging
+- ✅ **Database** - DynamoDB with PynamoDB ORM and distributed locking
+- ✅ **Deployment** - Docker, Kubernetes, and AWS integration
 
 ---
 
-## 📁 Project Structure
+**🔐 Enterprise-grade microservices platform demonstrating production-ready security, monitoring, and resilience patterns**
 
-```
-services/
-├── README.md                    # This file - main overview
-├── build.sh                     # Universal build and test script
-├── build.md                     # Detailed build documentation
-├── Makefile                     # Build automation targets
-├── user_service/                # Authentication and user management
-├── order_service/               # Order processing and trading
-├── inventory_service/           # Asset inventory management
-├── common/                      # Shared utilities and business logic
-└── exception/                   # Centralized exception handling
-```
-
-## 🏗️ Architecture Overview
-
-### **Service Communication**
-```
-Frontend → API Gateway → Backend Services → DynamoDB
-    ↓           ↓              ↓            ↓
-  React    Authentication   FastAPI      Database
-           Rate Limiting    Services     Storage
-```
-
-### **Service Responsibilities**
-- **User Service**: User authentication, profile management, balance operations
-- **Order Service**: Order creation, trading operations, portfolio management
-- **Inventory Service**: Asset catalog, pricing data, public inventory access
-- **Common Package**: Shared DAOs, utilities, and business logic
-- **Exception Package**: Centralized error handling and domain exceptions
-
-## 🛠️ Technology Stack
-
-- **Python 3.11+**: Modern Python with type hints and async support
-- **FastAPI**: High-performance web framework with automatic API documentation
-- **Pydantic**: Data validation and serialization
-- **Redis**: Distributed locking and caching
-- **DynamoDB**: NoSQL database for scalable data storage
-- **Pytest**: Testing framework with comprehensive coverage
-
-## 🔐 Security Model
-
-### **Authentication & Authorization**
-- **JWT Tokens**: Secure, stateless authentication
-- **Role-Based Access**: Public, customer, and admin roles
-- **Password Security**: bcrypt-based password hashing
-- **Audit Logging**: Security event tracking and monitoring
-
-### **Data Protection**
-- **Input Validation**: Pydantic-based request validation
-- **SQL Injection Protection**: Parameterized queries and ORM usage
-- **Rate Limiting**: API Gateway-based request throttling
-- **Secure Headers**: CORS and security header configuration
-
-## 💰 Business Logic
-
-### **Order Processing**
-- **Market Orders**: Buy/sell orders with balance validation
-- **Portfolio Management**: Real-time balance updates and transaction history
-- **Distributed Locking**: Atomic operations for consistency
-- **Transaction Types**: Deposit, withdrawal, order payment, refunds
-
-### **Asset Management**
-- **Public Inventory**: Browseable asset catalog with real-time pricing
-- **Asset Details**: Comprehensive asset information and metadata
-- **Search & Filtering**: Advanced asset discovery capabilities
-
-## 🧪 Testing
-
-- **Test All**: `./build.sh --test-only`
-- **Test Specific**: `./build.sh --test-only user_service`
-- **Coverage**: `./build.sh --coverage`
-- **Integration**: `./test-local.sh --services`
-
-## 🚀 Development Workflow
-
-```bash
-# 1. Test specific service
-./build.sh --test-only user_service
-
-# 2. Make code changes
-# 3. Re-test
-./build.sh --test-only user_service
-
-# 4. Build for deployment
-./build.sh --build-only user_service
-```
-
-## 🔍 Troubleshooting
-
-```bash
-# Python version issues
-python --version  # Should be 3.11+
-
-# Virtual environment problems
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Test failures
-./build.sh --test-only [service_name]
-./build.sh --verbose [service_name]
-```
-
-## 📚 Related Documentation
-
-- **[Services Design](../docs/design-docs/services-design.md)**: Architecture and design decisions
-- **[Build Documentation](build.md)**: Detailed build and test procedures
-- **[Individual Service READMEs](#quick-links)**: Service-specific documentation
-- **[API Documentation](../gateway/README.md)**: Gateway and API endpoint information
-
----
-
-**Note**: This is a focused README for quick start and essential information. For detailed technical information, see the individual service READMEs and design documents.
+**🛡️ Built with**: Python, FastAPI, Go, DynamoDB, Prometheus, Grafana, Docker, Kubernetes, and modern security patterns

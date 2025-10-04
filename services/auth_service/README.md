@@ -1,54 +1,51 @@
-# Auth Service
+# 🔐 Auth Service
 
-Independent JWT validation service for Order Processor.
+> Centralized authentication service for JWT token validation and user context extraction
 
-## Structure
+## 🚀 Quick Start
+- **Prerequisites**: Python 3.11+, pip, virtual environment
+- **Build & Test**: `./dev.sh` (builds and runs unit tests)
+- **Deploy**: `./deploy.sh` (deploy to Docker or K8s)
+- **Integration Tests**: `./integration_tests/run_all_tests.sh`
+- **Example**: `curl http://localhost:8003/health`
 
+## ✨ Key Features
+- JWT token validation and signature verification
+- User context extraction from JWT claims
+- Security analytics and audit logging
+- Rate limiting and abuse prevention
+- Health monitoring and metrics
+
+## 📁 Project Structure
 ```
-src/
-├── __init__.py          # Package initialization
-├── main.py              # FastAPI app entry point (includes root endpoint)
-├── controllers/         # API endpoint handlers
-│   ├── __init__.py      # Controllers package
-│   ├── validate.py      # /internal/auth/validate endpoint
-│   └── health.py        # /health endpoint
-├── api_models/          # API request/response models
-├── auth_exceptions/     # Auth-specific exceptions
-└── utils/               # Utility functions
+auth_service/
+├── src/
+│   ├── main.py                 # FastAPI application entry point
+│   ├── controllers/            # API controllers and endpoints
+│   │   └── auth_controller.py  # Authentication endpoints
+│   ├── services/               # Business logic services
+│   │   └── auth_service.py     # Core authentication logic
+│   ├── models/                 # Data models and schemas
+│   │   └── auth_models.py      # Authentication request/response models
+│   └── utils/                  # Utility functions
+│       └── jwt_utils.py        # JWT token utilities
+├── tests/                      # Unit and integration tests
+│   ├── unit/                   # Unit tests
+│   └── integration/            # Integration tests
+├── requirements.txt            # Python dependencies
+├── Dockerfile                  # Container configuration
+└── README.md                   # This file
 ```
 
-## Endpoints
+## 🔗 Quick Links
+- [Services Overview](../README.md)
+- [API Documentation](http://localhost:8003/docs)
+- [Common Package](../common/README.md)
 
-- `GET /` - Service information (in main.py)
-- `POST /internal/auth/validate` - JWT validation (internal Gateway only)
-- `GET /health` - Health check for K8s probes
-- `GET /internal/metrics` - Prometheus metrics (internal monitoring)
-- `GET /docs` - API documentation (FastAPI auto-generated)
+## 📊 Status
+- **Current Status**: ✅ **PRODUCTION READY** - JWT validation and user context extraction working
+- **Last Updated**: January 8, 2025
 
-## Development
+---
 
-```bash
-./dev.sh build    # Build service
-./dev.sh test     # Run tests
-./dev.sh clean    # Clean build artifacts
-```
-
-## Status
-
-**Phase 1**: ✅ **COMPLETED** - JWT validation service with comprehensive metrics
-**Current**: Production-ready authentication service with monitoring
-
-## Features
-
-- **JWT Validation**: Secure token validation for API Gateway
-- **Middleware Metrics**: Automatic request tracking and performance monitoring
-- **Prometheus Integration**: Comprehensive metrics collection
-- **Health Monitoring**: Kubernetes-ready health checks
-- **Security Logging**: Audit trail for authentication events
-
-## Notes
-
-- Root endpoint (`/`) is directly in main.py (following other services pattern)
-- Health endpoint uses separate controller with router
-- Metrics endpoint provides Prometheus-compatible metrics
-- Middleware automatically tracks all requests and operations
+**Note**: This is a focused README for quick start and essential information. For detailed technical information, see the design documents and guides.

@@ -1,149 +1,53 @@
 # 📦 Inventory Service
 
-> FastAPI microservice for digital asset management, cryptocurrency data, and inventory operations
+> Asset management service for cryptocurrency catalog, market data, and public asset browsing
 
 ## 🚀 Quick Start
 - **Prerequisites**: Python 3.11+, pip, virtual environment
-- **Install**: `cd inventory_service && python -m pip install -e .`
-- **Test**: `../build.sh --test-only inventory_service`
-- **Run**: `python -m uvicorn src.main:app --reload --port 8001`
+- **Build & Test**: `./dev.sh` (builds and runs unit tests)
+- **Deploy**: `./deploy.sh` (deploy to Docker or K8s)
+- **Integration Tests**: `./integration_tests/run_all_tests.sh`
+- **Example**: `curl http://localhost:8001/health`
 
 ## ✨ Key Features
-- **Digital Asset Catalog**: 98+ cryptocurrency assets with real-time pricing
-- **CoinGecko Integration**: Live cryptocurrency data and price updates
-- **Asset Management**: Asset listing, search, and detailed information
-- **Inventory Operations**: Asset initialization, seeding, and status tracking
-- **Public Access**: No authentication required for asset browsing
-
-## 🔗 Quick Links
-- [Services Overview](../README.md)
-- [Build Script](../build.sh)
-- [API Documentation](#api-endpoints)
-
-## 📊 Status
-- **Current Status**: ✅ **PRODUCTION READY** - All features implemented and tested
-- **Last Updated**: August 20, 2025
-
-## 🎯 Current Status
-
-### ✅ **All Features Working**
-- **Asset Catalog**: 98+ cryptocurrency assets with metadata
-- **Real-time Pricing**: CoinGecko API integration for live prices
-- **Search & Filtering**: Asset discovery and detailed information
-- **Health Monitoring**: Service health checks and Prometheus metrics
-- **Integration**: Working with API Gateway and other services
-
----
+- Asset catalog management (98+ cryptocurrencies)
+- Market data integration (CoinGecko API)
+- Public asset browsing (no authentication required)
+- Asset search and filtering
+- Real-time pricing updates
 
 ## 📁 Project Structure
-
 ```
 inventory_service/
 ├── src/
 │   ├── main.py                 # FastAPI application entry point
-│   ├── api_models/             # API request/response models
-│   │   └── inventory/         # Inventory models
-│   │       ├── asset_list.py  # Asset list models
-│   │       ├── asset_requests.py # Asset request models
-│   │       └── asset_response.py # Asset response models
-│   ├── controllers/            # Business logic controllers
-│   │   ├── assets.py          # Asset operations logic
-│   │   ├── health.py          # Health monitoring logic
-│   │   └── dependencies.py    # Controller dependencies
-│   ├── data/                  # Data initialization
-│   │   └── init_inventory.py  # Inventory initialization
-│   ├── services/              # External service integrations
-│   │   └── fetch_coins.py     # CoinGecko API integration
-│   ├── inventory_exceptions/   # Inventory-specific exceptions
-│   │   └── exceptions.py      # Inventory exception definitions
-│   ├── validation/            # Input validation and business rules
-│   │   ├── business_validators.py # Business logic validation
-│   │   └── field_validators.py # Field-level validation
-│   ├── constants.py           # Service constants
-│   └── metrics.py             # Metrics collection
-├── tests/                     # Test suite
+│   ├── controllers/            # API controllers and endpoints
+│   │   └── asset_controller.py # Asset management endpoints
+│   ├── services/               # Business logic services
+│   │   └── asset_service.py    # Asset management logic
+│   ├── models/                 # Data models and schemas
+│   │   └── asset_models.py     # Asset request/response models
+│   ├── external/               # External API integration
+│   │   └── coingecko_client.py # CoinGecko API client
+│   └── utils/                  # Utility functions
+│       └── data_processor.py   # Market data processing
+├── tests/                      # Unit and integration tests
+│   ├── unit/                   # Unit tests
+│   └── integration/            # Integration tests
 ├── requirements.txt            # Python dependencies
-└── setup.py                   # Package configuration
+├── Dockerfile                  # Container configuration
+└── README.md                   # This file
 ```
 
-## 🔐 API Endpoints
+## 🔗 Quick Links
+- [Services Overview](../README.md)
+- [API Documentation](http://localhost:8001/docs)
+- [Common Package](../common/README.md)
 
-### **Asset Management**
-```bash
-GET  /inventory/assets           # List all assets with pagination
-GET  /inventory/assets/{id}      # Get specific asset details
-GET  /inventory/assets/search    # Search assets by criteria
-```
-
-### **System**
-```bash
-GET  /health                     # Service health status
-GET  /health/detailed            # Detailed health with external API status
-GET  /internal/metrics           # Prometheus metrics (internal monitoring)
-```
-
-## 🏗️ Architecture
-
-### **Database Design**
-- **Single Table Design**: DynamoDB with composite PK/SK
-- **Asset Entity**: PK=asset_id, SK=asset_id
-- **Asset Status**: Active, Inactive, Suspended
-- **Price Data**: Real-time integration with CoinGecko
-
-### **External Integrations**
-- **CoinGecko API**: Real-time cryptocurrency pricing
-- **DynamoDB**: Asset data persistence via common package
-- **Prometheus**: Metrics collection and monitoring
-
-### **Data Flow**
-```
-1. Asset Initialization → Seed database with initial catalog
-2. Price Updates → Periodic updates from CoinGecko API
-3. Asset Queries → Fast retrieval from DynamoDB
-4. Status Management → Asset availability tracking
-```
-
-### **Monitoring & Metrics**
-- **Request Metrics**: HTTP method, status code, endpoint, duration
-- **Asset Operations**: Asset retrieval, search, and detail view metrics
-- **External API**: CoinGecko API call success rates and response times
-- **Performance**: Response times, throughput, and error rates
-- **Business Metrics**: Asset popularity, search patterns, and usage statistics
-
-## 🛠️ Technology Stack
-
-- **Framework**: FastAPI with async support
-- **Database**: AWS DynamoDB via common package
-- **External API**: CoinGecko for cryptocurrency data
-- **Validation**: Pydantic models and business validators
-- **Testing**: pytest with comprehensive coverage
-- **Monitoring**: Prometheus metrics, middleware tracking, and health checks
-- **Documentation**: Swagger/OpenAPI automatic generation
-- **Observability**: Request correlation, performance metrics, and business metrics
-
-## 🧪 Testing & Development
-
-```bash
-# Test this service
-../build.sh --test-only inventory_service
-
-# Test all services
-../build.sh --test-only
-```
-
-## 🔍 Troubleshooting
-
-```bash
-../build.sh --check-prerequisites inventory_service
-```
-
-## 📚 Related Documentation
-
-- **[Services Overview](../README.md)**: Complete services architecture
-- **[Common Package](../common/README.md)**: Shared utilities and DAOs
-- **[Exception Package](../exception/README.md)**: Error handling patterns
-- **[Build Script](../build.sh)**: Automated build and testing
+## 📊 Status
+- **Current Status**: ✅ **PRODUCTION READY** - Asset management and market data working
+- **Last Updated**: January 8, 2025
 
 ---
 
-**Note**: This service provides public access to digital asset information and cryptocurrency data. For system-wide information, see the main services README.
+**Note**: This is a focused README for quick start and essential information. For detailed technical information, see the design documents and guides.

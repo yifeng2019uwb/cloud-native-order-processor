@@ -1,221 +1,198 @@
 # 🔧 Common Package
 
-> Shared components, utilities, and data access objects for all microservices
+> **Shared components and utilities** for the Cloud Native Order Processor microservices platform
 
-## 🚀 Quick Start
-- **Prerequisites**: Python 3.11+, pip, virtual environment
-- **Install**: `cd common && python -m pip install -e .`
-- **Test**: `python -m pytest`
-- **Use**: Import in other services via `from common import ...`
+## 🎯 What is the Common Package?
 
-## ✨ Key Features
-- **Shared Entities**: User, Order, Inventory, and Asset data models
-- **Data Access Objects**: Database operations and business logic
-- **Security Management**: Centralized password hashing and JWT handling
-- **Database Utilities**: DynamoDB connections and health checks
-- **Exception Handling**: Domain-specific exceptions for all services
+The Common Package provides shared functionality across all microservices in the CNOP system. It includes data models, database access objects, authentication utilities, exception handling, and shared constants.
 
-## 🔗 Quick Links
-- [Services Overview](../README.md)
-- [Build Script](../build.sh)
-- [Entity Models](#entities)
-
-## 📊 Status
-- **Current Status**: ✅ **PRODUCTION READY** - All components implemented and tested
-- **Last Updated**: August 20, 2025
-
-## 🎯 Current Status
-
-### ✅ **All Components Working**
-- **Entities**: Complete data models for all services
-- **DAOs**: Database operations and business logic
-- **Security**: Password hashing, JWT management, and audit logging
-- **Database**: DynamoDB connections and health monitoring
-- **Exceptions**: Comprehensive error handling across all services
-
----
-
-## 📁 Package Structure
+## 🏗️ Package Structure
 
 ```
 common/
 ├── src/
-│   ├── data/              # Data layer components
-│   │   ├── entities/      # Data models and entities
-│   │   │   ├── user/      # User, Balance, BalanceTransaction
-│   │   │   ├── order/     # Order and related models
-│   │   │   ├── inventory/ # Asset and inventory models
-│   │   │   └── asset/     # Asset balance and transaction models
-│   │   ├── dao/           # Data Access Objects
-│   │   │   ├── user/      # User and balance DAOs
-│   │   │   ├── order/     # Order DAO
-│   │   │   ├── inventory/ # Asset DAO
-│   │   │   └── asset/     # Asset management DAOs
-│   │   ├── database/      # Database connections and utilities
-│   │   └── exceptions/    # Database exception classes
-│   ├── auth/              # Authentication components
-│   │   ├── security/      # Security management components
-│   │   │   ├── password_manager.py    # Password hashing and validation
-│   │   │   ├── token_manager.py       # JWT token management
-│   │   │   └── audit_logger.py        # Security event logging
-│   │   ├── gateway/       # Gateway integration
-│   │   └── exceptions/    # Auth exception classes
-│   ├── core/              # Core business logic
-│   │   ├── utils/         # Core utilities
-│   │   └── validation/    # Core validation
-│   ├── aws/               # AWS utilities (STS, etc.)
-│   ├── exceptions/        # Shared exception classes
-│   └── shared/            # Shared utilities
-│       ├── health/        # Health check utilities
-│       ├── logging/       # Logging utilities
-│       └── monitoring/    # Monitoring utilities
-├── tests/                  # Test suite
-├── requirements.txt         # Python dependencies
-└── setup.py                # Package configuration
+│   ├── auth/                    # Authentication & Security
+│   ├── aws/                     # AWS Integration
+│   ├── core/                    # Core Utilities
+│   ├── data/                    # Data Layer
+│   │   ├── entities/           # Domain models + Database models
+│   │   └── dao/                # Data Access Objects
+│   ├── exceptions/              # Exception Handling
+│   └── shared/                  # Shared Utilities
+│       ├── constants/          # Centralized constants
+│       └── logging/            # Structured logging
+└── tests/                      # Comprehensive test suite
 ```
 
-## 🏗️ Architecture
+## 🔧 Core Components
 
-### **Service-Based Organization**
-- **User Service**: User, Balance, BalanceTransaction entities
-- **Order Service**: Order and related models
-- **Inventory Service**: Asset and inventory models
-- **Asset Management**: AssetBalance, AssetTransaction models
+### **1. Data Layer**
+**What it provides**: Database models and data access objects
+- **Entities**: User, Order, Asset, Balance, AssetBalance, AssetTransaction
+- **DAOs**: UserDAO, OrderDAO, AssetDAO, BalanceDAO, AssetBalanceDAO, AssetTransactionDAO
+- **Features**: Type safety, ORM integration, atomic operations, comprehensive error handling
 
-### **Database Design**
-- **Single Table Approach**: Service-specific tables with composite keys
-- **DynamoDB**: Serverless, pay-per-use, minimal operational overhead
-- **Composite Keys**: Efficient querying with PK/SK patterns
-- **GSI Support**: Global Secondary Indexes for complex queries
+### **2. Authentication & Security**
+**What it provides**: Security utilities for all services
+- **Password Management**: bcrypt hashing, password validation
+- **Token Management**: JWT generation and validation
+- **Gateway Integration**: Header validation, user context extraction
 
-### **Design Philosophy**
-- **Cost Efficiency**: Minimize RCU/WCU usage through efficient key design
-- **Development Velocity**: Prioritize rapid iteration over enterprise complexity
-- **Atomic Operations**: Conditional expressions for cost optimization
-- **Simplified Queries**: Single-table design for personal project scale
+### **3. Core Utilities**
+**What it provides**: Shared business logic utilities
+- **Lock Manager**: User-level locking for atomic operations
+- **Transaction Manager**: Distributed transaction coordination
+- **Validation**: Shared validation functions and input sanitization
 
-## 📊 Core Components
+### **4. Exception Handling**
+**What it provides**: Consistent error handling across services
+- **Exception Hierarchy**: Base exceptions, infrastructure exceptions, business logic exceptions
+- **Features**: Structured error handling, error mapping, audit logging, type safety
 
-### **Entities**
-- **User Entities**: User, Balance, BalanceTransaction, TransactionType, TransactionStatus
-- **Order Entities**: Order, OrderCreate, OrderResponse, OrderType, OrderStatus
-- **Inventory Entities**: Asset, AssetListResponse
-- **Asset Management**: AssetBalance, AssetTransaction, AssetTransactionType, AssetTransactionStatus
+### **5. Shared Constants**
+**What it provides**: Centralized configuration and constants
+- **HTTP Status Codes**: Standardized HTTP responses
+- **Error Messages**: Consistent error messaging
+- **Service Names**: Service identification
+- **Field Constraints**: Validation limits
 
-### **Data Access Objects (DAOs)**
-- **UserDAO**: User CRUD operations with integrated security
-- **BalanceDAO**: Balance and transaction management
-- **OrderDAO**: Order lifecycle management
-- **AssetDAO**: Asset information and operations
-- **AssetBalanceDAO**: Asset balance tracking
-- **AssetTransactionDAO**: Asset transaction history
+## 🚀 How Services Use It
 
-### **Security Management**
-- **PasswordManager**: bcrypt-based password hashing and verification
-- **TokenManager**: JWT token creation, validation, and management
-- **AuditLogger**: Security event logging and audit trails
+**Data Operations:**
+```python
+# Services import and use DAOs
+from common.data.dao.user.user_dao import UserDAO
+user_dao = UserDAO()
+user = user_dao.create_user(user_data)
+```
 
-### **Database Utilities**
-- **DynamoDB Connection**: Database connection management
-- **Health Checks**: Service health monitoring
-- **AWS Integration**: STS client for role assumption
+**Authentication:**
+```python
+# Services use authentication utilities
+from common.auth.security.password_manager import PasswordManager
+password_manager = PasswordManager()
+hashed_password = password_manager.hash_password(password)
+```
 
-## 🛠️ Technology Stack
+**Exception Handling:**
+```python
+# Services use shared exceptions
+from common.exceptions import CNOPUserNotFoundException
+raise CNOPUserNotFoundException("User not found")
+```
 
-- **Framework**: Python 3.11+ with type hints
-- **Database**: AWS DynamoDB via boto3
-- **Security**: bcrypt for password hashing, PyJWT for JWT handling
-- **Validation**: Pydantic models and data validation
-- **Testing**: pytest with comprehensive coverage
-- **Monitoring**: Health checks and AWS integration
+**Logging:**
+```python
+# Services use shared logging
+from common.shared.logging import BaseLogger, Loggers, LogActions
+logger = BaseLogger(Loggers.USER)
+logger.info(action=LogActions.USER_CREATED, message="User created")
+```
 
 ## 🧪 Testing
 
-### **Test Coverage**
+**Running Tests:**
 ```bash
 # Run all tests
+cd services/common
 python -m pytest
 
-# Run with coverage
-python -m pytest --cov=src
-
-# Run specific test file
-python -m pytest tests/test_entities.py
-
-# Run with verbose output
-python -m pytest -v
+# Run specific test categories
+python -m pytest tests/data/entities/
+python -m pytest tests/data/dao/
+python -m pytest tests/core/utils/
+python -m pytest tests/auth/
 ```
 
-### **Test Structure**
-- **Unit Tests**: Individual component testing with mocking
-- **Integration Tests**: Database and external service integration
-- **Entity Tests**: Data model validation and business logic
-- **DAO Tests**: Database operation validation
+## 🔧 Configuration
 
-## 🔄 Development Workflow
-
-### **Local Development**
+**Environment Variables:**
 ```bash
-# 1. Activate virtual environment
-source venv/bin/activate
+# AWS Configuration
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
 
-# 2. Install dependencies
-pip install -r requirements.txt
+# DynamoDB Tables
+USERS_TABLE=users
+ORDERS_TABLE=orders
+INVENTORY_TABLE=inventory
 
-# 3. Run tests
-python -m pytest
+# JWT Configuration
+JWT_SECRET_KEY=your_jwt_secret
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-# 4. Install in development mode
-pip install -e .
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password
 ```
 
-### **Code Changes**
-```bash
-# 1. Make code changes
-# 2. Run tests to verify
-python -m pytest
+## 🚀 Development
 
-# 3. Check code quality
-python -m flake8 src/
-python -m black src/
+**Adding New Components:**
+1. **Create Entity**: Add Pydantic model + PynamoDB model
+2. **Create DAO**: Add data access object with CRUD operations
+3. **Add Tests**: Comprehensive test coverage
+4. **Update Constants**: Add any new constants to shared constants
+5. **Documentation**: Update this README
 
-# 4. Commit changes
-git add .
-git commit -m "Description of changes"
-```
+**Code Standards:**
+- **Type Hints**: All functions must have type hints
+- **Docstrings**: Comprehensive documentation
+- **Error Handling**: Proper exception handling
+- **Logging**: Structured logging for all operations
+- **Testing**: Unit tests for all functionality
 
-## 🔍 Troubleshooting
+## 📊 Performance
 
-### **Common Issues**
-```bash
-# Python version issues
-python --version  # Should be 3.11+
+**Optimization Features:**
+- **Connection Pooling**: Efficient database connections
+- **Caching**: Redis integration for frequently accessed data
+- **Batch Operations**: Efficient bulk operations
+- **Query Optimization**: Efficient DynamoDB queries
 
-# Virtual environment problems
-source venv/bin/activate
-pip install -r requirements.txt
+**Monitoring:**
+- **Metrics**: Prometheus metrics integration
+- **Logging**: Structured JSON logging
+- **Tracing**: Request correlation IDs
+- **Health Checks**: Service health monitoring
 
-# Test failures
-python -m pytest -v
-python -m pytest --tb=short
-```
+## 🔒 Security
 
-### **Import Issues**
-```bash
-# Ensure package is installed
-pip install -e .
+**Security Features:**
+- **Password Security**: bcrypt hashing with salt
+- **JWT Security**: Secure token generation and validation
+- **Input Validation**: Comprehensive input sanitization
+- **Audit Logging**: Security event tracking
 
-# Check import paths
-python -c "from common.entities.user import User; print('Import successful')"
-```
+**Best Practices:**
+- **Least Privilege**: Minimal required permissions
+- **Defense in Depth**: Multiple security layers
+- **Secure Defaults**: Secure configuration defaults
+- **Regular Updates**: Keep dependencies updated
 
-## 📚 Related Documentation
+## 📚 Documentation
 
-- **[Services Overview](../README.md)**: Complete services architecture
-- **[Exception Package](../exception/README.md)**: Error handling patterns
-- **[Build Script](../build.sh)**: Automated build and testing
-- **[Individual Services](../user_service/README.md)**: Service-specific usage
+**API Documentation:**
+- **Entity Models**: Pydantic model documentation
+- **DAO Methods**: Data access object documentation
+- **Exception Types**: Exception hierarchy documentation
+- **Utility Functions**: Helper function documentation
+
+**Architecture Documentation:**
+- **Data Flow**: How data flows through the system
+- **Error Handling**: Exception handling patterns
+- **Security Model**: Authentication and authorization
+- **Performance**: Optimization strategies
 
 ---
 
-**Note**: This package provides shared components for all microservices. For service-specific information, see the individual service READMEs.
+**🔧 Built for**: Production microservices with enterprise-grade reliability and security
+
+**🛡️ Perfect for**: Shared functionality across multiple services with consistent patterns
+
+**🔒 Questions about implementation?** Check the source code or open an issue
+
+*Built with type safety, comprehensive testing, and production-ready patterns*
