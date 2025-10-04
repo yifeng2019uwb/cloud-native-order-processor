@@ -8,13 +8,16 @@ setup(
     package_dir={"common": "src"},
     python_requires=">=3.11",
     install_requires=[
-        "pydantic==2.5.0",
-        "boto3==1.29.7",
-        "python-dotenv==1.0.0",
-        "pyyaml==6.0.1",
-        "email-validator==2.1.0",
-        "fastapi==0.104.1",
-        "bcrypt==4.0.1",
+        "pydantic>=2.8.0",
+        "boto3>=1.34.0",
+        "pynamodb>=6.1.0",
+        "python-dotenv>=1.0.0",
+        "pyyaml>=6.0.1",
+        "email-validator>=2.1.0",
+        "fastapi>=0.110.0",
+        "bcrypt>=4.1.0",
+        "redis>=5.0.1",
+        "python-jose[cryptography]>=3.3.0",
     ],
     extras_require={
         "dev": [
