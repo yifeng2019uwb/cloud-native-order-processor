@@ -15,9 +15,8 @@ from pynamodb.attributes import UnicodeAttribute, UTCDateTimeAttribute
 from pynamodb.indexes import GlobalSecondaryIndex, AllProjection
 
 from .enums import OrderStatus, OrderType
-from ..datetime_utils import safe_parse_datetime, get_current_utc
+from ..datetime_utils import get_current_utc
 from ..entity_constants import OrderFields, AWSConfig, TableNames, DatabaseFields
-
 
 class Order(BaseModel):
     """Order domain entity - pure business entity without database fields"""
@@ -64,7 +63,7 @@ class OrderItem(Model):
 
     class Meta:
         """Meta class for OrderItem"""
-        table_name = os.getenv('ORDERS_TABLE', TableNames.ORDERS)
+        table_name = os.getenv(OrderFields.ORDERS_TABLE_ENV_VAR, TableNames.ORDERS)
         region = os.getenv(AWSConfig.AWS_REGION_ENV_VAR, AWSConfig.DEFAULT_REGION)
         billing_mode = AWSConfig.BILLING_MODE_PAY_PER_REQUEST
 
@@ -139,16 +138,16 @@ class OrderItem(Model):
     def get_key(self) -> dict:
         """Get database key for this order item"""
         return {
-            'Pk': self.Pk,
-            'Sk': self.Sk
+            DatabaseFields.PK: self.Pk,
+            DatabaseFields.SK: self.Sk
         }
 
     @staticmethod
     def get_key_for_order_id(order_id: str) -> dict:
         """Get database key for an order ID (static method)"""
         return {
-            'Pk': order_id,
-            'Sk': OrderFields.SK_VALUE
+            DatabaseFields.PK: order_id,
+            DatabaseFields.SK: OrderFields.SK_VALUE
         }
 
     # ==================== LIFECYCLE ====================

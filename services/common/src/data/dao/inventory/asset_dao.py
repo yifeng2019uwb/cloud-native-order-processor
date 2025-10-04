@@ -174,7 +174,7 @@ class AssetDAO:
             asset_item.created_at = existing_asset_item.created_at
 
             # Business rule: if price is zero, asset should be inactive
-            if asset_item.price_usd == "0" or asset_item.price_usd == "0.0":
+            if asset_item.price_usd == 0 or asset_item.price_usd == 0.0:
                 asset_item.is_active = False
 
             # Save the updated asset (updated_at will be set automatically in save method)

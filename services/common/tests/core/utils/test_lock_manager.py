@@ -12,8 +12,9 @@ import pytest
 from botocore.exceptions import ClientError
 
 # Local imports
-from src.core.utils.lock_manager import (LOCK_TIMEOUTS, UserLock, acquire_lock,
+from src.core.utils.lock_manager import (LOCK_TIMEOUTS, UserLock, UserLockItem, acquire_lock,
                                          release_lock)
+from tests.data.dao.mock_constants import MockDatabaseMethods
 from src.data.exceptions import (CNOPDatabaseOperationException,
                                  CNOPLockAcquisitionException)
 
@@ -92,155 +93,108 @@ class TestUserLock:
 class TestAcquireLock:
     """Test acquire_lock function"""
 
-    def test_acquire_lock_success(self):
+    @patch.object(UserLockItem, MockDatabaseMethods.GET)
+    @patch.object(UserLockItem, MockDatabaseMethods.SAVE)
+    def test_acquire_lock_success(self, mock_save, mock_get):
         """Test successful lock acquisition"""
         username = "test-user-123"
         operation = "deposit"
         timeout = 10
 
-        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
-            mock_table = MagicMock()
-            mock_manager = MagicMock()
-            mock_connection = MagicMock()
-            mock_connection.users_table = mock_table
-            mock_manager.get_connection.return_value = mock_connection
-            mock_get_manager.return_value = mock_manager
+        # Mock that no existing lock exists
+        mock_get.side_effect = UserLockItem.DoesNotExist()
+        mock_save.return_value = None
 
-            lock_id = acquire_lock(username, operation, timeout)
+        lock_id = acquire_lock(username, operation, timeout)
 
-            assert lock_id is not None
-            assert isinstance(lock_id, str)
-            assert "lock_" in lock_id
+        assert lock_id is not None
+        assert isinstance(lock_id, str)
+        assert "lock_" in lock_id
 
-            # Verify DynamoDB put_item was called
-            mock_table.put_item.assert_called_once()
-            call_args = mock_table.put_item.call_args
+        # Verify PynamoDB operations were called
+        mock_get.assert_called_once()
+        mock_save.assert_called_once()
 
-            # Check the item structure
-            item = call_args[1]['Item']
-            assert item['Pk'] == f"USER#{username}"
-            assert item['Sk'] == "LOCK"
-            assert item['operation'] == operation
-            assert 'lock_id' in item
-            assert 'expires_at' in item
-
-    def test_acquire_lock_conditional_check_failed(self):
+    @patch.object(UserLockItem, MockDatabaseMethods.GET)
+    @patch.object(UserLockItem, MockDatabaseMethods.SAVE)
+    def test_acquire_lock_conditional_check_failed(self, mock_save, mock_get):
         """Test lock acquisition when lock already exists"""
         username = "test-user-123"
         operation = "deposit"
         timeout = 10
 
-        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
-            mock_table = MagicMock()
-            mock_manager = MagicMock()
-            mock_connection = MagicMock()
-            mock_connection.users_table = mock_table
-            mock_manager.get_connection.return_value = mock_connection
-            mock_get_manager.return_value = mock_manager
+        # Mock that an existing lock exists and is still valid
+        existing_lock = UserLockItem()
+        existing_lock.lock_id = "existing_lock_123"
+        existing_lock.expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=5)
+        mock_get.return_value = existing_lock
+        mock_save.side_effect = Exception("Conditional check failed")
 
-            # Simulate conditional check failure
-            error_response = {
-                'Error': {
-                    'Code': 'ConditionalCheckFailedException',
-                    'Message': 'Conditional check failed'
-                }
-            }
-            mock_table.put_item.side_effect = ClientError(error_response, 'PutItem')
+        with pytest.raises(CNOPDatabaseOperationException, match="Database operation failed while acquiring lock"):
+            acquire_lock(username, operation, timeout)
 
-            with pytest.raises(CNOPLockAcquisitionException, match="Lock acquisition failed"):
-                acquire_lock(username, operation, timeout)
-
-    def test_acquire_lock_database_error(self):
+    @patch.object(UserLockItem, MockDatabaseMethods.GET)
+    @patch.object(UserLockItem, MockDatabaseMethods.SAVE)
+    def test_acquire_lock_database_error(self, mock_save, mock_get):
         """Test lock acquisition when database error occurs"""
         username = "test-user-123"
         operation = "deposit"
         timeout = 10
 
-        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
-            mock_table = MagicMock()
-            mock_manager = MagicMock()
-            mock_connection = MagicMock()
-            mock_connection.users_table = mock_table
-            mock_manager.get_connection.return_value = mock_connection
-            mock_get_manager.return_value = mock_manager
+        # Mock database error
+        mock_get.side_effect = Exception("Database connection failed")
 
-            # Simulate database error
-            mock_table.put_item.side_effect = Exception("Database connection failed")
-
-            with pytest.raises(CNOPDatabaseOperationException, match="Failed to acquire lock"):
-                acquire_lock(username, operation, timeout)
+        with pytest.raises(CNOPDatabaseOperationException, match="Database operation failed while acquiring lock"):
+            acquire_lock(username, operation, timeout)
 
 
 class TestReleaseLock:
     """Test release_lock function"""
 
-    def test_release_lock_success(self):
+    @patch.object(UserLockItem, MockDatabaseMethods.GET)
+    @patch.object(UserLockItem, MockDatabaseMethods.DELETE)
+    def test_release_lock_success(self, mock_delete, mock_get):
         """Test successful lock release"""
         username = "test-user-123"
         lock_id = "lock-123"
 
-        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
-            mock_table = MagicMock()
-            mock_manager = MagicMock()
-            mock_connection = MagicMock()
-            mock_connection.users_table = mock_table
-            mock_manager.get_connection.return_value = mock_connection
-            mock_get_manager.return_value = mock_manager
+        # Mock existing lock
+        existing_lock = UserLockItem()
+        existing_lock.lock_id = lock_id
+        mock_get.return_value = existing_lock
+        mock_delete.return_value = None
 
-            result = release_lock(username, lock_id)
+        result = release_lock(username, lock_id)
 
-            assert result is True
+        assert result is True
 
-            # Verify DynamoDB delete_item was called
-            mock_table.delete_item.assert_called_once()
-            call_args = mock_table.delete_item.call_args
+        # Verify PynamoDB operations were called
+        mock_get.assert_called_once()
+        mock_delete.assert_called_once()
 
-            # Check the key structure
-            key = call_args[1]['Key']
-            assert key['Pk'] == f"USER#{username}"
-            assert key['Sk'] == "LOCK"
-
-    def test_release_lock_conditional_check_failed(self):
+    @patch.object(UserLockItem, MockDatabaseMethods.GET)
+    @patch.object(UserLockItem, MockDatabaseMethods.DELETE)
+    def test_release_lock_conditional_check_failed(self, mock_delete, mock_get):
         """Test lock release when lock was already released"""
         username = "test-user-123"
         lock_id = "lock-123"
 
-        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
-            mock_table = MagicMock()
-            mock_manager = MagicMock()
-            mock_connection = MagicMock()
-            mock_connection.users_table = mock_table
-            mock_manager.get_connection.return_value = mock_connection
-            mock_get_manager.return_value = mock_manager
+        # Mock that lock doesn't exist or has different lock_id
+        mock_get.side_effect = UserLockItem.DoesNotExist()
 
-            # Simulate conditional check failure
-            error_response = {
-                'Error': {
-                    'Code': 'ConditionalCheckFailedException',
-                    'Message': 'Conditional check failed'
-                }
-            }
-            mock_table.delete_item.side_effect = ClientError(error_response, 'DeleteItem')
+        result = release_lock(username, lock_id)
 
-            result = release_lock(username, lock_id)
+        assert result is False
 
-            assert result is False
-
-    def test_release_lock_database_error(self):
+    @patch.object(UserLockItem, MockDatabaseMethods.GET)
+    @patch.object(UserLockItem, MockDatabaseMethods.DELETE)
+    def test_release_lock_database_error(self, mock_delete, mock_get):
         """Test lock release when database error occurs"""
         username = "test-user-123"
         lock_id = "lock-123"
 
-        with patch('src.core.utils.lock_manager.get_dynamodb_manager') as mock_get_manager:
-            mock_table = MagicMock()
-            mock_manager = MagicMock()
-            mock_connection = MagicMock()
-            mock_connection.users_table = mock_table
-            mock_manager.get_connection.return_value = mock_connection
-            mock_get_manager.return_value = mock_manager
+        # Mock database error
+        mock_get.side_effect = Exception("Database connection failed")
 
-            # Simulate database error
-            mock_table.delete_item.side_effect = Exception("Database connection failed")
-
-            with pytest.raises(CNOPDatabaseOperationException, match="Failed to release lock"):
-                release_lock(username, lock_id)
+        with pytest.raises(CNOPDatabaseOperationException, match="Database operation failed while releasing lock"):
+            release_lock(username, lock_id)

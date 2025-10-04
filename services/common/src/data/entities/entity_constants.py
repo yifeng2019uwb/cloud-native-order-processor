@@ -228,3 +228,6 @@ class OrderFields:
 
     # Sort Key Values
     SK_VALUE = "ORDER"
+
+    # Environment Variables
+    ORDERS_TABLE_ENV_VAR = "ORDERS_TABLE"

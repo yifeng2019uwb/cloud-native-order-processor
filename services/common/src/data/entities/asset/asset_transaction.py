@@ -17,7 +17,7 @@ from pynamodb.models import Model
 from pynamodb.attributes import UnicodeAttribute, UTCDateTimeAttribute
 
 from ..entity_constants import (AssetTransactionFields, FieldConstraints,
-                                AWSConfig, TableNames)
+                                AWSConfig, TableNames, UserConstants)
 from ..datetime_utils import get_current_utc
 from .enums import AssetTransactionStatus, AssetTransactionType
 
@@ -48,7 +48,7 @@ class AssetTransactionItem(Model):
 
     class Meta:
         """Meta class for AssetTransactionItem"""
-        table_name = os.getenv('USERS_TABLE', TableNames.USERS)
+        table_name = os.getenv(UserConstants.USERS_TABLE_ENV_VAR, TableNames.USERS)
         region = os.getenv(AWSConfig.AWS_REGION_ENV_VAR, AWSConfig.DEFAULT_REGION)
         billing_mode = AWSConfig.BILLING_MODE_PAY_PER_REQUEST
 

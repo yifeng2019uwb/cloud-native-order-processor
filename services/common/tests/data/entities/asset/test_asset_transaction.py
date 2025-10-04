@@ -225,9 +225,9 @@ class TestAssetTransactionItem:
             "username": "testuser123",
             "asset_id": "BTC",
             "transaction_type": AssetTransactionType.BUY,
-            "quantity": Decimal("2.5"),
-            "price": Decimal("50000.00"),
-            "total_amount": Decimal("125000.00"),
+            "quantity": "2.5",  # String for PynamoDB
+            "price": "50000.00",  # String for PynamoDB
+            "total_amount": "125000.00",  # String for PynamoDB
             "order_id": "order-123",
             "status": AssetTransactionStatus.COMPLETED,
             "created_at": now.isoformat()
@@ -238,9 +238,9 @@ class TestAssetTransactionItem:
         assert transaction_item.username == "testuser123"
         assert transaction_item.asset_id == "BTC"
         assert transaction_item.transaction_type == AssetTransactionType.BUY
-        assert transaction_item.quantity == Decimal("2.5")
-        assert transaction_item.price == Decimal("50000.00")
-        assert transaction_item.total_amount == Decimal("125000.00")
+        assert transaction_item.quantity == "2.5"  # Stored as string in PynamoDB
+        assert transaction_item.price == "50000.00"  # Stored as string in PynamoDB
+        assert transaction_item.total_amount == "125000.00"  # Stored as string in PynamoDB
         assert transaction_item.order_id == "order-123"
         assert transaction_item.status == AssetTransactionStatus.COMPLETED
 
@@ -262,9 +262,9 @@ class TestAssetTransactionItem:
         assert transaction_item.username == "testuser123"
         assert transaction_item.asset_id == "BTC"
         assert transaction_item.transaction_type == AssetTransactionType.BUY
-        assert transaction_item.quantity == Decimal("2.5")
-        assert transaction_item.price == Decimal("50000.00")
-        assert transaction_item.total_amount == Decimal("125000.00")
+        assert transaction_item.quantity == "2.5"  # Stored as string in PynamoDB
+        assert transaction_item.price == "50000.00"  # Stored as string in PynamoDB
+        assert transaction_item.total_amount == "125000.00"  # Stored as string in PynamoDB
         assert transaction_item.order_id == "order-123"
         assert transaction_item.status == AssetTransactionStatus.COMPLETED
 
@@ -277,12 +277,12 @@ class TestAssetTransactionItem:
             username="testuser123",
             asset_id="BTC",
             transaction_type=AssetTransactionType.BUY,
-            quantity=Decimal("2.5"),
-            price=Decimal("50000.00"),
-            total_amount=Decimal("125000.00"),
+            quantity="2.5",  # String for PynamoDB
+            price="50000.00",  # String for PynamoDB
+            total_amount="125000.00",  # String for PynamoDB
             order_id="order-123",
             status=AssetTransactionStatus.COMPLETED,
-            created_at=now.isoformat()
+            created_at=now
         )
         transaction = transaction_item.to_asset_transaction()
         assert transaction.username == "testuser123"
@@ -303,27 +303,26 @@ class TestAssetTransactionItem:
             "username": "testuser123",
             "asset_id": "BTC",
             "transaction_type": AssetTransactionType.BUY,
-            "quantity": Decimal("2.5"),
-            "price": Decimal("50000.00"),
-            "total_amount": Decimal("125000.00"),
+            "quantity": "2.5",  # String for PynamoDB
+            "price": "50000.00",  # String for PynamoDB
+            "total_amount": "125000.00",  # String for PynamoDB
             "order_id": "order-123",
             "status": AssetTransactionStatus.COMPLETED,
             "created_at": now.isoformat()
         }
         transaction_item = AssetTransactionItem(**transaction_item_data)
 
-        # Test model_dump
-        json_data = transaction_item.model_dump()
-        assert json_data["Pk"] == "ASSET_TRANS#testuser123#BTC"
-        assert json_data["Sk"] == "2024-01-01T12:00:00Z"
-        assert json_data["username"] == "testuser123"
-        assert json_data["asset_id"] == "BTC"
-        assert json_data["transaction_type"] == AssetTransactionType.BUY
-        assert json_data["quantity"] == Decimal("2.5")
-        assert json_data["price"] == Decimal("50000.00")
-        assert json_data["total_amount"] == Decimal("125000.00")
-        assert json_data["order_id"] == "order-123"
-        assert json_data["status"] == AssetTransactionStatus.COMPLETED
+        # Test direct attribute access (PynamoDB models don't have model_dump)
+        assert transaction_item.Pk == "ASSET_TRANS#testuser123#BTC"
+        assert transaction_item.Sk == "2024-01-01T12:00:00Z"
+        assert transaction_item.username == "testuser123"
+        assert transaction_item.asset_id == "BTC"
+        assert transaction_item.transaction_type == AssetTransactionType.BUY
+        assert transaction_item.quantity == "2.5"  # Stored as string in PynamoDB
+        assert transaction_item.price == "50000.00"  # Stored as string in PynamoDB
+        assert transaction_item.total_amount == "125000.00"  # Stored as string in PynamoDB
+        assert transaction_item.order_id == "order-123"
+        assert transaction_item.status == AssetTransactionStatus.COMPLETED
 
 
 class TestAssetTransactionEnums:

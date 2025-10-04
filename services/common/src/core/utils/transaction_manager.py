@@ -13,6 +13,7 @@ from typing import Any, Callable, Dict, Optional
 
 from ...data.entities.asset import AssetTransaction, AssetTransactionType
 from ...data.entities.order import Order, OrderStatus, OrderType
+from ...data.entities.entity_constants import OrderFields
 from ...data.entities.user import (BalanceTransaction, TransactionStatus,
                                    TransactionType)
 from ...data.entities.entity_constants import TransactionFields
@@ -270,7 +271,7 @@ class TransactionManager:
                 now = datetime.now(timezone.utc)
                 order = Order(
                     Pk=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
-                    Sk="ORDER",
+                    Sk=OrderFields.SK_VALUE,
                     order_id=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
                     username=username,
                     order_type=order_type,
@@ -391,7 +392,7 @@ class TransactionManager:
                 now = datetime.now(timezone.utc)
                 order = Order(
                     Pk=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
-                    Sk="ORDER",
+                    Sk=OrderFields.SK_VALUE,
                     order_id=f"order_{uuid.uuid4().hex[:8]}_{int(now.timestamp())}",
                     username=username,
                     order_type=order_type,

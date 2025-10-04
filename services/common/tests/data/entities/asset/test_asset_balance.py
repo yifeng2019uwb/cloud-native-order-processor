@@ -146,6 +146,7 @@ class TestAssetBalanceItem:
         assert balance.username == "testuser123"
         assert balance.asset_id == "BTC"
         assert balance.quantity == Decimal("10.5")
+
     def test_asset_balance_item_json_serialization(self):
         """Test asset balance item JSON serialization"""
         now = datetime.now(timezone.utc)
@@ -158,10 +159,9 @@ class TestAssetBalanceItem:
         balance_item.created_at = now
         balance_item.updated_at = now
 
-        # Test model_dump
-        json_data = balance_item.model_dump()
-        assert json_data["Pk"] == "testuser123"
-        assert json_data["Sk"] == "ASSET#BTC"
-        assert json_data["username"] == "testuser123"
-        assert json_data["asset_id"] == "BTC"
-        assert json_data["quantity"] == "10.5"  # String in PynamoDB
+        # Test direct attribute access (PynamoDB models don't have model_dump)
+        assert balance_item.Pk == "testuser123"
+        assert balance_item.Sk == "ASSET#BTC"
+        assert balance_item.username == "testuser123"
+        assert balance_item.asset_id == "BTC"
+        assert balance_item.quantity == "10.5"  # String in PynamoDB
