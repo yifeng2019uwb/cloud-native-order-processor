@@ -12,7 +12,9 @@ from fastapi import Request
 from common.data.database.dependencies import get_asset_dao
 from common.data.dao.inventory.asset_dao import AssetDAO
 
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, Loggers
+from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
+
 
 logger = BaseLogger(Loggers.INVENTORY)
 
@@ -27,7 +29,6 @@ def get_request_id_from_request(request: Request) -> str:
     Returns:
         Request ID string for correlation across services
     """
-    from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
     return request.headers.get(RequestHeaders.REQUEST_ID) or RequestHeaderDefaults.REQUEST_ID_DEFAULT
 
 

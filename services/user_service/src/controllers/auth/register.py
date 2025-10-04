@@ -22,7 +22,7 @@ from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInternalServerException
 )
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
 from common.shared.constants.error_messages import ErrorMessages
 from common.shared.constants.api_responses import APIResponseDescriptions
 from common.shared.constants.http_status import HTTPStatus
@@ -91,10 +91,10 @@ def register_user(
         message=f"Register attempt from {request.client.host if request.client else 'unknown'}",
         request_id=request_id,
         extra={
-            "username": user_data.username,
-            "email": user_data.email,
-            "user_agent": request.headers.get("user-agent", "unknown"),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            LogFields.USERNAME: user_data.username,
+            LogFields.EMAIL: user_data.email,
+            LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT),
+            LogFields.TIMESTAMP: datetime.now(timezone.utc).isoformat()
         }
     )
 
@@ -130,12 +130,12 @@ def register_user(
 
         # Audit log successful registration
         audit_logger.log_security_event(
-            "user_registration_success",
+            LogActions.USER_REGISTRATION_SUCCESS,
             user_data.username,
             {
-                "email": user_data.email,
-                "client_ip": request.client.host if request.client else "unknown",
-                "user_agent": request.headers.get("user-agent", "unknown")
+                LogFields.EMAIL: user_data.email,
+                LogFields.CLIENT_IP: request.client.host if request.client else LogExtraDefaults.UNKNOWN_IP,
+                LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT)
             }
         )
 
@@ -147,13 +147,13 @@ def register_user(
     except CNOPUserAlreadyExistsException as e:
         # Audit log failed registration due to user already exists
         audit_logger.log_security_event(
-            "user_registration_failed",
+            LogActions.USER_REGISTRATION_FAILED,
             user_data.username,
             {
-                "reason": "user_already_exists",
-                "email": user_data.email,
-                "client_ip": request.client.host if request.client else "unknown",
-                "user_agent": request.headers.get("user-agent", "unknown")
+                LogFields.ERROR_TYPE: "user_already_exists",
+                LogFields.EMAIL: user_data.email,
+                LogFields.CLIENT_IP: request.client.host if request.client else LogExtraDefaults.UNKNOWN_IP,
+                LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT)
             }
         )
         # Re-raise the exception as it should be handled by the exception mapper
@@ -161,13 +161,13 @@ def register_user(
     except CNOPUserValidationException as e:
         # Audit log failed registration due to validation error
         audit_logger.log_security_event(
-            "user_registration_failed",
+            LogActions.USER_REGISTRATION_FAILED,
             user_data.username,
             {
-                "reason": "validation_error",
-                "email": user_data.email,
-                "client_ip": request.client.host if request.client else "unknown",
-                "user_agent": request.headers.get("user-agent", "unknown")
+                LogFields.ERROR_TYPE: LogFields.VALIDATION_ERROR,
+                LogFields.EMAIL: user_data.email,
+                LogFields.CLIENT_IP: request.client.host if request.client else LogExtraDefaults.UNKNOWN_IP,
+                LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT)
             }
         )
         # Re-raise the exception as it should be handled by the exception mapper
@@ -175,14 +175,14 @@ def register_user(
     except Exception as e:
         # Audit log unexpected error during registration
         audit_logger.log_security_event(
-            "user_registration_failed",
+            LogActions.USER_REGISTRATION_FAILED,
             user_data.username,
             {
-                "reason": "unexpected_error",
-                "error": str(e),
-                "email": user_data.email,
-                "client_ip": request.client.host if request.client else "unknown",
-                "user_agent": request.headers.get("user-agent", "unknown")
+                LogFields.ERROR_TYPE: LogFields.ERROR,
+                LogFields.ERROR: str(e),
+                LogFields.EMAIL: user_data.email,
+                LogFields.CLIENT_IP: request.client.host if request.client else LogExtraDefaults.UNKNOWN_IP,
+                LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT)
             }
         )
         # Log unexpected errors and convert to internal server exception

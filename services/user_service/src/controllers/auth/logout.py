@@ -12,7 +12,7 @@ from api_models.auth.logout import (
 )
 from api_models.shared.common import ErrorResponse
 from common.auth.security import AuditLogger
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields
 from common.shared.constants.api_responses import APIResponseDescriptions
 from common.shared.constants.http_status import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
@@ -75,7 +75,7 @@ def logout_user(
         audit_logger.log_security_event(
             LogActions.SECURITY_EVENT,
             current_user.username,
-            {"error": str(e)}
+            {LogFields.ERROR: str(e)}
         )
 
         return LogoutErrorResponse(

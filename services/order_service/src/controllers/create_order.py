@@ -22,7 +22,7 @@ from common.exceptions import (
     CNOPLockAcquisitionException
 )
 from common.exceptions.shared_exceptions import CNOPInternalServerException
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
 from common.shared.constants.http_status import HTTPStatus
 from common.shared.constants.api_responses import APIResponseDescriptions
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys, API_ORDERS_ROOT
@@ -105,11 +105,11 @@ async def create_order(
         user=current_user["username"],
         request_id=request_id,
         extra={
-            "order_type": order_data.order_type.value,
-            "asset_id": order_data.asset_id,
-            "quantity": str(order_data.quantity),
-            "user_agent": request.headers.get(USER_AGENT_HEADER, UNKNOWN_VALUE),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            LogFields.ORDER_TYPE: order_data.order_type.value,
+            LogFields.ASSET_ID: order_data.asset_id,
+            LogFields.QUANTITY: str(order_data.quantity),
+            LogFields.USER_AGENT: request.headers.get(USER_AGENT_HEADER, LogExtraDefaults.UNKNOWN_USER_AGENT),
+            LogFields.TIMESTAMP: datetime.now(timezone.utc).isoformat()
         }
     )
 

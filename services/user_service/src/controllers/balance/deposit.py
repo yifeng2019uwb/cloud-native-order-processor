@@ -17,7 +17,7 @@ from common.exceptions import (
     CNOPEntityNotFoundException,
     CNOPLockAcquisitionException
 )
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
 from common.shared.constants.error_messages import ErrorMessages
 from common.shared.constants.api_responses import APIResponseDescriptions
 from common.shared.constants.http_status import HTTPStatus
@@ -91,9 +91,9 @@ async def deposit_funds(
         user=current_user.username,
         request_id=request_id,
         extra={
-            "amount": str(deposit_data.amount),
-            "user_agent": request.headers.get("user-agent", "unknown"),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            LogFields.AMOUNT: str(deposit_data.amount),
+            LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT),
+            LogFields.TIMESTAMP: datetime.now(timezone.utc).isoformat()
         }
     )
 

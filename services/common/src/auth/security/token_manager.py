@@ -20,7 +20,7 @@ from jose import JWTError, jwt
 from ...data.entities.user import DEFAULT_USER_ROLE
 from ...exceptions.shared_exceptions import (CNOPTokenExpiredException,
                                              CNOPTokenInvalidException)
-from ...shared.logging import BaseLogger, LogActions, Loggers
+from ...shared.logging import BaseLogger, LogActions, Loggers, LogFields, LogExtraDefaults
 
 # Create logger instance for token management
 logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
@@ -75,7 +75,7 @@ class TokenManager:
                 action=LogActions.SECURITY_EVENT,
                 message=f"Access token created for user {username} with role {role}",
                 user=username,
-                extra={"role": role, "expires_in_hours": self.jwt_expiration_hours}
+                extra={LogFields.ROLE: role, LogFields.EXPIRES_IN_HOURS: self.jwt_expiration_hours}
             )
 
             return {
@@ -89,7 +89,7 @@ class TokenManager:
                 action=LogActions.ERROR,
                 message=f"Error creating access token for user {username}",
                 user=username,
-                extra={"error": str(e), "error_type": type(e).__name__}
+                extra={LogFields.ERROR: str(e), LogFields.ERROR_TYPE: type(e).__name__}
             )
             raise CNOPTokenInvalidException("Token creation failed")
 
@@ -115,7 +115,7 @@ class TokenManager:
                 logger.warning(
                     action=LogActions.ERROR,
                     message="Invalid token type",
-                    extra={"token_type": payload.get("type")}
+                    extra={LogFields.TOKEN_TYPE: payload.get("type")}
                 )
                 raise CNOPTokenInvalidException("Invalid token type")
 
@@ -154,7 +154,7 @@ class TokenManager:
             logger.error(
                 action=LogActions.ERROR,
                 message=f"Unexpected error verifying token: {e}",
-                extra={"error": str(e), "error_type": type(e).__name__}
+                extra={LogFields.ERROR: str(e), LogFields.ERROR_TYPE: type(e).__name__}
             )
             raise CNOPTokenInvalidException("Token verification failed")
 
@@ -186,7 +186,7 @@ class TokenManager:
                 logger.warning(
                     action=LogActions.ERROR,
                     message="Invalid token type: %s (expected: access_token)",
-                    extra={"token_type": payload.get("type")}
+                    extra={LogFields.TOKEN_TYPE: payload.get("type")}
                 )
                 raise CNOPTokenInvalidException("Invalid token type")
 
@@ -247,7 +247,7 @@ class TokenManager:
             logger.error(
                 action=LogActions.ERROR,
                 message=f"Unexpected error during comprehensive token validation: {e}",
-                extra={"error": str(e), "error_type": type(e).__name__}
+                extra={LogFields.ERROR: str(e), LogFields.ERROR_TYPE: type(e).__name__}
             )
             raise CNOPTokenInvalidException("Token validation failed")
 
@@ -272,7 +272,7 @@ class TokenManager:
             logger.error(
                 action=LogActions.ERROR,
                 message=f"Error decoding token payload: {e}",
-                extra={"error": str(e), "error_type": type(e).__name__}
+                extra={LogFields.ERROR: str(e), LogFields.ERROR_TYPE: type(e).__name__}
             )
             raise CNOPTokenInvalidException("Token decode failed")
 

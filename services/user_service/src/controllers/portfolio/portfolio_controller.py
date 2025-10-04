@@ -21,7 +21,7 @@ from common.exceptions.shared_exceptions import (
     CNOPInternalServerException,
     CNOPUserNotFoundException
 )
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields
 from user_exceptions import CNOPUserValidationException
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from validation_enums import ValidationActions
@@ -98,8 +98,8 @@ def get_user_portfolio(
         user=username,
         request_id=request_id,
         extra={
-            "user_agent": request.headers.get(RequestHeaders.USER_AGENT, RequestHeaderDefaults.USER_AGENT_DEFAULT),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            LogFields.USER_AGENT: request.headers.get(RequestHeaders.USER_AGENT, RequestHeaderDefaults.USER_AGENT_DEFAULT),
+            LogFields.TIMESTAMP: datetime.now(timezone.utc).isoformat()
         }
     )
 

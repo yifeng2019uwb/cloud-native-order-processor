@@ -15,7 +15,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from ...shared.logging import BaseLogger, LogActions, Loggers
+from ...shared.logging import BaseLogger, LogActions, Loggers, LogFields
 
 # Create logger instance for security events
 logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
@@ -52,9 +52,9 @@ class AuditLogger:
         # Build extra context
         extra = {}
         if ip_address:
-            extra["ip_address"] = ip_address
+            extra[LogFields.IP_ADDRESS] = ip_address
         if user_agent:
-            extra["user_agent"] = user_agent
+            extra[LogFields.USER_AGENT] = user_agent
         if details:
             extra.update(details)
 
@@ -112,7 +112,7 @@ class AuditLogger:
         self.log_security_event(
             LogActions.AUTH_FAILED,
             username,
-            details={"reason": reason},
+            details={LogFields.AUDIT_REASON: reason},
             ip_address=ip_address,
             user_agent=user_agent
         )
@@ -157,7 +157,7 @@ class AuditLogger:
         self.log_security_event(
             LogActions.SECURITY_EVENT,
             username,
-            details={"token_type": token_type},
+            details={LogFields.TOKEN_TYPE: token_type},
             ip_address=ip_address
         )
 
@@ -175,6 +175,6 @@ class AuditLogger:
         self.log_security_event(
             LogActions.ACCESS_DENIED,  # Use our defined constant
             username,
-            details={"resource": resource, "reason": reason},
+            details={LogFields.RESOURCE: resource, LogFields.AUDIT_REASON: reason},
             ip_address=ip_address
         )

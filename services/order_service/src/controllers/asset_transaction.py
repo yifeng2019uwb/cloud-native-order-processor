@@ -21,7 +21,7 @@ from common.exceptions import (
     CNOPEntityNotFoundException
 )
 from common.exceptions.shared_exceptions import CNOPInternalServerException
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
 from common.shared.constants.http_status import HTTPStatus
 from common.shared.constants.api_responses import APIResponseDescriptions
 from api_info_enum import ApiTags, ApiResponseKeys, API_ASSET_TRANSACTIONS
@@ -88,11 +88,11 @@ def get_asset_transactions(
         user=current_user["username"],
         request_id=request_id,
         extra={
-            "asset_id": asset_id,
-            "limit": limit,
-            "offset": offset,
-            "user_agent": request.headers.get("user-agent", "unknown") if request else "unknown",
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            LogFields.ASSET_ID: asset_id,
+            LogFields.LIMIT: limit,
+            LogFields.OFFSET: offset,
+            LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT) if request else LogExtraDefaults.UNKNOWN_USER_AGENT,
+            LogFields.TIMESTAMP: datetime.now(timezone.utc).isoformat()
         }
     )
 

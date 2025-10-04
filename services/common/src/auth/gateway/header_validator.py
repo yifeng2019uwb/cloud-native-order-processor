@@ -9,6 +9,8 @@ from typing import Dict, Optional
 
 from fastapi import HTTPException, status
 
+from ...shared.constants.request_headers import RequestHeaders
+
 
 class HeaderValidator:
     """
@@ -21,10 +23,10 @@ class HeaderValidator:
     def __init__(self):
         """Initialize the header validator with required header names."""
         self.required_headers = [
-            'X-User-ID',
-            'X-User-Role',
-            'X-Request-ID',
-            'X-Source-Service'
+            RequestHeaders.USER_ID,
+            RequestHeaders.USER_ROLE,
+            RequestHeaders.REQUEST_ID,
+            RequestHeaders.SOURCE_SERVICE
         ]
 
     def validate_gateway_headers(self, headers: Dict[str, str]) -> bool:
@@ -65,10 +67,10 @@ class HeaderValidator:
         self.validate_gateway_headers(headers)
 
         return {
-            'user_id': headers.get('X-User-ID'),
-            'user_role': headers.get('X-User-Role'),
-            'request_id': headers.get('X-Request-ID'),
-            'source_service': headers.get('X-Source-Service')
+            'user_id': headers.get(RequestHeaders.USER_ID),
+            'user_role': headers.get(RequestHeaders.USER_ROLE),
+            'request_id': headers.get(RequestHeaders.REQUEST_ID),
+            'source_service': headers.get(RequestHeaders.SOURCE_SERVICE)
         }
 
     def is_authenticated(self, headers: Dict[str, str]) -> bool:
@@ -109,4 +111,4 @@ class HeaderValidator:
         Returns:
             User ID string or None if not present
         """
-        return headers.get('X-User-ID')
+        return headers.get(RequestHeaders.USER_ID)

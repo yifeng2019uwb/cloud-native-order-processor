@@ -15,7 +15,6 @@ from common.data.dao.inventory.asset_dao import AssetDAO
 from common.core.utils import TransactionManager
 from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
 
-
 def get_request_id_from_request(request: Request) -> str:
     """
     Extract request ID from Request object headers for distributed tracing
@@ -76,7 +75,6 @@ def get_balance_dao_dependency() -> BalanceDAO:
 
 def get_asset_balance_dao_dependency() -> AssetBalanceDAO:
     """Get AssetBalanceDAO instance for asset balance operations"""
-    from common.data.database.dependencies import get_asset_balance_dao
     return get_asset_balance_dao()
 
 
@@ -87,5 +85,4 @@ def get_user_dao_dependency() -> UserDAO:
 
 def get_asset_dao_dependency() -> AssetDAO:
     """Get AssetDAO instance for asset operations"""
-    from common.data.database.dependencies import get_asset_dao
     return get_asset_dao()

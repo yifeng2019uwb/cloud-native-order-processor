@@ -20,6 +20,7 @@ class RequestHeaders(str, Enum):
     AUTHENTICATED = "X-Authenticated"
     SOURCE = "X-Source"
     AUTH_SERVICE = "X-Auth-Service"
+    SOURCE_SERVICE = "X-Source-Service"
     SESSION_ID = "X-Session-ID"
 
 

@@ -9,6 +9,59 @@
 
 ## 📊 Progress Summary
 
+### **2025-01-08: INFRA-008 - Standardize Logging Formats and Field Names** ✅ **COMPLETED**
+
+**Task**: Standardize logging formats, field names, and extra data structures across all services
+
+**Key Achievements**:
+- ✅ **Created Logging Constants**: Added comprehensive LogFields and LogExtraDefaults classes
+- ✅ **Added Audit Constants**: Extended LogActions with security and audit-related constants
+- ✅ **Replaced Hardcoded Fields**: Updated all hardcoded field names in logging extra data across all services
+- ✅ **Fixed Import Issues**: Resolved relative import paths in common package
+- ✅ **Fixed Dependencies**: Added pynamodb to common package setup.py
+
+**Files Updated**:
+- `services/common/src/shared/logging/log_constants.py` - Added LogFields, LogExtraDefaults, audit LogActions
+- `services/common/src/shared/logging/__init__.py` - Updated exports
+- `services/common/src/auth/gateway/header_validator.py` - Fixed import path
+- `services/common/setup.py` - Added pynamodb dependency
+- All service controllers - Replaced hardcoded field names with constants
+
+**Field Names Standardized**:
+- user_agent → LogFields.USER_AGENT
+- timestamp → LogFields.TIMESTAMP
+- client_ip → LogFields.CLIENT_IP
+- amount → LogFields.AMOUNT
+- username → LogFields.USERNAME
+- email → LogFields.EMAIL
+- request_id → LogFields.REQUEST_ID
+- error → LogFields.ERROR
+- asset_id → LogFields.ASSET_ID
+- order_id → LogFields.ORDER_ID
+- quantity → LogFields.QUANTITY
+- limit → LogFields.LIMIT
+- offset → LogFields.OFFSET
+- role → LogFields.ROLE
+- token_type → LogFields.TOKEN_TYPE
+- ip_address → LogFields.IP_ADDRESS
+- audit_reason → LogFields.AUDIT_REASON
+- resource → LogFields.RESOURCE
+
+**Benefits**:
+- **Consistency**: All logging now uses standardized field names
+- **Maintainability**: Easy to update field names across all services
+- **Type Safety**: Constants prevent typos and ensure consistency
+- **Audit Trail**: Comprehensive audit logging for security events
+- **Developer Experience**: Clear, documented field names for logging
+
+**Evidence of Success**:
+- All tests pass across all services
+- No hardcoded field names remain in logging extra data
+- Comprehensive audit logging implemented
+- Dependencies properly resolved
+
+---
+
 ### **2025-10-03: PynamoDB Migration - Complete Data Access Layer Migration** ✅ **COMPLETED**
 
 **Task**: Migrate entire data access layer from `boto3` to `PynamoDB` for all entities within the `common` package
