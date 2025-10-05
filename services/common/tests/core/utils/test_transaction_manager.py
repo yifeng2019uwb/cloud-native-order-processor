@@ -32,10 +32,12 @@ from src.exceptions import CNOPEntityValidationException
 from src.exceptions.shared_exceptions import (CNOPEntityNotFoundException,
                                               CNOPInsufficientBalanceException)
 
-
-
 class TestTransactionManager:
     """Test TransactionManager class"""
+
+    # Define patch paths as class constants
+    PATH_ACQUIRE_LOCK = f'{lock_manager.__name__}.acquire_lock'
+    PATH_RELEASE_LOCK = f'{lock_manager.__name__}.release_lock'
 
     @pytest.fixture
     def mock_daos(self):
@@ -108,10 +110,8 @@ class TestTransactionManager:
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
         # Mock both acquire_lock and release_lock functions
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -132,10 +132,8 @@ class TestTransactionManager:
         """Test deposit operation when balance update fails"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -152,10 +150,8 @@ class TestTransactionManager:
         """Test successful withdrawal operation"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -176,10 +172,8 @@ class TestTransactionManager:
         """Test withdrawal with insufficient balance"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -196,10 +190,8 @@ class TestTransactionManager:
         """Test withdrawal when user is not found"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -215,10 +207,8 @@ class TestTransactionManager:
         """Test successful buy order creation with balance update"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -247,10 +237,8 @@ class TestTransactionManager:
         """Test successful sell order creation with balance update"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -275,9 +263,7 @@ class TestTransactionManager:
     async def test_lock_acquisition_failure(self, transaction_manager, mock_daos):
         """Test operations when lock acquisition fails"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
-
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock:
             mock_acquire_lock.side_effect = CNOPLockAcquisitionException("Lock acquisition failed")
 
             with pytest.raises(CNOPDatabaseOperationException, match="Service temporarily unavailable"):
@@ -288,10 +274,8 @@ class TestTransactionManager:
         """Test operations when lock release fails"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.side_effect = Exception("Lock release failed")
@@ -312,10 +296,8 @@ class TestTransactionManager:
         """Test complex transaction scenario with multiple operations"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -338,10 +320,8 @@ class TestTransactionManager:
         """Test comprehensive error handling in transaction operations"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True

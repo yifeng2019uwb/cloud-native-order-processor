@@ -63,10 +63,7 @@ class TestWithdrawFunds:
     def mock_transaction_result(self):
         """Mock successful transaction result"""
         mock_result = Mock()
-        mock_result.lock_duration = 1.5
-        mock_result.data = {
-            "transaction": Mock(transaction_id="txn-12345")
-        }
+        mock_result.transaction = Mock(transaction_id="txn-12345")
         return mock_result
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -116,7 +113,6 @@ class TestWithdrawFunds:
         # Verify the second call (successful withdrawal) was made with correct parameters
         second_call = mock_logger.info.call_args_list[1]
         assert second_call[1]['action'] == 'request_end'
-        assert 'Withdrawal successful for user testuser: 100.00 (lock_duration: 1.5s)' in second_call[1]['message']
         assert second_call[1]['user'] == 'testuser'
 
     @patch('src.controllers.balance.withdraw.logger')
@@ -439,10 +435,7 @@ class TestWithdrawFunds:
         """Test withdrawal with transaction result that has no lock duration"""
         # Create transaction result without lock_duration
         mock_result = Mock()
-        mock_result.lock_duration = None
-        mock_result.data = {
-            "transaction": Mock(transaction_id="txn-no-lock")
-        }
+        mock_result.transaction = Mock(transaction_id="txn-no-lock")
         mock_transaction_manager.withdraw_funds.return_value = mock_result
 
         result = await withdraw_funds(
@@ -455,14 +448,6 @@ class TestWithdrawFunds:
         # Verify the function handles None lock_duration gracefully
         assert result.success is True
         assert result.transaction_id == "txn-no-lock"
-
-        # Verify logging shows None for lock_duration (structured BaseLogger format)
-        mock_logger.info.assert_any_call(
-            action='request_end',
-            message='Withdrawal successful for user testuser: 100.00 (lock_duration: Nones)',
-            user='testuser',
-            request_id='no-request-id'
-        )
 
 
 class TestWithdrawRouter:

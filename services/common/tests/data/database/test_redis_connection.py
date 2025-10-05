@@ -9,6 +9,7 @@ import redis
 from redis.connection import ConnectionPool
 from redis.exceptions import ConnectionError, RedisError, TimeoutError
 
+from src.data.database import redis_connection
 from src.data.database.redis_config import get_redis_connection_params
 from src.data.database.redis_connection import (RedisConnectionManager,
                                                 close_redis_connections,
@@ -21,6 +22,11 @@ from src.data.database.redis_connection import (RedisConnectionManager,
 
 class TestRedisConnectionManager:
     """Test RedisConnectionManager class"""
+
+    # Define patch paths as class constants
+    PATH_REDIS_MANAGER = f'{redis_connection.__name__}._redis_manager'
+    PATH_MANAGER_CLASS = f'{redis_connection.__name__}.RedisConnectionManager'
+    PATH_GET_MANAGER = f'{redis_connection.__name__}.get_redis_manager'
 
     @patch('src.data.database.redis_connection.get_redis_config')
     def test_init(self, mock_get_config):
@@ -367,10 +373,15 @@ class TestRedisConnectionManager:
 class TestGlobalFunctions:
     """Test global Redis functions"""
 
+    # Define patch paths as class constants
+    PATH_REDIS_MANAGER = f'{redis_connection.__name__}._redis_manager'
+    PATH_MANAGER_CLASS = f'{redis_connection.__name__}.RedisConnectionManager'
+    PATH_GET_MANAGER = f'{redis_connection.__name__}.get_redis_manager'
+
     def test_get_redis_manager_first_time(self):
         """Test getting Redis manager for the first time"""
-        with patch('src.data.database.redis_connection._redis_manager', None):
-            with patch('src.data.database.redis_connection.RedisConnectionManager') as mock_manager_class:
+        with patch(self.PATH_REDIS_MANAGER, None):
+            with patch(self.PATH_MANAGER_CLASS) as mock_manager_class:
                 mock_manager = Mock()
                 mock_manager_class.return_value = mock_manager
 
@@ -383,7 +394,7 @@ class TestGlobalFunctions:
         """Test getting Redis manager on subsequent calls"""
         mock_manager = Mock()
 
-        with patch('src.data.database.redis_connection._redis_manager', mock_manager):
+        with patch(self.PATH_REDIS_MANAGER, mock_manager):
             result = get_redis_manager()
 
             assert result == mock_manager
@@ -395,7 +406,7 @@ class TestGlobalFunctions:
         mock_client = Mock()
         mock_manager.get_client.return_value = mock_client
 
-        with patch('src.data.database.redis_connection.get_redis_manager', return_value=mock_manager):
+        with patch(self.PATH_GET_MANAGER, return_value=mock_manager):
             result = get_redis_client()
 
             mock_manager.get_client.assert_called_once()
@@ -406,7 +417,7 @@ class TestGlobalFunctions:
         mock_manager = Mock()
         mock_manager.test_connection.return_value = True
 
-        with patch('src.data.database.redis_connection.get_redis_manager', return_value=mock_manager):
+        with patch(self.PATH_GET_MANAGER, return_value=mock_manager):
             result = test_redis_connection()
 
             mock_manager.test_connection.assert_called_once()
@@ -416,7 +427,7 @@ class TestGlobalFunctions:
         """Test closing all Redis connections"""
         mock_manager = Mock()
 
-        with patch('src.data.database.redis_connection._redis_manager', mock_manager):
+        with patch(self.PATH_REDIS_MANAGER, mock_manager):
             close_redis_connections()
 
             mock_manager.close.assert_called_once()
@@ -426,13 +437,18 @@ class TestGlobalFunctions:
 
     def test_close_redis_connections_no_manager(self):
         """Test closing Redis connections when no manager exists"""
-        with patch('src.data.database.redis_connection._redis_manager', None):
+        with patch(self.PATH_REDIS_MANAGER, None):
             # Should not raise any exceptions
             close_redis_connections()
 
 
 class TestRedisUtilityFunctions:
     """Test Redis utility functions"""
+
+    # Define patch paths as class constants
+    PATH_REDIS_MANAGER = f'{redis_connection.__name__}._redis_manager'
+    PATH_MANAGER_CLASS = f'{redis_connection.__name__}.RedisConnectionManager'
+    PATH_GET_MANAGER = f'{redis_connection.__name__}.get_redis_manager'
 
     @patch('src.data.database.redis_connection.logger')
     def test_redis_set_success(self, mock_logger):
@@ -450,7 +466,7 @@ class TestRedisUtilityFunctions:
         mock_context.__exit__ = Mock(return_value=None)
         mock_manager.get_connection.return_value = mock_context
 
-        with patch('src.data.database.redis_connection.get_redis_manager', return_value=mock_manager):
+        with patch(self.PATH_GET_MANAGER, return_value=mock_manager):
             result = redis_set("test_key", "test_value")
 
             mock_client.set.assert_called_once_with("test_key", "test_value")
@@ -472,7 +488,7 @@ class TestRedisUtilityFunctions:
         mock_context.__exit__ = Mock(return_value=None)
         mock_manager.get_connection.return_value = mock_context
 
-        with patch('src.data.database.redis_connection.get_redis_manager', return_value=mock_manager):
+        with patch(self.PATH_GET_MANAGER, return_value=mock_manager):
             result = redis_set("test_key", "test_value", expire=3600)
 
             mock_client.setex.assert_called_once_with("test_key", 3600, "test_value")
@@ -494,7 +510,7 @@ class TestRedisUtilityFunctions:
         mock_context.__exit__ = Mock(return_value=None)
         mock_manager.get_connection.return_value = mock_context
 
-        with patch('src.data.database.redis_connection.get_redis_manager', return_value=mock_manager):
+        with patch(self.PATH_GET_MANAGER, return_value=mock_manager):
             result = redis_set("test_key", "test_value")
 
             assert result is False
@@ -515,7 +531,7 @@ class TestRedisUtilityFunctions:
         mock_context.__exit__ = Mock(return_value=None)
         mock_manager.get_connection.return_value = mock_context
 
-        with patch('src.data.database.redis_connection.get_redis_manager', return_value=mock_manager):
+        with patch(self.PATH_GET_MANAGER, return_value=mock_manager):
             result = redis_get("test_key")
 
             mock_client.get.assert_called_once_with("test_key")
@@ -537,7 +553,7 @@ class TestRedisUtilityFunctions:
         mock_context.__exit__ = Mock(return_value=None)
         mock_manager.get_connection.return_value = mock_context
 
-        with patch('src.data.database.redis_connection.get_redis_manager', return_value=mock_manager):
+        with patch(self.PATH_GET_MANAGER, return_value=mock_manager):
             result = redis_get("test_key")
 
             assert result is None
@@ -558,7 +574,7 @@ class TestRedisUtilityFunctions:
         mock_context.__exit__ = Mock(return_value=None)
         mock_manager.get_connection.return_value = mock_context
 
-        with patch('src.data.database.redis_connection.get_redis_manager', return_value=mock_manager):
+        with patch(self.PATH_GET_MANAGER, return_value=mock_manager):
             result = redis_delete("test_key")
 
             mock_client.delete.assert_called_once_with("test_key")
@@ -580,7 +596,7 @@ class TestRedisUtilityFunctions:
         mock_context.__exit__ = Mock(return_value=None)
         mock_manager.get_connection.return_value = mock_context
 
-        with patch('src.data.database.redis_connection.get_redis_manager', return_value=mock_manager):
+        with patch(self.PATH_GET_MANAGER, return_value=mock_manager):
             result = redis_delete("test_key")
 
             assert result is False
@@ -601,7 +617,7 @@ class TestRedisUtilityFunctions:
         mock_context.__exit__ = Mock(return_value=None)
         mock_manager.get_connection.return_value = mock_context
 
-        with patch('src.data.database.redis_connection.get_redis_manager', return_value=mock_manager):
+        with patch(self.PATH_GET_MANAGER, return_value=mock_manager):
             result = redis_exists("test_key")
 
             mock_client.exists.assert_called_once_with("test_key")
@@ -623,7 +639,7 @@ class TestRedisUtilityFunctions:
         mock_context.__exit__ = Mock(return_value=None)
         mock_manager.get_connection.return_value = mock_context
 
-        with patch('src.data.database.redis_connection.get_redis_manager', return_value=mock_manager):
+        with patch(self.PATH_GET_MANAGER, return_value=mock_manager):
             result = redis_exists("test_key")
 
             assert result is False

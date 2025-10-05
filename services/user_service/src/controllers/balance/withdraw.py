@@ -107,12 +107,12 @@ async def withdraw_funds(
             amount=withdraw_data.amount
         )
 
-        logger.info(action=LogActions.REQUEST_END, message=f"Withdrawal successful for user {current_user.username}: {withdraw_data.amount} (lock_duration: {result.lock_duration}s)", user=current_user.username, request_id=request_id)
+        logger.info(action=LogActions.REQUEST_END, message=f"Withdrawal successful for user {current_user.username}: {withdraw_data.amount}", user=current_user.username, request_id=request_id)
 
         return WithdrawResponse(
             success=True,
             message=f"Successfully withdrew ${withdraw_data.amount}",
-            transaction_id=str(result.data["transaction"].transaction_id),
+            transaction_id=str(result.transaction.transaction_id),
             timestamp=datetime.utcnow()
         )
 

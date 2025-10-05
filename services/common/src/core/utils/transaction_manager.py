@@ -40,6 +40,10 @@ class TransactionResult:
         asset_id: Optional[str] = None,
         asset_quantity: Optional[Decimal] = None,  # Asset quantity involved
         asset_balance: Optional[AssetBalance] = None,  # Final asset balance
+        # Order information (Required for order operations, None for deposit/withdraw)
+        order: Optional[Order] = None,
+        # Transaction information (Required for deposit/withdraw, None for orders)
+        transaction: Optional[BalanceTransaction] = None,
         # Error details (Only when status is FAILED)
         error: Optional[str] = None
     ):
@@ -52,6 +56,12 @@ class TransactionResult:
         self.asset_id = asset_id
         self.asset_quantity = asset_quantity
         self.asset_balance = asset_balance
+
+        # Order information (Required for order operations, None for deposit/withdraw)
+        self.order = order
+
+        # Transaction information (Required for deposit/withdraw, None for orders)
+        self.transaction = transaction
 
         # Error details (Only when status is FAILED)
         self.error = error
@@ -160,7 +170,8 @@ class TransactionManager:
                     status=TransactionStatus.COMPLETED,
                     transaction_type=TransactionType.DEPOSIT,
                     transaction_amount=amount,
-                    balance=balance
+                    balance=balance,
+                    transaction=created_transaction
                 )
 
         except CNOPLockAcquisitionException as e:
@@ -258,7 +269,8 @@ class TransactionManager:
                     status=TransactionStatus.COMPLETED,
                     transaction_type=TransactionType.WITHDRAW,
                     transaction_amount=amount,
-                    balance=updated_balance
+                    balance=updated_balance,
+                    transaction=created_transaction
                 )
 
         except CNOPLockAcquisitionException as e:
@@ -397,7 +409,8 @@ class TransactionManager:
                     balance=updated_balance,
                     asset_id=created_order.asset_id,
                     asset_quantity=asset_quantity,
-                    asset_balance=updated_asset_balance
+                    asset_balance=updated_asset_balance,
+                    order=created_order
                 )
 
         except CNOPLockAcquisitionException as e:
@@ -513,7 +526,8 @@ class TransactionManager:
                     balance=updated_balance,
                     asset_id=created_order.asset_id,
                     asset_quantity=asset_amount,
-                    asset_balance=updated_asset_balance
+                    asset_balance=updated_asset_balance,
+                    order=created_order
                 )
 
         except CNOPLockAcquisitionException as e:

@@ -107,12 +107,12 @@ async def deposit_funds(
             amount=deposit_data.amount
         )
 
-        logger.info(action=LogActions.REQUEST_END, message=f"Deposit successful for user {current_user.username}: {deposit_data.amount} (lock_duration: {result.lock_duration}s)", user=current_user.username, request_id=request_id)
+        logger.info(action=LogActions.REQUEST_END, message=f"Deposit successful for user {current_user.username}: {deposit_data.amount}", user=current_user.username, request_id=request_id)
 
         return DepositResponse(
             success=True,
             message=f"Successfully deposited ${deposit_data.amount}",
-            transaction_id=str(result.data["transaction"].transaction_id),
+            transaction_id=str(result.transaction.transaction_id),
             timestamp=datetime.utcnow()
         )
 

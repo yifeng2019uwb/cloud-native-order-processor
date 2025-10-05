@@ -54,10 +54,7 @@ class TestDepositFunds:
     def mock_transaction_result(self):
         """Mock transaction result"""
         result = Mock()
-        result.lock_duration = 1.5
-        result.data = {
-            "transaction": Mock(transaction_id="txn_12345")
-        }
+        result.transaction = Mock(transaction_id="txn_12345")
         return result
 
     @pytest.mark.asyncio

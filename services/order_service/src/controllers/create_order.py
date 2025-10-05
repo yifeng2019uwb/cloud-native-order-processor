@@ -149,9 +149,9 @@ async def create_order(
 
             logger.info(
                 action=LogActions.REQUEST_END,
-                message=f"Buy order executed successfully: order_id={result.data['order'].order_id}, "
+                message=f"Buy order executed successfully: order_id={result.order.order_id}, "
                        f"asset={order_data.asset_id}, quantity={order_data.quantity}, "
-                       f"total_cost={total_amount}, lock_duration={result.lock_duration}s",
+                       f"total_cost={total_amount}",
                 user=current_user['username'],
                 request_id=request_id
             )
@@ -169,9 +169,9 @@ async def create_order(
 
             logger.info(
                 action=LogActions.REQUEST_END,
-                message=f"Sell order executed successfully: order_id={result.data['order'].order_id}, "
+                message=f"Sell order executed successfully: order_id={result.order.order_id}, "
                        f"asset={order_data.asset_id}, quantity={order_data.quantity}, "
-                       f"asset_amount={total_amount}, lock_duration={result.lock_duration}s",
+                       f"asset_amount={total_amount}",
                 user=current_user['username'],
                 request_id=request_id
             )
@@ -180,7 +180,7 @@ async def create_order(
             raise CNOPOrderValidationException(f"Unsupported order type: {order_data.order_type.value}")
 
         # Extract order from transaction result
-        created_order = result.data["order"]
+        created_order = result.order
 
         # Create response data
         order_data_response = OrderData(

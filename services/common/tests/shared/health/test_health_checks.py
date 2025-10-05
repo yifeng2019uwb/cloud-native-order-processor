@@ -10,6 +10,8 @@ import pytest
 from fastapi import HTTPException
 
 # Local imports
+from src.shared.health import health_checks
+from src.data.database import dynamodb_connection
 from src.shared.health.health_checks import (HealthChecker,
                                              HealthCheckResponse,
                                              create_health_checker,
@@ -18,6 +20,10 @@ from src.shared.health.health_checks import (HealthChecker,
 
 class TestHealthCheckResponse:
     """Test HealthCheckResponse class"""
+
+    # Define patch paths as class constants
+    PATH_GET_DB_HEALTH = f'{health_checks.__name__}.get_database_health'
+    PATH_GET_MANAGER = f'{dynamodb_connection.__name__}.get_dynamodb_manager'
 
     def test_health_check_response_creation(self):
         """Test creating a HealthCheckResponse"""
@@ -47,6 +53,10 @@ class TestHealthCheckResponse:
 class TestHealthChecker:
     """Test HealthChecker class"""
 
+    # Define patch paths as class constants
+    PATH_GET_DB_HEALTH = f'{health_checks.__name__}.get_database_health'
+    PATH_GET_MANAGER = f'{dynamodb_connection.__name__}.get_dynamodb_manager'
+
     @pytest.fixture
     def health_checker(self):
         """Create a HealthChecker instance"""
@@ -73,7 +83,7 @@ class TestHealthChecker:
 
     def test_readiness_check_success(self, health_checker):
         """Test successful readiness check"""
-        with patch('src.shared.health.health_checks.get_database_health') as mock_db_health:
+        with patch(self.PATH_GET_DB_HEALTH) as mock_db_health:
             mock_db_health.return_value = True
 
             result = health_checker.readiness_check()
@@ -86,7 +96,7 @@ class TestHealthChecker:
 
     def test_readiness_check_database_failure(self, health_checker):
         """Test readiness check when database is unhealthy"""
-        with patch('src.shared.health.health_checks.get_database_health') as mock_db_health:
+        with patch(self.PATH_GET_DB_HEALTH) as mock_db_health:
             mock_db_health.return_value = False
 
             with pytest.raises(HTTPException) as exc_info:
@@ -97,7 +107,7 @@ class TestHealthChecker:
 
     def test_readiness_check_exception(self, health_checker):
         """Test readiness check when exception occurs"""
-        with patch('src.shared.health.health_checks.get_database_health') as mock_db_health:
+        with patch(self.PATH_GET_DB_HEALTH) as mock_db_health:
             mock_db_health.side_effect = Exception("Database connection failed")
 
             with pytest.raises(HTTPException) as exc_info:
@@ -108,7 +118,7 @@ class TestHealthChecker:
 
     def test_database_health_check_success(self, health_checker):
         """Test successful database health check"""
-        with patch('src.shared.health.health_checks.get_database_health') as mock_db_health:
+        with patch(self.PATH_GET_DB_HEALTH) as mock_db_health:
             mock_db_health.return_value = True
 
             result = health_checker.database_health_check()
@@ -120,7 +130,7 @@ class TestHealthChecker:
 
     def test_database_health_check_failure(self, health_checker):
         """Test database health check when database is unhealthy"""
-        with patch('src.shared.health.health_checks.get_database_health') as mock_db_health:
+        with patch(self.PATH_GET_DB_HEALTH) as mock_db_health:
             mock_db_health.return_value = False
 
             with pytest.raises(HTTPException) as exc_info:
@@ -131,7 +141,7 @@ class TestHealthChecker:
 
     def test_database_health_check_exception(self, health_checker):
         """Test database health check when exception occurs"""
-        with patch('src.shared.health.health_checks.get_database_health') as mock_db_health:
+        with patch(self.PATH_GET_DB_HEALTH) as mock_db_health:
             mock_db_health.side_effect = Exception("Database connection failed")
 
             with pytest.raises(HTTPException) as exc_info:
@@ -156,9 +166,13 @@ class TestCreateHealthChecker:
 class TestGetDatabaseHealth:
     """Test get_database_health function"""
 
+    # Define patch paths as class constants
+    PATH_GET_DB_HEALTH = f'{health_checks.__name__}.get_database_health'
+    PATH_GET_MANAGER = f'{dynamodb_connection.__name__}.get_dynamodb_manager'
+
     def test_get_database_health_success(self):
         """Test successful database health check"""
-        with patch('src.data.database.dynamodb_connection.get_dynamodb_manager') as mock_get_manager:
+        with patch(self.PATH_GET_MANAGER) as mock_get_manager:
             mock_manager = MagicMock()
             mock_manager.health_check.return_value = True
             mock_get_manager.return_value = mock_manager
@@ -169,7 +183,7 @@ class TestGetDatabaseHealth:
 
     def test_get_database_health_failure(self):
         """Test database health check when database is unhealthy"""
-        with patch('src.data.database.dynamodb_connection.get_dynamodb_manager') as mock_get_manager:
+        with patch(self.PATH_GET_MANAGER) as mock_get_manager:
             mock_manager = MagicMock()
             mock_manager.health_check.return_value = False
             mock_get_manager.return_value = mock_manager
@@ -180,7 +194,7 @@ class TestGetDatabaseHealth:
 
     def test_get_database_health_exception(self):
         """Test database health check when exception occurs"""
-        with patch('src.data.database.dynamodb_connection.get_dynamodb_manager') as mock_get_manager:
+        with patch(self.PATH_GET_MANAGER) as mock_get_manager:
             mock_manager = MagicMock()
             mock_manager.health_check.side_effect = Exception("Connection failed")
             mock_get_manager.return_value = mock_manager

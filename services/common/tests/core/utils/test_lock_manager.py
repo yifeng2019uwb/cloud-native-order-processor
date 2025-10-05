@@ -23,16 +23,18 @@ from src.data.exceptions import (CNOPDatabaseOperationException,
 class TestUserLock:
     """Test UserLock context manager"""
 
+    # Define patch paths as class constants
+    PATH_ACQUIRE_LOCK = f'{lock_manager.__name__}.acquire_lock'
+    PATH_RELEASE_LOCK = f'{lock_manager.__name__}.release_lock'
+
     @pytest.mark.asyncio
     async def test_user_lock_success(self):
         """Test successful lock acquisition and release"""
         username = "test-user-123"
         operation = LockType.DEPOSIT
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
                 mock_acquire_lock.return_value = "lock-123"
                 mock_release_lock.return_value = True
 
@@ -48,8 +50,7 @@ class TestUserLock:
         username = "test-user-123"
         operation = LockType.DEPOSIT
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock:
             mock_acquire_lock.side_effect = CNOPLockAcquisitionException("Lock failed")
 
             with pytest.raises(CNOPLockAcquisitionException):
@@ -62,10 +63,8 @@ class TestUserLock:
         username = "test-user-123"
         operation = LockType.DEPOSIT
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
                 mock_acquire_lock.return_value = "lock-123"
                 mock_release_lock.return_value = True
 
@@ -81,10 +80,8 @@ class TestUserLock:
         username = "test-user-123"
         operation = LockType.DEPOSIT
 
-        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
-        path_release_lock = f'{lock_manager.__name__}.release_lock'
-        with patch(path_acquire_lock) as mock_acquire_lock, \
-             patch(path_release_lock) as mock_release_lock:
+        with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
+             patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
                 mock_acquire_lock.side_effect = CNOPLockAcquisitionException("Lock failed")
 
                 with pytest.raises(CNOPLockAcquisitionException):

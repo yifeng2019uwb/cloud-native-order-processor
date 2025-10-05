@@ -166,7 +166,7 @@ class TestCreateOrder:
             mock_order.created_at = datetime.now(timezone.utc)
 
             mock_result = MagicMock()
-            mock_result.data = {"order": mock_order}
+            mock_result.order = mock_order
             mock_result.lock_duration = 30
 
             mock_transaction_manager.create_buy_order_with_balance_update.return_value = mock_result
@@ -245,7 +245,7 @@ class TestCreateOrder:
             mock_order.created_at = datetime.now(timezone.utc)
 
             mock_result = MagicMock()
-            mock_result.data = {"order": mock_order}
+            mock_result.order = mock_order
             mock_result.lock_duration = 30
 
             mock_transaction_manager.create_sell_order_with_balance_update.return_value = mock_result
@@ -520,7 +520,7 @@ class TestCreateOrder:
             mock_order.created_at = datetime.now(timezone.utc)
 
             mock_result = MagicMock()
-            mock_result.data = {"order": mock_order}
+            mock_result.order = mock_order
             mock_result.lock_duration = 30
 
             mock_transaction_manager.create_buy_order_with_balance_update.return_value = mock_result
