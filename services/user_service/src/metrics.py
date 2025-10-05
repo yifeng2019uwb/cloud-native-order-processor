@@ -49,6 +49,13 @@ LABEL_RESULT = "result"
 INFO_KEY_VERSION = "version"
 INFO_KEY_SERVICE = "service"
 
+# =============================================================================
+# RESPONSE CONSTANTS (Local constants for response handling)
+# =============================================================================
+CACHE_CONTROL_HEADER = "Cache-Control"
+NO_CACHE_VALUE = "no-cache"
+ERROR_CONTENT = "# Error\n"
+
 logger = BaseLogger(Loggers.USER)
 
 # ========================================
@@ -116,8 +123,8 @@ def get_metrics_response() -> Response:
         return Response(
             content=metrics_collector.get_metrics(),
             media_type=CONTENT_TYPE_LATEST,
-            headers={"Cache-Control": "no-cache"}
+            headers={CACHE_CONTROL_HEADER: NO_CACHE_VALUE}
         )
     except Exception as e:
         logger.error(action=LogActions.ERROR, message=f"Metrics error: {e}")
-        return Response(content="# Error\n", status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
+        return Response(content=ERROR_CONTENT, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)

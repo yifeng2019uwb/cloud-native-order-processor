@@ -7,6 +7,8 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from enum import Enum
+
 
 from pynamodb.models import Model
 from pynamodb.attributes import UnicodeAttribute, UTCDateTimeAttribute
@@ -20,6 +22,23 @@ from ...shared.logging import BaseLogger, LogActions, Loggers
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
+
+class LockType(str, Enum):
+    """Types of locks"""
+    DEPOSIT = "deposit"
+    WITHDRAW = "withdraw"
+    BUY_ORDER = "buy_order"
+    SELL_ORDER = "sell_order"
+    GET_BALANCE = "get_balance"
+
+
+class LockTimeout(int, Enum):
+    """Lock timeout values in seconds"""
+    DEPOSIT = 2
+    WITHDRAW = 2
+    BUY_ORDER = 5
+    SELL_ORDER = 5
+    GET_BALANCE = 1
 
 class UserLockItem(Model):
     """PynamoDB model for user locks - uses same table as users but different key pattern"""
@@ -55,10 +74,10 @@ class UserLock:
     Provides automatic lock acquisition and release.
     """
 
-    def __init__(self, username: str, operation: str, timeout_seconds: int = 15):
+    def __init__(self, username: str, operation: LockType):
         self.username = username
         self.operation = operation
-        self.timeout_seconds = timeout_seconds
+        self.timeout_seconds = LockTimeout[operation.name].value
         self.lock_id: Optional[str] = None
         self.acquired = False
 
@@ -90,7 +109,7 @@ class UserLock:
             self.acquired = False
 
 
-def acquire_lock(username: str, operation: str, timeout_seconds: int = 15) -> Optional[str]:
+def acquire_lock(username: str, operation: LockType, timeout_seconds: int = None) -> Optional[str]:
     """
     Acquire a lock for a user operation.
 
@@ -107,7 +126,8 @@ def acquire_lock(username: str, operation: str, timeout_seconds: int = 15) -> Op
     """
     try:
         lock_id = f"lock_{uuid.uuid4().hex[:8]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        expires_at = datetime.now(timezone.utc) + timedelta(seconds=timeout_seconds)
+        timeout = timeout_seconds if timeout_seconds is not None else LockTimeout[operation.name].value
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=timeout)
         now = datetime.now(timezone.utc)
 
         # Check if lock already exists
@@ -207,13 +227,3 @@ def release_lock(username: str, lock_id: str) -> bool:
             message=f"Failed to release lock: {str(e)}"
         )
         raise CNOPDatabaseOperationException(f"Database operation failed while releasing lock: {str(e)}") from e
-
-
-# Lock timeout configuration - Optimized for operation complexity
-LOCK_TIMEOUTS = {
-    "deposit": 2,       # Simple single write operation - 2s
-    "withdraw": 2,      # Simple single write operation - 2s
-    "buy_order": 5,     # Complex operation: balance update + order creation + asset balance update - 5s
-    "sell_order": 5,    # Complex operation: balance update + order creation + asset balance update - 5s
-    "get_balance": 1,   # Optional lock for consistency - 1s
-}

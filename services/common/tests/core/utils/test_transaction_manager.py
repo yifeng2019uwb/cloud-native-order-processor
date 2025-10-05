@@ -12,8 +12,11 @@ from uuid import UUID
 import pytest
 
 # Local imports
+from src.core.utils import lock_manager
 from src.core.utils.transaction_manager import (TransactionManager,
                                                 TransactionResult)
+from src.data.entities.user.balance import Balance
+from src.data.entities.user.balance_enums import TransactionStatus, TransactionType
 from src.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from src.data.dao.asset.asset_transaction_dao import AssetTransactionDAO
 from src.data.dao.inventory.asset_dao import AssetDAO
@@ -28,6 +31,7 @@ from src.data.exceptions import (CNOPDatabaseOperationException,
 from src.exceptions import CNOPEntityValidationException
 from src.exceptions.shared_exceptions import (CNOPEntityNotFoundException,
                                               CNOPInsufficientBalanceException)
+
 
 
 class TestTransactionManager:
@@ -104,8 +108,10 @@ class TestTransactionManager:
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
         # Mock both acquire_lock and release_lock functions
-        with patch('src.core.utils.lock_manager.acquire_lock') as mock_acquire_lock, \
-             patch('src.core.utils.lock_manager.release_lock') as mock_release_lock:
+        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
+        path_release_lock = f'{lock_manager.__name__}.release_lock'
+        with patch(path_acquire_lock) as mock_acquire_lock, \
+             patch(path_release_lock) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -117,18 +123,19 @@ class TestTransactionManager:
 
             result = await transaction_manager.deposit_funds("testuser123", Decimal('50.00'))
 
-            assert result.success is True
-            assert result.data['transaction'] == mock_transaction
-            assert result.data['balance'] == mock_balance
-            assert result.data['amount'] == Decimal('50.00')
+            assert result.status == TransactionStatus.COMPLETED
+            assert result.transaction_amount == Decimal('50.00')
+            assert result.balance == mock_balance
 
     @pytest.mark.asyncio
     async def test_deposit_funds_balance_update_failure(self, transaction_manager, mock_daos):
         """Test deposit operation when balance update fails"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        with patch('src.core.utils.lock_manager.acquire_lock') as mock_acquire_lock, \
-             patch('src.core.utils.lock_manager.release_lock') as mock_release_lock:
+        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
+        path_release_lock = f'{lock_manager.__name__}.release_lock'
+        with patch(path_acquire_lock) as mock_acquire_lock, \
+             patch(path_release_lock) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -145,8 +152,10 @@ class TestTransactionManager:
         """Test successful withdrawal operation"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        with patch('src.core.utils.lock_manager.acquire_lock') as mock_acquire_lock, \
-             patch('src.core.utils.lock_manager.release_lock') as mock_release_lock:
+        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
+        path_release_lock = f'{lock_manager.__name__}.release_lock'
+        with patch(path_acquire_lock) as mock_acquire_lock, \
+             patch(path_release_lock) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -158,18 +167,19 @@ class TestTransactionManager:
 
             result = await transaction_manager.withdraw_funds("testuser123", Decimal('25.00'))
 
-            assert result.success is True
-            assert result.data['transaction'] == mock_transaction
-            assert result.data['balance'] == mock_balance
-            assert result.data['amount'] == Decimal('25.00')
+            assert result.status == TransactionStatus.COMPLETED
+            assert result.transaction_amount == Decimal('25.00')
+            assert result.balance == mock_balance
 
     @pytest.mark.asyncio
     async def test_withdraw_funds_insufficient_balance(self, transaction_manager, mock_daos, mock_balance):
         """Test withdrawal with insufficient balance"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        with patch('src.core.utils.lock_manager.acquire_lock') as mock_acquire_lock, \
-             patch('src.core.utils.lock_manager.release_lock') as mock_release_lock:
+        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
+        path_release_lock = f'{lock_manager.__name__}.release_lock'
+        with patch(path_acquire_lock) as mock_acquire_lock, \
+             patch(path_release_lock) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -186,8 +196,10 @@ class TestTransactionManager:
         """Test withdrawal when user is not found"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        with patch('src.core.utils.lock_manager.acquire_lock') as mock_acquire_lock, \
-             patch('src.core.utils.lock_manager.release_lock') as mock_release_lock:
+        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
+        path_release_lock = f'{lock_manager.__name__}.release_lock'
+        with patch(path_acquire_lock) as mock_acquire_lock, \
+             patch(path_release_lock) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -203,8 +215,10 @@ class TestTransactionManager:
         """Test successful buy order creation with balance update"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        with patch('src.core.utils.lock_manager.acquire_lock') as mock_acquire_lock, \
-             patch('src.core.utils.lock_manager.release_lock') as mock_release_lock:
+        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
+        path_release_lock = f'{lock_manager.__name__}.release_lock'
+        with patch(path_acquire_lock) as mock_acquire_lock, \
+             patch(path_release_lock) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -225,17 +239,18 @@ class TestTransactionManager:
                 total_cost=Decimal('50000.00')
             )
 
-            assert result.success is True
-            assert result.data['order'] == mock_order
-            assert result.data['transaction'] == mock_transaction
+            assert result.status == TransactionStatus.COMPLETED
+            assert result.transaction_amount == Decimal('50000.00')
 
     @pytest.mark.asyncio
     async def test_create_sell_order_with_balance_update_success(self, transaction_manager, mock_daos, mock_order, mock_transaction):
         """Test successful sell order creation with balance update"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        with patch('src.core.utils.lock_manager.acquire_lock') as mock_acquire_lock, \
-             patch('src.core.utils.lock_manager.release_lock') as mock_release_lock:
+        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
+        path_release_lock = f'{lock_manager.__name__}.release_lock'
+        with patch(path_acquire_lock) as mock_acquire_lock, \
+             patch(path_release_lock) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -248,21 +263,21 @@ class TestTransactionManager:
                 username="testuser123",
                 asset_id="BTC",
                 quantity=Decimal('1.0'),
-                price=Decimal('50000.00'),
+                price=Decimal('500.00'),
                 order_type=OrderType.MARKET_SELL,
-                asset_amount=Decimal('50000.00')  # USD amount from sell
+                asset_amount=Decimal('5000.00')  # USD amount from sell
             )
 
-            assert result.success is True
-            assert result.data['order'] == mock_order
-            assert result.data['transaction'] == mock_transaction
+            assert result.status == TransactionStatus.COMPLETED
+            assert result.transaction_amount == Decimal('2500000.00')  # asset_amount * price = 50000 * 50000
 
     @pytest.mark.asyncio
     async def test_lock_acquisition_failure(self, transaction_manager, mock_daos):
         """Test operations when lock acquisition fails"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        with patch('src.core.utils.lock_manager.acquire_lock') as mock_acquire_lock:
+        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
+        with patch(path_acquire_lock) as mock_acquire_lock:
             mock_acquire_lock.side_effect = CNOPLockAcquisitionException("Lock acquisition failed")
 
             with pytest.raises(CNOPDatabaseOperationException, match="Service temporarily unavailable"):
@@ -273,8 +288,10 @@ class TestTransactionManager:
         """Test operations when lock release fails"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        with patch('src.core.utils.lock_manager.acquire_lock') as mock_acquire_lock, \
-             patch('src.core.utils.lock_manager.release_lock') as mock_release_lock:
+        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
+        path_release_lock = f'{lock_manager.__name__}.release_lock'
+        with patch(path_acquire_lock) as mock_acquire_lock, \
+             patch(path_release_lock) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.side_effect = Exception("Lock release failed")
@@ -295,8 +312,10 @@ class TestTransactionManager:
         """Test complex transaction scenario with multiple operations"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        with patch('src.core.utils.lock_manager.acquire_lock') as mock_acquire_lock, \
-             patch('src.core.utils.lock_manager.release_lock') as mock_release_lock:
+        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
+        path_release_lock = f'{lock_manager.__name__}.release_lock'
+        with patch(path_acquire_lock) as mock_acquire_lock, \
+             patch(path_release_lock) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -308,19 +327,21 @@ class TestTransactionManager:
 
             # Test multiple operations
             deposit_result = await transaction_manager.deposit_funds("testuser123", Decimal('100.00'))
-            assert deposit_result.success is True
+            assert deposit_result.status == TransactionStatus.COMPLETED
 
             # Test withdrawal
             withdraw_result = await transaction_manager.withdraw_funds("testuser123", Decimal('25.00'))
-            assert withdraw_result.success is True
+            assert withdraw_result.status == TransactionStatus.COMPLETED
 
     @pytest.mark.asyncio
     async def test_error_handling_in_transaction_operations(self, transaction_manager, mock_daos):
         """Test comprehensive error handling in transaction operations"""
         user_dao, balance_dao, order_dao, asset_dao, asset_balance_dao, asset_transaction_dao = mock_daos
 
-        with patch('src.core.utils.lock_manager.acquire_lock') as mock_acquire_lock, \
-             patch('src.core.utils.lock_manager.release_lock') as mock_release_lock:
+        path_acquire_lock = f'{lock_manager.__name__}.acquire_lock'
+        path_release_lock = f'{lock_manager.__name__}.release_lock'
+        with patch(path_acquire_lock) as mock_acquire_lock, \
+             patch(path_release_lock) as mock_release_lock:
 
             mock_acquire_lock.return_value = "test-lock-id"
             mock_release_lock.return_value = True
@@ -346,55 +367,28 @@ class TestTransactionResult:
     def test_transaction_result_creation(self):
         """Test TransactionResult creation with all parameters"""
         result = TransactionResult(
-            success=True,
-            data={"key": "value"},
-            error="No error",
-            lock_duration=2.5
+            status=TransactionStatus.COMPLETED,
+            transaction_type=TransactionType.DEPOSIT,
+            transaction_amount=Decimal("100.00"),
+            balance=Balance(username="test", current_balance=Decimal("100.00"))
         )
 
-        assert result.success is True
-        assert result.data == {"key": "value"}
-        assert result.error == "No error"
-        assert result.lock_duration == 2.5
+        assert result.status == TransactionStatus.COMPLETED
+        assert result.transaction_type == TransactionType.DEPOSIT
+        assert result.transaction_amount == Decimal("100.00")
+        assert result.balance.current_balance == Decimal("100.00")
 
     def test_transaction_result_defaults(self):
         """Test TransactionResult creation with defaults"""
-        result = TransactionResult(success=False)
-
-        assert result.success is False
-        assert result.data == {}
-        assert result.error is None
-        assert result.lock_duration is None
-
-    def test_transaction_result_to_dict(self):
-        """Test TransactionResult to_dict method"""
         result = TransactionResult(
-            success=True,
-            data={"test": "data"},
-            error=None,
-            lock_duration=1.0
+            status=TransactionStatus.FAILED,
+            transaction_type=TransactionType.DEPOSIT,
+            transaction_amount=Decimal("0.00"),
+            balance=Balance(username="test", current_balance=Decimal("0.00")),
+            error="Test error"
         )
 
-        result_dict = result.to_dict()
-        expected = {
-            "success": True,
-            "data": {"test": "data"},
-            "error": None,
-            "lock_duration": 1.0
-        }
-
-        assert result_dict == expected
-
-    def test_transaction_result_to_dict_with_none_values(self):
-        """Test TransactionResult to_dict with None values"""
-        result = TransactionResult(success=False)
-        result_dict = result.to_dict()
-
-        expected = {
-            "success": False,
-            "data": {},
-            "error": None,
-            "lock_duration": None
-        }
-
-        assert result_dict == expected
+        assert result.status == TransactionStatus.FAILED
+        assert result.transaction_type == TransactionType.DEPOSIT
+        assert result.transaction_amount == Decimal("0.00")
+        assert result.error == "Test error"

@@ -99,6 +99,7 @@ class LogFields:
     PRICE = "price"
     TRANSACTION_ID = "transaction_id"
     TRANSACTION_TYPE = "transaction_type"
+    BALANCE = "balance"
 
     # Request Parameters
     LIMIT = "limit"
