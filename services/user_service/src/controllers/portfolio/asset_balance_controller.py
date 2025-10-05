@@ -40,7 +40,7 @@ logger = BaseLogger(Loggers.USER, log_to_file=True)
 router = APIRouter(tags=[ApiTags.ASSET_BALANCE.value])
 
 @router.get(ApiPaths.ASSET_BALANCE.value, response_model=GetAssetBalanceResponse)
-async def get_user_asset_balance(
+def get_user_asset_balance(
     asset_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     user_dao: Annotated[object, Depends(get_user_dao_dependency)],
@@ -50,6 +50,9 @@ async def get_user_asset_balance(
 ):
     """
     Get single asset balance for authenticated user
+
+    SYNC OPERATION: Read-only operation, no locks needed.
+    FastAPI runs in thread pool automatically.
 
     Args:
         asset_id: Asset identifier (e.g., BTC, ETH)

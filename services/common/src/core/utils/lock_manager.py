@@ -209,11 +209,11 @@ def release_lock(username: str, lock_id: str) -> bool:
         raise CNOPDatabaseOperationException(f"Database operation failed while releasing lock: {str(e)}") from e
 
 
-# Lock timeout configuration - Reduced for personal project with minimal traffic
+# Lock timeout configuration - Optimized for operation complexity
 LOCK_TIMEOUTS = {
-    "deposit": 5,       # Simple operation - 5s
-    "withdraw": 5,      # Includes validation - 5s
-    "buy_order": 5,     # Complex operation - 5s
-    "sell_order": 5,    # Complex operation - 5s
+    "deposit": 2,       # Simple single write operation - 2s
+    "withdraw": 2,      # Simple single write operation - 2s
+    "buy_order": 5,     # Complex operation: balance update + order creation + asset balance update - 5s
+    "sell_order": 5,    # Complex operation: balance update + order creation + asset balance update - 5s
     "get_balance": 1,   # Optional lock for consistency - 1s
 }

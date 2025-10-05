@@ -78,6 +78,9 @@ async def withdraw_funds(
     """
     Withdraw funds from user account using transaction manager for atomicity
 
+    ASYNC OPERATION: Modifies balance, requires user lock for atomicity.
+    Lock timeout: 2 seconds (LOCK_TIMEOUTS['withdraw'])
+
     Layer 1: Field validation already handled in API models
     Layer 2: Business validation (user authentication, etc.)
     """

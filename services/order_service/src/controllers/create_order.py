@@ -88,7 +88,10 @@ async def create_order(
     balance_dao: BalanceDAO = Depends(get_balance_dao_dependency),
 ) -> OrderCreateResponse:
     """
-    Create a new order with atomic operations using TransactionManager
+    Create a new trading order
+
+    ASYNC OPERATION: Modifies balance and creates order, requires user lock for atomicity.
+    Lock timeout: 5 seconds (LOCK_TIMEOUTS['buy_order'] or LOCK_TIMEOUTS['sell_order'])
 
     Supports:
     - Market Buy: Immediate purchase with balance validation
