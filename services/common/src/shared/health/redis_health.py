@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 
 from ...data.database.redis_connection import (get_redis_manager,
                                                test_redis_connection)
+from ...shared.constants.health_constants import HealthCheckConstants
 from ...shared.logging import BaseLogger, LogActions, Loggers
 
 logger = BaseLogger(Loggers.CACHE, log_to_file=True)
@@ -20,7 +21,7 @@ class RedisHealthChecker:
     def __init__(self):
         self._last_check: Optional[datetime] = None
         self._last_status: Optional[bool] = None
-        self._check_interval = 30  # seconds
+        self._check_interval = HealthCheckConstants.DEFAULT_CHECK_INTERVAL  # seconds
 
     def is_healthy(self) -> bool:
         """Check if Redis is healthy"""
@@ -40,12 +41,12 @@ class RedisHealthChecker:
             if status:
                 logger.info(
                     action=LogActions.HEALTH_CHECK,
-                    message="Redis health check: OK"
+                    message=f"Redis health check: {HealthCheckConstants.STATUS_OK}"
                 )
             else:
                 logger.warning(
                     action=LogActions.ERROR,
-                    message="Redis health check: FAILED"
+                    message=f"Redis health check: {HealthCheckConstants.STATUS_FAILED}"
                 )
 
             return status
@@ -64,10 +65,10 @@ class RedisHealthChecker:
         is_healthy = self.is_healthy()
 
         status = {
-            "status": "healthy" if is_healthy else "unhealthy",
-            "timestamp": datetime.now().isoformat(),
-            "last_check": self._last_check.isoformat() if self._last_check else None,
-            "check_interval_seconds": self._check_interval,
+            HealthCheckConstants.STATUS: HealthCheckConstants.STATUS_HEALTHY if is_healthy else HealthCheckConstants.STATUS_UNHEALTHY,
+            HealthCheckConstants.TIMESTAMP: datetime.now().isoformat(),
+            HealthCheckConstants.LAST_CHECK: self._last_check.isoformat() if self._last_check else None,
+            HealthCheckConstants.CHECK_INTERVAL_SECONDS: self._check_interval,
         }
 
         # Add connection details if available
@@ -75,10 +76,10 @@ class RedisHealthChecker:
             manager = get_redis_manager()
             config = manager._config
             status.update({
-                "host": config.host,
-                "port": config.port,
-                "ssl_enabled": config.ssl,
-                "connection_pool_size": getattr(manager._pool, 'max_connections', 'unknown') if manager._pool else 'unknown'
+                HealthCheckConstants.HOST: config.host,
+                HealthCheckConstants.PORT: config.port,
+                HealthCheckConstants.SSL_ENABLED: config.ssl,
+                HealthCheckConstants.CONNECTION_POOL_SIZE: getattr(manager._pool, 'max_connections', HealthCheckConstants.UNKNOWN) if manager._pool else HealthCheckConstants.UNKNOWN
             })
         except Exception as e:
             logger.warning(

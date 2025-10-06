@@ -372,17 +372,6 @@ class TestOrderValidationUtils:
         assert is_valid is True
         assert error is None
 
-    def test_validate_currency(self):
-        """Test currency validation."""
-        # Valid currencies
-        is_valid, error = OrderValidationUtils.validate_currency("USD")
-        assert is_valid is True
-        assert error is None
-
-        # Invalid currencies
-        is_valid, error = OrderValidationUtils.validate_currency("INVALID")
-        assert is_valid is False
-        assert "not supported" in error
 
     def test_validate_order_type_requirements_limit_orders(self):
         """Test order type requirements for limit orders."""
@@ -425,8 +414,7 @@ class TestOrderBusinessRules:
         errors = OrderBusinessRules.validate_all_business_rules(
             order_type=OrderType.MARKET_BUY,
             quantity=Decimal("1.0"),
-            order_price=None,  # Market orders shouldn't specify order_price
-            currency="USD"
+            order_price=None  # Market orders shouldn't specify order_price
         )
 
         assert len(errors) == 0
@@ -436,8 +424,7 @@ class TestOrderBusinessRules:
         errors = OrderBusinessRules.validate_all_business_rules(
             order_type=OrderType.LIMIT_BUY,
             quantity=Decimal("1.0"),
-            order_price=Decimal("45000.00"),
-            currency="USD"
+            order_price=Decimal("45000.00")
         )
 
         assert len(errors) == 0
@@ -447,13 +434,11 @@ class TestOrderBusinessRules:
         errors = OrderBusinessRules.validate_all_business_rules(
             order_type=OrderType.MARKET_BUY,
             quantity=Decimal("0.0001"),  # Too small
-            order_price=None,
-            currency="INVALID"  # Invalid currency
+            order_price=None
         )
 
         assert len(errors) > 0
         assert any("quantity" in error.lower() for error in errors)
-        assert any("currency" in error.lower() for error in errors)
 
     def test_validate_all_business_rules_multiple_errors(self):
         """Test business rules validation with multiple errors."""
@@ -461,11 +446,10 @@ class TestOrderBusinessRules:
             order_type=OrderType.LIMIT_BUY,
             quantity=Decimal("0.0001"),  # Too small
             order_price=Decimal("45000.123"),  # Too many decimal places
-            currency="INVALID",  # Invalid currency
             expires_at=datetime.now(timezone.utc) + timedelta(days=31)  # Too far in future
         )
 
-        assert len(errors) >= 4  # Should have multiple validation errors
+        assert len(errors) >= 3  # Should have multiple validation errors
 
 
 class TestOrderStatusTransition:

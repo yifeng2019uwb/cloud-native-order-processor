@@ -16,6 +16,10 @@ import redis
 from ...shared.logging import BaseLogger, LogActions, Loggers
 from .redis_config import (RedisConfig, get_redis_config,
                            get_redis_connection_params)
+from .database_constants import (
+    get_redis_max_connections,
+    RedisConfig as RedisConfigConstants
+)
 
 logger = BaseLogger(Loggers.CACHE, log_to_file=True)
 
@@ -34,27 +38,32 @@ class RedisConnectionManager:
 
         # Pool configuration
         pool_params = {
-            "max_connections": int(os.getenv("REDIS_MAX_CONNECTIONS", "10")),
-            "retry_on_timeout": params.get("retry_on_timeout", True),
-            "socket_connect_timeout": params.get("socket_connect_timeout", 5),
-            "socket_timeout": params.get("socket_timeout", 5),
-            "health_check_interval": params.get("health_check_interval", 30),
+            RedisConfigConstants.MAX_CONNECTIONS_KEY: get_redis_max_connections(),
+            RedisConfigConstants.RETRY_ON_TIMEOUT_KEY:
+                params.get(RedisConfigConstants.RETRY_ON_TIMEOUT_KEY, RedisConfigConstants.RETRY_ON_TIMEOUT),
+            RedisConfigConstants.SOCKET_CONNECT_TIMEOUT_KEY:
+                params.get(RedisConfigConstants.SOCKET_CONNECT_TIMEOUT_KEY, RedisConfigConstants.SOCKET_CONNECT_TIMEOUT),
+            RedisConfigConstants.SOCKET_TIMEOUT_KEY:
+                params.get(RedisConfigConstants.SOCKET_TIMEOUT_KEY, RedisConfigConstants.SOCKET_TIMEOUT),
+            RedisConfigConstants.HEALTH_CHECK_INTERVAL_KEY:
+                params.get(RedisConfigConstants.HEALTH_CHECK_INTERVAL_KEY, RedisConfigConstants.HEALTH_CHECK_INTERVAL),
         }
 
         # Create pool based on SSL configuration
-        if params.get("ssl"):
+        if params.get(RedisConfigConstants.SSL_KEY):
             return redis.ConnectionPool.from_url(
                 f"rediss://{params['host']}:{params['port']}/{params['db']}",
                 **pool_params,
-                ssl_cert_reqs=params.get("ssl_cert_reqs", "required")
+                ssl_cert_reqs=params.get(RedisConfigConstants.SSL_CERT_REQS_KEY, RedisConfigConstants.SSL_CERT_REQUIRED)
             )
         else:
             return redis.ConnectionPool(
-                host=params["host"],
-                port=params["port"],
-                db=params["db"],
-                password=params.get("password"),
-                decode_responses=params.get("decode_responses", True),
+
+                host=params[RedisConfigConstants.HOST_KEY],
+                port=params[RedisConfigConstants.PORT_KEY],
+                db=params[RedisConfigConstants.DB_KEY],
+                password=params.get(RedisConfigConstants.PASSWORD_KEY),
+                decode_responses=params.get(RedisConfigConstants.DECODE_RESPONSES_KEY, True),
                 **pool_params
             )
 

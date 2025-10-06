@@ -13,29 +13,40 @@ from botocore.exceptions import ClientError, NoCredentialsError
 
 from ...exceptions.shared_exceptions import CNOPInternalServerException
 from ...shared.logging import BaseLogger, LogActions, Loggers
+from .database_constants import (
+    EnvironmentVariables,
+    DefaultValues,
+    DatabaseConfig,
+    get_aws_region,
+    get_users_table_name,
+    get_orders_table_name,
+    get_inventory_table_name,
+    get_aws_web_identity_token_file,
+    get_aws_role_arn
+)
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 # Universal session pattern for IRSA and AssumeRole
 
 def get_boto3_session():
-    region = os.getenv("AWS_REGION")
+    region = get_aws_region()
     # If running in EKS with IRSA, let boto3 handle it natively
-    if os.getenv("AWS_WEB_IDENTITY_TOKEN_FILE"):
+    if get_aws_web_identity_token_file():
         return boto3.Session(region_name=region)
     # Otherwise, if AWS_ROLE_ARN is set, assume the role
-    role_arn = os.getenv("AWS_ROLE_ARN")
+    role_arn = get_aws_role_arn()
     if role_arn:
-        sts = boto3.client("sts", region_name=region)
+        sts = boto3.client(DatabaseConfig.STS_SERVICE_NAME, region_name=region)
         resp = sts.assume_role(
             RoleArn=role_arn,
-            RoleSessionName="order-processor-session"
+            RoleSessionName=DatabaseConfig.ROLE_SESSION_NAME
         )
-        creds = resp["Credentials"]
+        creds = resp[DatabaseConfig.CREDENTIALS]
         return boto3.Session(
-            aws_access_key_id=creds["AccessKeyId"],
-            aws_secret_access_key=creds["SecretAccessKey"],
-            aws_session_token=creds["SessionToken"],
+            aws_access_key_id=creds[DatabaseConfig.ACCESS_KEY_ID],
+            aws_secret_access_key=creds[DatabaseConfig.SECRET_ACCESS_KEY],
+            aws_session_token=creds[DatabaseConfig.SESSION_TOKEN],
             region_name=region
         )
     # Fallback: use default credentials (for local dev, etc.)
@@ -46,27 +57,27 @@ class DynamoDBManager:
 
     def __init__(self):
         """Initialize DynamoDB manager with table references"""
-        # Get environment variables
-        self.users_table_name = os.getenv('USERS_TABLE')
+        # Get environment variables using constants - check if they exist first
+        self.users_table_name = get_users_table_name()
         if not self.users_table_name:
-            raise CNOPInternalServerException("USERS_TABLE environment variable not found")
+            raise CNOPInternalServerException(f"{EnvironmentVariables.USERS_TABLE} environment variable not found")
 
-        self.orders_table_name = os.getenv('ORDERS_TABLE')
+        self.orders_table_name =get_orders_table_name()
         if not self.orders_table_name:
-            raise CNOPInternalServerException("ORDERS_TABLE environment variable not found")
+            raise CNOPInternalServerException(f"{EnvironmentVariables.ORDERS_TABLE} environment variable not found")
 
-        self.inventory_table_name = os.getenv('INVENTORY_TABLE')
+        self.inventory_table_name = get_inventory_table_name()
         if not self.inventory_table_name:
-            raise CNOPInternalServerException("INVENTORY_TABLE environment variable not found")
+            raise CNOPInternalServerException(f"{EnvironmentVariables.INVENTORY_TABLE} environment variable not found")
 
-        self.region = os.getenv('AWS_REGION')
+        self.region = get_aws_region()
         if not self.region:
-            raise CNOPInternalServerException("AWS_REGION environment variable is required")
+            raise CNOPInternalServerException(f"{EnvironmentVariables.AWS_REGION} environment variable is required")
 
         # Use the universal session pattern
         session = get_boto3_session()
-        self.dynamodb = session.resource('dynamodb', region_name=self.region)
-        self.client = session.client('dynamodb', region_name=self.region)
+        self.dynamodb = session.resource(DatabaseConfig.DYNAMODB_SERVICE_NAME, region_name=self.region)
+        self.client = session.client(DatabaseConfig.DYNAMODB_SERVICE_NAME, region_name=self.region)
         logger.info(
             action=LogActions.DB_CONNECT,
             message="DynamoDB connection initialized using universal session pattern (IRSA/AssumeRole/local)"

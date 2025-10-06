@@ -22,24 +22,6 @@ class TimestampFields:
     UPDATED_AT = "updated_at"
 
 
-# ==================== CONFIGURATION CONSTANTS ====================
-# These are infrastructure/deployment configurations
-
-class TableNames:
-    """DynamoDB table names - from environment or config"""
-    USERS = "users"
-    ORDERS = "orders"
-    INVENTORY = "inventory"
-
-
-class AWSConfig:
-    """AWS configuration constants"""
-    DEFAULT_REGION = "us-east-1"
-    BILLING_MODE_PAY_PER_REQUEST = "PAY_PER_REQUEST"
-    BILLING_MODE_PROVISIONED = "PROVISIONED"
-    AWS_REGION_ENV_VAR = "AWS_REGION"
-
-
 # ==================== FIELD CONSTRAINTS ====================
 # Validation constraints used across multiple entities
 # Keep these here as they might be used in API validation too
@@ -155,6 +137,10 @@ class AssetFields:
     SYMBOL = "symbol"
     IMAGE = "image"
 
+    # Default values
+    DEFAULT_CATEGORY = "unknown"
+    DEFAULT_AMOUNT = "0"
+
     # CoinGecko API fields
     CURRENT_PRICE = "current_price"
     HIGH_24H = "high_24h"
@@ -231,3 +217,6 @@ class OrderFields:
 
     # Environment Variables
     ORDERS_TABLE_ENV_VAR = "ORDERS_TABLE"
+
+    # Currency constants (USD only)
+    DEFAULT_CURRENCY = "USD"

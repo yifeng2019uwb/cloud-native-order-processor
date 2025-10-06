@@ -17,7 +17,8 @@ from pynamodb.models import Model
 from pynamodb.attributes import UnicodeAttribute, UTCDateTimeAttribute
 
 from ..entity_constants import (AssetTransactionFields, FieldConstraints,
-                                AWSConfig, TableNames, UserConstants)
+                                UserConstants)
+from ...database.database_constants import AWSConfig, TableNames
 from ..datetime_utils import get_current_utc
 from .enums import AssetTransactionStatus, AssetTransactionType
 

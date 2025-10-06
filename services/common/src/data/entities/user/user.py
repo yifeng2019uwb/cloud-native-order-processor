@@ -12,9 +12,9 @@ from pynamodb.attributes import (BooleanAttribute, UnicodeAttribute,
 from pynamodb.indexes import AllProjection, GlobalSecondaryIndex
 from pynamodb.models import Model
 
-from ..entity_constants import (AWSConfig, DatabaseFields, FieldConstraints,
-                                TableNames, TimestampFields, UserConstants,
-                                UserFields)
+from ..entity_constants import (DatabaseFields, FieldConstraints,
+                                TimestampFields, UserConstants, UserFields)
+from ...database.database_constants import AWSConfig, TableNames
 from ..datetime_utils import get_current_utc
 from .user_enums import DEFAULT_USER_ROLE
 

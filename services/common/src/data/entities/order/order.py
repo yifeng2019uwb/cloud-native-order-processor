@@ -16,7 +16,8 @@ from pynamodb.indexes import GlobalSecondaryIndex, AllProjection
 
 from .enums import OrderStatus, OrderType
 from ..datetime_utils import get_current_utc
-from ..entity_constants import OrderFields, AWSConfig, TableNames, DatabaseFields
+from ..entity_constants import OrderFields, DatabaseFields
+from ...database.database_constants import AWSConfig, TableNames
 
 class Order(BaseModel):
     """Order domain entity - pure business entity without database fields"""

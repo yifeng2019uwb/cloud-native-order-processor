@@ -9,7 +9,7 @@ from typing import Dict, Optional
 
 from fastapi import HTTPException, status
 
-from ...shared.constants.request_headers import RequestHeaders
+from ...shared.constants.request_headers import RequestHeaders, ExtractedUserFields
 
 
 class HeaderValidator:
@@ -59,7 +59,7 @@ class HeaderValidator:
             headers: Request headers dictionary
 
         Returns:
-            Dictionary containing user information
+            Dictionary containing user information with normalized keys
 
         Raises:
             HTTPException: If headers are invalid
@@ -67,10 +67,10 @@ class HeaderValidator:
         self.validate_gateway_headers(headers)
 
         return {
-            'user_id': headers.get(RequestHeaders.USER_ID),
-            'user_role': headers.get(RequestHeaders.USER_ROLE),
-            'request_id': headers.get(RequestHeaders.REQUEST_ID),
-            'source_service': headers.get(RequestHeaders.SOURCE_SERVICE)
+            ExtractedUserFields.USER_ID_KEY: headers.get(RequestHeaders.USER_ID),
+            ExtractedUserFields.USER_ROLE_KEY: headers.get(RequestHeaders.USER_ROLE),
+            ExtractedUserFields.REQUEST_ID_KEY: headers.get(RequestHeaders.REQUEST_ID),
+            ExtractedUserFields.SOURCE_SERVICE_KEY: headers.get(RequestHeaders.SOURCE_SERVICE)
         }
 
     def is_authenticated(self, headers: Dict[str, str]) -> bool:

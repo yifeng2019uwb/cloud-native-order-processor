@@ -11,7 +11,8 @@ from pynamodb.attributes import (
     UnicodeAttribute, UTCDateTimeAttribute, NumberAttribute, BooleanAttribute)
 from pynamodb.models import Model
 
-from ..entity_constants import AssetFields, FieldConstraints, AWSConfig, TableNames, UserConstants
+from ..entity_constants import AssetFields, FieldConstraints, UserConstants
+from ...database.database_constants import AWSConfig, TableNames
 from ..datetime_utils import safe_parse_datetime, get_current_utc
 
 
@@ -195,8 +196,8 @@ class AssetData(BaseModel):
             asset_id=self.asset_id,
             name=self.name or '',
             description=self.description,
-            category=self.category or 'unknown',
-            amount=self.amount or Decimal('0'),
+            category=self.category or AssetFields.DEFAULT_CATEGORY,
+            amount=self.amount or Decimal(AssetFields.DEFAULT_AMOUNT),
             price_usd=self.price_usd,
             is_active=self.is_active,
             created_at=safe_parse_datetime(self.created_at),

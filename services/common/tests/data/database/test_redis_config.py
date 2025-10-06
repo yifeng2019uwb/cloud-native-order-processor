@@ -9,7 +9,8 @@ import pytest
 from src.data.database.redis_config import (RedisConfig, get_redis_config,
                                             get_redis_connection_params,
                                             get_redis_namespace, get_redis_url,
-                                            is_local_kubernetes, is_production)
+                                            is_local_kubernetes)
+from src.data.database.database_constants import is_production
 
 
 class TestRedisConfig:

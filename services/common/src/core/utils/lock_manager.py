@@ -14,8 +14,8 @@ from pynamodb.models import Model
 from pynamodb.attributes import UnicodeAttribute, UTCDateTimeAttribute
 from pynamodb.exceptions import DeleteError
 
-from ...data.entities.entity_constants import (
-    AWSConfig, TableNames, UserConstants, LockFields)
+from ...data.entities.entity_constants import UserConstants, LockFields
+from ...data.database.database_constants import AWSConfig, TableNames
 from ...data.exceptions import (CNOPDatabaseOperationException,
                                         CNOPLockAcquisitionException)
 from ...shared.logging import BaseLogger, LogActions, Loggers

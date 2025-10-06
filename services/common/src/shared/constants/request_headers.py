@@ -33,3 +33,12 @@ class RequestHeaderDefaults:
     USER_ID_DEFAULT = "1"
     USER_ROLE_DEFAULT = "customer"
     USER_AGENT_DEFAULT = "unknown"
+
+
+class ExtractedUserFields:
+    """Field names for extracted user information from headers"""
+
+    USER_ID_KEY = "user_id"
+    USER_ROLE_KEY = "user_role"
+    REQUEST_ID_KEY = "request_id"
+    SOURCE_SERVICE_KEY = "source_service"

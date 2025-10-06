@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from ...shared.logging import BaseLogger, LogActions, Loggers
 from ..exceptions import CNOPDatabaseOperationException
+from ..database.database_constants import DatabaseConfig
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
@@ -22,7 +23,7 @@ class BaseDAO(ABC):
                 message=f"Getting item from DynamoDB: key={key}"
             )
             response = table.get_item(Key=key)
-            item = response.get('Item')
+            item = response.get(DatabaseConfig.ITEM)
             if item:
                 logger.info(
                 action=LogActions.DB_OPERATION,
@@ -73,17 +74,17 @@ class BaseDAO(ABC):
             )
 
             kwargs = {
-                'Key': key,
-                'UpdateExpression': update_expression,
-                'ExpressionAttributeValues': expression_values,
-                'ReturnValues': 'ALL_NEW'
+                DatabaseConfig.KEY: key,
+                DatabaseConfig.UPDATE_EXPRESSION: update_expression,
+                DatabaseConfig.EXPRESSION_ATTRIBUTE_VALUES: expression_values,
+                DatabaseConfig.RETURN_VALUES: DatabaseConfig.ALL_NEW
             }
 
             if expression_names:
-                kwargs['ExpressionAttributeNames'] = expression_names
+                kwargs[DatabaseConfig.EXPRESSION_ATTRIBUTE_NAMES] = expression_names
 
             response = table.update_item(**kwargs)
-            attributes = response.get('Attributes')
+            attributes = response.get(DatabaseConfig.ATTRIBUTES)
             if not attributes:
                 raise CNOPDatabaseOperationException(f"Failed to update item with key {key}: No attributes returned")
 
@@ -102,8 +103,8 @@ class BaseDAO(ABC):
     def _safe_delete_item(self, table, key: Dict[str, Any]) -> bool:
         """Safely delete item from DynamoDB table"""
         try:
-            response = table.delete_item(Key=key, ReturnValues='ALL_OLD')
-            return 'Attributes' in response
+            response = table.delete_item(Key=key, ReturnValues=DatabaseConfig.ALL_OLD)
+            return DatabaseConfig.ATTRIBUTES in response
         except Exception as e:
             logger.error(
                 action=LogActions.ERROR,
@@ -116,18 +117,18 @@ class BaseDAO(ABC):
         """Safely query DynamoDB table"""
         try:
             kwargs = {
-                'KeyConditionExpression': key_condition
+                DatabaseConfig.KEY_CONDITION_EXPRESSION: key_condition
             }
 
             if filter_condition:
-                kwargs['FilterExpression'] = filter_condition
+                kwargs[DatabaseConfig.FILTER_EXPRESSION] = filter_condition
             if index_name:
-                kwargs['IndexName'] = index_name
+                kwargs[DatabaseConfig.INDEX_NAME] = index_name
             if limit:
-                kwargs['Limit'] = limit
+                kwargs[DatabaseConfig.LIMIT] = limit
 
             response = table.query(**kwargs)
-            return response.get('Items', [])
+            return response.get(DatabaseConfig.ITEMS, [])
         except Exception as e:
             logger.error(
                 action=LogActions.ERROR,

@@ -22,12 +22,12 @@ logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
 def get_user_dao():
     """Get UserDAO instance with database connection"""
-    return UserDAO(get_dynamodb_manager().get_connection())
+    return UserDAO()
 
 
 def get_balance_dao():
     """Get BalanceDAO instance with database connection"""
-    return BalanceDAO(get_dynamodb_manager().get_connection())
+    return BalanceDAO()
 
 
 def get_asset_dao():
@@ -47,7 +47,7 @@ def get_asset_balance_dao():
 
 def get_asset_transaction_dao():
     """Get AssetTransactionDAO instance with database connection"""
-    return AssetTransactionDAO(get_dynamodb_manager().get_connection())
+    return AssetTransactionDAO()
 
 
 def get_database_health():

@@ -12,6 +12,7 @@ from typing import Any, Dict, Optional
 from fastapi import HTTPException, status
 
 from ...shared.logging import BaseLogger, LogActions, Loggers
+from ...shared.constants.health_constants import HealthCheckConstants
 
 logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
 
@@ -27,17 +28,17 @@ class HealthCheckResponse:
     ):
         self.service_name = service_name
         self.version = version
-        self.environment = environment or os.getenv("ENVIRONMENT", "development")
+        self.environment = environment or os.getenv("ENVIRONMENT", HealthCheckConstants.DEFAULT_ENVIRONMENT)
         self.timestamp = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary format"""
         return {
-            "status": "healthy",
-            "service": self.service_name,
-            "version": self.version,
-            "timestamp": self.timestamp,
-            "environment": self.environment
+            HealthCheckConstants.STATUS: HealthCheckConstants.STATUS_HEALTHY,
+            HealthCheckConstants.SERVICE: self.service_name,
+            HealthCheckConstants.VERSION: self.version,
+            HealthCheckConstants.TIMESTAMP: self.timestamp,
+            HealthCheckConstants.ENVIRONMENT: self.environment
         }
 
 
@@ -52,7 +53,7 @@ class HealthChecker:
     ):
         self.service_name = service_name
         self.version = version
-        self.environment = environment or os.getenv("ENVIRONMENT", "development")
+        self.environment = environment or os.getenv("ENVIRONMENT", HealthCheckConstants.DEFAULT_ENVIRONMENT)
         self.response = HealthCheckResponse(service_name, version, self.environment)
 
     def basic_health_check(self) -> Dict[str, Any]:
@@ -64,9 +65,9 @@ class HealthChecker:
         """
         return {
             **self.response.to_dict(),
-            "checks": {
-                "api": "ok",
-                "service": "running"
+            HealthCheckConstants.CHECKS: {
+                HealthCheckConstants.API: HealthCheckConstants.OK,
+                HealthCheckConstants.SERVICE: HealthCheckConstants.RUNNING
             }
         }
 
@@ -89,11 +90,11 @@ class HealthChecker:
 
             return {
                 **self.response.to_dict(),
-                "status": "ready",
-                "checks": {
-                    "api": "ok",
-                    "database": "ok",
-                    "service": "ready"
+                HealthCheckConstants.STATUS: HealthCheckConstants.READY,
+                HealthCheckConstants.CHECKS: {
+                    HealthCheckConstants.API: HealthCheckConstants.OK,
+                    HealthCheckConstants.DATABASE: HealthCheckConstants.OK,
+                    HealthCheckConstants.SERVICE: HealthCheckConstants.READY
                 }
             }
 
@@ -118,10 +119,10 @@ class HealthChecker:
         """
         return {
             **self.response.to_dict(),
-            "status": "alive",
-            "checks": {
-                "api": "ok",
-                "service": "alive"
+            HealthCheckConstants.STATUS: HealthCheckConstants.ALIVE,
+            HealthCheckConstants.CHECKS: {
+                HealthCheckConstants.API: HealthCheckConstants.OK,
+                HealthCheckConstants.SERVICE: HealthCheckConstants.ALIVE
             }
         }
 
@@ -142,13 +143,13 @@ class HealthChecker:
                 )
 
             return {
-                "status": "healthy",
-                "service": f"{self.service_name}-database",
-                "timestamp": self.response.timestamp,
-                "database": {
-                    "status": "healthy",
-                    "connection": "ok",
-                    "last_check": self.response.timestamp
+                HealthCheckConstants.STATUS: HealthCheckConstants.STATUS_HEALTHY,
+                HealthCheckConstants.SERVICE: f"{self.service_name}-database",
+                HealthCheckConstants.TIMESTAMP: self.response.timestamp,
+                HealthCheckConstants.DATABASE: {
+                    HealthCheckConstants.STATUS: HealthCheckConstants.STATUS_HEALTHY,
+                    HealthCheckConstants.CONNECTION: HealthCheckConstants.OK,
+                    HealthCheckConstants.LAST_CHECK: self.response.timestamp
                 }
             }
 

@@ -16,8 +16,9 @@ from pydantic import BaseModel, Field
 from pynamodb.attributes import UnicodeAttribute, UTCDateTimeAttribute
 from pynamodb.models import Model
 
-from ..entity_constants import (AssetBalanceFields, AWSConfig, DatabaseFields,
-                                FieldConstraints, TableNames, UserConstants)
+from ..entity_constants import (AssetBalanceFields, DatabaseFields,
+                                FieldConstraints, UserConstants)
+from ...database.database_constants import AWSConfig, TableNames
 from ..datetime_utils import get_current_utc
 
 

@@ -152,7 +152,6 @@ class OrderValidationUtils:
     MAX_EXPIRATION_DAYS = 30
     MAX_DECIMAL_PLACES = 8  # For crypto quantities
     MAX_PRICE_DECIMAL_PLACES = 2  # For USD prices
-    SUPPORTED_CURRENCIES = {"USD", "EUR", "GBP"}
 
     @classmethod
     def validate_quantity_range(cls, quantity: Decimal) -> Tuple[bool, Optional[str]]:
@@ -210,12 +209,6 @@ class OrderValidationUtils:
 
         return True, None
 
-    @classmethod
-    def validate_currency(cls, currency: str) -> Tuple[bool, Optional[str]]:
-        """Validate currency is supported"""
-        if currency not in cls.SUPPORTED_CURRENCIES:
-            return False, f"Currency {currency} is not supported. Supported currencies: {', '.join(cls.SUPPORTED_CURRENCIES)}"
-        return True, None
 
     @classmethod
     def validate_order_type_requirements(cls, order_type: OrderType,
@@ -239,8 +232,7 @@ class OrderBusinessRules:
     @classmethod
     def validate_all_business_rules(cls, order_type: OrderType, quantity: Decimal,
                                   order_price: Optional[Decimal] = None,
-                                  expires_at: Optional[datetime] = None,
-                                  currency: str = "USD") -> List[str]:
+                                  expires_at: Optional[datetime] = None):
         """
         Validate all business rules for an order
         Returns list of error messages (empty if valid)
@@ -281,10 +273,6 @@ class OrderBusinessRules:
         if not is_valid:
             errors.append(error)
 
-        # Currency validation
-        is_valid, error = OrderValidationUtils.validate_currency(currency)
-        if not is_valid:
-            errors.append(error)
 
         return errors
 

@@ -13,6 +13,14 @@ from typing import Any, Dict, Optional
 import redis
 
 from ...shared.logging import BaseLogger, LogActions, Loggers
+from .database_constants import (
+    build_redis_config,
+    build_redis_pool_params,
+    get_environment,
+    is_development,
+    get_redis_namespace,
+    RedisConfig as RedisConfigConstants,
+)
 
 logger = BaseLogger(Loggers.CACHE, log_to_file=True)
 
@@ -36,42 +44,8 @@ def get_redis_config() -> RedisConfig:
     Get Redis configuration based on environment
     Supports both local K8s and AWS environments
     """
-    environment = os.getenv("ENVIRONMENT", "dev").lower()
-
-    # Base configuration
-    config = {
-        "host": os.getenv("REDIS_HOST", "redis.order-processor.svc.cluster.local"),
-        "port": int(os.getenv("REDIS_PORT", "6379")),
-        "db": int(os.getenv("REDIS_DB", "0")),
-        "password": os.getenv("REDIS_PASSWORD"),
-        "decode_responses": True,
-        "socket_connect_timeout": 5,
-        "socket_timeout": 5,
-        "retry_on_timeout": True,
-        "health_check_interval": 30,
-    }
-
-    # Environment-specific overrides
-    if environment == "prod":
-        # AWS ElastiCache configuration
-        config.update({
-            "ssl": True,
-            "ssl_cert_reqs": "required",
-            "socket_connect_timeout": 10,
-            "socket_timeout": 10,
-        })
-
-        # Use AWS ElastiCache endpoint if available
-        aws_redis_endpoint = os.getenv("REDIS_ENDPOINT")
-        if aws_redis_endpoint:
-            config["host"] = aws_redis_endpoint
-
-    else:
-        # Local K8s configuration
-        config.update({
-            "ssl": False,
-            "ssl_cert_reqs": None,
-        })
+    environment = get_environment()
+    config = build_redis_config()
 
     logger.info(
         action=LogActions.CACHE_OPERATION,
@@ -87,7 +61,7 @@ def get_redis_url() -> str:
     config = get_redis_config()
 
     # Build URL components
-    scheme = "rediss" if config.ssl else "redis"
+    scheme = RedisConfigConstants.REDISS_SCHEME if config.ssl else RedisConfigConstants.REDIS_SCHEME
     auth = f":{config.password}@" if config.password else ""
 
     return f"{scheme}://{auth}{config.host}:{config.port}/{config.db}"
@@ -100,36 +74,27 @@ def get_redis_connection_params() -> Dict[str, Any]:
     config = get_redis_config()
 
     params = {
-        "host": config.host,
-        "port": config.port,
-        "db": config.db,
-        "decode_responses": config.decode_responses,
-        "socket_connect_timeout": config.socket_connect_timeout,
-        "socket_timeout": config.socket_timeout,
-        "retry_on_timeout": config.retry_on_timeout,
-        "health_check_interval": config.health_check_interval,
+        RedisConfigConstants.HOST_KEY: config.host,
+        RedisConfigConstants.PORT_KEY: config.port,
+        RedisConfigConstants.DB_KEY: config.db,
+        RedisConfigConstants.DECODE_RESPONSES_KEY: config.decode_responses,
+        RedisConfigConstants.SOCKET_CONNECT_TIMEOUT_KEY: config.socket_connect_timeout,
+        RedisConfigConstants.SOCKET_TIMEOUT_KEY: config.socket_timeout,
+        RedisConfigConstants.RETRY_ON_TIMEOUT_KEY: config.retry_on_timeout,
+        RedisConfigConstants.HEALTH_CHECK_INTERVAL_KEY: config.health_check_interval,
     }
 
     # Add optional parameters
     if config.password:
-        params["password"] = config.password
+        params[RedisConfigConstants.PASSWORD_KEY] = config.password
 
     if config.ssl:
-        params["ssl"] = config.ssl
-        params["ssl_cert_reqs"] = config.ssl_cert_reqs
+        params[RedisConfigConstants.SSL_KEY] = config.ssl
+        params[RedisConfigConstants.SSL_CERT_REQS_KEY] = config.ssl_cert_reqs
 
     return params
 
 # Environment detection helpers
-def is_production() -> bool:
-    """Check if running in production environment"""
-    return os.getenv("ENVIRONMENT", "dev").lower() == "prod"
-
 def is_local_kubernetes() -> bool:
     """Check if running in local K8s environment"""
-    return os.getenv("ENVIRONMENT", "dev").lower() == "dev"
-
-def get_redis_namespace() -> str:
-    """Get Redis namespace for key prefixing"""
-    environment = os.getenv("ENVIRONMENT", "dev").lower()
-    return f"order-processor:{environment}"
+    return is_development()
