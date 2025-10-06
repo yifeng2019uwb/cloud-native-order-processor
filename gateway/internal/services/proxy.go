@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"order-processor-gateway/internal/config"
@@ -16,48 +17,100 @@ import (
 	"order-processor-gateway/pkg/models"
 )
 
+// CircuitBreaker tracks service health and prevents cascading failures
+type CircuitBreaker struct {
+	serviceName      string
+	state            string
+	failureCount     int
+	successCount     int
+	lastFailureTime  time.Time
+	failureThreshold int
+	timeout          time.Duration
+	successThreshold int
+	mutex            sync.RWMutex
+}
+
 // ProxyService handles forwarding requests to backend services
 type ProxyService struct {
-	config *config.Config
-	client *http.Client
+	config          *config.Config
+	client          *http.Client
+	circuitBreakers map[string]*CircuitBreaker
 }
 
 // NewProxyService creates a new proxy service
 func NewProxyService(cfg *config.Config) *ProxyService {
+	circuitBreakers := make(map[string]*CircuitBreaker)
+
+	// Initialize circuit breakers for each service
+	services := []string{
+		constants.UserService,
+		constants.InventoryService,
+		constants.OrderService,
+		constants.AuthService,
+	}
+
+	for _, service := range services {
+		circuitBreakers[service] = &CircuitBreaker{
+			serviceName:      service,
+			state:            constants.CircuitBreakerStateClosed,
+			failureCount:     0,
+			successCount:     0,
+			failureThreshold: constants.CircuitBreakerFailureThreshold,
+			timeout:          constants.CircuitBreakerTimeout,
+			successThreshold: constants.CircuitBreakerSuccessThreshold,
+		}
+	}
+
 	return &ProxyService{
-		config: cfg,
-		client: &http.Client{
-			Timeout: constants.DefaultTimeout,
-		},
+		config:          cfg,
+		client:          &http.Client{Timeout: constants.DefaultTimeout},
+		circuitBreakers: circuitBreakers,
 	}
 }
 
-// ProxyRequest forwards a request to a backend service
-// Phase 1: Basic request forwarding with error handling
+// ProxyRequest forwards a request to a backend service with circuit breaker protection
 func (p *ProxyService) ProxyRequest(ctx context.Context, proxyReq *models.ProxyRequest) (*http.Response, error) {
-	// Phase 1: Simple request forwarding
-	// Phase 2: Add circuit breaker logic
-	// Phase 3: Add retry logic and advanced monitoring
+	// Get circuit breaker for the target service
+	cb, exists := p.circuitBreakers[proxyReq.TargetService]
+	if !exists {
+		return nil, fmt.Errorf("no circuit breaker found for service: %s", proxyReq.TargetService)
+	}
+
+	// Check if circuit breaker allows the request
+	if !cb.CanExecute() {
+		return nil, fmt.Errorf("circuit breaker is open for service %s (state: %s, failures: %d)",
+			proxyReq.TargetService, cb.GetState(), cb.GetFailureCount())
+	}
 
 	// Build target URL
 	targetURL, err := p.buildTargetURL(proxyReq)
 	if err != nil {
+		cb.RecordFailure()
 		return nil, fmt.Errorf("failed to build target URL: %w", err)
 	}
 
 	// Create HTTP request
 	req, err := p.createHTTPRequest(ctx, proxyReq, targetURL)
 	if err != nil {
+		cb.RecordFailure()
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
 	// Forward request to backend service
 	resp, err := p.client.Do(req)
 	if err != nil {
-		// Phase 2: Circuit breaker - increment failure count
+		cb.RecordFailure()
 		return nil, fmt.Errorf("backend service request failed: %w", err)
 	}
 
+	// Check if response indicates failure (5xx status codes)
+	if resp.StatusCode >= 500 {
+		cb.RecordFailure()
+		return resp, nil // Return response even for 5xx errors
+	}
+
+	// Record success for 2xx and 4xx status codes
+	cb.RecordSuccess()
 	return resp, nil
 }
 
@@ -254,12 +307,92 @@ func (p *ProxyService) GetTargetService(path string) string {
 	}
 }
 
-// Phase 2: Circuit breaker pattern for service health monitoring (TODO)
-// CircuitBreaker tracks service health and prevents cascading failures
-// - Add failure count tracking
-// - Add timeout tracking
-// - Add state management (open, closed, half-open)
-// - Add failure threshold configuration
+// Circuit breaker methods
+
+// CanExecute checks if the circuit breaker allows the request to proceed
+func (cb *CircuitBreaker) CanExecute() bool {
+	cb.mutex.RLock()
+	defer cb.mutex.RUnlock()
+
+	switch cb.state {
+	case constants.CircuitBreakerStateClosed:
+		return true
+	case constants.CircuitBreakerStateOpen:
+		// Check if timeout has passed to transition to half-open
+		if time.Since(cb.lastFailureTime) >= cb.timeout {
+			cb.mutex.RUnlock()
+			cb.mutex.Lock()
+			cb.state = constants.CircuitBreakerStateHalfOpen
+			cb.successCount = 0
+			cb.mutex.Unlock()
+			cb.mutex.RLock()
+			return true
+		}
+		return false
+	case constants.CircuitBreakerStateHalfOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// RecordSuccess records a successful request
+func (cb *CircuitBreaker) RecordSuccess() {
+	cb.mutex.Lock()
+	defer cb.mutex.Unlock()
+
+	cb.successCount++
+
+	// If in half-open state and success threshold reached, close the circuit
+	if cb.state == constants.CircuitBreakerStateHalfOpen && cb.successCount >= cb.successThreshold {
+		cb.state = constants.CircuitBreakerStateClosed
+		cb.failureCount = 0
+		cb.successCount = 0
+	}
+}
+
+// RecordFailure records a failed request
+func (cb *CircuitBreaker) RecordFailure() {
+	cb.mutex.Lock()
+	defer cb.mutex.Unlock()
+
+	cb.failureCount++
+	cb.lastFailureTime = time.Now()
+
+	// If failure threshold reached, open the circuit
+	if cb.failureCount >= cb.failureThreshold {
+		cb.state = constants.CircuitBreakerStateOpen
+	}
+}
+
+// GetState returns the current circuit breaker state
+func (cb *CircuitBreaker) GetState() string {
+	cb.mutex.RLock()
+	defer cb.mutex.RUnlock()
+	return cb.state
+}
+
+// GetFailureCount returns the current failure count
+func (cb *CircuitBreaker) GetFailureCount() int {
+	cb.mutex.RLock()
+	defer cb.mutex.RUnlock()
+	return cb.failureCount
+}
+
+// GetCircuitBreakerStatus returns the status of all circuit breakers
+func (p *ProxyService) GetCircuitBreakerStatus() map[string]map[string]interface{} {
+	status := make(map[string]map[string]interface{})
+
+	for serviceName, cb := range p.circuitBreakers {
+		status[serviceName] = map[string]interface{}{
+			"state":         cb.GetState(),
+			"failure_count": cb.GetFailureCount(),
+			"service_name":  cb.serviceName,
+		}
+	}
+
+	return status
+}
 
 // Phase 3: Advanced features (Future - simple comments)
 // - Service discovery integration

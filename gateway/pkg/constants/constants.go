@@ -290,10 +290,17 @@ const (
 	DefaultJWTAlgorithm = "HS256"
 )
 
-// Phase 1: Circuit breaker configuration (TODO - Phase 2)
+// Circuit breaker configuration
 const (
-// CircuitBreakerFailureThreshold = 5  // Number of failures before opening circuit
-// CircuitBreakerTimeout          = 60 * time.Second // Time to wait before trying again
+	// Circuit breaker states
+	CircuitBreakerStateClosed   = "closed"
+	CircuitBreakerStateOpen     = "open"
+	CircuitBreakerStateHalfOpen = "half-open"
+
+	// Circuit breaker thresholds
+	CircuitBreakerFailureThreshold = 5                // Number of failures before opening circuit
+	CircuitBreakerTimeout          = 60 * time.Second // Time to wait before trying again
+	CircuitBreakerSuccessThreshold = 3                // Number of successes to close circuit from half-open
 )
 
 // Phase 1: Route configuration
