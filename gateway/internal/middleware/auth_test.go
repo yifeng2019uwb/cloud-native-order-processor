@@ -36,15 +36,15 @@ func TestAuthMiddleware(t *testing.T) {
 	router.GET("/test", func(c *gin.Context) {
 		userID, userIDExists := c.Get(constants.ContextKeyUserID)
 		userRole, userRoleExists := c.Get(constants.ContextKeyUserRole)
-		userContext, userContextExists := c.Get("user_context")
+		userContext, userContextExists := c.Get(constants.ContextKeyUserContext)
 
 		c.JSON(http.StatusOK, gin.H{
-			"user_id":             userID,
-			"user_id_exists":      userIDExists,
-			"user_role":           userRole,
-			"user_role_exists":    userRoleExists,
-			"user_context":        userContext,
-			"user_context_exists": userContextExists,
+			constants.JSONFieldUsername: userID,
+			"user_id_exists":            userIDExists,
+			"user_role":                 userRole,
+			"user_role_exists":          userRoleExists,
+			"user_context":              userContext,
+			"user_context_exists":       userContextExists,
 		})
 	})
 

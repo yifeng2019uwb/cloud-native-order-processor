@@ -142,7 +142,7 @@ func TestLoadWithInvalidRedisSSL(t *testing.T) {
 
 func TestGetEnv(t *testing.T) {
 	t.Run("Environment Variable Set", func(t *testing.T) {
-		key := "TEST_ENV_VAR"
+		key := constants.EnvRedisDB
 		expectedValue := "test_value"
 		fallback := "fallback_value"
 

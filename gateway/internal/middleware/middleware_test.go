@@ -21,7 +21,7 @@ func TestCORS(t *testing.T) {
 	router := setupTestRouter()
 	router.Use(CORS())
 	router.GET("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "cors test"})
+		c.JSON(http.StatusOK, gin.H{constants.JSONFieldMessage: "cors test"})
 	})
 
 	t.Run("CORS Headers", func(t *testing.T) {
@@ -37,7 +37,7 @@ func TestCORS(t *testing.T) {
 
 	t.Run("OPTIONS Request", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("OPTIONS", "/test", nil)
+		req, _ := http.NewRequest(constants.HTTPMethodOptions, "/test", nil)
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, constants.StatusNoContent, w.Code)
@@ -49,7 +49,7 @@ func TestLogger(t *testing.T) {
 	router := setupTestRouter()
 	router.Use(Logger())
 	router.GET("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "logger test"})
+		c.JSON(http.StatusOK, gin.H{constants.JSONFieldMessage: "logger test"})
 	})
 
 	t.Run("Logger Middleware", func(t *testing.T) {
@@ -69,7 +69,7 @@ func TestRecovery(t *testing.T) {
 		panic("test panic")
 	})
 	router.GET("/normal", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "normal"})
+		c.JSON(http.StatusOK, gin.H{constants.JSONFieldMessage: "normal"})
 	})
 
 	t.Run("Recovery from Panic", func(t *testing.T) {

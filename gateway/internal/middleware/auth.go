@@ -23,14 +23,14 @@ var logger = logging.NewBaseLogger(logging.GATEWAY)
 func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		logger.Info(logging.REQUEST_START, "AuthMiddleware processing request", "", map[string]interface{}{
-			"path":   c.Request.URL.Path,
-			"method": c.Request.Method,
+			constants.JSONFieldPath:   c.Request.URL.Path,
+			constants.JSONFieldMethod: c.Request.Method,
 		})
 
 		// Extract token from Authorization header
 		authHeader := c.GetHeader(constants.AuthorizationHeader)
 		logger.Info(logging.REQUEST_START, "Auth header extracted", "", map[string]interface{}{
-			"auth_header": authHeader,
+			constants.JSONFieldAuthHeader: authHeader,
 		})
 
 		if authHeader == "" {
@@ -60,13 +60,13 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 
 		// Add user information to context
 		logger.Info(logging.REQUEST_END, "User context set successfully", userContext.Username, map[string]interface{}{
-			"username": userContext.Username,
-			"role":     userContext.Role,
+			constants.JSONFieldUsername: userContext.Username,
+			constants.JSONFieldRole:     userContext.Role,
 		})
 
 		c.Set(constants.ContextKeyUserID, userContext.Username)
 		c.Set(constants.ContextKeyUserRole, userContext.Role)
-		c.Set("user_context", userContext)
+		c.Set(constants.ContextKeyUserContext, userContext)
 
 		c.Next()
 	}
@@ -80,13 +80,13 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 func RoleMiddleware(requiredRoles []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		logger.Info(logging.REQUEST_START, "RoleMiddleware processing request", "", map[string]interface{}{
-			"path":           c.Request.URL.Path,
-			"required_roles": requiredRoles,
+			constants.JSONFieldPath:          c.Request.URL.Path,
+			constants.JSONFieldRequiredRoles: requiredRoles,
 		})
 
 		userRole := c.GetString(constants.ContextKeyUserRole)
 		logger.Info(logging.REQUEST_START, "User role extracted", "", map[string]interface{}{
-			"user_role": userRole,
+			constants.JSONFieldUserRole: userRole,
 		})
 
 		// If no role restrictions, allow access
@@ -99,7 +99,7 @@ func RoleMiddleware(requiredRoles []string) gin.HandlerFunc {
 		// If user has no role but roles are required, deny access
 		if userRole == "" {
 			logger.Error(logging.AUTH_FAILURE, "User has no role but roles are required", "", map[string]interface{}{
-				"required_roles": requiredRoles,
+				constants.JSONFieldRequiredRoles: requiredRoles,
 			})
 			handleAuthError(c, models.ErrPermInsufficient, fmt.Sprintf("Insufficient permissions. Required roles: %v, User role: none", requiredRoles))
 			return
@@ -116,15 +116,15 @@ func RoleMiddleware(requiredRoles []string) gin.HandlerFunc {
 
 		if !hasRole {
 			logger.Error(logging.AUTH_FAILURE, "User role not found in required roles", "", map[string]interface{}{
-				"user_role":      userRole,
-				"required_roles": requiredRoles,
+				constants.JSONFieldUserRole:      userRole,
+				constants.JSONFieldRequiredRoles: requiredRoles,
 			})
 			handleAuthError(c, models.ErrPermInsufficient, fmt.Sprintf("Insufficient permissions. Required roles: %v, User role: %s", requiredRoles, userRole))
 			return
 		}
 
 		logger.Info(logging.REQUEST_END, "User role found in required roles, allowing access", "", map[string]interface{}{
-			"user_role": userRole,
+			constants.JSONFieldUserRole: userRole,
 		})
 		c.Next()
 	}
@@ -133,10 +133,10 @@ func RoleMiddleware(requiredRoles []string) gin.HandlerFunc {
 // handleAuthError handles authentication and authorization errors
 func handleAuthError(c *gin.Context, errorCode models.ErrorCode, message string) {
 	logger.Error(logging.AUTH_FAILURE, "Authentication/authorization error", "", map[string]interface{}{
-		"error_code": string(errorCode),
-		"message":    message,
-		"path":       c.Request.URL.Path,
-		"method":     c.Request.Method,
+		"error_code":               string(errorCode),
+		constants.JSONFieldMessage: message,
+		constants.JSONFieldPath:    c.Request.URL.Path,
+		constants.JSONFieldMethod:  c.Request.Method,
 	})
 
 	errorResponse := models.ErrorResponse{

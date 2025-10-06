@@ -183,11 +183,11 @@ func (p *ProxyService) createHTTPRequest(ctx context.Context, proxyReq *models.P
 	if proxyReq.Context != nil && proxyReq.Context.User != nil && proxyReq.Context.User.Username != "" {
 		req.Header.Set(constants.XUserIDHeader, proxyReq.Context.User.Username)
 		req.Header.Set(constants.XUserRoleHeader, proxyReq.Context.User.Role)
-		req.Header.Set(constants.XAuthenticatedHeader, "true")
+		req.Header.Set(constants.XAuthenticatedHeader, constants.HeaderValueTrue)
 	}
 
 	// Add source and auth service headers for backend service validation
-	req.Header.Set(constants.XSourceHeader, "gateway")
+	req.Header.Set(constants.XSourceHeader, constants.HeaderValueGateway)
 	req.Header.Set(constants.XAuthServiceHeader, "auth-service")
 
 	// Set content type if not present
@@ -266,22 +266,12 @@ func (p *ProxyService) stripAPIPrefix(path, prefix string) string {
 	return path
 }
 
-// generateRequestID generates a simple request ID
-// Phase 2: Use UUID v4 for better uniqueness
-func generateRequestID() string {
-	return fmt.Sprintf("req-%d", time.Now().UnixNano())
-}
-
 // GetRouteConfig returns the route configuration for a given path
 func (p *ProxyService) GetRouteConfig(path string) (*constants.RouteConfig, bool) {
-	fmt.Printf("🔍 STEP 3: GetRouteConfig - Looking up path: %s\n", path)
 	config, exists := constants.RouteConfigs[path]
 	if !exists {
-		fmt.Printf("🔍 STEP 3.1: GetRouteConfig - Route config not found for path: %s\n", path)
-		fmt.Printf("🔍 STEP 3.2: GetRouteConfig - Available routes: %v\n", constants.RouteConfigs)
 		return nil, false
 	}
-	fmt.Printf("🔍 STEP 3.3: GetRouteConfig - Route config found for path: %s\n", path)
 	return &config, true
 }
 
@@ -385,9 +375,9 @@ func (p *ProxyService) GetCircuitBreakerStatus() map[string]map[string]interface
 
 	for serviceName, cb := range p.circuitBreakers {
 		status[serviceName] = map[string]interface{}{
-			"state":         cb.GetState(),
-			"failure_count": cb.GetFailureCount(),
-			"service_name":  cb.serviceName,
+			constants.CircuitBreakerFieldState:        cb.GetState(),
+			constants.CircuitBreakerFieldFailureCount: cb.GetFailureCount(),
+			constants.CircuitBreakerFieldServiceName:  cb.serviceName,
 		}
 	}
 

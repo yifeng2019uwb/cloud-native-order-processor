@@ -33,7 +33,7 @@ func NewAuthServiceClient(cfg *config.Config) *AuthServiceClient {
 func (a *AuthServiceClient) ValidateToken(ctx context.Context, token string) (*models.UserContext, error) {
 	// Prepare request payload
 	requestPayload := map[string]interface{}{
-		"token": token,
+		constants.AuthTokenField: token,
 	}
 
 	// Marshal request to JSON
@@ -43,14 +43,14 @@ func (a *AuthServiceClient) ValidateToken(ctx context.Context, token string) (*m
 	}
 
 	// Create HTTP request
-	req, err := http.NewRequestWithContext(ctx, "POST", a.config.Services.AuthService+"/internal/auth/validate", bytes.NewBuffer(requestBody))
+	req, err := http.NewRequestWithContext(ctx, "POST", a.config.Services.AuthService+constants.AuthValidatePath, bytes.NewBuffer(requestBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	// Set headers
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Source", "gateway")
+	req.Header.Set("Content-Type", constants.ContentTypeJSON)
+	req.Header.Set(constants.XSourceHeader, constants.HeaderValueGateway)
 
 	// Send request to Auth Service
 	resp, err := a.client.Do(req)
@@ -77,21 +77,21 @@ func (a *AuthServiceClient) ValidateToken(ctx context.Context, token string) (*m
 	}
 
 	// Check if token is valid
-	valid, ok := authResponse["valid"].(bool)
+	valid, ok := authResponse[constants.AuthValidField].(bool)
 	if !ok || !valid {
-		return nil, fmt.Errorf("token validation failed: %s", authResponse["message"])
+		return nil, fmt.Errorf("token validation failed: %s", authResponse[constants.AuthMessageField])
 	}
 
 	// Extract user information
-	username, ok := authResponse["user"].(string)
+	username, ok := authResponse[constants.AuthUserField].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid user information in response")
 	}
 
 	// Extract role from metadata if available, default to "customer"
-	role := "customer"
-	if metadata, ok := authResponse["metadata"].(map[string]interface{}); ok {
-		if userRole, ok := metadata["role"].(string); ok {
+	role := constants.DefaultUserRole
+	if metadata, ok := authResponse[constants.AuthMetadataField].(map[string]interface{}); ok {
+		if userRole, ok := metadata[constants.AuthRoleField].(string); ok {
 			role = userRole
 		}
 	}

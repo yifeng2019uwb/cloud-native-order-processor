@@ -16,7 +16,7 @@ func CORS() gin.HandlerFunc {
 		c.Header("Access-Control-Allow-Methods", constants.CORSAllowMethods)
 		c.Header("Access-Control-Allow-Headers", constants.CORSAllowHeaders)
 
-		if c.Request.Method == "OPTIONS" {
+		if c.Request.Method == constants.HTTPMethodOptions {
 			c.AbortWithStatus(constants.StatusNoContent)
 			return
 		}

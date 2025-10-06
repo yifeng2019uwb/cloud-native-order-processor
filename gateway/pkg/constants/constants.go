@@ -209,13 +209,16 @@ const (
 
 // Log messages
 const (
-	LogConfigLoadFailed     = "Failed to load configuration"
-	LogRedisConnectFailed   = "Failed to connect to Redis"
-	LogRedisConnectSuccess  = "Connected to Redis"
-	LogRedisContinueWithout = "Continuing without Redis (some features will be disabled)"
-	LogProxyInitSuccess     = "Proxy service initialized"
-	LogServerStart          = "Starting Gateway server on port"
-	LogServerStartFailed    = "Failed to start server"
+	LogConfigLoadFailed            = "Failed to load configuration"
+	LogRedisConnectFailed          = "Failed to connect to Redis"
+	LogRedisConnectSuccess         = "Connected to Redis"
+	LogRedisContinueWithout        = "Continuing without Redis (some features will be disabled)"
+	LogProxyInitSuccess            = "Proxy service initialized"
+	LogServerStart                 = "Starting Gateway server on port"
+	LogServerStartFailed           = "Failed to start server"
+	LogLookingUpRouteConfig        = "Looking up route config"
+	LogRouteNotFoundTryingBasePath = "Route not found, trying basePath"
+	LogRouteNotFoundReturning404   = "Route not found, returning 404"
 )
 
 // Service status messages
@@ -228,6 +231,93 @@ const (
 const (
 	ServiceNameUser      = "user-service"
 	ServiceNameInventory = "inventory-service"
+)
+
+// JSON field names
+const (
+	JSONFieldPath          = "path"
+	JSONFieldMethod        = "method"
+	JSONFieldStatus        = "status"
+	JSONFieldService       = "service"
+	JSONFieldRedis         = "redis"
+	JSONFieldMessage       = "message"
+	JSONFieldError         = "error"
+	JSONFieldSuccess       = "success"
+	JSONFieldUserRole      = "user_role"
+	JSONFieldAuthHeader    = "auth_header"
+	JSONFieldUsername      = "username"
+	JSONFieldRole          = "role"
+	JSONFieldRequiredRoles = "required_roles"
+	JSONFieldAllowedRoles  = "allowed_roles"
+	JSONFieldRequiresAuth  = "requires_auth"
+	JSONFieldInputPath     = "input_path"
+	JSONFieldResult        = "result"
+	JSONFieldRetryAfter    = "retry_after"
+	JSONFieldLimit         = "limit"
+	JSONFieldRemaining     = "remaining"
+	JSONFieldResetTime     = "reset_time"
+)
+
+// Context keys
+const (
+	ContextKeyUserContext = "user_context"
+)
+
+// Header values
+const (
+	HeaderValueTrue    = "true"
+	HeaderValueGateway = "gateway"
+)
+
+// Rate limit header names
+const (
+	RateLimitHeaderLimit     = "X-RateLimit-Limit"
+	RateLimitHeaderRemaining = "X-RateLimit-Remaining"
+	RateLimitHeaderReset     = "X-RateLimit-Reset"
+)
+
+// Circuit breaker field names
+const (
+	CircuitBreakerFieldState        = "state"
+	CircuitBreakerFieldFailureCount = "failure_count"
+	CircuitBreakerFieldServiceName  = "service_name"
+)
+
+// Prometheus metric names
+const (
+	MetricHTTPRequestsTotal        = "gateway_http_requests_total"
+	MetricHTTPRequestDuration      = "gateway_http_request_duration_seconds"
+	MetricProxyRequestsTotal       = "gateway_proxy_requests_total"
+	MetricProxyRequestDuration     = "gateway_proxy_request_duration_seconds"
+	MetricProxyErrorsTotal         = "gateway_proxy_errors_total"
+	MetricRequestsTotal            = "gateway_requests_total"
+	MetricRateLimitViolationsTotal = "gateway_rate_limit_violations_total"
+	MetricRateLimitRemaining       = "gateway_rate_limit_remaining"
+	MetricRateLimitReset           = "gateway_rate_limit_reset"
+)
+
+// Prometheus label names
+const (
+	LabelMethod        = "method"
+	LabelPath          = "path"
+	LabelStatusCode    = "status_code"
+	LabelService       = "service"
+	LabelTargetService = "target_service"
+	LabelErrorType     = "error_type"
+	LabelEndpoint      = "endpoint"
+	LabelStatus        = "status"
+	LabelClientIP      = "client_ip"
+)
+
+// Auth service constants
+const (
+	AuthValidatePath  = "/internal/auth/validate"
+	AuthTokenField    = "token"
+	AuthValidField    = "valid"
+	AuthMessageField  = "message"
+	AuthUserField     = "user"
+	AuthMetadataField = "metadata"
+	AuthRoleField     = "role"
 )
 
 // Proxy messages

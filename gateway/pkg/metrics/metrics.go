@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"order-processor-gateway/pkg/constants"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -37,44 +39,44 @@ func NewGatewayMetricsWithRegistry(reg prometheus.Registerer) *GatewayMetrics {
 	return &GatewayMetrics{
 		HTTPRequestsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "gateway_http_requests_total",
+				Name: constants.MetricHTTPRequestsTotal,
 				Help: "Total number of HTTP requests processed",
 			},
-			[]string{"method", "path", "status_code", "service"},
+			[]string{constants.LabelMethod, constants.LabelPath, constants.LabelStatusCode, constants.LabelService},
 		),
 
 		HTTPRequestDuration: factory.NewHistogramVec(
 			prometheus.HistogramOpts{
-				Name:    "gateway_http_request_duration_seconds",
+				Name:    constants.MetricHTTPRequestDuration,
 				Help:    "Duration of HTTP requests in seconds",
 				Buckets: prometheus.DefBuckets,
 			},
-			[]string{"method", "path", "status_code", "service"},
+			[]string{constants.LabelMethod, constants.LabelPath, constants.LabelStatusCode, constants.LabelService},
 		),
 
 		ProxyRequestsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "gateway_proxy_requests_total",
+				Name: constants.MetricProxyRequestsTotal,
 				Help: "Total number of proxy requests to backend services",
 			},
-			[]string{"target_service", "method", "status_code"},
+			[]string{constants.LabelTargetService, constants.LabelMethod, constants.LabelStatusCode},
 		),
 
 		ProxyRequestDuration: factory.NewHistogramVec(
 			prometheus.HistogramOpts{
-				Name:    "gateway_proxy_request_duration_seconds",
+				Name:    constants.MetricProxyRequestDuration,
 				Help:    "Duration of proxy requests to backend services in seconds",
 				Buckets: prometheus.DefBuckets,
 			},
-			[]string{"target_service", "method", "status_code"},
+			[]string{constants.LabelTargetService, constants.LabelMethod, constants.LabelStatusCode},
 		),
 
 		ProxyErrorsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "gateway_proxy_errors_total",
+				Name: constants.MetricProxyErrorsTotal,
 				Help: "Total number of proxy errors to backend services",
 			},
-			[]string{"target_service", "error_type"},
+			[]string{constants.LabelTargetService, constants.LabelErrorType},
 		),
 
 		RateLimit: NewRateLimitMetricsWithRegistry(reg),

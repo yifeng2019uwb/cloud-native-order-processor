@@ -144,9 +144,9 @@ func (s *Server) healthCheck(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  status,
-		"service": constants.GatewayService,
-		"redis":   s.redisService != nil,
+		constants.JSONFieldStatus:  status,
+		constants.JSONFieldService: constants.GatewayService,
+		constants.JSONFieldRedis:   s.redisService != nil,
 	})
 }
 
@@ -154,24 +154,24 @@ func (s *Server) healthCheck(c *gin.Context) {
 // Phase 1: Basic proxy logic with simple error handling
 func (s *Server) handleProxyRequest(c *gin.Context) {
 	s.logger.Info(logging.REQUEST_START, "handleProxyRequest processing request", "", map[string]interface{}{
-		"path":   c.Request.URL.Path,
-		"method": c.Request.Method,
+		constants.JSONFieldPath:   c.Request.URL.Path,
+		constants.JSONFieldMethod: c.Request.Method,
 	})
 
 	// Get route configuration
 	path := c.Request.URL.Path
-	s.logger.Info(logging.REQUEST_START, "Looking up route config", "", map[string]interface{}{
-		"path": path,
+	s.logger.Info(logging.REQUEST_START, constants.LogLookingUpRouteConfig, "", map[string]interface{}{
+		constants.JSONFieldPath: path,
 	})
 	routeConfig, exists := s.proxyService.GetRouteConfig(path)
 
 	if !exists {
 		// Handle dynamic routes (like /assets/:id)
-		s.logger.Info(logging.REQUEST_START, "Route not found, trying basePath", "", nil)
+		s.logger.Info(logging.REQUEST_START, constants.LogRouteNotFoundTryingBasePath, "", nil)
 		basePath := s.getBasePath(path)
 		routeConfig, exists = s.proxyService.GetRouteConfig(basePath)
 		if !exists {
-			s.logger.Info(logging.REQUEST_END, "Route not found, returning 404", "", nil)
+			s.logger.Info(logging.REQUEST_END, constants.LogRouteNotFoundReturning404, "", nil)
 			s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, constants.ErrorRouteNotFound)
 			return
 		}
@@ -185,20 +185,20 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	}
 
 	s.logger.Info(logging.REQUEST_END, "Route config found", "", map[string]interface{}{
-		"path":          routeConfig.Path,
-		"requires_auth": routeConfig.RequiresAuth,
-		"allowed_roles": routeConfig.AllowedRoles,
+		constants.JSONFieldPath:         routeConfig.Path,
+		constants.JSONFieldRequiresAuth: routeConfig.RequiresAuth,
+		constants.JSONFieldAllowedRoles: routeConfig.AllowedRoles,
 	})
 
 	s.logger.Info(logging.REQUEST_START, "Checking authentication requirements", "", map[string]interface{}{
-		"requires_auth": routeConfig.RequiresAuth,
+		constants.JSONFieldRequiresAuth: routeConfig.RequiresAuth,
 	})
 
 	// Check authentication requirements
 	if routeConfig.RequiresAuth {
 		userRole := c.GetString(constants.ContextKeyUserRole)
 		s.logger.Info(logging.REQUEST_START, "Authentication required", "", map[string]interface{}{
-			"user_role": userRole,
+			constants.JSONFieldUserRole: userRole,
 		})
 		if userRole == "" {
 			s.logger.Error(logging.AUTH_FAILURE, "No userRole, returning 401", "", nil)
@@ -210,15 +210,15 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	}
 
 	s.logger.Info(logging.REQUEST_START, "Checking role permissions", "", map[string]interface{}{
-		"allowed_roles": routeConfig.AllowedRoles,
+		constants.JSONFieldAllowedRoles: routeConfig.AllowedRoles,
 	})
 
 	// Check role permissions
 	if len(routeConfig.AllowedRoles) > 0 {
 		userRole := c.GetString(constants.ContextKeyUserRole)
 		s.logger.Info(logging.REQUEST_START, "Checking user role against allowed roles", "", map[string]interface{}{
-			"user_role":     userRole,
-			"allowed_roles": routeConfig.AllowedRoles,
+			constants.JSONFieldUserRole:     userRole,
+			constants.JSONFieldAllowedRoles: routeConfig.AllowedRoles,
 		})
 		hasPermission := false
 		for _, role := range routeConfig.AllowedRoles {
@@ -229,14 +229,14 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		}
 		if !hasPermission {
 			s.logger.Error(logging.AUTH_FAILURE, "Permission denied", "", map[string]interface{}{
-				"user_role":     userRole,
-				"allowed_roles": routeConfig.AllowedRoles,
+				constants.JSONFieldUserRole:     userRole,
+				constants.JSONFieldAllowedRoles: routeConfig.AllowedRoles,
 			})
 			s.handleError(c, http.StatusForbidden, models.ErrPermInsufficient, constants.ErrorInsufficientPerms)
 			return
 		}
 		s.logger.Info(logging.REQUEST_END, "Permission granted", "", map[string]interface{}{
-			"user_role": userRole,
+			constants.JSONFieldUserRole: userRole,
 		})
 	} else {
 		s.logger.Info(logging.REQUEST_END, "No role restrictions, allowing access", "", nil)
@@ -338,7 +338,7 @@ func (s *Server) handleError(c *gin.Context, statusCode int, errorCode models.Er
 
 // getUserContext extracts user context from gin context
 func (s *Server) getUserContext(c *gin.Context) *models.UserContext {
-	userContext, exists := c.Get("user_context")
+	userContext, exists := c.Get(constants.ContextKeyUserContext)
 	if !exists {
 		return &models.UserContext{
 			Username:        "",
@@ -351,22 +351,12 @@ func (s *Server) getUserContext(c *gin.Context) *models.UserContext {
 
 // getBasePath extracts the base path for dynamic routes
 func (s *Server) getBasePath(path string) string {
-	// Local constants for path processing
-	const pathSeparator = "/"
+	// Using path separator constant from api_constants.go
 
-	// Path prefixes for pattern matching
-	const (
-		apiV1AssetsPrefix    = "/api/v1/assets/"
-		apiV1OrdersPrefix    = "/api/v1/orders/"
-		apiV1PortfolioPrefix = "/api/v1/portfolio/"
-		apiV1InventoryPrefix = "/api/v1/inventory/assets/"
-		apiV1BalancePrefix   = "/api/v1/balance/asset/"
-		transactionsSuffix   = "/transactions"
-		balanceSuffix        = "/balance"
-	)
+	// Path prefixes for pattern matching - using constants from api_constants.go
 
 	s.logger.Info(logging.REQUEST_START, "getBasePath processing", "", map[string]interface{}{
-		"input_path": path,
+		constants.JSONFieldInputPath: path,
 	})
 
 	// Check for known dynamic route patterns
@@ -375,73 +365,73 @@ func (s *Server) getBasePath(path string) string {
 		// /api/v1/assets/balances -> /api/v1/assets/balances (exact match)
 		result := constants.AssetBalancesPattern
 		s.logger.Info(logging.REQUEST_END, "Asset balances pattern matched", "", map[string]interface{}{
-			"result": result,
+			constants.JSONFieldResult: result,
 		})
 		return result
 
-	case strings.HasPrefix(path, apiV1AssetsPrefix) && strings.HasSuffix(path, transactionsSuffix):
+	case strings.HasPrefix(path, constants.APIV1AssetsPrefix) && strings.HasSuffix(path, constants.TransactionsSuffix):
 		// /api/v1/assets/AAVE/transactions -> /api/v1/assets/:asset_id/transactions
 		result := constants.AssetTransactionsPattern
 		s.logger.Info(logging.REQUEST_END, "Asset transactions pattern matched", "", map[string]interface{}{
-			"result": result,
+			constants.JSONFieldResult: result,
 		})
 		return result
 
-	case strings.HasPrefix(path, apiV1AssetsPrefix) && strings.HasSuffix(path, balanceSuffix):
+	case strings.HasPrefix(path, constants.APIV1AssetsPrefix) && strings.HasSuffix(path, constants.BalanceSuffix):
 		// /api/v1/assets/AAVE/balance -> /api/v1/assets/:asset_id/balance
 		result := constants.AssetBalancePattern
 		s.logger.Info(logging.REQUEST_END, "Asset balance pattern matched", "", map[string]interface{}{
-			"result": result,
+			constants.JSONFieldResult: result,
 		})
 		return result
 
-	case strings.HasPrefix(path, apiV1OrdersPrefix):
+	case strings.HasPrefix(path, constants.APIV1OrdersPrefix):
 		// /api/v1/orders/123 -> /api/v1/orders/:id
-		parts := strings.Split(path, pathSeparator)
+		parts := strings.Split(path, constants.PathSeparator)
 		if len(parts) == 5 { // /api/v1/orders/{id}
 			result := constants.OrderByIDPattern
 			s.logger.Info(logging.REQUEST_END, "Order by ID pattern matched", "", map[string]interface{}{
-				"result": result,
+				constants.JSONFieldResult: result,
 			})
 			return result
 		}
 
-	case strings.HasPrefix(path, apiV1PortfolioPrefix):
+	case strings.HasPrefix(path, constants.APIV1PortfolioPrefix):
 		// /api/v1/portfolio/username -> /api/v1/portfolio/:username
-		parts := strings.Split(path, pathSeparator)
+		parts := strings.Split(path, constants.PathSeparator)
 		if len(parts) == 5 { // /api/v1/portfolio/{username}
 			result := constants.PortfolioByUserPattern
 			s.logger.Info(logging.REQUEST_END, "Portfolio by user pattern matched", "", map[string]interface{}{
-				"result": result,
+				constants.JSONFieldResult: result,
 			})
 			return result
 		}
 
-	case strings.HasPrefix(path, apiV1InventoryPrefix):
+	case strings.HasPrefix(path, constants.APIV1InventoryPrefix):
 		// /api/v1/inventory/assets/123 -> /api/v1/inventory/assets/:id
-		parts := strings.Split(path, pathSeparator)
+		parts := strings.Split(path, constants.PathSeparator)
 		if len(parts) == 6 { // /api/v1/inventory/assets/{id}
 			result := constants.InventoryAssetByIDPattern
 			s.logger.Info(logging.REQUEST_END, "Inventory asset by ID pattern matched", "", map[string]interface{}{
-				"result": result,
+				constants.JSONFieldResult: result,
 			})
 			return result
 		}
 
-	case strings.HasPrefix(path, apiV1BalancePrefix):
+	case strings.HasPrefix(path, constants.APIV1BalancePrefix):
 		// /api/v1/balance/asset/BTC -> /api/v1/balance/asset/:asset_id
-		parts := strings.Split(path, pathSeparator)
+		parts := strings.Split(path, constants.PathSeparator)
 		if len(parts) == 6 { // /api/v1/balance/asset/{asset_id}
 			result := constants.BalanceAssetByIDPattern
 			s.logger.Info(logging.REQUEST_END, "Asset balance by ID pattern matched", "", map[string]interface{}{
-				"result": result,
+				constants.JSONFieldResult: result,
 			})
 			return result
 		}
 	}
 
 	s.logger.Info(logging.REQUEST_END, "No pattern matched, returning original path", "", map[string]interface{}{
-		"path": path,
+		constants.JSONFieldPath: path,
 	})
 	return path
 }

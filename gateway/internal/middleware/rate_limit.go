@@ -34,9 +34,9 @@ func RateLimitMiddleware(redisService *services.RedisService, limit int, window 
 		}
 
 		// Add rate limit headers to response
-		c.Header("X-RateLimit-Limit", strconv.Itoa(limit))
-		c.Header("X-RateLimit-Remaining", strconv.FormatInt(remaining, 10))
-		c.Header("X-RateLimit-Reset", strconv.FormatInt(resetTime, 10))
+		c.Header(constants.RateLimitHeaderLimit, strconv.Itoa(limit))
+		c.Header(constants.RateLimitHeaderRemaining, strconv.FormatInt(remaining, 10))
+		c.Header(constants.RateLimitHeaderReset, strconv.FormatInt(resetTime, 10))
 
 		if !allowed {
 			// Record rate limit violation
@@ -47,11 +47,11 @@ func RateLimitMiddleware(redisService *services.RedisService, limit int, window 
 			}
 
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":       constants.ErrorRateLimitExceeded,
-				"retry_after": window.Seconds(),
-				"limit":       limit,
-				"remaining":   remaining,
-				"reset_time":  resetTime,
+				constants.JSONFieldError:      constants.ErrorRateLimitExceeded,
+				constants.JSONFieldRetryAfter: window.Seconds(),
+				constants.JSONFieldLimit:      limit,
+				constants.JSONFieldRemaining:  remaining,
+				constants.JSONFieldResetTime:  resetTime,
 			})
 			c.Abort()
 			return
@@ -81,7 +81,7 @@ func SessionMiddleware(redisService *services.RedisService) gin.HandlerFunc {
 		session, err := redisService.GetSession(c.Request.Context(), sessionID)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": constants.ErrorSessionInvalid,
+				constants.JSONFieldError: constants.ErrorSessionInvalid,
 			})
 			c.Abort()
 			return

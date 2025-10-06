@@ -78,9 +78,9 @@ func TestHealthCheck(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 
-		assert.Equal(t, constants.StatusHealthy, response["status"])
-		assert.Equal(t, constants.GatewayService, response["service"])
-		assert.Equal(t, true, response["redis"])
+		assert.Equal(t, constants.StatusHealthy, response[constants.JSONFieldStatus])
+		assert.Equal(t, constants.GatewayService, response[constants.JSONFieldService])
+		assert.Equal(t, true, response[constants.JSONFieldRedis])
 	})
 
 	t.Run("Degraded Status", func(t *testing.T) {

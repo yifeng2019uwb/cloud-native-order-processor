@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"order-processor-gateway/pkg/constants"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -37,34 +39,34 @@ func NewRateLimitMetricsWithRegistry(reg prometheus.Registerer) *RateLimitMetric
 	return &RateLimitMetrics{
 		RequestsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "gateway_requests_total",
+				Name: constants.MetricRequestsTotal,
 				Help: "Total number of requests processed by the gateway",
 			},
-			[]string{"method", "endpoint", "status", "client_ip"},
+			[]string{constants.LabelMethod, constants.LabelEndpoint, constants.LabelStatus, constants.LabelClientIP},
 		),
 
 		RateLimitViolationsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "gateway_rate_limit_violations_total",
+				Name: constants.MetricRateLimitViolationsTotal,
 				Help: "Total number of requests blocked by rate limiting",
 			},
-			[]string{"client_ip", "endpoint"},
+			[]string{constants.LabelClientIP, constants.LabelEndpoint},
 		),
 
 		RateLimitRemaining: factory.NewGaugeVec(
 			prometheus.GaugeOpts{
-				Name: "gateway_rate_limit_remaining",
+				Name: constants.MetricRateLimitRemaining,
 				Help: "Number of requests remaining in current rate limit window",
 			},
-			[]string{"client_ip", "endpoint"},
+			[]string{constants.LabelClientIP, constants.LabelEndpoint},
 		),
 
 		RateLimitReset: factory.NewGaugeVec(
 			prometheus.GaugeOpts{
-				Name: "gateway_rate_limit_reset",
+				Name: constants.MetricRateLimitReset,
 				Help: "Unix timestamp when the rate limit window resets",
 			},
-			[]string{"client_ip", "endpoint"},
+			[]string{constants.LabelClientIP, constants.LabelEndpoint},
 		),
 	}
 }
