@@ -1,7 +1,14 @@
+"""
+Unit tests for assets controller - Following correct patterns
+Path: services/inventory-service/tests/controllers/test_assets.py
+"""
 import pytest
 import os
 import sys
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import patch, MagicMock
+from fastapi import Request
+from decimal import Decimal
+from datetime import datetime
 
 # Add the necessary paths to sys.path before importing the controller
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))  # for common
@@ -16,800 +23,486 @@ from inventory_exceptions import (
     CNOPInventoryServerException
 )
 
-def create_mock_request(request_id="test-request-id"):
-    """Helper function to create a mock request object with headers"""
-    mock_request = MagicMock()
-    mock_request.headers = {"X-Request-ID": request_id}
-    return mock_request
 from common.exceptions import (
     CNOPDatabaseOperationException,
     CNOPAssetNotFoundException
 )
 
+from common.data.entities.inventory import Asset
+
+# Constants for patch paths
+PATH_GET_ASSET_DAO = 'controllers.assets.get_asset_dao'
+PATH_GET_REQUEST_ID_FROM_REQUEST = 'controllers.assets.get_request_id_from_request'
+PATH_VALIDATE_ASSET_EXISTS = 'controllers.assets.validate_asset_exists'
+PATH_ASSET_DAO = 'controllers.assets.AssetDAO'
+PATH_ASSET_ID_REQUEST = 'controllers.assets.AssetIdRequest'
+
+# Reusable test assets
+def create_test_asset_btc():
+    """Create a real BTC Asset object for testing"""
+    return Asset(
+        asset_id="BTC",
+        name="Bitcoin",
+        description="Bitcoin cryptocurrency",
+        category="Cryptocurrency",
+        amount=Decimal("1000000"),
+        price_usd=Decimal("45000.0"),
+        is_active=True,
+        symbol="BTC",
+        image="https://example.com/btc.png",
+        market_cap_rank=1,
+        current_price=Decimal("45000.0"),
+        high_24h=Decimal("46000.0"),
+        low_24h=Decimal("44000.0"),
+        circulating_supply=Decimal("19500000"),
+        total_supply=Decimal("21000000"),
+        max_supply=Decimal("21000000"),
+        price_change_24h=Decimal("500.0"),
+        price_change_percentage_24h=Decimal("1.1"),
+        price_change_percentage_7d=Decimal("5.2"),
+        price_change_percentage_30d=Decimal("8.5"),
+        market_cap=Decimal("850000000000"),
+        market_cap_change_24h=Decimal("10000000000"),
+        market_cap_change_percentage_24h=Decimal("1.2"),
+        total_volume_24h=Decimal("25000000000"),
+        volume_change_24h=Decimal("5000000000"),
+        ath=Decimal("69000.0"),
+        ath_change_percentage=Decimal("-34.8"),
+        ath_date="2021-11-10T14:24:11.849Z",
+        atl=Decimal("67.81"),
+        atl_change_percentage=Decimal("66263.0"),
+        atl_date="2013-07-06T00:00:00.000Z",
+        last_updated="2025-08-30T21:49:33.955Z",
+        sparkline_7d={"prices": [44000, 45000, 46000, 45000, 44000, 45000, 45000]},
+        updated_at=datetime.utcnow()
+    )
 
 
+def create_test_asset_eth():
+    """Create a real ETH Asset object for testing"""
+    return Asset(
+        asset_id="ETH",
+        name="Ethereum",
+        description="Ethereum cryptocurrency",
+        category="Cryptocurrency",
+        amount=Decimal("2000000"),
+        price_usd=Decimal("3000.0"),
+        is_active=True,
+        symbol="ETH",
+        image="https://example.com/eth.png",
+        market_cap_rank=2,
+        current_price=Decimal("3000.0"),
+        high_24h=Decimal("3100.0"),
+        low_24h=Decimal("2900.0"),
+        circulating_supply=Decimal("120000000"),
+        total_supply=Decimal("120000000"),
+        max_supply=None,
+        price_change_24h=Decimal("-50.0"),
+        price_change_percentage_24h=Decimal("-1.6"),
+        price_change_percentage_7d=Decimal("-2.1"),
+        price_change_percentage_30d=Decimal("-5.2"),
+        market_cap=Decimal("350000000000"),
+        market_cap_change_24h=Decimal("-5000000000"),
+        market_cap_change_percentage_24h=Decimal("-1.4"),
+        total_volume_24h=Decimal("15000000000"),
+        volume_change_24h=Decimal("-2000000000"),
+        ath=Decimal("4878.26"),
+        ath_change_percentage=Decimal("-38.5"),
+        ath_date="2021-11-10T14:24:11.849Z",
+        atl=Decimal("0.432979"),
+        atl_change_percentage=Decimal("692866.0"),
+        atl_date="2020-01-20T00:00:00.000Z",
+        last_updated="2025-08-30T21:49:33.955Z",
+        sparkline_7d={"prices": [3100, 3000, 2900, 3000, 3100, 3000, 3000]},
+        updated_at=datetime.utcnow()
+    )
+
+
+def create_test_asset_inactive():
+    """Create an inactive asset for testing"""
+    asset = create_test_asset_btc()
+    asset.is_active = False
+    return asset
+
+
+def create_test_request():
+    """Create a real Request object for testing"""
+    request = Request({"type": "http", "method": "GET", "url": "http://test"})
+    request._headers = {"X-Request-ID": "test-request-id"}
+    return request
+
+
+# ===== list_assets tests =====
 
 def test_list_assets_with_limit():
     """Test list_assets with limit parameter"""
-    with patch('controllers.assets.AssetDAO') as mock_dao_class:
+    request = create_test_request()
+    test_assets = [create_test_asset_btc(), create_test_asset_eth()]
+
+    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
         mock_dao = MagicMock()
-        mock_dao_class.return_value = mock_dao
-
-        # Create more mock assets with proper attributes
-        mock_assets = []
-        for i in range(5):
-            mock_asset = MagicMock()
-            mock_asset.asset_id = f"ASSET{i}"
-            mock_asset.name = f"Asset {i}"
-            mock_asset.description = f"Description for Asset {i}"
-            mock_asset.category = "Test Category"
-            mock_asset.price_usd = 100.0 + i
-            mock_asset.is_active = True
-            # Add new CoinGecko fields
-            mock_asset.symbol = f"ASSET{i}"
-            mock_asset.image = f"https://example.com/asset{i}.png"
-            mock_asset.market_cap_rank = 100 + i
-            mock_asset.high_24h = 110.0 + i
-            mock_asset.low_24h = 90.0 + i
-            mock_asset.circulating_supply = 1000000 + (i * 100000)
-            mock_asset.total_supply = 1000000 + (i * 100000)
-            mock_asset.max_supply = 1000000 + (i * 100000)
-            mock_asset.price_change_24h = 5.0 + i
-            mock_asset.price_change_percentage_24h = 1.0 + (i * 0.5)
-            mock_asset.price_change_percentage_7d = 2.0 + (i * 1.0)
-            mock_asset.price_change_percentage_30d = 3.0 + (i * 1.5)
-            mock_asset.market_cap = 100000000 + (i * 10000000)
-            mock_asset.market_cap_change_24h = 1000000 + (i * 100000)
-            mock_asset.market_cap_change_percentage_24h = 1.0 + (i * 0.2)
-            mock_asset.total_volume_24h = 5000000 + (i * 500000)
-            mock_asset.volume_change_24h = 100000 + (i * 10000)
-            mock_asset.ath = 200.0 + (i * 20)
-            mock_asset.ath_change_percentage = -10.0 - (i * 2)
-            mock_asset.ath_date = "2021-11-10T14:24:11.849Z"
-            mock_asset.atl = 50.0 + (i * 5)
-            mock_asset.atl_change_percentage = 100.0 + (i * 10)
-            mock_asset.atl_date = "2020-01-01T00:00:00.000Z"
-            mock_asset.last_updated = "2025-08-30T21:49:33.955Z"
-            mock_asset.sparkline_7d = {"prices": [100, 105, 110, 105, 100, 105, 100]}
-            mock_asset.updated_at = "2025-08-30T21:49:33.955Z"
-            mock_assets.append(mock_asset)
-
-        mock_dao.get_all_assets.return_value = mock_assets
-
-        # Create mock request object
-        mock_request = MagicMock()
-        mock_request.headers = {"X-Request-ID": "test-request-id"}
-
-        # test with limit
-        result = list_assets(request=mock_request, active_only=True, limit=3, asset_dao=mock_dao)
-
-        # Verify limit was applied
-        assert len(result.assets) == 3
-        assert result.assets[0].asset_id == "ASSET0"
-        assert result.assets[1].asset_id == "ASSET1"
-        assert result.assets[2].asset_id == "ASSET2"
-
-
-def test_list_assets_without_limit():
-    """Test list_assets without limit parameter"""
-    with patch('controllers.assets.AssetDAO') as mock_dao_class:
-        mock_dao = MagicMock()
-        mock_dao_class.return_value = mock_dao
-
-        # Create mock assets
-        mock_assets = []
-        for i in range(3):
-            mock_asset = MagicMock()
-            mock_asset.asset_id = f"ASSET{i}"
-            mock_asset.name = f"Asset {i}"
-            mock_asset.description = f"Description for Asset {i}"
-            mock_asset.category = "Test Category"
-            mock_asset.price_usd = 100.0 + i
-            mock_asset.is_active = True
-            # Add new CoinGecko fields
-            mock_asset.symbol = f"ASSET{i}"
-            mock_asset.image = f"https://example.com/asset{i}.png"
-            mock_asset.market_cap_rank = 100 + i
-            mock_asset.high_24h = 110.0 + i
-            mock_asset.low_24h = 90.0 + i
-            mock_asset.circulating_supply = 1000000 + (i * 100000)
-            mock_asset.total_supply = 1000000 + (i * 100000)
-            mock_asset.max_supply = 1000000 + (i * 100000)
-            mock_asset.price_change_24h = 5.0 + i
-            mock_asset.price_change_percentage_24h = 1.0 + (i * 0.5)
-            mock_asset.price_change_percentage_7d = 2.0 + (i * 1.0)
-            mock_asset.price_change_percentage_30d = 3.0 + (i * 1.5)
-            mock_asset.market_cap = 100000000 + (i * 10000000)
-            mock_asset.market_cap_change_24h = 1000000 + (i * 100000)
-            mock_asset.market_cap_change_percentage_24h = 1.0 + (i * 0.2)
-            mock_asset.total_volume_24h = 5000000 + (i * 500000)
-            mock_asset.volume_change_24h = 100000 + (i * 10000)
-            mock_asset.ath = 200.0 + (i * 20)
-            mock_asset.ath_change_percentage = -10.0 - (i * 2)
-            mock_asset.ath_date = "2021-11-10T14:24:11.849Z"
-            mock_asset.atl = 50.0 + (i * 5)
-            mock_asset.atl_change_percentage = 100.0 + (i * 10)
-            mock_asset.atl_date = "2020-01-01T00:00:00.000Z"
-            mock_asset.last_updated = "2025-08-30T21:49:33.955Z"
-            mock_asset.sparkline_7d = {"prices": [100, 105, 110, 105, 100, 105, 100]}
-            mock_asset.updated_at = "2025-08-30T21:49:33.955Z"
-            mock_assets.append(mock_asset)
-
-        mock_dao.get_all_assets.return_value = mock_assets
-
-        # Create mock request object
-        mock_request = MagicMock()
-        mock_request.headers = {"X-Request-ID": "test-request-id"}
-
-        # test without limit
-        result = list_assets(request=mock_request, active_only=True, limit=None, asset_dao=mock_dao)
-
-        # Verify all assets were returned
-        assert len(result.assets) == 3
-
-
-    def test_get_asset_by_id_success():
-        """Test get_asset_by_id with valid asset ID"""
-        with patch('controllers.assets.AssetDAO') as mock_dao_class:
-            mock_dao = MagicMock()
-            mock_dao_class.return_value = mock_dao
-
-            # Create mock asset
-            mock_asset = MagicMock()
-            mock_asset.asset_id = "BTC"
-            mock_asset.name = "Bitcoin"
-            mock_asset.description = "Bitcoin cryptocurrency"
-            mock_asset.category = "Cryptocurrency"
-            mock_asset.price_usd = 45000.0
-            mock_asset.is_active = True
-            mock_asset.amount = 100.0  # Add amount for availability check
-            # Add new CoinGecko fields
-            mock_asset.symbol = "BTC"
-            mock_asset.image = "https://assets.coingecko.com/coins/images/1/large/bitcoin.png"
-            mock_asset.market_cap_rank = 1
-            mock_asset.high_24h = 46000.0
-            mock_asset.low_24h = 44000.0
-            mock_asset.circulating_supply = 19500000
-            mock_asset.total_supply = 21000000
-            mock_asset.max_supply = 21000000
-            mock_asset.price_change_24h = 500.0
-            mock_asset.price_change_percentage_24h = 1.1
-            mock_asset.price_change_percentage_7d = 5.2
-            mock_asset.price_change_percentage_30d = 8.5
-            mock_asset.market_cap = 850000000000
-            mock_asset.market_cap_change_24h = 10000000000
-            mock_asset.market_cap_change_percentage_24h = 1.2
-            mock_asset.total_volume_24h = 25000000000
-            mock_asset.volume_change_24h = 5000000000
-            mock_asset.ath = 69000.0
-            mock_asset.ath_change_percentage = -34.8
-            mock_asset.ath_date = "2021-11-10T14:24:11.849Z"
-            mock_asset.atl = 67.81
-            mock_asset.atl_change_percentage = 66263.0
-            mock_asset.atl_date = "2013-07-06T00:00:00.000Z"
-            mock_asset.last_updated = "2025-08-30T21:49:33.955Z"
-            mock_asset.sparkline_7d = {"prices": [44000, 45000, 46000, 45000, 44000, 45000, 45000]}
-            mock_asset.updated_at = "2025-08-30T21:49:33.955Z"
-
-            mock_dao.get_asset_by_id.return_value = mock_asset
-
-            # test the function
-            result = get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_dao)
-
-        # Verify AssetDAO was called with uppercase asset_id
-        mock_dao.get_asset_by_id.assert_called_once_with("BTC")
-
-        # Verify result
-        assert result is not None
-        assert hasattr(result, 'asset_id')
-        assert result.asset_id == "BTC"
-
-
-def test_get_asset_by_id_not_found():
-    """Test get_asset_by_id with non-existent asset ID"""
-    with patch('controllers.assets.AssetDAO') as mock_dao_class:
-        mock_dao = MagicMock()
-        mock_dao_class.return_value = mock_dao
-
-        # Mock DAO to return None (asset not found)
-        mock_dao.get_asset_by_id.return_value = None
-
-        # Test that the function raises the correct exception
-        with pytest.raises(CNOPInventoryServerException) as exc_info:
-            get_asset_by_id(create_mock_request(), "INVALID", asset_dao=mock_dao)
-
-        error = exc_info.value
-        # Check that the error message contains the operation context
-        assert "failed to get asset invalid" in str(error).lower()
-
-
-    def test_get_asset_by_id_case_insensitive():
-        """Test get_asset_by_id handles case insensitivity"""
-        with patch('controllers.assets.AssetDAO') as mock_dao_class:
-            mock_dao = MagicMock()
-            mock_dao_class.return_value = mock_dao
-
-            # Create mock asset
-            mock_asset = MagicMock()
-            mock_asset.asset_id = "BTC"
-            mock_asset.name = "Bitcoin"
-            mock_asset.description = "Bitcoin cryptocurrency"
-            mock_asset.category = "Cryptocurrency"
-            mock_asset.price_usd = 45000.0
-            mock_asset.is_active = True
-            mock_asset.amount = 100.0  # Add amount for availability check
-            # Add new CoinGecko fields
-            mock_asset.symbol = "BTC"
-            mock_asset.image = "https://assets.coingecko.com/coins/images/1/large/bitcoin.png"
-            mock_asset.market_cap_rank = 1
-            mock_asset.high_24h = 46000.0
-            mock_asset.low_24h = 44000.0
-            mock_asset.circulating_supply = 19500000
-            mock_asset.total_supply = 21000000
-            mock_asset.max_supply = 21000000
-            mock_asset.price_change_24h = 500.0
-            mock_asset.price_change_percentage_24h = 1.1
-            mock_asset.price_change_percentage_7d = 5.2
-            mock_asset.price_change_percentage_30d = 8.5
-            mock_asset.market_cap = 850000000000
-            mock_asset.market_cap_change_24h = 10000000000
-            mock_asset.market_cap_change_percentage_24h = 1.2
-            mock_asset.total_volume_24h = 25000000000
-            mock_asset.volume_change_24h = 5000000000
-            mock_asset.ath = 69000.0
-            mock_asset.ath_change_percentage = -34.8
-            mock_asset.ath_date = "2021-11-10T14:24:11.849Z"
-            mock_asset.atl = 67.81
-            mock_asset.atl_change_percentage = 66263.0
-            mock_asset.atl_date = "2013-07-06T00:00:00.000Z"
-            mock_asset.last_updated = "2025-08-30T21:49:33.955Z"
-            mock_asset.sparkline_7d = {"prices": [44000, 45000, 46000, 45000, 44000, 45000, 45000]}
-            mock_asset.updated_at = "2025-08-30T21:49:33.955Z"
-
-            mock_dao.get_asset_by_id.return_value = mock_asset
-
-            # Test with lowercase input
-            result = get_asset_by_id(create_mock_request(), "btc", asset_dao=mock_dao)
-
-        # Verify AssetDAO was called with uppercase asset_id
-        mock_dao.get_asset_by_id.assert_called_once_with("BTC")
-
-        # Verify result
-        assert result is not None
-        assert result.asset_id == "BTC"
-
-
-# ========================================
-# COMPREHENSIVE EXCEPTION HANDLING TESTS
-# ========================================
-
-class TestAssetsControllerExceptionHandling:
-    """Comprehensive tests for exception handling in assets controller"""
-
-    def test_list_assets_database_error_handling(self):
-        """Test that database errors are properly converted to internal exceptions"""
-        # Mock the asset DAO to raise an exception
-        mock_asset_dao = MagicMock()
-        mock_asset_dao.get_all_assets.side_effect = Exception("Database connection failed")
-
-        with pytest.raises(CNOPInventoryServerException) as exc_info:
-            list_assets(request=create_mock_request(), active_only=True, limit=10, asset_dao=mock_asset_dao)
-
-        error = exc_info.value
-        # Check that the error message contains the operation context
-        assert "failed to list assets" in str(error).lower()
-
-    def test_get_asset_by_id_database_error_handling(self):
-        """Test that database errors in get_asset_by_id are properly handled"""
-        # Mock the asset DAO to raise an exception
-        mock_asset_dao = MagicMock()
-        mock_asset_dao.get_asset_by_id.side_effect = Exception("Database query failed")
-
-        with pytest.raises(CNOPInventoryServerException) as exc_info:
-            get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
-
-        error = exc_info.value
-        # Check that the error message contains the operation context
-        assert "failed to get asset btc" in str(error).lower()
-
-    def test_list_assets_with_common_package_exception(self):
-        """Test handling of common package exceptions in list_assets"""
-        # Mock the asset DAO to raise a common package exception
-        mock_asset_dao = MagicMock()
-        mock_asset_dao.get_all_assets.side_effect = CNOPDatabaseOperationException(
-            "Connection failed", service="dynamodb"
-        )
-
-        with pytest.raises(CNOPInventoryServerException) as exc_info:
-            list_assets(request=create_mock_request(), active_only=True, limit=10, asset_dao=mock_asset_dao)
-
-        error = exc_info.value
-        # Check that the error message contains the operation context
-        assert "failed to list assets" in str(error).lower()
-
-    def test_get_asset_by_id_with_common_package_exception(self):
-        """Test handling of common package exceptions in get_asset_by_id"""
-        # Mock the asset DAO to raise a common package exception
-        mock_asset_dao = MagicMock()
-        mock_asset_dao.get_asset_by_id.side_effect = CNOPDatabaseOperationException(
-            "Operation failed", operation="get_item"
-        )
-
-        with pytest.raises(CNOPInventoryServerException) as exc_info:
-            get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
-
-        error = exc_info.value
-        # Check that the error message contains the operation context
-        assert "failed to get asset btc" in str(error).lower()
-
-    def test_assets_controller_error_context(self):
-        """Test that assets controller provides proper error context"""
-        # Mock the asset DAO to raise an exception
-        mock_asset_dao = MagicMock()
-        mock_asset_dao.get_asset_by_id.side_effect = Exception("Test database error")
-
-        with pytest.raises(CNOPInventoryServerException) as exc_info:
-            get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
-
-        error = exc_info.value
-        # Check that the error has proper context
-        assert "failed to get asset btc" in str(error).lower()
-        assert "Test database error" in str(error)
-
-    def test_assets_controller_exception_flow(self):
-        """Test the complete exception flow in assets controller"""
-        # Mock the asset DAO to raise a common package exception
-        mock_asset_dao = MagicMock()
-        mock_asset_dao.get_all_assets.side_effect = CNOPDatabaseOperationException(
-            "Connection failed", service="dynamodb", region="us-east-1"
-        )
-
-        with pytest.raises(CNOPInventoryServerException) as exc_info:
-            list_assets(request=create_mock_request(), active_only=True, limit=5, asset_dao=mock_asset_dao)
-
-        error = exc_info.value
-        # Verify the error is properly wrapped
-        assert isinstance(error, CNOPInventoryServerException)
-        assert "failed to list assets" in str(error).lower()
-
-    def test_assets_controller_with_complex_exception(self):
-        """Test assets controller with complex nested exceptions"""
-        # Create a complex nested exception
-        class ComplexDatabaseError(Exception):
-            def __init__(self, message, details):
-                self.message = message
-                self.details = details
-                super().__init__(message)
-
-        complex_error = ComplexDatabaseError("Complex error", {"level": "critical", "retry_count": 3})
-
-        # Mock the asset DAO to raise the complex exception
-        mock_asset_dao = MagicMock()
-        mock_asset_dao.get_asset_by_id.side_effect = complex_error
-
-        with pytest.raises(CNOPInventoryServerException) as exc_info:
-            get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
-
-        error = exc_info.value
-        assert "failed to get asset btc" in str(error).lower()
-        assert "Complex error" in str(error)
-
-    def test_assets_controller_with_multiple_exceptions(self):
-        """Test assets controller handling multiple types of exceptions"""
-        # Test with different exception types
-        exceptions_to_test = [
-            (Exception("Generic exception"), CNOPInventoryServerException),
-            (RuntimeError("Runtime error"), CNOPInventoryServerException),
-            (CNOPDatabaseOperationException("Connection error", service="dynamodb"), CNOPInventoryServerException),
-            (CNOPDatabaseOperationException("Operation error", operation="scan"), CNOPInventoryServerException)
-        ]
-
-        for exc, expected_exception_type in exceptions_to_test:
-            mock_asset_dao = MagicMock()
-            mock_asset_dao.get_asset_by_id.side_effect = exc
-
-            with pytest.raises(expected_exception_type) as exc_info:
-                get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
-
-            error = exc_info.value
-            assert isinstance(error, expected_exception_type)
-            if expected_exception_type == CNOPInventoryServerException:
-                assert "failed to get asset btc" in str(error).lower()
-
-    def test_assets_controller_validation_error_handling(self):
-        """Test assets controller handling validation errors"""
-        # Test with validation errors that should be converted to AssetValidationException
-        validation_errors = [
-            CNOPAssetValidationException("Asset ID cannot be empty"),
-            CNOPAssetValidationException("Asset ID contains potentially malicious content"),
-            CNOPAssetValidationException("Asset ID must be 1-10 alphanumeric characters")
-        ]
-
-        for validation_error in validation_errors:
-            mock_asset_dao = MagicMock()
-            mock_asset_dao.get_asset_by_id.side_effect = validation_error
-
-            with pytest.raises(CNOPAssetValidationException) as exc_info:
-                get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_asset_dao)
-
-            error = exc_info.value
-            assert isinstance(error, CNOPAssetValidationException)
-            # Check that the error message contains the expected content from the validation_error
-            assert str(validation_error) in str(error)
-
-
-def test_list_assets_success():
-    """Test list_assets success case"""
-    with patch('controllers.assets.AssetDAO') as mock_dao_class:
-
-        # Setup mock AssetDAO
-        mock_dao = MagicMock()
-        mock_dao_class.return_value = mock_dao
-
-        # Mock asset data
-        mock_asset1 = MagicMock()
-        mock_asset1.asset_id = "BTC"
-        mock_asset1.name = "Bitcoin"
-        mock_asset1.description = "Bitcoin cryptocurrency"
-        mock_asset1.category = "Cryptocurrency"
-        mock_asset1.price_usd = 45000.0
-        mock_asset1.is_active = True
-        # Add new CoinGecko fields
-        mock_asset1.symbol = "BTC"
-        mock_asset1.image = "https://assets.coingecko.com/coins/images/1/large/bitcoin.png"
-        mock_asset1.market_cap_rank = 1
-        mock_asset1.high_24h = 46000.0
-        mock_asset1.low_24h = 44000.0
-        mock_asset1.circulating_supply = 19500000
-        mock_asset1.total_supply = 21000000
-        mock_asset1.max_supply = 21000000
-        mock_asset1.price_change_24h = 500.0
-        mock_asset1.price_change_percentage_24h = 1.1
-        mock_asset1.price_change_percentage_7d = 5.2
-        mock_asset1.price_change_percentage_30d = 8.5
-        mock_asset1.market_cap = 850000000000
-        mock_asset1.market_cap_change_24h = 10000000000
-        mock_asset1.market_cap_change_percentage_24h = 1.2
-        mock_asset1.total_volume_24h = 25000000000
-        mock_asset1.volume_change_24h = 5000000000
-        mock_asset1.ath = 69000.0
-        mock_asset1.ath_change_percentage = -34.8
-        mock_asset1.ath_date = "2021-11-10T14:24:11.849Z"
-        mock_asset1.atl = 67.81
-        mock_asset1.atl_change_percentage = 66263.0
-        mock_asset1.atl_date = "2013-07-06T00:00:00.000Z"
-        mock_asset1.last_updated = "2025-08-30T21:49:33.955Z"
-        mock_asset1.sparkline_7d = {"prices": [44000, 45000, 46000, 45000, 44000, 45000, 45000]}
-        mock_asset1.updated_at = "2025-08-30T21:49:33.955Z"
-
-        mock_asset2 = MagicMock()
-        mock_asset2.asset_id = "ETH"
-        mock_asset2.name = "Ethereum"
-        mock_asset2.description = "Ethereum cryptocurrency"
-        mock_asset2.category = "Cryptocurrency"
-        mock_asset2.price_usd = 3000.0
-        mock_asset2.is_active = True
-        # Add new CoinGecko fields
-        mock_asset2.symbol = "ETH"
-        mock_asset2.image = "https://assets.coingecko.com/coins/images/279/large/ethereum.png"
-        mock_asset2.market_cap_rank = 2
-        mock_asset2.high_24h = 3100.0
-        mock_asset2.low_24h = 2900.0
-        mock_asset2.circulating_supply = 120000000
-        mock_asset2.total_supply = 120000000
-        mock_asset2.max_supply = None
-        mock_asset2.price_change_24h = -50.0
-        mock_asset2.price_change_percentage_24h = -1.6
-        mock_asset2.price_change_percentage_7d = -2.1
-        mock_asset2.price_change_percentage_30d = -5.2
-        mock_asset2.market_cap = 350000000000
-        mock_asset2.market_cap_change_24h = -5000000000
-        mock_asset2.market_cap_change_percentage_24h = -1.4
-        mock_asset2.total_volume_24h = 15000000000
-        mock_asset2.volume_change_24h = -2000000000
-        mock_asset2.ath = 4878.26
-        mock_asset2.ath_change_percentage = -38.5
-        mock_asset2.ath_date = "2021-11-10T14:24:11.849Z"
-        mock_asset2.atl = 0.432979
-        mock_asset2.atl_change_percentage = 692866.0
-        mock_asset2.atl_date = "2020-01-20T00:00:00.000Z"
-        mock_asset2.last_updated = "2025-08-30T21:49:33.955Z"
-        mock_asset2.sparkline_7d = {"prices": [3100, 3000, 2900, 3000, 3100, 3000, 3000]}
-        mock_asset2.updated_at = "2025-08-30T21:49:33.955Z"
-
-        # Mock inactive asset for total count
-        mock_asset3 = MagicMock()
-        mock_asset3.asset_id = "INACTIVE"
-        mock_asset3.name = "Inactive Asset"
-        mock_asset3.description = "Inactive asset"
-        mock_asset3.category = "Test"
-        mock_asset3.price_usd = 100.0
-        mock_asset3.is_active = False
-        # Add new CoinGecko fields (can be None for inactive assets)
-        mock_asset3.symbol = None
-        mock_asset3.image = None
-        mock_asset3.market_cap_rank = None
-        mock_asset3.high_24h = None
-        mock_asset3.low_24h = None
-        mock_asset3.circulating_supply = None
-        mock_asset3.total_supply = None
-        mock_asset3.max_supply = None
-        mock_asset3.price_change_24h = None
-        mock_asset3.price_change_percentage_24h = None
-        mock_asset3.price_change_percentage_7d = None
-        mock_asset3.price_change_percentage_30d = None
-        mock_asset3.market_cap = None
-        mock_asset3.market_cap_change_24h = None
-        mock_asset3.market_cap_change_percentage_24h = None
-        mock_asset3.total_volume_24h = None
-        mock_asset3.volume_change_24h = None
-        mock_asset3.ath = None
-        mock_asset3.ath_change_percentage = None
-        mock_asset3.ath_date = None
-        mock_asset3.atl = None
-        mock_asset3.atl_change_percentage = None
-        mock_asset3.atl_date = None
-        mock_asset3.last_updated = None
-        mock_asset3.sparkline_7d = None
-        mock_asset3.updated_at = "2025-08-30T21:49:33.955Z"
-
-        # Setup mock to return different results based on active_only parameter
-        def mock_get_all_assets(active_only=True):
-            if active_only:
-                return [mock_asset1, mock_asset2]
-            else:
-                return [mock_asset1, mock_asset2, mock_asset3]
-
-        mock_dao.get_all_assets.side_effect = mock_get_all_assets
-
-        # test the function
-        result = list_assets(request=create_mock_request(), active_only=True, limit=2, asset_dao=mock_dao)
+        mock_dao.get_all_assets.return_value = test_assets
+        mock_get_request_id.return_value = "test-request-id"
+
+        # Pass limit as integer, not Query object
+        result = list_assets(request, active_only=True, limit=1, asset_dao=mock_dao)
 
         # Verify result structure
         assert result is not None
         assert hasattr(result, 'assets')
-        assert len(result.assets) == 2
+        assert len(result.assets) == 1  # Should be limited to 1
+        assert hasattr(result, 'total_count')
+        assert result.total_count == 2  # Total count should be 2
+        assert result.assets[0].asset_id == "BTC"
 
 
-def test_get_asset_by_id_validation_error_handling():
-    """Test get_asset_by_id with AssetValidationException handling (lines 172-176)"""
-    with patch('controllers.assets.AssetDAO') as mock_dao_class, \
-         patch('controllers.assets.validate_asset_exists') as mock_validate:
+def test_list_assets_without_limit():
+    """Test list_assets without limit parameter"""
+    request = create_test_request()
+    test_assets = [create_test_asset_btc(), create_test_asset_eth()]
 
-        # Setup mock AssetDAO
+    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
         mock_dao = MagicMock()
-        mock_dao_class.return_value = mock_dao
+        mock_dao.get_all_assets.return_value = test_assets
+        mock_get_request_id.return_value = "test-request-id"
 
-        # Mock asset data with all required attributes
-        mock_asset = MagicMock()
-        mock_asset.asset_id = "BTC"
-        mock_asset.name = "Bitcoin"
-        mock_asset.description = "Bitcoin cryptocurrency"
-        mock_asset.category = "Cryptocurrency"
-        mock_asset.price_usd = 45000.0
-        mock_asset.is_active = True
-        mock_asset.amount = 100.0  # Add amount attribute
-        mock_asset.market_cap = 850000000000
-        mock_asset.volume_24h = 25000000000
-        mock_asset.created_at = "2024-01-01T00:00:00Z"
-        mock_asset.updated_at = "2024-01-01T00:00:00Z"
-        # Add new CoinGecko fields
-        mock_asset.symbol = "BTC"
-        mock_asset.image = "https://assets.coingecko.com/coins/images/1/large/bitcoin.png"
-        mock_asset.market_cap_rank = 1
-        mock_asset.high_24h = 46000.0
-        mock_asset.low_24h = 44000.0
-        mock_asset.circulating_supply = 19500000
-        mock_asset.total_supply = 21000000
-        mock_asset.max_supply = 21000000
-        mock_asset.price_change_24h = 500.0
-        mock_asset.price_change_percentage_24h = 1.1
-        mock_asset.price_change_percentage_7d = 5.2
-        mock_asset.price_change_percentage_30d = 8.5
-        mock_asset.market_cap_change_24h = 10000000000
-        mock_asset.market_cap_change_percentage_24h = 1.2
-        mock_asset.total_volume_24h = 25000000000
-        mock_asset.volume_change_24h = 5000000000
-        mock_asset.ath = 69000.0
-        mock_asset.ath_change_percentage = -34.8
-        mock_asset.ath_date = "2021-11-10T14:24:11.849Z"
-        mock_asset.atl = 67.81
-        mock_asset.atl_change_percentage = 66263.0
-        mock_asset.atl_date = "2013-07-06T00:00:00.000Z"
-        mock_asset.last_updated = "2025-08-30T21:49:33.955Z"
-        mock_asset.sparkline_7d = {"prices": [44000, 45000, 46000, 45000, 44000, 45000, 45000]}
-
-        # Setup mocks
-        mock_dao.get_asset_by_id.return_value = mock_asset
-        mock_validate.return_value = None  # No validation error
-
-        # Test successful case first
-        result = get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_dao)
-
-        # Verify validation was called
-        mock_validate.assert_called_once_with("BTC", mock_dao)
-
-        # Now test with AssetValidationException
-        mock_validate.side_effect = CNOPAssetValidationException("Asset ID cannot be empty")
-
-        with pytest.raises(CNOPAssetValidationException) as exc_info:
-            get_asset_by_id(create_mock_request(), "INVALID", asset_dao=mock_dao)
-
-        # Verify the exception message is properly formatted
-        # The actual format is: "CNOPAssetValidationException: Asset ID cannot be empty"
-        assert "Asset ID cannot be empty" in str(exc_info.value)
-
-
-def test_get_asset_by_id_success():
-    """Test get_asset_by_id success case"""
-    with patch('controllers.assets.AssetDAO') as mock_dao_class, \
-         patch('controllers.assets.validate_asset_exists') as mock_validate:
-
-        # Setup mock AssetDAO
-        mock_dao = MagicMock()
-        mock_dao_class.return_value = mock_dao
-
-        # Mock asset data with all required attributes
-        mock_asset = MagicMock()
-        mock_asset.asset_id = "ETH"
-        mock_asset.name = "Ethereum"
-        mock_asset.description = "Ethereum cryptocurrency"
-        mock_asset.category = "Cryptocurrency"
-        mock_asset.price_usd = 3000.0
-        mock_asset.is_active = True
-        mock_asset.amount = 5000.0  # Add amount attribute
-        mock_asset.market_cap = 350000000000
-        mock_asset.volume_24h = 15000000000
-        mock_asset.created_at = "2024-01-01T00:00:00Z"
-        mock_asset.updated_at = "2024-01-01T00:00:00Z"
-        # Add new CoinGecko fields
-        mock_asset.symbol = "ETH"
-        mock_asset.image = "https://assets.coingecko.com/coins/images/279/large/ethereum.png"
-        mock_asset.market_cap_rank = 2
-        mock_asset.high_24h = 3100.0
-        mock_asset.low_24h = 2900.0
-        mock_asset.circulating_supply = 120000000
-        mock_asset.total_supply = 120000000
-        mock_asset.max_supply = None
-        mock_asset.price_change_24h = -50.0
-        mock_asset.price_change_percentage_24h = -1.6
-        mock_asset.price_change_percentage_7d = -2.1
-        mock_asset.price_change_percentage_30d = -5.2
-        mock_asset.market_cap_change_24h = -5000000000
-        mock_asset.market_cap_change_percentage_24h = -1.4
-        mock_asset.total_volume_24h = 15000000000
-        mock_asset.volume_change_24h = -2000000000
-        mock_asset.ath = 4878.26
-        mock_asset.ath_change_percentage = -38.5
-        mock_asset.ath_date = "2021-11-10T14:24:11.849Z"
-        mock_asset.atl = 0.432979
-        mock_asset.atl_change_percentage = 692866.0
-        mock_asset.atl_date = "2020-01-20T00:00:00.000Z"
-        mock_asset.last_updated = "2025-08-30T21:49:33.955Z"
-        mock_asset.sparkline_7d = {"prices": [3100, 3000, 2900, 3000, 3100, 3000, 3000]}
-
-        # Setup mocks
-        mock_dao.get_asset_by_id.return_value = mock_asset
-        mock_validate.return_value = None  # No validation error
-
-        # Test the function
-        result = get_asset_by_id(create_mock_request(), "ETH", asset_dao=mock_dao)
-
+        # Pass limit=None explicitly
+        result = list_assets(request, active_only=True, limit=None, asset_dao=mock_dao)
 
         # Verify result structure
         assert result is not None
+        assert hasattr(result, 'assets')
+        assert len(result.assets) == 2  # Should return all assets
+        assert hasattr(result, 'total_count')
+        assert result.total_count == 2
 
 
+def test_list_assets_total_count_without_active_only():
+    """Test total_count calculation when active_only=False - covers line 140"""
+    request = create_test_request()
+    test_assets = [create_test_asset_btc(), create_test_asset_eth()]
+
+    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+        mock_dao = MagicMock()
+        mock_dao.get_all_assets.return_value = test_assets
+        mock_get_request_id.return_value = "test-request-id"
+
+        # Test with active_only=False to trigger line 140: total_count = len(all_assets)
+        result = list_assets(request, active_only=False, limit=10, asset_dao=mock_dao)
+
+        # Verify total_count is calculated from all_assets (line 140)
+        assert result.total_count == 2
+        assert len(result.assets) == 2
 
 
-class TestValidationErrorHandling:
-    """Test validation error handling scenarios"""
+def test_list_assets_database_error():
+    """Test that database errors are properly converted to internal exceptions"""
+    request = create_test_request()
 
-    def test_get_asset_by_id_validation_error_asset_id(self):
-        """Test validation error when asset_id is invalid"""
-        with patch('controllers.assets.AssetDAO') as mock_dao_class:
-            # Setup mock AssetDAO
-            mock_dao = MagicMock()
-            mock_dao_class.return_value = mock_dao
+    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+        mock_dao = MagicMock()
+        mock_dao.get_all_assets.side_effect = Exception("Database connection failed")
+        mock_get_request_id.return_value = "test-request-id"
 
-            # Mock validation to fail
-            with patch('controllers.assets.AssetIdRequest') as mock_request_class:
-                mock_request = MagicMock()
-                mock_request_class.side_effect = ValueError("Invalid asset_id format")
-                mock_request_class.return_value = mock_request
+        with pytest.raises(CNOPInventoryServerException) as exc_info:
+            list_assets(request, active_only=True, limit=10, asset_dao=mock_dao)
 
-                # Test that validation error is converted to internal server exception
-                with pytest.raises(CNOPInventoryServerException, match="Failed to get asset invalid-asset-id"):
-                    get_asset_by_id(create_mock_request(), "invalid-asset-id", asset_dao=mock_dao)
-
-    def test_get_asset_by_id_validation_error_asset_id_logging(self):
-        """Test validation error logging when asset_id is invalid"""
-        with patch('controllers.assets.AssetDAO') as mock_dao_class:
-            # Setup mock AssetDAO
-            mock_dao = MagicMock()
-            mock_dao_class.return_value = mock_dao
-
-            # Mock validation to fail
-            with patch('controllers.assets.AssetIdRequest') as mock_request_class:
-                mock_request = MagicMock()
-                mock_request_class.side_effect = ValueError("Invalid asset_id format")
-                mock_request_class.return_value = mock_request
-
-                # Mock logger to capture warning and error
-                with patch('controllers.assets.logger') as mock_logger:
-                    with pytest.raises(CNOPInventoryServerException):
-                        get_asset_by_id(create_mock_request(), "invalid-asset-id", asset_dao=mock_dao)
-
-                    # Check that warning was logged for validation error
-                    mock_logger.warning.assert_called_once()
-                    # Check that error was logged for the final exception
-                    mock_logger.error.assert_called_once()
-
-    def test_get_asset_by_id_cnop_validation_exception(self):
-        """Test that CNOPAssetValidationException is properly caught and re-raised"""
-        with patch('controllers.assets.AssetDAO') as mock_dao_class:
-            # Setup mock AssetDAO
-            mock_dao = MagicMock()
-            mock_dao_class.return_value = mock_dao
-
-            # Mock validation to succeed
-            with patch('controllers.assets.AssetIdRequest') as mock_request_class:
-                mock_request = MagicMock()
-                mock_request.asset_id = "BTC"
-                mock_request_class.return_value = mock_request
-
-                # Mock business validation to raise CNOPAssetValidationException
-                with patch('controllers.assets.validate_asset_exists') as mock_validate:
-                    mock_validate.side_effect = CNOPAssetValidationException("Asset ID cannot be empty")
-
-                    # Test that CNOPAssetValidationException is re-raised as-is
-                    with pytest.raises(CNOPAssetValidationException, match="Asset ID cannot be empty"):
-                        get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_dao)
+        error = exc_info.value
+        assert "Failed to list assets" in str(error)
 
 
-class TestExceptionHandling:
-    """Test exception handling scenarios"""
+def test_list_assets_active_count():
+    """Test that active_count is correctly calculated"""
+    request = create_test_request()
+    btc_active = create_test_asset_btc()
+    eth_inactive = create_test_asset_eth()
+    eth_inactive.is_active = False
+    test_assets = [btc_active, eth_inactive]
 
-    def test_get_asset_by_id_database_exception(self):
-        """Test handling of database exceptions"""
-        with patch('controllers.assets.AssetDAO') as mock_dao_class:
-            # Setup mock AssetDAO
-            mock_dao = MagicMock()
-            mock_dao_class.return_value = mock_dao
+    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+        mock_dao = MagicMock()
+        mock_dao.get_all_assets.return_value = test_assets
+        mock_get_request_id.return_value = "test-request-id"
 
-            # Mock validation to succeed
-            with patch('controllers.assets.AssetIdRequest') as mock_request_class:
-                mock_request = MagicMock()
-                mock_request.asset_id = "BTC"
-                mock_request_class.return_value = mock_request
+        result = list_assets(request, active_only=False, limit=None, asset_dao=mock_dao)
 
-                # Mock business validation to succeed
-                with patch('controllers.assets.validate_asset_exists'):
-                    # Mock DAO to raise database exception
-                    mock_dao.get_asset_by_id.side_effect = CNOPDatabaseOperationException("Database connection failed")
+        # Verify active_count counts only active assets
+        assert result.active_count == 1
+        assert result.total_count == 2
 
-                    # Test that database exception is converted to internal server exception
-                    with pytest.raises(CNOPInventoryServerException, match="Failed to get asset BTC"):
-                        get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_dao)
 
-    def test_get_asset_by_id_unexpected_exception(self):
-        """Test handling of unexpected exceptions"""
-        with patch('controllers.assets.AssetDAO') as mock_dao_class:
-            # Setup mock AssetDAO
-            mock_dao = MagicMock()
-            mock_dao_class.return_value = mock_dao
+# ===== get_asset_by_id tests =====
 
-            # Mock validation to succeed
-            with patch('controllers.assets.AssetIdRequest') as mock_request_class:
-                mock_request = MagicMock()
-                mock_request.asset_id = "BTC"
-                mock_request_class.return_value = mock_request
+def test_get_asset_by_id_success():
+    """Test get_asset_by_id with valid asset ID"""
+    request = create_test_request()
+    test_asset = create_test_asset_btc()
 
-                # Mock business validation to succeed
-                with patch('controllers.assets.validate_asset_exists'):
-                    # Mock DAO to raise unexpected exception
-                    mock_dao.get_asset_by_id.side_effect = RuntimeError("Unexpected runtime error")
+    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
+         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
 
-                    # Test that unexpected exception is converted to internal server exception
-                    with pytest.raises(CNOPInventoryServerException, match="Failed to get asset BTC"):
-                        get_asset_by_id(create_mock_request(), "BTC", asset_dao=mock_dao)
+        mock_dao = MagicMock()
+        mock_dao.get_asset_by_id.return_value = test_asset
+        mock_get_request_id.return_value = "test-request-id"
+
+        result = get_asset_by_id(request, "BTC", asset_dao=mock_dao)
+
+        # Verify result
+        assert result is not None
+        assert result.asset_id == "BTC"
+        assert result.name == "Bitcoin"
+        assert result.availability_status == "available"
+        mock_validate.assert_called_once_with("BTC", mock_dao)
+
+
+def test_get_asset_by_id_not_found():
+    """Test get_asset_by_id with non-existent asset ID"""
+    request = create_test_request()
+
+    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
+         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+
+        mock_dao = MagicMock()
+        mock_get_request_id.return_value = "test-request-id"
+
+        # Mock validate_asset_exists to raise CNOPAssetNotFoundException
+        mock_validate.side_effect = CNOPAssetNotFoundException("Asset not found")
+
+        # Test that the function raises the correct exception
+        with pytest.raises(CNOPAssetNotFoundException):
+            get_asset_by_id(request, "XYZ", asset_dao=mock_dao)
+
+
+def test_get_asset_by_id_database_error():
+    """Test that database errors in get_asset_by_id are properly handled"""
+    request = create_test_request()
+
+    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
+         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+
+        mock_dao = MagicMock()
+        mock_dao.get_asset_by_id.side_effect = Exception("Database query failed")
+        mock_get_request_id.return_value = "test-request-id"
+
+        with pytest.raises(CNOPInventoryServerException) as exc_info:
+            get_asset_by_id(request, "BTC", asset_dao=mock_dao)
+
+        error = exc_info.value
+        assert "Failed to get asset BTC" in str(error)
+
+
+def test_get_asset_by_id_validation_error():
+    """Test get_asset_by_id with field validation error - re-raises validation exception"""
+    request = create_test_request()
+
+    with patch(PATH_ASSET_ID_REQUEST) as mock_asset_id_request, \
+         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+
+        mock_get_request_id.return_value = "test-request-id"
+
+        # Mock AssetIdRequest to raise CNOPAssetValidationException
+        mock_asset_id_request.side_effect = CNOPAssetValidationException("Invalid asset_id format")
+
+        # The code re-raises the original validation error (lines 203-206)
+        with pytest.raises(CNOPAssetValidationException) as exc_info:
+            get_asset_by_id(request, "INVALID@#$", asset_dao=MagicMock())
+
+        assert "Invalid asset_id format" in str(exc_info.value)
+
+
+def test_get_asset_by_id_business_validation_error():
+    """Test CNOPAssetNotFoundException from business validation - covers lines 275-277"""
+    request = create_test_request()
+
+    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
+         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+
+        mock_dao = MagicMock()
+        mock_get_request_id.return_value = "test-request-id"
+
+        # Mock validate_asset_exists to raise CNOPAssetNotFoundException (business validation)
+        mock_validate.side_effect = CNOPAssetNotFoundException("Asset not found")
+
+        # Test that CNOPAssetNotFoundException is re-raised (lines 275-277)
+        with pytest.raises(CNOPAssetNotFoundException, match="Asset not found"):
+            get_asset_by_id(request, "XYZ", asset_dao=mock_dao)
+
+
+def test_get_asset_by_id_inactive_asset():
+    """Test get_asset_by_id with inactive asset - availability_status should be 'unavailable'"""
+    request = create_test_request()
+    test_asset = create_test_asset_inactive()
+
+    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
+         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+
+        mock_dao = MagicMock()
+        mock_dao.get_asset_by_id.return_value = test_asset
+        mock_get_request_id.return_value = "test-request-id"
+
+        result = get_asset_by_id(request, "BTC", asset_dao=mock_dao)
+
+        # Verify availability_status is 'unavailable' for inactive asset
+        assert result.availability_status == "unavailable"
+        assert result.is_active is False
+
+
+def test_get_asset_by_id_asset_without_last_updated():
+    """Test get_asset_by_id when asset.last_updated is None - covers line 221"""
+    request = create_test_request()
+    test_asset = create_test_asset_btc()
+    test_asset.last_updated = None
+
+    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
+         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+
+        mock_dao = MagicMock()
+        mock_dao.get_asset_by_id.return_value = test_asset
+        mock_get_request_id.return_value = "test-request-id"
+
+        result = get_asset_by_id(request, "BTC", asset_dao=mock_dao)
+
+        # Verify last_updated is set to current time when None (line 221)
+        assert result.last_updated is not None
+
+
+# ===== Metrics tests (when METRICS_AVAILABLE is False) =====
+
+def test_list_assets_metrics_not_available():
+    """Test that metrics are not recorded when METRICS_AVAILABLE is False - covers lines 146-148"""
+    request = create_test_request()
+    test_assets = [create_test_asset_btc()]
+
+    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+        mock_dao = MagicMock()
+        mock_dao.get_all_assets.return_value = test_assets
+        mock_get_request_id.return_value = "test-request-id"
+
+        # Test list_assets - metrics code will not execute (lines 146-148)
+        result = list_assets(request, active_only=True, limit=10, asset_dao=mock_dao)
+        assert result is not None
+        assert len(result.assets) == 1
+
+
+def test_get_asset_by_id_metrics_not_available():
+    """Test that metrics are not recorded when METRICS_AVAILABLE is False - covers line 219"""
+    request = create_test_request()
+    test_asset = create_test_asset_btc()
+
+    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
+         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+
+        mock_dao = MagicMock()
+        mock_dao.get_asset_by_id.return_value = test_asset
+        mock_get_request_id.return_value = "test-request-id"
+
+        # Test get_asset_by_id - metrics code will not execute (line 219)
+        result = get_asset_by_id(request, "BTC", asset_dao=mock_dao)
+        assert result is not None
+        assert result.asset_id == "BTC"
+
+
+# ===== Additional coverage tests =====
+
+def test_build_asset_list_with_empty_name():
+    """Test build_asset_list handles assets with None name - covers line 59"""
+    request = create_test_request()
+    test_asset = create_test_asset_btc()
+    test_asset.name = None
+
+    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+        mock_dao = MagicMock()
+        mock_dao.get_all_assets.return_value = [test_asset]
+        mock_get_request_id.return_value = "test-request-id"
+
+        result = list_assets(request, active_only=True, limit=None, asset_dao=mock_dao)
+
+        # Verify empty name is converted to empty string (line 59)
+        assert result.assets[0].name == ''
+
+
+def test_build_asset_list_with_none_category():
+    """Test build_asset_list handles assets with None category - covers line 61"""
+    request = create_test_request()
+    test_asset = create_test_asset_btc()
+    test_asset.category = None
+
+    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+        mock_dao = MagicMock()
+        mock_dao.get_all_assets.return_value = [test_asset]
+        mock_get_request_id.return_value = "test-request-id"
+
+        result = list_assets(request, active_only=True, limit=None, asset_dao=mock_dao)
+
+        # Verify None category defaults to 'unknown' (line 61)
+        assert result.assets[0].category == 'unknown'
+
+
+def test_list_assets_filters_in_response():
+    """Test that filters are correctly included in response - covers lines 75-78"""
+    request = create_test_request()
+    test_assets = [create_test_asset_btc()]
+
+    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+        mock_dao = MagicMock()
+        mock_dao.get_all_assets.return_value = test_assets
+        mock_get_request_id.return_value = "test-request-id"
+
+        result = list_assets(request, active_only=True, limit=50, asset_dao=mock_dao)
+
+        # Verify filters are included in response (lines 75-78)
+        assert result.filters["active_only"] is True
+        assert result.filters["limit"] == 50
+
+
+def test_list_assets_with_limit_and_active_only_true():
+    """Test list_assets total_count calculation with active_only=True and limit - covers lines 136-138"""
+    request = create_test_request()
+    active_assets = [create_test_asset_btc()]
+    all_assets = [create_test_asset_btc(), create_test_asset_eth()]
+
+    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+        mock_dao = MagicMock()
+        # First call returns active assets, second call returns all assets
+        mock_dao.get_all_assets.side_effect = [active_assets, all_assets]
+        mock_get_request_id.return_value = "test-request-id"
+
+        result = list_assets(request, active_only=True, limit=10, asset_dao=mock_dao)
+
+        # Verify total_count is from all assets (lines 136-138)
+        assert len(result.assets) == 1
+        assert result.total_count == 2
+
+
+def test_get_asset_by_id_comprehensive_fields():
+    """Test that all comprehensive fields are returned in AssetDetailResponse"""
+    request = create_test_request()
+    test_asset = create_test_asset_btc()
+
+    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
+         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+
+        mock_dao = MagicMock()
+        mock_dao.get_asset_by_id.return_value = test_asset
+        mock_get_request_id.return_value = "test-request-id"
+
+        result = get_asset_by_id(request, "BTC", asset_dao=mock_dao)
+
+        # Verify all comprehensive market data fields are present
+        assert result.market_cap == test_asset.market_cap
+        assert result.price_change_24h == test_asset.price_change_24h
+        assert result.price_change_percentage_24h == test_asset.price_change_percentage_24h
+        assert result.price_change_percentage_7d == test_asset.price_change_percentage_7d
+        assert result.price_change_percentage_30d == test_asset.price_change_percentage_30d
+        assert result.high_24h == test_asset.high_24h
+        assert result.low_24h == test_asset.low_24h
+        assert result.total_volume_24h == test_asset.total_volume_24h
+        assert result.circulating_supply == test_asset.circulating_supply
+        assert result.total_supply == test_asset.total_supply
+        assert result.max_supply == test_asset.max_supply
+        assert result.ath == test_asset.ath
+        assert result.ath_change_percentage == test_asset.ath_change_percentage
+        assert result.ath_date == test_asset.ath_date
+        assert result.atl == test_asset.atl
+        assert result.atl_change_percentage == test_asset.atl_change_percentage
+        assert result.atl_date == test_asset.atl_date

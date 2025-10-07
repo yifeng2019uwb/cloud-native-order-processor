@@ -4,21 +4,66 @@ Path: services/inventory-service/src/data/init_inventory.py
 """
 import asyncio
 from decimal import Decimal
-from typing import List
+from typing import List, Dict, Any, Annotated
+from pydantic import BaseModel, Field, AfterValidator
+
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.database.dynamodb_connection import get_dynamodb_manager
 from common.data.entities.inventory import Asset
 from common.exceptions import CNOPEntityNotFoundException, CNOPAssetNotFoundException
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from constants import DEFAULT_ASSET_AMOUNT, DEFAULT_ASSET_CATEGORY
+from services.fetch_coins import CoinData
 
 logger = BaseLogger(Loggers.INVENTORY)
+
 
 def get_category(coin: dict) -> str:
     """Get category for coin - simplified to use default"""
     return DEFAULT_ASSET_CATEGORY
 
-async def upsert_coins_to_inventory(coins: List[dict]) -> int:
+
+
+def coin_to_asset(coin: CoinData) -> Asset:
+    """Convert validated coin data to Asset entity"""
+    return Asset(
+        asset_id=coin.symbol,
+        name=coin.name,
+        description=f"Digital asset: {coin.name}",
+        category=DEFAULT_ASSET_CATEGORY,
+        amount=Decimal(str(DEFAULT_ASSET_AMOUNT)),
+        price_usd=coin.price_usd,
+        is_active=True,
+        symbol=coin.symbol,
+        image=coin.image,
+        market_cap_rank=coin.market_cap_rank,
+        current_price=coin.current_price,
+        high_24h=coin.high_24h,
+        low_24h=coin.low_24h,
+        circulating_supply=coin.circulating_supply,
+        total_supply=coin.total_supply,
+        max_supply=coin.max_supply,
+        price_change_24h=coin.price_change_24h,
+        price_change_percentage_24h=coin.price_change_percentage_24h,
+        price_change_percentage_7d=coin.price_change_percentage_7d,
+        price_change_percentage_30d=coin.price_change_percentage_30d,
+        market_cap=coin.market_cap,
+        market_cap_change_24h=coin.market_cap_change_24h,
+        market_cap_change_percentage_24h=coin.market_cap_change_percentage_24h,
+        total_volume_24h=coin.total_volume_24h,
+        volume_change_24h=coin.volume_change_24h,
+        ath=coin.ath,
+        ath_change_percentage=coin.ath_change_percentage,
+        ath_date=coin.ath_date,
+        atl=coin.atl,
+        atl_change_percentage=coin.atl_change_percentage,
+        atl_date=coin.atl_date,
+        last_updated=coin.last_updated,
+        sparkline_7d=coin.sparkline_7d
+    )
+
+
+async def upsert_coins_to_inventory(coins: List[CoinData]) -> int:
     """Upsert coins data to inventory - update existing, create new"""
     updated_count = 0
     db_connection = get_dynamodb_manager().get_connection()
@@ -26,106 +71,90 @@ async def upsert_coins_to_inventory(coins: List[dict]) -> int:
 
     for coin in coins:
         try:
-            asset_id = coin["symbol"].upper()
-            logger.info(action=LogActions.DB_OPERATION, message=f"Processing coin: {asset_id}, current_price: {coin.get('current_price')}")
+            asset = coin_to_asset(coin)
 
-            asset = Asset(
-                asset_id=asset_id,
-                name=coin.get("name", ""),
-                description=f"Digital asset: {coin.get('name', '')}",
-                category=DEFAULT_ASSET_CATEGORY,
-                amount=Decimal(str(DEFAULT_ASSET_AMOUNT)),
-                price_usd=Decimal(str(coin.get("price_usd", 0))),
-                is_active=True,
-
-                # CoinGecko API fields
-                symbol=coin.get("symbol"),
-                image=coin.get("image"),
-                market_cap_rank=coin.get("market_cap_rank"),
-                current_price=coin.get("current_price"),
-                high_24h=coin.get("high_24h"),
-                low_24h=coin.get("low_24h"),
-                circulating_supply=coin.get("circulating_supply"),
-                total_supply=coin.get("total_supply"),
-                max_supply=coin.get("max_supply"),
-                price_change_24h=coin.get("price_change_24h"),
-                price_change_percentage_24h=coin.get("price_change_percentage_24h"),
-                price_change_percentage_7d=coin.get("price_change_percentage_7d"),
-                price_change_percentage_30d=coin.get("price_change_percentage_30d"),
-                market_cap=coin.get("market_cap"),
-                market_cap_change_24h=coin.get("market_cap_change_24h"),
-                market_cap_change_percentage_24h=coin.get("market_cap_change_percentage_24h"),
-                total_volume_24h=coin.get("total_volume_24h"),
-                volume_change_24h=coin.get("volume_change_24h"),
-                ath=coin.get("ath"),
-                ath_change_percentage=coin.get("ath_change_percentage"),
-                ath_date=coin.get("ath_date"),
-                atl=coin.get("atl"),
-                atl_change_percentage=coin.get("atl_change_percentage"),
-                atl_date=coin.get("atl_date"),
-                last_updated=coin.get("last_updated"),
-                sparkline_7d=coin.get("sparkline_7d")
+            logger.info(
+                action=LogActions.DB_OPERATION,
+                message=f"Processing coin: {asset.asset_id}, current_price: {coin.current_price}"
             )
 
-            # Try to get existing asset first
             try:
-                logger.info(action=LogActions.DB_OPERATION, message=f"Checking if asset exists: {asset_id}")
-                existing_asset = asset_dao.get_asset_by_id(asset_id)
-                # Asset exists, update it
-                logger.info(action=LogActions.DB_OPERATION, message=f"Asset exists, updating: {asset_id}")
+                logger.info(
+                    action=LogActions.DB_OPERATION,
+                    message=f"Checking if asset exists: {asset.asset_id}"
+                )
+                existing_asset = asset_dao.get_asset_by_id(asset.asset_id)
+                logger.info(
+                    action=LogActions.DB_OPERATION,
+                    message=f"Asset exists, updating: {asset.asset_id}"
+                )
                 asset_dao.update_asset(asset)
-                logger.info(action=LogActions.DB_OPERATION, message=f"Updated asset: {asset_id}")
+                logger.info(
+                    action=LogActions.DB_OPERATION,
+                    message=f"Updated asset: {asset.asset_id}"
+                )
             except (CNOPEntityNotFoundException, CNOPAssetNotFoundException):
-                # Asset doesn't exist, create it
-                logger.info(action=LogActions.DB_OPERATION, message=f"Asset doesn't exist, creating: {asset_id}")
+                logger.info(
+                    action=LogActions.DB_OPERATION,
+                    message=f"Asset doesn't exist, creating: {asset.asset_id}"
+                )
                 asset_dao.create_asset(asset)
-                logger.info(action=LogActions.DB_OPERATION, message=f"Created asset: {asset_id}")
+                logger.info(
+                    action=LogActions.DB_OPERATION,
+                    message=f"Created asset: {asset.asset_id}"
+                )
             except Exception as e:
-                logger.error(action=LogActions.ERROR, message=f"Database operation failed for {asset_id}: {e}")
+                logger.error(
+                    action=LogActions.ERROR,
+                    message=f"Database operation failed for {asset.asset_id}: {e}"
+                )
                 continue
 
             updated_count += 1
 
         except Exception as e:
-            logger.error(action=LogActions.ERROR, message=f"Failed to upsert asset {coin.get('symbol', '')}: {e}")
+            logger.error(
+                action=LogActions.ERROR,
+                message=f"Failed to upsert asset {coin.symbol}: {e}"
+            )
             continue
 
     return updated_count
 
-async def initialize_inventory_data(force_recreate: bool = False) -> dict:
+
+async def initialize_inventory_data(force_recreate: bool = False) -> None:
     """Initialize inventory data on service startup by fetching from data providers"""
-    logger.info(action=LogActions.SERVICE_START, message="Starting inventory data initialization...")
+    logger.info(
+        action=LogActions.SERVICE_START,
+        message="Starting inventory data initialization..."
+    )
     try:
         from services.fetch_coins import fetch_coins
 
         coins = await fetch_coins()
         if not coins:
-            logger.error(action=LogActions.ERROR, message="No coins received from fetch service")
-            return {
-                "status": "error",
-                "error": "No coins received",
-                "message": "Failed to fetch coins from data providers"
-            }
+            logger.error(
+                action=LogActions.ERROR,
+                message="No coins received from fetch service"
+            )
+            return
 
         count = await upsert_coins_to_inventory(coins)
-        logger.info(action=LogActions.SERVICE_START, message=f"Successfully upserted {count} assets from data providers")
-        return {
-            "status": "success",
-            "assets_upserted": count,
-            "message": f"Successfully upserted {count} assets from data providers"
-        }
-    except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Failed to initialize inventory data: {e}")
-        return {
-            "status": "error",
-            "error": str(e),
-            "message": "Failed to initialize inventory data from data providers"
-        }
+        logger.info(
+            action=LogActions.SERVICE_START,
+            message=f"Successfully upserted {count} assets from data providers"
+        )
 
-# Convenience function for startup
-async def startup_inventory_initialization():
+    except Exception as e:
+        logger.error(
+            action=LogActions.ERROR,
+            message=f"Failed to initialize inventory data: {e}"
+        )
+
+
+async def startup_inventory_initialization() -> None:
     """
     Non-blocking startup initialization
     This function is designed to not block service startup
     """
-    return await initialize_inventory_data()
+    await initialize_inventory_data()
