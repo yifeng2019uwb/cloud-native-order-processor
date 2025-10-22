@@ -23,132 +23,50 @@ from src.exceptions import CNOPEntityValidationException
 
 
 class TestOrderIdGenerator:
-    """Test OrderIdGenerator utility."""
+    """Test OrderIdGenerator utility - Simplified"""
+
+    def test_generate(self):
+        """Test generating order ID using new simple method."""
+        order_id = OrderIdGenerator.generate()
+
+        # Should start with 'ord_' and have UUID
+        assert order_id.startswith('ord_')
+        assert len(order_id) == 20  # ord_ (4) + 16 hex chars = 20
+
+        # Should be unique
+        order_id2 = OrderIdGenerator.generate()
+        assert order_id != order_id2
 
     def test_generate_order_id(self):
-        """Test generating order ID."""
+        """Test backward compatibility for generate_order_id()."""
         order_id = OrderIdGenerator.generate_order_id()
 
-        # Should start with 'ord' and contain separator
-        assert order_id.startswith('ord')
-        assert OrderIdGenerator.SEPARATOR in order_id
-        assert len(order_id) > 10
-
-    def test_generate_order_id_with_username(self):
-        """Test generating order ID with username."""
-        username = "user123"
-        order_id = OrderIdGenerator.generate_order_id(username)
-
-        # Should contain username
-        assert username in order_id
-        assert order_id.startswith('ord')
+        assert order_id.startswith('ord_')
+        assert len(order_id) == 20
 
     def test_generate_simple_order_id(self):
-        """Test generating simple order ID."""
+        """Test backward compatibility for generate_simple_order_id()."""
         order_id = OrderIdGenerator.generate_simple_order_id()
 
-        # Should start with 'ord' and be reasonable length
-        assert order_id.startswith('ord')
-        assert len(order_id) > 10
+        assert order_id.startswith('ord_')
+        assert len(order_id) == 20
 
     def test_generate_timestamped_order_id(self):
-        """Test generating timestamped order ID."""
+        """Test backward compatibility for generate_timestamped_order_id()."""
         order_id = OrderIdGenerator.generate_timestamped_order_id()
 
-        # Should start with 'ord' and contain timestamp
-        assert order_id.startswith('ord')
-        assert len(order_id) > 10
+        assert order_id.startswith('ord_')
+        assert len(order_id) == 20
 
-        # Should be parseable
-        parsed = OrderIdGenerator.parse_order_id(order_id)
-        assert parsed['prefix'] == 'ord'
-        assert 'unique_id' in parsed
+    def test_uniqueness(self):
+        """Test that generated IDs are unique."""
+        ids = set()
+        for _ in range(100):
+            order_id = OrderIdGenerator.generate()
+            ids.add(order_id)
 
-    def test_parse_order_id(self):
-        """Test parsing order ID."""
-        order_id = "ord_20231201123456789_user123"
-        parsed = OrderIdGenerator.parse_order_id(order_id)
-
-        assert parsed['prefix'] == 'ord'
-        assert parsed['unique_id'] == 'user123'
-        # username is only present if there are 4+ parts
-        assert 'username' not in parsed  # This format has 3 parts, so no username
-
-    def test_parse_order_id_with_username(self):
-        """Test parsing order ID with username."""
-        order_id = "ord_20231201123456789_abc123def_user123"
-        parsed = OrderIdGenerator.parse_order_id(order_id)
-
-        assert parsed['prefix'] == 'ord'
-        assert parsed['unique_id'] == 'user123'
-        assert parsed['username'] == 'user123'  # This format has 4+ parts, so username is present
-
-    def test_is_valid_order_id(self):
-        """Test validating order ID."""
-        valid_id = "ord_20231201123456789_user123"
-        invalid_id = "invalid_id"
-
-        assert OrderIdGenerator.is_valid_order_id(valid_id) is True
-        assert OrderIdGenerator.is_valid_order_id(invalid_id) is False
-
-    def test_parse_order_id_invalid_format(self):
-        """Test parsing invalid order ID format."""
-        invalid_id = "invalid_123"
-
-        with pytest.raises(CNOPEntityValidationException, match="Invalid order ID format"):
-            OrderIdGenerator.parse_order_id(invalid_id)
-
-    def test_parse_order_id_insufficient_parts(self):
-        """Test parsing order ID with insufficient parts."""
-        invalid_id = "ord_123"
-
-        with pytest.raises(CNOPEntityValidationException, match="Invalid order ID format"):
-            OrderIdGenerator.parse_order_id(invalid_id)
-
-    def test_parse_order_id_date_time_format(self):
-        """Test parsing order ID with date-time format."""
-        order_id = "ord_20231201_143052_abc123def"
-        parsed = OrderIdGenerator.parse_order_id(order_id)
-
-        # The actual implementation doesn't parse date-time format this way
-        # It only parses unix timestamps or simple formats
-        assert parsed['prefix'] == 'ord'
-        assert parsed['unique_id'] == 'abc123def'
-
-    def test_parse_order_id_unix_timestamp_format(self):
-        """Test parsing order ID with unix timestamp format."""
-        order_id = "ord_1732891852_abc123def"
-        parsed = OrderIdGenerator.parse_order_id(order_id)
-
-        assert parsed['unix_timestamp'] == 1732891852
-        # The actual implementation doesn't set 'format' field
-
-    def test_get_order_id_info_valid(self):
-        """Test getting order ID information for valid ID."""
-        order_id = "ord_1732891852_abc123def"  # Use unix timestamp format
-        info = OrderIdGenerator.get_order_id_info(order_id)
-
-        assert info['valid'] is True
-        assert info['format'] == "timestamp"  # This is what the actual implementation returns
-        assert 'components' in info
-
-    def test_get_order_id_info_invalid(self):
-        """Test getting order ID information for invalid ID."""
-        invalid_id = "invalid_123"
-        info = OrderIdGenerator.get_order_id_info(invalid_id)
-
-        assert info['valid'] is False
-        assert 'error' in info
-
-    def test_get_order_id_info_exception_handling(self):
-        """Test getting order ID info with exception handling."""
-        # Test with an invalid order ID that will cause parsing to fail
-        invalid_id = "invalid_123"
-        info = OrderIdGenerator.get_order_id_info(invalid_id)
-
-        # Should return error info instead of raising exception
-        assert info['valid'] is False
-        assert 'error' in info
+        # All 100 IDs should be unique
+        assert len(ids) == 100
 
 
 class TestOrderStatusManager:
