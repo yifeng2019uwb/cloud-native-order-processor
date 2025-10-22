@@ -10,7 +10,7 @@ from decimal import Decimal
 from datetime import datetime
 
 # Import proper exceptions
-from order_exceptions import CNOPOrderValidationException
+from order_exceptions.exceptions import CNOPOrderValidationException
 
 # Local constants for validation messages (only used in this file)
 MSG_ERROR_ORDER_ID_EMPTY = "Order ID cannot be empty"

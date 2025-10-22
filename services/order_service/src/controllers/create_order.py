@@ -33,7 +33,7 @@ from constants import (
     USER_AGENT_HEADER, UNKNOWN_VALUE
 )
 from common.shared.constants.error_messages import ErrorMessages
-from order_exceptions import CNOPOrderValidationException
+from order_exceptions.exceptions import CNOPOrderValidationException
 from controllers.dependencies import (
     get_current_user, get_transaction_manager,
     get_asset_dao_dependency, get_user_dao_dependency,

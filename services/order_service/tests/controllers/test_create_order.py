@@ -74,7 +74,7 @@ from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInternalServerException
 )
-from order_exceptions import CNOPOrderValidationException
+from order_exceptions.exceptions import CNOPOrderValidationException
 
 class TestCreateOrder:
     """Test create_order function"""

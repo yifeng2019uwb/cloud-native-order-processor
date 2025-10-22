@@ -12,7 +12,7 @@ from src.controllers.get_order import get_order, router
 from src.api_models.order import GetOrderResponse, OrderData
 from common.data.entities.order.enums import OrderType, OrderStatus
 from common.exceptions.shared_exceptions import CNOPOrderNotFoundException, CNOPInternalServerException
-from order_exceptions import CNOPOrderValidationException
+from order_exceptions.exceptions import CNOPOrderValidationException
 
 
 def create_mock_request(request_id="test-request-id"):

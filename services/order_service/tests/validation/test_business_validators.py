@@ -27,7 +27,7 @@ from src.validation.business_validators import (
 
 # Import exceptions
 from common.exceptions import CNOPAssetNotFoundException, CNOPOrderNotFoundException
-from order_exceptions import CNOPOrderValidationException
+from order_exceptions.exceptions import CNOPOrderValidationException
 
 # Define the interface as a list of method names
 USER_DAO_SPEC = [

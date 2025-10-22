@@ -12,7 +12,7 @@ from typing import Optional
 from common.data.entities.order.enums import OrderType, OrderStatus
 
 from common.exceptions import CNOPAssetNotFoundException, CNOPOrderNotFoundException
-from order_exceptions import CNOPOrderValidationException
+from order_exceptions.exceptions import CNOPOrderValidationException
 
 # Local constants for validation messages (only used in this file)
 MSG_ERROR_INSUFFICIENT_BALANCE_DETAILED = "Insufficient balance for this order"

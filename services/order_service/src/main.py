@@ -13,18 +13,16 @@ from common.exceptions import (
     CNOPOrderNotFoundException,
     CNOPInternalServerException
 )
-from order_exceptions import (
+from order_exceptions.exceptions import (
     CNOPOrderAlreadyExistsException,
     CNOPOrderServerException,
     CNOPOrderValidationException
 )
-from controllers import (
-    create_order_router,
-    get_order_router,
-    list_orders_router,
-    asset_transaction_router,
-    health_router
-)
+from controllers.create_order import router as create_order_router
+from controllers.get_order import router as get_order_router
+from controllers.list_orders import router as list_orders_router
+from controllers.asset_transaction import router as asset_transaction_router
+from controllers.health import router as health_router
 from metrics import get_metrics_response
 from api_info_enum import ServiceMetadata, ApiPaths, ApiTags, ApiResponseKeys, API_PREFIX_ORDERS, API_PREFIX_ASSETS
 from constants import (
