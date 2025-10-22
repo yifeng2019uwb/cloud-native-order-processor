@@ -11,17 +11,17 @@ from pynamodb.attributes import (
     UnicodeAttribute, UTCDateTimeAttribute, NumberAttribute, BooleanAttribute)
 from pynamodb.models import Model
 
-from ..entity_constants import AssetFields, FieldConstraints, UserConstants
+from ..entity_constants import AssetFields, AssetConstraints, UserConstants
 from ...database.database_constants import AWSConfig, TableNames
 from ..datetime_utils import safe_parse_datetime, get_current_utc
 
 
 class Asset(BaseModel):
     """Asset domain model - pure business entity without database fields"""
-    asset_id: str = Field(..., max_length=FieldConstraints.ASSET_ID_MAX_LENGTH, description="Asset symbol (primary key)")
-    name: str = Field(..., max_length=FieldConstraints.ASSET_NAME_MAX_LENGTH, description="Asset full name")
-    description: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_DESCRIPTION_MAX_LENGTH, description="Asset description")
-    category: str = Field(..., max_length=FieldConstraints.ASSET_CATEGORY_MAX_LENGTH, description="Asset category (major/altcoin/stablecoin)")
+    asset_id: str = Field(..., max_length=AssetConstraints.ASSET_ID_MAX_LENGTH, description="Asset symbol (primary key)")
+    name: str = Field(..., max_length=AssetConstraints.ASSET_NAME_MAX_LENGTH, description="Asset full name")
+    description: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_DESCRIPTION_MAX_LENGTH, description="Asset description")
+    category: str = Field(..., max_length=AssetConstraints.ASSET_CATEGORY_MAX_LENGTH, description="Asset category (major/altcoin/stablecoin)")
     amount: Decimal = Field(..., description="Available inventory amount")
     price_usd: Decimal = Field(..., description="Current USD price")
     is_active: bool = Field(default=True, description="Whether asset is available for trading")
@@ -29,8 +29,8 @@ class Asset(BaseModel):
     updated_at: datetime = Field(default_factory=get_current_utc)
 
     # CoinGecko API fields - Comprehensive market data
-    symbol: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_SYMBOL_MAX_LENGTH, description="Ticker symbol (e.g., BTC)")
-    image: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_IMAGE_MAX_LENGTH, description="URL to coin logo")
+    symbol: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_SYMBOL_MAX_LENGTH, description="Ticker symbol (e.g., BTC)")
+    image: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_IMAGE_MAX_LENGTH, description="URL to coin logo")
     market_cap_rank: Optional[int] = Field(None, description="Rank by market cap")
 
     # Price data
@@ -61,13 +61,13 @@ class Asset(BaseModel):
     # Historical context
     ath: Optional[float] = Field(None, description="All-time high price")
     ath_change_percentage: Optional[float] = Field(None, description="% change from all-time high")
-    ath_date: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_DATE_MAX_LENGTH, description="Date of all-time high")
+    ath_date: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_DATE_MAX_LENGTH, description="Date of all-time high")
     atl: Optional[float] = Field(None, description="All-time low price")
     atl_change_percentage: Optional[float] = Field(None, description="% change from all-time low")
-    atl_date: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_DATE_MAX_LENGTH, description="Date of all-time low")
+    atl_date: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_DATE_MAX_LENGTH, description="Date of all-time low")
 
     # Additional metadata
-    last_updated: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_LAST_UPDATED_MAX_LENGTH, description="Last update timestamp from CoinGecko")
+    last_updated: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_LAST_UPDATED_MAX_LENGTH, description="Last update timestamp from CoinGecko")
     sparkline_7d: Optional[dict] = Field(None, description="7-day price sparkline data")
 
     @model_validator(mode="before")
@@ -90,10 +90,10 @@ class AssetData(BaseModel):
     product_id: str = Field(..., description="Product ID (primary key)")
 
     # Asset fields (same as Asset entity)
-    asset_id: str = Field(..., max_length=FieldConstraints.ASSET_ID_MAX_LENGTH, description="Asset symbol")
-    name: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_NAME_MAX_LENGTH, description="Asset full name")
-    description: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_DESCRIPTION_MAX_LENGTH, description="Asset description")
-    category: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_CATEGORY_MAX_LENGTH, description="Asset category")
+    asset_id: str = Field(..., max_length=AssetConstraints.ASSET_ID_MAX_LENGTH, description="Asset symbol")
+    name: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_NAME_MAX_LENGTH, description="Asset full name")
+    description: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_DESCRIPTION_MAX_LENGTH, description="Asset description")
+    category: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_CATEGORY_MAX_LENGTH, description="Asset category")
     amount: Optional[Decimal] = Field(None, description="Available inventory amount")
     price_usd: Decimal = Field(..., description="Current USD price")
     is_active: bool = Field(default=True, description="Whether asset is available for trading")
@@ -101,8 +101,8 @@ class AssetData(BaseModel):
     updated_at: Optional[str] = Field(None, description="Last update timestamp (ISO string)")
 
     # CoinGecko API fields
-    symbol: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_SYMBOL_MAX_LENGTH, description="Ticker symbol")
-    image: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_IMAGE_MAX_LENGTH, description="URL to coin logo")
+    symbol: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_SYMBOL_MAX_LENGTH, description="Ticker symbol")
+    image: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_IMAGE_MAX_LENGTH, description="URL to coin logo")
     market_cap_rank: Optional[int] = Field(None, description="Rank by market cap")
     current_price: Optional[Decimal] = Field(None, description="Current price in USD")
     high_24h: Optional[Decimal] = Field(None, description="24-hour high price")
@@ -121,11 +121,11 @@ class AssetData(BaseModel):
     volume_change_24h: Optional[Decimal] = Field(None, description="Volume change in last 24h")
     ath: Optional[Decimal] = Field(None, description="All-time high price")
     ath_change_percentage: Optional[Decimal] = Field(None, description="% change from all-time high")
-    ath_date: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_DATE_MAX_LENGTH, description="Date of all-time high")
+    ath_date: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_DATE_MAX_LENGTH, description="Date of all-time high")
     atl: Optional[Decimal] = Field(None, description="All-time low price")
     atl_change_percentage: Optional[Decimal] = Field(None, description="% change from all-time low")
-    atl_date: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_DATE_MAX_LENGTH, description="Date of all-time low")
-    last_updated: Optional[str] = Field(None, max_length=FieldConstraints.ASSET_LAST_UPDATED_MAX_LENGTH, description="Last update timestamp")
+    atl_date: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_DATE_MAX_LENGTH, description="Date of all-time low")
+    last_updated: Optional[str] = Field(None, max_length=AssetConstraints.ASSET_LAST_UPDATED_MAX_LENGTH, description="Last update timestamp")
     sparkline_7d: Optional[dict] = Field(None, description="7-day price sparkline data")
 
     @model_validator(mode="before")

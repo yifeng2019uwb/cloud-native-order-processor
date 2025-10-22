@@ -12,7 +12,7 @@ from pynamodb.attributes import (BooleanAttribute, UnicodeAttribute,
 from pynamodb.indexes import AllProjection, GlobalSecondaryIndex
 from pynamodb.models import Model
 
-from ..entity_constants import (DatabaseFields, FieldConstraints,
+from ..entity_constants import (DatabaseFields, UserConstraints,
                                 TimestampFields, UserConstants, UserFields)
 from ...database.database_constants import AWSConfig, TableNames
 from ..datetime_utils import get_current_utc
@@ -21,15 +21,15 @@ from .user_enums import DEFAULT_USER_ROLE
 
 class User(BaseModel):
     """User domain model - pure business entity without database fields"""
-    username: str = Field(..., max_length=FieldConstraints.USERNAME_MAX_LENGTH, description="Username for easy access")
-    email: str = Field(..., max_length=FieldConstraints.EMAIL_MAX_LENGTH)
-    password: str = Field(..., max_length=FieldConstraints.PASSWORD_MAX_LENGTH, description="Hashed password")
-    first_name: str = Field(..., max_length=FieldConstraints.FIRST_NAME_MAX_LENGTH)
-    last_name: str = Field(..., max_length=FieldConstraints.LAST_NAME_MAX_LENGTH)
-    phone: Optional[str] = Field(None, max_length=FieldConstraints.PHONE_MAX_LENGTH)
+    username: str = Field(..., max_length=UserConstraints.USERNAME_MAX_LENGTH, description="Username for easy access")
+    email: str = Field(..., max_length=UserConstraints.EMAIL_MAX_LENGTH)
+    password: str = Field(..., max_length=UserConstraints.PASSWORD_MAX_LENGTH, description="Hashed password")
+    first_name: str = Field(..., max_length=UserConstraints.FIRST_NAME_MAX_LENGTH)
+    last_name: str = Field(..., max_length=UserConstraints.LAST_NAME_MAX_LENGTH)
+    phone: Optional[str] = Field(None, max_length=UserConstraints.PHONE_MAX_LENGTH)
     date_of_birth: Optional[date] = None
     marketing_emails_consent: bool = False
-    role: str = Field(default=DEFAULT_USER_ROLE, max_length=FieldConstraints.ROLE_MAX_LENGTH)
+    role: str = Field(default=DEFAULT_USER_ROLE, max_length=UserConstraints.ROLE_MAX_LENGTH)
     created_at: datetime = Field(default_factory=get_current_utc)
     updated_at: datetime = Field(default_factory=get_current_utc)
 
