@@ -87,16 +87,16 @@ def login_user(
         logger.info(action=LogActions.AUTH_SUCCESS, message=f"User authenticated successfully: {login_data.username}", request_id=request_id)
 
         # Create JWT token using centralized TokenManager
-        token_data = token_manager.create_access_token(user.username, user.role)
+        token_response = token_manager.create_access_token(user.username, user.role)
 
         # Log successful login and token creation
         audit_logger.log_login_success(user.username, client_ip, user_agent)
         audit_logger.log_token_created(user.username, "access_token", client_ip)
 
         login_response = UserLoginResponse(
-            access_token=token_data["access_token"],
-            token_type=token_data["token_type"],
-            expires_in=token_data["expires_in"]
+            access_token=token_response.access_token,
+            token_type=token_response.token_type,
+            expires_in=token_response.expires_in
         )
 
         # Wrap in LoginSuccessResponse

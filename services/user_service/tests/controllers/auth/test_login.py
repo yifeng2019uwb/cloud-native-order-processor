@@ -1,3 +1,4 @@
+import os
 import pytest
 from fastapi import HTTPException, status
 from unittest.mock import AsyncMock, patch, MagicMock
@@ -5,6 +6,12 @@ from controllers.auth.login import login_user
 from api_models.auth.login import UserLoginRequest
 from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException
 import pydantic
+
+# Test constants
+TEST_JWT_SECRET = "test-secret-key-for-unit-tests-at-least-32-chars-long"
+
+# Set JWT_SECRET_KEY for all tests
+os.environ["JWT_SECRET_KEY"] = TEST_JWT_SECRET
 
 
 def create_mock_request(request_id="test-request-id"):

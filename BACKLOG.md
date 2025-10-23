@@ -66,18 +66,6 @@
   9. **Performance Optimization**: Use modern Python features and patterns
 
 
-#### **INFRA-009.3: Order Service Optimization**
-- **Priority**: 🔥 **HIGH PRIORITY**
-- **Status**: 📋 **To Do**
-- **Scope**: Complete modernization of order service
-- **Tasks**:
-  - **Replace hardcoded JSON** with Pydantic models for order data, transaction responses
-  - **Implement order serializer** classes for order creation, status updates, transaction data
-  - **Create typed order models** instead of hardcoded order statuses and validation rules
-  - Fix all relative imports (12+ files identified)
-  - Implement builder pattern for order creation
-  - Modernize transaction management with advanced patterns
-  - Add comprehensive order lifecycle management
 
 
 #### **INFRA-009.7: Frontend Optimization**
@@ -231,6 +219,18 @@
 ---
 
 ## ✅ **COMPLETED TASKS**
+
+#### **SEC-007: Enforce JWT Security and Eliminate Hardcoded Values** ✅ **COMPLETED**
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Summary**: Enforced JWT_SECRET_KEY as required environment variable with no unsafe defaults. Added CNOPConfigurationException for missing config. Created AccessTokenResponse Pydantic model to replace dict returns. Added security warning for weak secrets (<32 chars). Updated auth service validate controller to use constants (TokenValidationMessages, TokenErrorTypes, TokenPayloadFields, RequestDefaults). All hardcoded strings eliminated. All unit and integration tests passing.
+
+#### **INFRA-020: Simplify Health Checks and Consolidate Constants** ✅ **COMPLETED**
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Summary**: Simplified health endpoints from 3 (/health, /health/ready, /health/live) to single /health endpoint. Converted HealthCheckResponse to Pydantic BaseModel with nested HealthChecks model. Removed all hardcoded strings using ServiceNames and ServiceVersions constants. Removed 4 deprecated constant files (http_status.py, api_responses.py, error_messages.py, request_headers.py) and updated all services to import from api_constants.py. All unit and integration tests passing.
+
+#### **INFRA-009.3: Order Service Optimization** ✅ **COMPLETED**
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Summary**: Order service already fully optimized with Pydantic models for all requests/responses (OrderCreateRequest, OrderCreateResponse, OrderData, OrderSummary). No hardcoded JSON strings. Proper typed models instead of Dict. No relative imports. Uses OrderType and OrderStatus enums from common package. All endpoints return proper Pydantic response models.
 
 #### **INFRA-009.4: Inventory Service Optimization** ✅ **COMPLETED**
 - **Priority**: 🔥 **HIGH PRIORITY**

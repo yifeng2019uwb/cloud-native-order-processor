@@ -13,7 +13,7 @@ os.environ.setdefault('ORDERS_TABLE', 'test-orders-table')
 os.environ.setdefault('INVENTORY_TABLE', 'test-inventory-table')
 os.environ.setdefault('ASSETS_TABLE', 'test-assets-table')
 os.environ.setdefault('ENVIRONMENT', 'test')
-# JWT_SECRET_KEY and JWT_ALGORITHM removed - no longer needed for user service
+os.environ.setdefault('JWT_SECRET_KEY', 'test-jwt-secret-key-for-user-service-tests-at-least-32-chars')
 os.environ.setdefault('LOG_LEVEL', 'INFO')
 os.environ.setdefault('PYTHONUNBUFFERED', '1')
 os.environ.setdefault('TESTING', 'true')

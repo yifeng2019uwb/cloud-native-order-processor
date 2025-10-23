@@ -14,3 +14,41 @@ RESPONSE_FIELD_DOCS = "docs"
 RESPONSE_FIELD_HEALTH = "health"
 RESPONSE_FIELD_VALIDATE = "validate"
 RESPONSE_FIELD_METRICS = "metrics"
+
+# =============================================================================
+# TOKEN VALIDATION
+# =============================================================================
+class TokenValidationMessages:
+    """Messages for token validation responses"""
+    TOKEN_EXPIRED = "JWT token has expired"
+    TOKEN_INVALID = "JWT token is invalid"
+    VALIDATION_FAILED = "Token validation failed"
+    VALIDATING_JWT = "Validating JWT"
+    TOKEN_VALID = "Token valid"
+
+class TokenErrorTypes:
+    """Error types for token validation"""
+    TOKEN_EXPIRED = "token_expired"
+    TOKEN_INVALID = "token_invalid"
+    VALIDATION_ERROR = "validation_error"
+
+class TokenTypes:
+    """Token type constants"""
+    ACCESS = "access"
+    REFRESH = "refresh"
+    ACCESS_TOKEN = "access_token"
+
+class TokenPayloadFields:
+    """Token payload field names"""
+    TOKEN_TYPE = "token_type"
+    SCOPE = "scope"
+    USERNAME = "username"
+    EXPIRATION = "exp"
+    ISSUED_AT = "iat"
+    METADATA = "metadata"
+
+class RequestDefaults:
+    """Default values for requests"""
+    EMPTY_STRING = ""
+    EMPTY_DICT = {}
+    REQUEST_ID_PREFIX = "req-"

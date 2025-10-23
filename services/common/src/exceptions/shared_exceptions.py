@@ -103,6 +103,15 @@ class CNOPInsufficientBalanceException(CNOPClientException):
 
 
 # ========================================
+# CONFIGURATION EXCEPTIONS (500 scenarios)
+# ========================================
+
+class CNOPConfigurationException(CNOPClientException):
+    """Configuration error - missing or invalid required configuration"""
+    pass
+
+
+# ========================================
 # INTERNAL SERVER EXCEPTIONS (500 scenarios)
 # ========================================
 
@@ -134,6 +143,9 @@ __all__ = [
 
     # Business logic exceptions (400)
     "CNOPInsufficientBalanceException",
+
+    # Configuration exceptions (500)
+    "CNOPConfigurationException",
 
     # Internal server exceptions (500)
     "CNOPInternalServerException",

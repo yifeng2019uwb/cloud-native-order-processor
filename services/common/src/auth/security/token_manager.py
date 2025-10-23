@@ -16,15 +16,26 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from jose import JWTError, jwt
+from pydantic import BaseModel, Field
 
 from ...data.entities.user import DEFAULT_USER_ROLE
 from ...exceptions.shared_exceptions import (CNOPTokenExpiredException,
-                                             CNOPTokenInvalidException)
+                                             CNOPTokenInvalidException,
+                                             CNOPConfigurationException)
 from ...shared.logging import BaseLogger, LogActions, Loggers, LogFields, LogExtraDefaults
 from .jwt_constants import JWTConfig
 
 # Create logger instance for token management
 logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
+
+
+class AccessTokenResponse(BaseModel):
+    """Response model for access token creation"""
+
+    access_token: str = Field(..., description="JWT access token")
+    token_type: str = Field(default=JWTConfig.TOKEN_TYPE_BEARER, description="Token type")
+    expires_in: int = Field(..., description="Token expiration time in seconds")
+    expires_at: str = Field(..., description="Token expiration timestamp")
 
 
 class TokenManager:
@@ -37,12 +48,25 @@ class TokenManager:
 
     def __init__(self):
         """Initialize the token manager."""
-        # JWT Configuration
-        self.jwt_secret = os.getenv(JWTConfig.JWT_SECRET_KEY, JWTConfig.DEFAULT_SECRET)
+        # JWT Configuration - force required secret
+        self.jwt_secret = os.getenv(JWTConfig.JWT_SECRET_KEY)
+        if not self.jwt_secret:
+            raise CNOPConfigurationException(
+                "JWT_SECRET_KEY environment variable is required. "
+                "Generate a secure secret with: openssl rand -hex 32"
+            )
+
+        # Warn if using a weak secret
+        if len(self.jwt_secret) < 32:
+            logger.warning(
+                action=LogActions.SECURITY_EVENT,
+                message="JWT_SECRET_KEY should be at least 32 characters for security"
+            )
+
         self.jwt_algorithm = JWTConfig.ALGORITHM_HS256
         self.jwt_expiration_hours = JWTConfig.DEFAULT_EXPIRATION_HOURS
 
-    def create_access_token(self, username: str, role: str = DEFAULT_USER_ROLE, expires_delta: Optional[timedelta] = None) -> Dict[str, Any]:
+    def create_access_token(self, username: str, role: str = DEFAULT_USER_ROLE, expires_delta: Optional[timedelta] = None) -> AccessTokenResponse:
         """
         Create JWT access token for authenticated user.
 
@@ -52,7 +76,7 @@ class TokenManager:
             expires_delta: Optional custom expiration time
 
         Returns:
-            Dict with token information including access_token, token_type, expires_in
+            AccessTokenResponse object with token information
 
         Raises:
             CNOPTokenInvalidException: If token creation failed
@@ -64,7 +88,7 @@ class TokenManager:
 
         payload = {
             JWTConfig.SUBJECT: username,
-            JWTConfig.ROLE: role,  # Include role in JWT payload
+            JWTConfig.ROLE: role,
             JWTConfig.EXPIRATION: expire,
             JWTConfig.ISSUED_AT: datetime.now(timezone.utc),
             JWTConfig.TYPE: JWTConfig.ACCESS_TOKEN_TYPE
@@ -79,12 +103,11 @@ class TokenManager:
                 extra={LogFields.ROLE: role, LogFields.EXPIRES_IN_HOURS: self.jwt_expiration_hours}
             )
 
-            return {
-                JWTConfig.ACCESS_TOKEN: token,
-                JWTConfig.TOKEN_TYPE: JWTConfig.TOKEN_TYPE_BEARER,
-                JWTConfig.EXPIRES_IN: self.jwt_expiration_hours * JWTConfig.SECONDS_PER_HOUR,  # Convert hours to seconds
-                JWTConfig.EXPIRES_AT: expire.isoformat()
-            }
+            return AccessTokenResponse(
+                access_token=token,
+                expires_in=self.jwt_expiration_hours * JWTConfig.SECONDS_PER_HOUR,
+                expires_at=expire.isoformat()
+            )
         except Exception as e:
             logger.error(
                 action=LogActions.ERROR,
