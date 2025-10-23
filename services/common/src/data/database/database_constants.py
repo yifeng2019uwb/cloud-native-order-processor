@@ -54,43 +54,20 @@ class DefaultValues:
 # ==================== DATABASE CONFIGURATION ====================
 
 class DatabaseConfig:
-    """Database configuration constants"""
+    """Database configuration constants - Used for boto3 raw calls in health checks and initialization"""
 
-    # DynamoDB
-    BILLING_MODE_PAY_PER_REQUEST = "PAY_PER_REQUEST"
-    BILLING_MODE_PROVISIONED = "PROVISIONED"
+    # DynamoDB service names
     DYNAMODB_SERVICE_NAME = "dynamodb"
     STS_SERVICE_NAME = "sts"
-
-    # Connection settings
-    CONNECTION_TIMEOUT = 30
-    READ_TIMEOUT = 30
-    MAX_RETRIES = 3
 
     # Session settings
     ROLE_SESSION_NAME = "order-processor-session"
 
-    # AWS credential field names
+    # AWS credential field names (for STS AssumeRoleWithWebIdentity)
     ACCESS_KEY_ID = "AccessKeyId"
     SECRET_ACCESS_KEY = "SecretAccessKey"
     SESSION_TOKEN = "SessionToken"
     CREDENTIALS = "Credentials"
-
-    # DynamoDB response field names
-    ITEM = "Item"
-    ITEMS = "Items"
-    ATTRIBUTES = "Attributes"
-    KEY = "Key"
-    UPDATE_EXPRESSION = "UpdateExpression"
-    EXPRESSION_ATTRIBUTE_VALUES = "ExpressionAttributeValues"
-    EXPRESSION_ATTRIBUTE_NAMES = "ExpressionAttributeNames"
-    RETURN_VALUES = "ReturnValues"
-    KEY_CONDITION_EXPRESSION = "KeyConditionExpression"
-    FILTER_EXPRESSION = "FilterExpression"
-    INDEX_NAME = "IndexName"
-    LIMIT = "Limit"
-    ALL_NEW = "ALL_NEW"
-    ALL_OLD = "ALL_OLD"
 
 
 

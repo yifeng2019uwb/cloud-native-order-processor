@@ -1,10 +1,3 @@
 """
-DAO package - Import individual DAOs only when needed
+DAO package
 """
-
-# Import individual DAOs only when needed to avoid circular imports
-from .base_dao import BaseDAO
-
-__all__ = [
-    "BaseDAO"
-]

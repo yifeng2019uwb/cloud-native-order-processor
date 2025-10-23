@@ -82,6 +82,14 @@ deploy_service() {
     docker-compose stop "$service" 2>/dev/null || true
     docker-compose rm -f "$service" 2>/dev/null || true
 
+    # Remove existing image
+    log_info "Removing existing $service image..."
+    docker rmi "docker-$service" 2>/dev/null || true
+
+    # Clean build cache before rebuilding
+    log_info "Cleaning Docker build cache..."
+    docker builder prune -f
+
     # Build service
     log_info "Building $service service..."
     docker-compose build --no-cache "$service"
