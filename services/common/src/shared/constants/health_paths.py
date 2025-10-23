@@ -11,14 +11,8 @@ from enum import Enum
 class HealthPaths(str, Enum):
     """Standardized health check endpoint paths for all services."""
 
-    # Basic health check - lightweight liveness probe
+    # Single health check endpoint for Docker and Kubernetes
     HEALTH = "/health"
-
-    # Readiness check - service ready to receive traffic
-    HEALTH_READY = "/health/ready"
-
-    # Liveness check - service is alive and responding
-    HEALTH_LIVE = "/health/live"
 
     # Metrics endpoint - Prometheus metrics
     METRICS = "/metrics"

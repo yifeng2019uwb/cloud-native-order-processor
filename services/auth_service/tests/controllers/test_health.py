@@ -3,8 +3,15 @@ Test cases for health controller.
 """
 
 import pytest
-from unittest.mock import patch, Mock
-from src.controllers.health import router, health_checker, health_check, readiness_check, liveness_check
+from unittest.mock import patch
+from src.controllers.health import router, health_checker, health_check
+from common.shared.health.health_checks import HealthCheckResponse, HealthChecks
+from common.shared.constants.service_names import ServiceNames, ServiceVersions
+
+# Test constants
+TEST_STATUS_HEALTHY = "healthy"
+TEST_CHECK_OK = "ok"
+TEST_CHECK_RUNNING = "running"
 
 
 class TestHealthController:
@@ -22,42 +29,19 @@ class TestHealthController:
 
     @patch('src.controllers.health.health_checker')
     def test_health_check_endpoint(self, mock_health_checker):
-        """Test health check endpoint calls basic_health_check (line 21 coverage)."""
+        """Test health check endpoint calls health_check."""
         # Mock the health checker response
-        mock_response = {"status": "healthy", "service": "auth-service"}
-        mock_health_checker.basic_health_check.return_value = mock_response
+        mock_response = HealthCheckResponse(
+            service=ServiceNames.AUTH_SERVICE.value,
+            timestamp="2024-01-01T00:00:00Z",
+            environment="test"
+        )
+        mock_health_checker.health_check.return_value = mock_response
 
         # Call the endpoint function
         response = health_check()
 
-        # Verify response and that basic_health_check was called
-        assert response == mock_response
-        mock_health_checker.basic_health_check.assert_called_once()
-
-    @patch('src.controllers.health.health_checker')
-    def test_readiness_check_endpoint(self, mock_health_checker):
-        """Test readiness check endpoint calls readiness_check (line 27 coverage)."""
-        # Mock the health checker response
-        mock_response = {"status": "ready", "service": "auth-service"}
-        mock_health_checker.readiness_check.return_value = mock_response
-
-        # Call the endpoint function
-        response = readiness_check()
-
-        # Verify response and that readiness_check was called
-        assert response == mock_response
-        mock_health_checker.readiness_check.assert_called_once()
-
-    @patch('src.controllers.health.health_checker')
-    def test_liveness_check_endpoint(self, mock_health_checker):
-        """Test liveness check endpoint calls liveness_check (line 33 coverage)."""
-        # Mock the health checker response
-        mock_response = {"status": "alive", "service": "auth-service"}
-        mock_health_checker.liveness_check.return_value = mock_response
-
-        # Call the endpoint function
-        response = liveness_check()
-
-        # Verify response and that liveness_check was called
-        assert response == mock_response
-        mock_health_checker.liveness_check.assert_called_once()
+        # Verify response and that health_check was called
+        assert isinstance(response, HealthCheckResponse)
+        assert response.service == ServiceNames.AUTH_SERVICE.value
+        mock_health_checker.health_check.assert_called_once()

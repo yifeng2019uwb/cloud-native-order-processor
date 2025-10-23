@@ -4,52 +4,32 @@ Unit tests for src/controllers/health.py - Health check controller
 import pytest
 from fastapi import status
 
-from controllers.health import (
-    health_check,
-    readiness_check,
-    liveness_check,
-    router
-)
+from controllers.health import health_check, router
+from common.shared.health.health_checks import HealthCheckResponse, HealthChecks
+from common.shared.constants.service_names import ServiceNames, ServiceVersions
+
+# Test constants
+TEST_STATUS_HEALTHY = "healthy"
+TEST_CHECK_OK = "ok"
+TEST_CHECK_RUNNING = "running"
 
 
 class TestHealthFunctions:
     """Test individual health functions"""
 
     def test_health_check_success(self):
-        """Test successful basic health check"""
+        """Test successful health check"""
         result = health_check()
 
-        assert result["status"] == "healthy"
-        assert result["service"] == "inventory-service"
-        assert result["version"] == "1.0.0"
-        assert "timestamp" in result
-        assert "environment" in result
-        assert "checks" in result
-        assert result["checks"]["api"] == "ok"
-        assert result["checks"]["service"] == "running"
-
-    def test_liveness_check_success(self):
-        """Test successful liveness check"""
-        result = liveness_check()
-
-        assert result["status"] == "alive"
-        assert result["service"] == "inventory-service"
-        assert result["version"] == "1.0.0"
-        assert "timestamp" in result
-        assert "checks" in result
-        assert result["checks"]["api"] == "ok"
-        assert result["checks"]["service"] == "alive"
-
-    def test_readiness_check_success(self):
-        """Test successful readiness check"""
-        result = readiness_check()
-
-        assert result["status"] == "ready"
-        assert result["service"] == "inventory-service"
-        assert result["version"] == "1.0.0"
-        assert "timestamp" in result
-        assert result["checks"]["api"] == "ok"
-        assert result["checks"]["service"] == "ready"
+        assert isinstance(result, HealthCheckResponse)
+        assert result.status == TEST_STATUS_HEALTHY
+        assert result.service == ServiceNames.INVENTORY_SERVICE.value
+        assert result.version == ServiceVersions.DEFAULT_VERSION
+        assert result.timestamp is not None
+        assert result.environment is not None
+        assert isinstance(result.checks, HealthChecks)
+        assert result.checks.api == TEST_CHECK_OK
+        assert result.checks.service == TEST_CHECK_RUNNING
 
 
 class TestHealthRouter:
@@ -58,4 +38,4 @@ class TestHealthRouter:
     def test_router_configuration(self):
         """Test that router is properly configured"""
         assert router.tags == ["health"]
-        assert len(router.routes) == 3  # health, ready, live (no db endpoint for inventory service)
+        assert len(router.routes) == 1  # single /health endpoint

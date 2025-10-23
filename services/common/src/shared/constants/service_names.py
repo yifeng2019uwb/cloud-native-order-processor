@@ -32,3 +32,9 @@ class ServiceValidation:
     SERVICE_ROLE_USER = "user"
     SERVICE_ROLE_ORDER = "order"
     SERVICE_ROLE_INVENTORY = "inventory"
+
+
+class ServiceVersions:
+    """Service version constants"""
+
+    DEFAULT_VERSION = "1.0.0"
