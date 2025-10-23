@@ -22,7 +22,7 @@ from common.exceptions.shared_exceptions import (
 def create_mock_request(request_id="test-request-id"):
     """Helper function to create a mock request object with headers"""
     mock_request = MagicMock()
-    from common.shared.constants.request_headers import RequestHeaders
+    from common.shared.constants.api_constants import RequestHeaders
     mock_request.headers = {RequestHeaders.REQUEST_ID: request_id}
     return mock_request
 

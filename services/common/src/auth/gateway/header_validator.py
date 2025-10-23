@@ -9,7 +9,7 @@ from typing import Dict, Optional
 
 from fastapi import HTTPException, status
 
-from ...shared.constants.request_headers import RequestHeaders, ExtractedUserFields
+from ...shared.constants.api_constants import RequestHeaders, ExtractedUserFields
 
 
 class HeaderValidator:

@@ -28,10 +28,10 @@ from validation_enums import ValidationActions
 from constants import (
     MSG_SUCCESS_PORTFOLIO_RETRIEVED, MSG_SUCCESS_ASSET_BALANCE_RETRIEVED
 )
-from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
-from common.shared.constants.api_responses import APIResponseDescriptions
-from common.shared.constants.http_status import HTTPStatus
-from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_constants import RequestHeaders, RequestHeaderDefaults
+from common.shared.constants.api_constants import APIResponseDescriptions
+from common.shared.constants.api_constants import HTTPStatus
+from common.shared.constants.api_constants import ErrorMessages
 from controllers.auth.dependencies import get_current_user
 from controllers.dependencies import (
     get_balance_dao_dependency,

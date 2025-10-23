@@ -7,7 +7,7 @@ from enum import Enum
 from prometheus_client import Counter, Histogram, Gauge, Info, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Response
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ServiceMetadata
 
 

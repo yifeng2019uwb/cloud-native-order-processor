@@ -24,8 +24,8 @@ from constants import (
     RESPONSE_FIELD_LOGOUT, RESPONSE_FIELD_BALANCE, RESPONSE_FIELD_DEPOSIT, RESPONSE_FIELD_WITHDRAW, RESPONSE_FIELD_TRANSACTIONS,
     RESPONSE_FIELD_PORTFOLIO, RESPONSE_FIELD_ASSET_BALANCE
 )
-from common.shared.constants.http_status import HTTPStatus
-from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_constants import HTTPStatus
+from common.shared.constants.api_constants import ErrorMessages
 from middleware import metrics_middleware
 
 # Import custom exceptions

@@ -20,10 +20,10 @@ from common.exceptions.shared_exceptions import (
     CNOPEntityNotFoundException as CNOPUserNotFoundException
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from common.shared.constants.error_messages import ErrorMessages
-from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.api_constants import ErrorMessages
+from common.shared.constants.api_constants import APIResponseDescriptions
 from api_info_enum import ApiResponseKeys
-from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths
 from constants import (
     MSG_SUCCESS_PROFILE_RETRIEVED, MSG_SUCCESS_PROFILE_UPDATED,

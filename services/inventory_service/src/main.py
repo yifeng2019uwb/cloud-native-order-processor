@@ -23,8 +23,7 @@ from constants import (
     RESPONSE_FIELD_ENDPOINTS, RESPONSE_FIELD_DOCS, RESPONSE_FIELD_HEALTH, RESPONSE_FIELD_ASSETS,
     RESPONSE_FIELD_ASSET_DETAIL, RESPONSE_FIELD_METRICS
 )
-from common.shared.constants.http_status import HTTPStatus
-from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_constants import HTTPStatus, ErrorMessages
 from middleware import metrics_middleware
 
 # Initialize logger

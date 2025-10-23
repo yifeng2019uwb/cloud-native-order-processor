@@ -18,9 +18,9 @@ from api_models.shared.common import ErrorResponse, UserBaseInfo
 from common.data.entities.user import User
 from common.data.database.dependencies import get_user_dao
 from common.auth.security import TokenManager, AuditLogger
-from common.shared.constants.error_messages import ErrorMessages
-from common.shared.constants.api_responses import APIResponseDescriptions
-from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_constants import ErrorMessages
+from common.shared.constants.api_constants import APIResponseDescriptions
+from common.shared.constants.api_constants import HTTPStatus
 from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException, CNOPInternalServerException
 from user_exceptions import CNOPUserValidationException
 from common.shared.logging import BaseLogger, Loggers, LogActions

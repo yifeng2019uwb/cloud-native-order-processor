@@ -12,7 +12,7 @@ from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInternalServerException
 )
-from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_constants import ErrorMessages
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from user_exceptions import CNOPUserAlreadyExistsException, CNOPUserValidationException
 

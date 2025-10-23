@@ -13,8 +13,8 @@ from api_models.auth.logout import (
 from api_models.shared.common import ErrorResponse
 from common.auth.security import AuditLogger
 from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields
-from common.shared.constants.api_responses import APIResponseDescriptions
-from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_constants import APIResponseDescriptions
+from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from constants import MSG_SUCCESS_LOGOUT
 from .dependencies import get_current_user

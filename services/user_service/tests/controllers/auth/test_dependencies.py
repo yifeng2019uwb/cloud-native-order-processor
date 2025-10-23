@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
-from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_constants import ErrorMessages
 
 # Import the functions to test
 from src.controllers.auth.dependencies import (
@@ -15,7 +15,7 @@ from src.controllers.auth.dependencies import (
 
 # Import models
 from common.data.entities.user import User
-from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_constants import ErrorMessages
 
 
 def test_verify_gateway_headers_valid():

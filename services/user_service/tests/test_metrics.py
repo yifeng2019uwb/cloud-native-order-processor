@@ -3,7 +3,7 @@ Unit tests for User Service Metrics functionality
 """
 import pytest
 from unittest.mock import patch, MagicMock
-from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_constants import HTTPStatus
 
 @patch('prometheus_client.Info')
 @patch('prometheus_client.Counter')

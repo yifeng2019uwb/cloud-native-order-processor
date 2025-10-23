@@ -3,10 +3,10 @@ FastAPI dependencies for authentication
 """
 from typing import Optional
 from fastapi import Depends, HTTPException, Request, Header
-from common.shared.constants.http_status import HTTPStatus
-from common.shared.constants.request_headers import RequestHeaders
+from common.shared.constants.api_constants import HTTPStatus
+from common.shared.constants.api_constants import RequestHeaders
 from common.shared.constants.service_names import ServiceValidation
-from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_constants import ErrorMessages
 from common.data.entities.user import User
 from common.data.dao.user.user_dao import UserDAO
 from common.data.database.dependencies import get_user_dao as get_common_user_dao

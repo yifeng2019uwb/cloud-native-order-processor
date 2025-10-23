@@ -22,9 +22,9 @@ from common.exceptions import (
     CNOPInsufficientBalanceException
 )
 from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
-from common.shared.constants.error_messages import ErrorMessages
-from common.shared.constants.api_responses import APIResponseDescriptions
-from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_constants import ErrorMessages
+from common.shared.constants.api_constants import APIResponseDescriptions
+from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from user_exceptions import CNOPUserValidationException
 from controllers.dependencies import get_transaction_manager, get_request_id_from_request

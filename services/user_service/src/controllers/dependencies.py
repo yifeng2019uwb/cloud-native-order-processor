@@ -13,7 +13,7 @@ from common.data.dao.user.user_dao import UserDAO
 from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.core.utils import TransactionManager
-from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
+from common.shared.constants.api_constants import RequestHeaders, RequestHeaderDefaults
 
 def get_request_id_from_request(request: Request) -> str:
     """

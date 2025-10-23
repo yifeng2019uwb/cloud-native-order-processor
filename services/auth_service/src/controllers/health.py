@@ -8,7 +8,7 @@ from fastapi import APIRouter
 from typing import Dict, Any
 
 from common.shared.health.health_checks import HealthChecker, HealthCheckResponse
-from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_constants import HTTPStatus
 from common.shared.constants.health_paths import HealthPaths
 from api_info_enum import ApiTags, ApiPaths, ServiceMetadata
 

@@ -16,8 +16,8 @@ from common.data.database.dependencies import get_asset_dao
 from controllers.dependencies import get_request_id_from_request
 from common.exceptions.shared_exceptions import CNOPAssetNotFoundException
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from common.shared.constants.http_status import HTTPStatus
-from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.api_constants import HTTPStatus
+from common.shared.constants.api_constants import APIResponseDescriptions
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys, API_INVENTORY_ROOT, API_ASSETS, API_ASSET_BY_ID
 from inventory_exceptions import (
     CNOPAssetValidationException,

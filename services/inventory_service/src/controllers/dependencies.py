@@ -13,7 +13,7 @@ from common.data.database.dependencies import get_asset_dao
 from common.data.dao.inventory.asset_dao import AssetDAO
 
 from common.shared.logging import BaseLogger, Loggers
-from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
+from common.shared.constants.api_constants import RequestHeaders, RequestHeaderDefaults
 
 
 logger = BaseLogger(Loggers.INVENTORY)

@@ -14,9 +14,9 @@ from common.data.database.dependencies import get_balance_dao
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from common.shared.constants.error_messages import ErrorMessages
-from common.shared.constants.api_responses import APIResponseDescriptions
-from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_constants import ErrorMessages
+from common.shared.constants.api_constants import APIResponseDescriptions
+from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from controllers.auth.dependencies import get_current_user
 from controllers.dependencies import get_request_id_from_request

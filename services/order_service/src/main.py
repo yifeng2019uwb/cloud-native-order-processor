@@ -31,9 +31,7 @@ from constants import (
     RESPONSE_FIELD_ENDPOINTS, RESPONSE_FIELD_DOCS, RESPONSE_FIELD_HEALTH, RESPONSE_FIELD_CREATE_ORDER,
     RESPONSE_FIELD_GET_ORDER, RESPONSE_FIELD_LIST_ORDERS, RESPONSE_FIELD_ASSET_TRANSACTIONS, RESPONSE_FIELD_METRICS
 )
-from common.shared.constants.api_responses import APIResponseKeys
-from common.shared.constants.error_messages import ErrorMessages
-from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_constants import APIResponseKeys, ErrorMessages, HTTPStatus
 from common.data.entities.entity_constants import OrderFields
 from middleware import metrics_middleware
 

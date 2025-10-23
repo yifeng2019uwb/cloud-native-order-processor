@@ -11,8 +11,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from common.data.entities.user import User
-from common.shared.constants.http_status import HTTPStatus
-from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_constants import HTTPStatus
+from common.shared.constants.api_constants import ErrorMessages
 
 from api_models.portfolio.portfolio_models import (
     GetAssetBalanceResponse,
