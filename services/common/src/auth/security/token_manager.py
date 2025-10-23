@@ -23,7 +23,7 @@ from ...exceptions.shared_exceptions import (CNOPTokenExpiredException,
                                              CNOPTokenInvalidException,
                                              CNOPConfigurationException)
 from ...shared.logging import BaseLogger, LogActions, Loggers, LogFields, LogExtraDefaults
-from .jwt_constants import JWTConfig
+from .jwt_constants import JWTConfig, JwtFields, JwtResponseFields
 
 # Create logger instance for token management
 logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
@@ -87,11 +87,11 @@ class TokenManager:
             expire = datetime.now(timezone.utc) + timedelta(hours=self.jwt_expiration_hours)
 
         payload = {
-            JWTConfig.SUBJECT: username,
-            JWTConfig.ROLE: role,
-            JWTConfig.EXPIRATION: expire,
-            JWTConfig.ISSUED_AT: datetime.now(timezone.utc),
-            JWTConfig.TYPE: JWTConfig.ACCESS_TOKEN_TYPE
+            JwtFields.SUBJECT: username,
+            JwtFields.ROLE: role,
+            JwtFields.EXPIRATION: expire,
+            JwtFields.ISSUED_AT: datetime.now(timezone.utc),
+            JwtFields.TYPE: JWTConfig.ACCESS_TOKEN_TYPE
         }
 
         try:
@@ -135,16 +135,16 @@ class TokenManager:
             payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
 
             # Check token type
-            if payload.get(JWTConfig.TYPE) != JWTConfig.ACCESS_TOKEN_TYPE:
+            if payload.get(JwtFields.TYPE) != JWTConfig.ACCESS_TOKEN_TYPE:
                 logger.warning(
                     action=LogActions.ERROR,
                     message="Invalid token type",
-                    extra={LogFields.TOKEN_TYPE: payload.get(JWTConfig.TYPE)}
+                    extra={LogFields.TOKEN_TYPE: payload.get(JwtFields.TYPE)}
                 )
                 raise CNOPTokenInvalidException("Invalid token type")
 
             # Extract username
-            username: str = payload.get(JWTConfig.SUBJECT)
+            username: str = payload.get(JwtFields.SUBJECT)
             if username is None:
                 logger.warning(
                     action=LogActions.ERROR,
@@ -206,16 +206,16 @@ class TokenManager:
             payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
 
             # Check token type
-            if payload.get(JWTConfig.TYPE) != JWTConfig.ACCESS_TOKEN_TYPE:
+            if payload.get(JwtFields.TYPE) != JWTConfig.ACCESS_TOKEN_TYPE:
                 logger.warning(
                     action=LogActions.ERROR,
                     message=f"Invalid token type: %s (expected: {JWTConfig.ACCESS_TOKEN_TYPE})",
-                    extra={LogFields.TOKEN_TYPE: payload.get(JWTConfig.TYPE)}
+                    extra={LogFields.TOKEN_TYPE: payload.get(JwtFields.TYPE)}
                 )
                 raise CNOPTokenInvalidException("Invalid token type")
 
             # Extract username
-            username: str = payload.get(JWTConfig.SUBJECT)
+            username: str = payload.get(JwtFields.SUBJECT)
             if username is None:
                 logger.warning(
                     action=LogActions.ERROR,
@@ -224,7 +224,7 @@ class TokenManager:
                 raise CNOPTokenInvalidException("Token missing subject")
 
             # Check if token is expired
-            exp_timestamp = payload.get(JWTConfig.EXPIRATION)
+            exp_timestamp = payload.get(JwtFields.EXPIRATION)
             if exp_timestamp is None:
                 logger.warning(
                     action=LogActions.ERROR,
@@ -242,15 +242,15 @@ class TokenManager:
 
             # Extract additional context
             context = {
-                JWTConfig.USERNAME: username,
-                JWTConfig.ROLE: payload.get(JWTConfig.ROLE),
-                JWTConfig.EXPIRATION: exp_timestamp,
-                JWTConfig.ISSUED_AT: payload.get(JWTConfig.ISSUED_AT),
-                JWTConfig.ISSUER: payload.get(JWTConfig.ISSUER),
-                JWTConfig.AUDIENCE: payload.get(JWTConfig.AUDIENCE),
-                JWTConfig.TYPE: payload.get(JWTConfig.TYPE),
-                JWTConfig.METADATA: {
-                    JWTConfig.ROLE: payload.get(JWTConfig.ROLE)
+                JwtFields.USERNAME: username,
+                JwtFields.ROLE: payload.get(JwtFields.ROLE),
+                JwtFields.EXPIRATION: exp_timestamp,
+                JwtFields.ISSUED_AT: payload.get(JwtFields.ISSUED_AT),
+                JwtFields.ISSUER: payload.get(JwtFields.ISSUER),
+                JwtFields.AUDIENCE: payload.get(JwtFields.AUDIENCE),
+                JwtFields.TYPE: payload.get(JwtFields.TYPE),
+                JwtFields.METADATA: {
+                    JwtFields.ROLE: payload.get(JwtFields.ROLE)
                 }
             }
 
@@ -317,7 +317,7 @@ class TokenManager:
         try:
             # Decode without verification to check expiration
             payload = jwt.decode(token, self.jwt_secret, options={JWTConfig.VERIFY_SIGNATURE: False}, algorithms=[self.jwt_algorithm])
-            exp_timestamp = payload.get(JWTConfig.EXPIRATION)
+            exp_timestamp = payload.get(JwtFields.EXPIRATION)
 
             if exp_timestamp is None:
                 logger.warning(
@@ -353,7 +353,7 @@ class TokenManager:
         try:
             # Decode the old token to extract user info
             payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
-            username = payload.get(JWTConfig.SUBJECT)
+            username = payload.get(JwtFields.SUBJECT)
 
             if not username:
                 logger.error(

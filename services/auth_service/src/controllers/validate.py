@@ -7,10 +7,11 @@ from typing import Union
 from fastapi import APIRouter
 from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
 from common.auth.security import TokenManager
+from common.auth.security.jwt_constants import JwtFields, TokenTypes, RequestDefaults
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields
 from api_info_enum import ApiTags, ApiPaths
-from constants import TokenValidationMessages, TokenErrorTypes, TokenTypes, TokenPayloadFields, RequestDefaults
+from constants import TokenValidationMessages, TokenErrorTypes
 
 router = APIRouter(tags=[ApiTags.INTERNAL.value])
 logger = BaseLogger(Loggers.AUTH)
@@ -21,13 +22,13 @@ API_VALIDATE_PATH = "/validate"
 
 def _determine_token_type(token_payload: dict) -> str:
     """Determine token type from JWT payload"""
-    # Check for explicit token type claim
-    token_type = token_payload.get(TokenPayloadFields.TOKEN_TYPE, '').lower()
+    # Check for explicit token_type field (note: different from 'type' field)
+    token_type = token_payload.get(JwtFields.TOKEN_TYPE, RequestDefaults.EMPTY_STRING).lower()
     if token_type in [TokenTypes.ACCESS, TokenTypes.REFRESH]:
         return token_type
 
     # Check for JWT standard claims that might indicate token type
-    if TokenPayloadFields.SCOPE in token_payload:
+    if TokenTypes.SCOPE in token_payload:
         return TokenTypes.ACCESS
 
     # Default to access token
@@ -46,14 +47,14 @@ def validate_jwt_token(request: ValidateTokenRequest):
         token_manager = TokenManager()
         user_context = token_manager.validate_token_comprehensive(request.token)
 
-        logger.info(action=LogActions.AUTH_SUCCESS, message=TokenValidationMessages.TOKEN_VALID, user=user_context[TokenPayloadFields.USERNAME], extra={LogFields.REQUEST_ID: request_id})
+        logger.info(action=LogActions.AUTH_SUCCESS, message=TokenValidationMessages.TOKEN_VALID, user=user_context[JwtFields.USERNAME], extra={LogFields.REQUEST_ID: request_id})
 
         return ValidateTokenResponse(
             valid=True,
-            user=user_context[TokenPayloadFields.USERNAME],
-            expires_at=str(user_context.get(TokenPayloadFields.EXPIRATION, RequestDefaults.EMPTY_STRING)),
-            created_at=str(user_context.get(TokenPayloadFields.ISSUED_AT, RequestDefaults.EMPTY_STRING)),
-            metadata=user_context.get(TokenPayloadFields.METADATA, RequestDefaults.EMPTY_DICT),
+            user=user_context[JwtFields.USERNAME],
+            expires_at=str(user_context.get(JwtFields.EXPIRATION, RequestDefaults.EMPTY_STRING)),
+            created_at=str(user_context.get(JwtFields.ISSUED_AT, RequestDefaults.EMPTY_STRING)),
+            metadata=user_context.get(JwtFields.METADATA, RequestDefaults.EMPTY_DICT),
             request_id=request_id
         )
 
