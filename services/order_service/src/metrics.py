@@ -7,7 +7,7 @@ from prometheus_client import Counter, Histogram, Gauge, Info, generate_latest, 
 from fastapi import Response
 from common.shared.logging import BaseLogger, Loggers, LogActions
 from constants import SERVICE_NAME, SERVICE_VERSION
-from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_constants import HTTPStatus
 
 logger = BaseLogger(Loggers.ORDER)
 

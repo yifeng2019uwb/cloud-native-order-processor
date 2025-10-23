@@ -23,8 +23,7 @@ from common.exceptions import (
 )
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
-from common.shared.constants.http_status import HTTPStatus
-from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.api_constants import HTTPStatus, APIResponseDescriptions, ErrorMessages
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys, API_ORDERS_ROOT
 from constants import (
     MSG_SUCCESS_ORDER_CREATED, MSG_SUCCESS_MARKET_BUY_ORDER_CREATED, MSG_SUCCESS_MARKET_SELL_ORDER_CREATED,
@@ -32,7 +31,6 @@ from constants import (
     MSG_ERROR_LOCK_ACQUISITION_FAILED, MSG_ERROR_UNEXPECTED_ERROR,
     USER_AGENT_HEADER, UNKNOWN_VALUE
 )
-from common.shared.constants.error_messages import ErrorMessages
 from order_exceptions.exceptions import CNOPOrderValidationException
 from controllers.dependencies import (
     get_current_user, get_transaction_manager,

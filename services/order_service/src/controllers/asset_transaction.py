@@ -22,11 +22,11 @@ from common.exceptions import (
 )
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
-from common.shared.constants.http_status import HTTPStatus
-from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.api_constants import HTTPStatus
+from common.shared.constants.api_constants import APIResponseDescriptions
 from api_info_enum import ApiTags, ApiResponseKeys, API_ASSET_TRANSACTIONS
 from constants import MSG_SUCCESS_ASSET_TRANSACTIONS_RETRIEVED, MSG_ERROR_ASSET_NOT_FOUND
-from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_constants import ErrorMessages
 from controllers.dependencies import (
     get_current_user, get_asset_transaction_dao_dependency,
     get_asset_dao_dependency, get_user_dao_dependency,

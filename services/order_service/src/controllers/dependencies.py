@@ -11,9 +11,7 @@ Provides dependency injection for:
 from decimal import Decimal
 from typing import Optional
 from fastapi import HTTPException, Request, Header
-from common.shared.constants.http_status import HTTPStatus
-from common.shared.constants.error_messages import ErrorMessages
-from common.shared.constants.request_headers import RequestHeaders, RequestHeaderDefaults
+from common.shared.constants.api_constants import HTTPStatus, ErrorMessages, RequestHeaders, RequestHeaderDefaults
 from common.shared.constants.service_names import ServiceValidation
 from common.data.database.dependencies import get_order_dao, get_balance_dao, get_asset_dao, get_user_dao
 from common.data.database.dynamodb_connection import get_dynamodb_manager

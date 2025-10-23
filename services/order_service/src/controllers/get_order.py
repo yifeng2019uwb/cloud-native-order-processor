@@ -18,11 +18,11 @@ from common.exceptions.shared_exceptions import (
 )
 from order_exceptions.exceptions import CNOPOrderValidationException
 from common.shared.logging import BaseLogger, Loggers, LogActions
-from common.shared.constants.http_status import HTTPStatus
-from common.shared.constants.api_responses import APIResponseDescriptions
+from common.shared.constants.api_constants import HTTPStatus
+from common.shared.constants.api_constants import APIResponseDescriptions
 from api_info_enum import ApiTags, ApiResponseKeys, API_ORDER_BY_ID
 from constants import MSG_SUCCESS_ORDER_RETRIEVED, MSG_ERROR_ORDER_NOT_FOUND
-from common.shared.constants.error_messages import ErrorMessages
+from common.shared.constants.api_constants import ErrorMessages
 from controllers.dependencies import (
     get_current_user, get_order_dao_dependency,
     get_user_dao_dependency, get_request_id_from_request

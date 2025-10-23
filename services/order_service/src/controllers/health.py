@@ -5,7 +5,7 @@ Path: services/order-service/src/controllers/health.py
 from fastapi import APIRouter
 from typing import Dict, Any
 
-from common.shared.constants.http_status import HTTPStatus
+from common.shared.constants.api_constants import HTTPStatus
 from common.shared.constants.health_paths import HealthPaths
 from common.shared.constants.service_names import ServiceNames, ServiceVersions
 from common.shared.health.health_checks import HealthChecker, HealthCheckResponse
