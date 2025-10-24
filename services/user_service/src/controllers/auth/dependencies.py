@@ -1,94 +1,55 @@
 """
 FastAPI dependencies for authentication
 """
-from typing import Optional
-from fastapi import Depends, HTTPException, Request, Header
-from common.shared.constants.api_constants import HTTPStatus
-from common.shared.constants.api_constants import RequestHeaders
-from common.shared.constants.service_names import ServiceValidation
-from common.shared.constants.api_constants import ErrorMessages
-from common.data.entities.user import User
+from fastapi import Depends, HTTPException, Request
+from common.shared.constants.api_constants import HTTPStatus, ErrorMessages, RequestHeaders, RequestHeaderDefaults
+from common.auth.security.token_manager import TokenManager
+from common.auth.security.jwt_constants import JwtFields, JWTConfig, RequestDefaults
+from common.auth.gateway.header_validator import get_request_id_from_request
+from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.data.entities.user import User, DEFAULT_USER_ROLE
 from common.data.dao.user.user_dao import UserDAO
 from common.data.database.dependencies import get_user_dao as get_common_user_dao
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.auth.security.auth_dependencies import AuthenticatedUser, get_current_user as get_authenticated_user
+
 logger = BaseLogger(Loggers.USER)
 
 
-def verify_gateway_headers(
-    request: Request,
-    x_source: Optional[str] = Header(None, alias=RequestHeaders.SOURCE),
-    x_auth_service: Optional[str] = Header(None, alias=RequestHeaders.AUTH_SERVICE),
-    x_user_id: Optional[str] = Header(None, alias=RequestHeaders.USER_ID),
-    x_user_role: Optional[str] = Header(None, alias=RequestHeaders.USER_ROLE)
-) -> str:
-    """
-    Verify Gateway headers for authentication
-
-    Args:
-        request: FastAPI request object
-        x_source: Source header (should be ServiceValidation.EXPECTED_SOURCE)
-        x_auth_service: Auth service header (should be ServiceValidation.EXPECTED_AUTH_SERVICE)
-        x_user_id: User ID header from Gateway
-        x_user_role: User role header from Gateway
-
-    Returns:
-        User username from Gateway headers
-
-    Raises:
-        HTTPException: If headers are invalid or missing
-    """
-    # Validate source headers
-    if not x_source or x_source != ServiceValidation.EXPECTED_SOURCE:
-        logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid source header: {x_source}")
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN,
-            detail=ErrorMessages.VALIDATION_ERROR
-        )
-
-    if not x_auth_service or x_auth_service != ServiceValidation.EXPECTED_AUTH_SERVICE:
-        logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid auth service header: {x_auth_service}")
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN,
-            detail=ErrorMessages.VALIDATION_ERROR
-        )
-
-    # Extract user information from headers
-    if not x_user_id:
-        logger.warning(action=LogActions.ACCESS_DENIED, message="Missing user ID header")
-        raise HTTPException(
-            status_code=HTTPStatus.UNAUTHORIZED,
-            detail=ErrorMessages.AUTHENTICATION_FAILED
-        )
-
-    logger.info(action=LogActions.AUTH_SUCCESS, message=f"Gateway headers verified for user: '{x_user_id}'")
-    return x_user_id
-
-
 def get_current_user(
-    username: str = Depends(verify_gateway_headers),
+    request: Request,
     user_dao: UserDAO = Depends(get_common_user_dao)
 ) -> User:
     """
-    Get current authenticated user from Gateway headers
+    Get current authenticated user from JWT token
 
     Args:
-        username: User username from Gateway headers
+        request: FastAPI request object
         user_dao: UserDAO instance
 
     Returns:
-        Current user information
+        Current user information from database
 
     Raises:
-        HTTPException: If user not found or database error
+        HTTPException: If authentication fails or user not found
     """
     try:
-        logger.info(action=LogActions.REQUEST_START, message=f"get_current_user called with username: '{username}'")
+        # Get authenticated user from JWT token
+        authenticated_user = get_authenticated_user(request)
 
-        user = user_dao.get_user_by_username(username)
-        logger.info(action=LogActions.AUTH_SUCCESS, message=f"user_dao.get_user_by_username returned: {user}")
+        logger.info(action=LogActions.REQUEST_START,
+                   message=f"get_current_user called with username: '{authenticated_user.username}'",
+                   request_id=authenticated_user.request_id)
+
+        # Get full user details from database
+        user = user_dao.get_user_by_username(authenticated_user.username)
+        logger.info(action=LogActions.AUTH_SUCCESS,
+                   message=f"user_dao.get_user_by_username returned: {user}",
+                   request_id=authenticated_user.request_id)
 
         if user is None:
-            logger.warning(action=LogActions.AUTH_FAILED, message=f"User not found for username: '{username}'")
+            logger.warning(action=LogActions.AUTH_FAILED,
+                          message=f"User not found for username: '{authenticated_user.username}'",
+                          request_id=authenticated_user.request_id)
             raise HTTPException(
                 status_code=HTTPStatus.UNAUTHORIZED,
                 detail=ErrorMessages.USER_NOT_FOUND

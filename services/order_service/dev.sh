@@ -236,13 +236,13 @@ test() {
     if [[ -n "$test_target" ]]; then
         log_info "Running tests for: $test_target"
         if [[ "$test_target" == *".py" ]]; then
-            python -m pytest "tests/$test_target" -v --tb=short
+            python -m pytest "tests/$test_target" -v --tb=short --cov=src --cov-report=html --cov-report=term-missing
         else
-            python -m pytest "tests/" -k "$test_target" -v --tb=short
+            python -m pytest "tests/" -k "$test_target" -v --tb=short --cov=src --cov-report=html --cov-report=term-missing
         fi
     else
         log_info "Running all tests..."
-        python -m pytest tests/ -v --tb=short --durations=10
+        python -m pytest tests/ -v --tb=short --durations=10 --cov=src --cov-report=html --cov-report=term-missing
     fi
 
     log_success "✅ ${SERVICE_NAME} tests completed"

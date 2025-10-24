@@ -495,3 +495,19 @@
 *📋 For detailed technical specifications, see: `docs/centralized-authentication-architecture.md`*
 *📋 For monitoring design, see: `docs/design-docs/monitoring-design.md`*
 *📋 For logging standards, see: `docs/design-docs/logging-standards.md`*
+
+---
+
+## **🔄 CURRENT TASKS**
+
+#### **AUTH-008: Simplify Authentication Architecture** 🔥 **HIGH PRIORITY**
+- **Problem**: Current architecture mixes JWT validation (auth service) with gateway headers (order/user services), creating complexity and inconsistency
+- **Goal**: Standardize on JWT validation across all services, remove unnecessary HeaderValidator and gateway header complexity
+- **Steps**:
+  1. **Refactor order service** to use JWT validation instead of gateway headers
+  2. **Refactor user service** to use JWT validation instead of gateway headers
+  3. **Remove HeaderValidator** from common module (unnecessary complexity)
+  4. **Update all service dependencies** to use simple JWT token validation
+  5. **Remove gateway header validation** from all services
+  6. **Test all services** to ensure JWT validation works correctly
+- **Benefits**: Simpler architecture, standard practice, easier maintenance, no over-engineering

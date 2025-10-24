@@ -19,7 +19,7 @@ from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from controllers.auth.dependencies import get_current_user
-from controllers.dependencies import get_request_id_from_request
+from common.auth.gateway.header_validator import get_request_id_from_request
 
 # Local constants for this controller only
 MSG_SUCCESS_TRANSACTIONS_RETRIEVED = "Transactions retrieved successfully"

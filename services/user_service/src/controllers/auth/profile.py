@@ -35,7 +35,7 @@ from validation.business_validators import (
     validate_age_requirements
 )
 from .dependencies import get_current_user
-from controllers.dependencies import get_request_id_from_request
+from common.auth.gateway.header_validator import get_request_id_from_request
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)

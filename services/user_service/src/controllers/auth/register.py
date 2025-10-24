@@ -15,7 +15,8 @@ from api_models.auth.registration import (
     RegistrationErrorResponse
 )
 from api_models.shared.common import ErrorResponse
-from common.auth.security import TokenManager, AuditLogger
+from common.auth.security.token_manager import TokenManager
+from common.auth.security.audit_logger import AuditLogger
 from common.data.database.dependencies import get_user_dao, get_balance_dao
 from common.data.entities.user import User, Balance
 from common.exceptions.shared_exceptions import (
@@ -28,7 +29,7 @@ from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from constants import MSG_SUCCESS_REGISTER, MSG_ERROR_USER_EXISTS
-from controllers.dependencies import get_request_id_from_request
+from common.auth.gateway.header_validator import get_request_id_from_request
 from user_exceptions.exceptions import (
     CNOPUserAlreadyExistsException,
     CNOPUserValidationException

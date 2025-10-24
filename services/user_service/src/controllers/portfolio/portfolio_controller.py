@@ -36,8 +36,9 @@ from controllers.auth.dependencies import get_current_user
 from controllers.dependencies import (
     get_balance_dao_dependency,
     get_asset_balance_dao_dependency, get_user_dao_dependency,
-    get_asset_dao_dependency, get_request_id_from_request
+    get_asset_dao_dependency
 )
+from common.auth.gateway.header_validator import get_request_id_from_request
 from validation.business_validators import validate_user_permissions
 
 # Initialize our standardized logger

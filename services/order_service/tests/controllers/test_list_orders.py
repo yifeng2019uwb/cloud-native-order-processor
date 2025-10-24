@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from src.controllers.list_orders import list_orders, router
 from src.api_models.order import OrderListResponse, OrderSummary
 from common.data.entities.order.enums import OrderType, OrderStatus
+from common.data.entities.user import User
 from common.exceptions import CNOPInternalServerException
 
 
@@ -24,12 +25,27 @@ def create_mock_request(request_id="test-request-id"):
 class TestListOrders:
     """Test list_orders function"""
 
+    # Test constants
+    TEST_USERNAME = "testuser"
+    TEST_EMAIL = "test@example.com"
+    TEST_PASSWORD = "hashed_password_123"
+    TEST_FIRST_NAME = "Test"
+    TEST_LAST_NAME = "User"
+    TEST_ROLE_CUSTOMER = "customer"
+    TEST_ASSET_ID_BTC = "BTC"
+    TEST_ORDER_ID_123 = "order123"
+
     @pytest.fixture
     def mock_current_user(self):
         """Mock current user data"""
-        return {
-            "username": "testuser"
-        }
+        return User(
+            username=self.TEST_USERNAME,
+            email=self.TEST_EMAIL,
+            password=self.TEST_PASSWORD,
+            first_name=self.TEST_FIRST_NAME,
+            last_name=self.TEST_LAST_NAME,
+            role=self.TEST_ROLE_CUSTOMER
+        )
 
     @pytest.fixture
     def mock_order_dao(self):

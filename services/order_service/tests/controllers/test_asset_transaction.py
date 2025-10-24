@@ -15,6 +15,7 @@ from common.exceptions.shared_exceptions import (
     CNOPEntityNotFoundException,
     CNOPInternalServerException
 )
+from common.data.entities.user import User
 
 
 def create_mock_request(request_id="test-request-id"):
@@ -45,6 +46,18 @@ with patch('src.controllers.asset_transaction.get_current_user', create=True), \
 class TestAssetTransactionController:
     """Test asset transaction controller functions"""
 
+    # Test constants
+    TEST_USERNAME = "testuser"
+    TEST_EMAIL = "test@example.com"
+    TEST_PASSWORD = "hashed_password_123"
+    TEST_FIRST_NAME = "Test"
+    TEST_LAST_NAME = "User"
+    TEST_ROLE_CUSTOMER = "customer"
+    TEST_ASSET_ID_BTC = "BTC"
+    TEST_ORDER_ID_123 = "order123"
+    TEST_QUANTITY_1_5 = "1.5"
+    TEST_PRICE_50000 = "50000.00"
+
     @pytest.fixture
     def mock_request(self):
         """Mock FastAPI request object"""
@@ -57,7 +70,14 @@ class TestAssetTransactionController:
     @pytest.fixture
     def mock_current_user(self):
         """Mock current user"""
-        return {"username": "testuser"}
+        return User(
+            username=self.TEST_USERNAME,
+            email=self.TEST_EMAIL,
+            password=self.TEST_PASSWORD,
+            first_name=self.TEST_FIRST_NAME,
+            last_name=self.TEST_LAST_NAME,
+            role=self.TEST_ROLE_CUSTOMER
+        )
 
     @pytest.fixture
     def mock_asset_transaction_dao(self):

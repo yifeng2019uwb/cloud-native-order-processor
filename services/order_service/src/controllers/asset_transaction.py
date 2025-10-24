@@ -16,6 +16,7 @@ from api_models.shared.common import ErrorResponse
 from common.data.dao.asset.asset_transaction_dao import AssetTransactionDAO
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.dao.user.user_dao import UserDAO
+from common.data.entities.user import User
 from common.exceptions import (
     CNOPDatabaseOperationException,
     CNOPEntityNotFoundException
@@ -29,9 +30,9 @@ from constants import MSG_SUCCESS_ASSET_TRANSACTIONS_RETRIEVED, MSG_ERROR_ASSET_
 from common.shared.constants.api_constants import ErrorMessages
 from controllers.dependencies import (
     get_current_user, get_asset_transaction_dao_dependency,
-    get_asset_dao_dependency, get_user_dao_dependency,
-    get_request_id_from_request
+    get_asset_dao_dependency, get_user_dao_dependency
 )
+from common.auth.gateway.header_validator import get_request_id_from_request
 from validation.business_validators import validate_order_history_business_rules
 
 # Initialize our standardized logger
@@ -70,7 +71,7 @@ def get_asset_transactions(
     request: Request,
     limit: int = 50,
     offset: int = 0,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     asset_transaction_dao: AssetTransactionDAO = Depends(get_asset_transaction_dao_dependency),
     asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
     user_dao: UserDAO = Depends(get_user_dao_dependency)
@@ -85,7 +86,7 @@ def get_asset_transactions(
     logger.info(
         action=LogActions.REQUEST_START,
         message=f"Asset transactions request from {request.client.host if request.client else 'unknown'}",
-        user=current_user["username"],
+        user=current_user.username,
         request_id=request_id,
         extra={
             LogFields.ASSET_ID: asset_id,
@@ -100,14 +101,14 @@ def get_asset_transactions(
         # Business validation (Layer 2)
         validate_order_history_business_rules(
             asset_id=asset_id,
-            username=current_user["username"],
+            username=current_user.username,
             asset_dao=asset_dao,
             user_dao=user_dao
         )
 
         # Get asset transactions for user
         asset_transactions = asset_transaction_dao.get_user_asset_transactions(
-            current_user["username"],
+            current_user.username,
             asset_id,
             limit=limit
         )
@@ -131,7 +132,7 @@ def get_asset_transactions(
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"Asset transactions retrieved successfully: asset={asset_id}, count={len(transaction_data_list)}, has_more={has_more}",
-            user=current_user['username'],
+            user=current_user.username,
             request_id=request_id
         )
 
@@ -147,7 +148,7 @@ def get_asset_transactions(
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"No asset transactions found: asset={asset_id}",
-            user=current_user['username'],
+            user=current_user.username,
             request_id=request_id
         )
         # Return empty list instead of error for no transactions
@@ -162,7 +163,7 @@ def get_asset_transactions(
         logger.error(
             action=LogActions.ERROR,
             message=f"Database operation failed for asset transactions: asset={asset_id}, error={str(e)}",
-            user=current_user['username'],
+            user=current_user.username,
             request_id=request_id
         )
         raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
@@ -170,7 +171,7 @@ def get_asset_transactions(
         logger.error(
             action=LogActions.ERROR,
             message=f"Unexpected error during asset transactions retrieval: asset={asset_id}, error={str(e)}",
-            user=current_user['username'],
+            user=current_user.username,
             request_id=request_id
         )
         raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)

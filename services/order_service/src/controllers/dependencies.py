@@ -9,10 +9,6 @@ Provides dependency injection for:
 - Authorization
 """
 from decimal import Decimal
-from typing import Optional
-from fastapi import HTTPException, Request, Header
-from common.shared.constants.api_constants import HTTPStatus, ErrorMessages, RequestHeaders, RequestHeaderDefaults
-from common.shared.constants.service_names import ServiceValidation
 from common.data.database.dependencies import get_order_dao, get_balance_dao, get_asset_dao, get_user_dao
 from common.data.database.dynamodb_connection import get_dynamodb_manager
 from common.data.dao.order.order_dao import OrderDAO
@@ -22,7 +18,10 @@ from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.dao.asset.asset_transaction_dao import AssetTransactionDAO
 from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from common.core.utils.transaction_manager import TransactionManager
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, Loggers
+from common.data.entities.user import User
+from common.auth.security.auth_dependencies import AuthenticatedUser, get_current_user
+from common.auth.gateway.header_validator import get_request_id_from_request
 from order_exceptions.exceptions import CNOPOrderValidationException
 
 # Initialize our standardized logger
@@ -74,64 +73,6 @@ def get_transaction_manager() -> TransactionManager:
         asset_balance_dao=get_asset_balance_dao_dependency(),
         asset_transaction_dao=get_asset_transaction_dao_dependency()
     )
-
-
-def get_request_id_from_request(request: Request) -> str:
-    """
-    Extract request ID from Request object headers for distributed tracing
-
-    Args:
-        request: FastAPI Request object
-
-    Returns:
-        Request ID string for correlation across services
-    """
-    return request.headers.get(RequestHeaders.REQUEST_ID) or RequestHeaderDefaults.REQUEST_ID_DEFAULT
-
-
-def get_current_user(
-    request: Request,
-    x_source: Optional[str] = Header(None, alias=RequestHeaders.SOURCE),
-    x_auth_service: Optional[str] = Header(None, alias=RequestHeaders.AUTH_SERVICE),
-    x_user_id: Optional[str] = Header(None, alias=RequestHeaders.USER_ID),
-    x_user_role: Optional[str] = Header(None, alias=RequestHeaders.USER_ROLE)
-) -> dict:
-    """
-    Get current user from Gateway headers (replaces JWT validation)
-
-    This validates that requests come from the Gateway and extracts user context
-    """
-    # Validate source headers
-    if not x_source or x_source != ServiceValidation.EXPECTED_SOURCE:
-        logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid source header: {x_source}")
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN,
-            detail=ErrorMessages.ACCESS_DENIED
-        )
-
-    if not x_auth_service or x_auth_service != ServiceValidation.EXPECTED_AUTH_SERVICE:
-        logger.warning(action=LogActions.ACCESS_DENIED, message=f"Invalid auth service header: {x_auth_service}")
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN,
-            detail=ErrorMessages.ACCESS_DENIED
-        )
-
-    # Extract user information from headers
-    if not x_user_id:
-        logger.warning(action=LogActions.ACCESS_DENIED, message="Missing user ID header")
-        raise HTTPException(
-            status_code=HTTPStatus.UNAUTHORIZED,
-            detail=ErrorMessages.AUTHENTICATION_FAILED
-        )
-
-    # Create user info with username as primary identifier
-    user_info = {
-        "username": x_user_id,
-        "role": x_user_role or RequestHeaderDefaults.USER_ROLE_DEFAULT  # Default role if not provided
-    }
-
-    logger.info(action=LogActions.AUTH_SUCCESS, message=f"User authenticated via Gateway: {x_user_id}")
-    return user_info
 
 
 def get_current_market_price(asset_id: str, asset_dao: AssetDAO) -> Decimal:

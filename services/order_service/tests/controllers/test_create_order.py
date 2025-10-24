@@ -9,6 +9,7 @@ from decimal import Decimal
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
+from common.data.entities.user import User
 
 
 def create_mock_request(request_id="test-request-id"):
@@ -79,22 +80,38 @@ from order_exceptions.exceptions import CNOPOrderValidationException
 class TestCreateOrder:
     """Test create_order function"""
 
+    # Test constants
+    TEST_USERNAME = "testuser"
+    TEST_EMAIL = "test@example.com"
+    TEST_PASSWORD = "hashed_password_123"
+    TEST_FIRST_NAME = "Test"
+    TEST_LAST_NAME = "User"
+    TEST_ROLE_CUSTOMER = "customer"
+    TEST_ASSET_ID_BTC = "BTC"
+    TEST_QUANTITY_1_0 = "1.0"
+    TEST_PRICE_50000 = "50000.00"
+
     @pytest.fixture
     def mock_order_create_request(self):
         """Mock order create request data"""
         return OrderCreateRequest(
             order_type=OrderType.MARKET_BUY,
-            asset_id="BTC",
-            quantity=Decimal("1.0"),
-            price=Decimal("50000.00")
+            asset_id=self.TEST_ASSET_ID_BTC,
+            quantity=Decimal(self.TEST_QUANTITY_1_0),
+            price=Decimal(self.TEST_PRICE_50000)
         )
 
     @pytest.fixture
     def mock_current_user(self):
         """Mock current user data"""
-        return {
-            "username": "testuser"
-        }
+        return User(
+            username=self.TEST_USERNAME,
+            email=self.TEST_EMAIL,
+            password=self.TEST_PASSWORD,
+            first_name=self.TEST_FIRST_NAME,
+            last_name=self.TEST_LAST_NAME,
+            role=self.TEST_ROLE_CUSTOMER
+        )
 
     @pytest.fixture
     def mock_request(self):

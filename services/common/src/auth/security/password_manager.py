@@ -19,6 +19,7 @@ from ...exceptions import CNOPEntityValidationException
 from ...shared.logging import BaseLogger, Loggers
 
 logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
+ENCODE_UTF_8 = 'utf-8'
 
 
 class PasswordManager:
@@ -51,8 +52,8 @@ class PasswordManager:
 
         # Generate salt and hash password using bcrypt
         salt = bcrypt.gensalt()
-        hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
-        return hashed.decode('utf-8')
+        hashed = bcrypt.hashpw(password.encode(ENCODE_UTF_8), salt)
+        return hashed.decode(ENCODE_UTF_8)
 
     def verify_password(self, password: str, hashed: str) -> bool:
         """
@@ -75,7 +76,7 @@ class PasswordManager:
             raise CNOPEntityValidationException("Hash must be a non-empty string")
 
         # Verify password using bcrypt
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+        return bcrypt.checkpw(password.encode(ENCODE_UTF_8), hashed.encode(ENCODE_UTF_8))
 
     def validate_password_strength(self, password: str) -> bool:
         """

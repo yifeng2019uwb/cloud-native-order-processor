@@ -23,9 +23,10 @@ from constants import MSG_SUCCESS_ORDERS_LISTED
 from common.shared.constants.api_constants import ErrorMessages
 from controllers.dependencies import (
     get_current_user, get_order_dao_dependency,
-    get_asset_dao_dependency, get_user_dao_dependency,
-    get_request_id_from_request
+    get_asset_dao_dependency, get_user_dao_dependency
 )
+from common.auth.gateway.header_validator import get_request_id_from_request
+from common.auth.security.auth_dependencies import AuthenticatedUser
 from validation.business_validators import validate_order_listing_business_rules
 
 # Initialize our standardized logger
@@ -57,7 +58,7 @@ def list_orders(
     order_type: Optional[OrderType] = Query(None, description="Filter by order type"),
     limit: int = Query(50, ge=1, le=100, description="Maximum number of orders to return"),
     offset: int = Query(0, ge=0, description="Number of orders to skip"),
-    current_user: dict = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     order_dao: OrderDAO = Depends(get_order_dao_dependency),
     asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
     user_dao: UserDAO = Depends(get_user_dao_dependency)
@@ -71,7 +72,7 @@ def list_orders(
     try:
         # Business validation (Layer 2)
         validate_order_listing_business_rules(
-            username=current_user["username"],
+            username=current_user.username,
             status=None,  # Not implemented yet
             asset_id=asset_id,
             asset_dao=asset_dao,
@@ -79,7 +80,7 @@ def list_orders(
         )
 
         # Get all orders for user
-        orders = order_dao.get_orders_by_user(current_user["username"])  # Use username instead of user_id
+        orders = order_dao.get_orders_by_user(current_user.username)  # Use username instead of user_id
 
         # Apply filters
         filtered_orders = []
@@ -100,7 +101,7 @@ def list_orders(
         logger.info(
             action=LogActions.REQUEST_END,
             message=f"Orders listed: count={len(paginated_orders)}",
-            user=current_user['username'],
+            user=current_user.username,
             request_id=request_id
         )
 
@@ -132,7 +133,7 @@ def list_orders(
         logger.error(
             action=LogActions.ERROR,
             message=f"Unexpected error listing orders: error={str(e)}",
-            user=current_user['username'],
+            user=current_user.username,
             request_id=request_id
         )
         raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)

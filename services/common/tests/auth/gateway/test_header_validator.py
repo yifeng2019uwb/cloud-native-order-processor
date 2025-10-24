@@ -1,210 +1,99 @@
 """
-Unit tests for header validator
+Unit tests for request utilities
 
-Tests the HeaderValidator class for gateway authentication.
+Tests the get_request_id_from_request function for request ID extraction.
 """
 
 import os
 import sys
-from typing import Dict, Optional
+from unittest.mock import Mock
 
 import pytest
-from fastapi import HTTPException, status
 
 # Add the common module to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
-# Import the actual HeaderValidator from source files
-from src.auth.gateway.header_validator import HeaderValidator
+# Import the actual function and constants from source files
+from src.auth.gateway.header_validator import get_request_id_from_request
+from src.shared.constants.api_constants import RequestHeaders, RequestHeaderDefaults
 
 
-class TestHeaderValidator:
-    """Test HeaderValidator class"""
+class TestRequestUtilities:
+    """Test request utility functions"""
 
-    def setup_method(self):
-        """Set up test fixtures"""
-        self.validator = HeaderValidator()
+    # Test constants
+    TEST_REQUEST_ID = "req-12345"
+    TEST_REQUEST_ID_2 = "req-67890"
+    TEST_AUTH_TOKEN = "Bearer token123"
+    TEST_CONTENT_TYPE = "application/json"
+    TEST_USER_AGENT = "test-agent"
+    EMPTY_STRING = ""
 
-    def test_initialization(self):
-        """Test HeaderValidator initialization"""
-        assert hasattr(self.validator, 'required_headers')
-        assert isinstance(self.validator.required_headers, list)
-        assert len(self.validator.required_headers) == 4
-        assert 'X-User-ID' in self.validator.required_headers
-        assert 'X-User-Role' in self.validator.required_headers
-        assert 'X-Request-ID' in self.validator.required_headers
-        assert 'X-Source-Service' in self.validator.required_headers
+    def test_get_request_id_from_request_with_header(self):
+        """Test request ID extraction when header is present"""
+        # Mock request with X-Request-ID header
+        mock_request = Mock()
+        mock_request.headers = {RequestHeaders.REQUEST_ID: self.TEST_REQUEST_ID}
 
-    def test_validate_gateway_headers_success(self):
-        """Test successful header validation"""
-        headers = {
-            'X-User-ID': 'user123',
-            'X-User-Role': 'customer',
-            'X-Request-ID': 'req-456',
-            'X-Source-Service': 'gateway'
+        result = get_request_id_from_request(mock_request)
+
+        assert result == self.TEST_REQUEST_ID
+
+    def test_get_request_id_from_request_without_header(self):
+        """Test request ID extraction when header is missing"""
+        # Mock request without X-Request-ID header
+        mock_request = Mock()
+        mock_request.headers = {}
+
+        result = get_request_id_from_request(mock_request)
+
+        assert result == RequestHeaderDefaults.REQUEST_ID_DEFAULT
+
+    def test_get_request_id_from_request_with_none_header(self):
+        """Test request ID extraction when header is None"""
+        # Mock request with None header value
+        mock_request = Mock()
+        mock_request.headers = {RequestHeaders.REQUEST_ID: None}
+
+        result = get_request_id_from_request(mock_request)
+
+        assert result == RequestHeaderDefaults.REQUEST_ID_DEFAULT
+
+    def test_get_request_id_from_request_with_empty_header(self):
+        """Test request ID extraction when header is empty string"""
+        # Mock request with empty string header value
+        mock_request = Mock()
+        mock_request.headers = {RequestHeaders.REQUEST_ID: self.EMPTY_STRING}
+
+        result = get_request_id_from_request(mock_request)
+
+        assert result == RequestHeaderDefaults.REQUEST_ID_DEFAULT
+
+    def test_get_request_id_from_request_with_other_headers(self):
+        """Test request ID extraction with other headers present but not X-Request-ID"""
+        # Mock request with other headers but no X-Request-ID
+        mock_request = Mock()
+        mock_request.headers = {
+            RequestHeaders.AUTHORIZATION: self.TEST_AUTH_TOKEN,
+            RequestHeaders.CONTENT_TYPE: self.TEST_CONTENT_TYPE,
+            RequestHeaders.USER_AGENT: self.TEST_USER_AGENT
         }
 
-        result = self.validator.validate_gateway_headers(headers)
-        assert result is True
+        result = get_request_id_from_request(mock_request)
 
-    def test_validate_gateway_headers_missing_single_header(self):
-        """Test header validation with one missing header"""
-        headers = {
-            'X-User-ID': 'user123',
-            'X-User-Role': 'customer',
-            'X-Request-ID': 'req-456'
-            # Missing X-Source-Service
+        assert result == RequestHeaderDefaults.REQUEST_ID_DEFAULT
+
+    def test_get_request_id_from_request_with_multiple_headers(self):
+        """Test request ID extraction with multiple headers including X-Request-ID"""
+        # Mock request with multiple headers including X-Request-ID
+        mock_request = Mock()
+        mock_request.headers = {
+            RequestHeaders.AUTHORIZATION: self.TEST_AUTH_TOKEN,
+            RequestHeaders.REQUEST_ID: self.TEST_REQUEST_ID_2,
+            RequestHeaders.CONTENT_TYPE: self.TEST_CONTENT_TYPE,
+            RequestHeaders.USER_AGENT: self.TEST_USER_AGENT
         }
 
-        with pytest.raises(HTTPException) as exc_info:
-            self.validator.validate_gateway_headers(headers)
+        result = get_request_id_from_request(mock_request)
 
-        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
-        assert "Missing required gateway headers" in str(exc_info.value.detail)
-        assert "X-Source-Service" in str(exc_info.value.detail)
-
-    def test_validate_gateway_headers_missing_multiple_headers(self):
-        """Test header validation with multiple missing headers"""
-        headers = {
-            'X-User-ID': 'user123'
-            # Missing X-User-Role, X-Request-ID, X-Source-Service
-        }
-
-        with pytest.raises(HTTPException) as exc_info:
-            self.validator.validate_gateway_headers(headers)
-
-        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
-        assert "Missing required gateway headers" in str(exc_info.value.detail)
-        assert "X-User-Role" in str(exc_info.value.detail)
-        assert "X-Request-ID" in str(exc_info.value.detail)
-        assert "X-Source-Service" in str(exc_info.value.detail)
-
-    def test_validate_gateway_headers_empty_headers(self):
-        """Test header validation with empty headers"""
-        headers = {}
-
-        with pytest.raises(HTTPException) as exc_info:
-            self.validator.validate_gateway_headers(headers)
-
-        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
-        assert "Missing required gateway headers" in str(exc_info.value.detail)
-
-    def test_extract_user_from_headers_success(self):
-        """Test successful user extraction from headers"""
-        headers = {
-            'X-User-ID': 'user123',
-            'X-User-Role': 'customer',
-            'X-Request-ID': 'req-456',
-            'X-Source-Service': 'gateway'
-        }
-
-        result = self.validator.extract_user_from_headers(headers)
-
-        assert isinstance(result, dict)
-        assert result['user_id'] == 'user123'
-        assert result['user_role'] == 'customer'
-        assert result['request_id'] == 'req-456'
-        assert result['source_service'] == 'gateway'
-
-    def test_extract_user_from_headers_missing_headers(self):
-        """Test user extraction with missing headers"""
-        headers = {
-            'X-User-ID': 'user123'
-            # Missing other required headers
-        }
-
-        with pytest.raises(HTTPException) as exc_info:
-            self.validator.extract_user_from_headers(headers)
-
-        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_is_authenticated_success(self):
-        """Test authentication check with valid headers"""
-        headers = {
-            'X-User-ID': 'user123',
-            'X-User-Role': 'customer',
-            'X-Request-ID': 'req-456',
-            'X-Source-Service': 'gateway'
-        }
-
-        result = self.validator.is_authenticated(headers)
-        assert result is True
-
-    def test_is_authenticated_failure(self):
-        """Test authentication check with invalid headers"""
-        headers = {
-            'X-User-ID': 'user123'
-            # Missing other required headers
-        }
-
-        result = self.validator.is_authenticated(headers)
-        assert result is False
-
-    def test_is_authenticated_empty_headers(self):
-        """Test authentication check with empty headers"""
-        headers = {}
-
-        result = self.validator.is_authenticated(headers)
-        assert result is False
-
-    def test_get_user_role_success(self):
-        """Test getting user role from headers"""
-        headers = {
-            'X-User-ID': 'user123',
-            'X-User-Role': 'admin',
-            'X-Request-ID': 'req-456',
-            'X-Source-Service': 'gateway'
-        }
-
-        result = self.validator.get_user_role(headers)
-        assert result == 'admin'
-
-    def test_get_user_role_missing(self):
-        """Test getting user role when not present"""
-        headers = {
-            'X-User-ID': 'user123',
-            'X-Request-ID': 'req-456',
-            'X-Source-Service': 'gateway'
-            # Missing X-User-Role
-        }
-
-        result = self.validator.get_user_role(headers)
-        assert result is None
-
-    def test_get_user_id_success(self):
-        """Test getting user ID from headers"""
-        headers = {
-            'X-User-ID': 'user123',
-            'X-User-Role': 'customer',
-            'X-Request-ID': 'req-456',
-            'X-Source-Service': 'gateway'
-        }
-
-        result = self.validator.get_user_id(headers)
-        assert result == 'user123'
-
-    def test_get_user_id_missing(self):
-        """Test getting user ID when not present"""
-        headers = {
-            'X-User-Role': 'customer',
-            'X-Request-ID': 'req-456',
-            'X-Source-Service': 'gateway'
-            # Missing X-User-ID
-        }
-
-        result = self.validator.get_user_id(headers)
-        assert result is None
-
-    def test_get_user_role_empty_headers(self):
-        """Test getting user role with empty headers"""
-        headers = {}
-
-        result = self.validator.get_user_role(headers)
-        assert result is None
-
-    def test_get_user_id_empty_headers(self):
-        """Test getting user ID with empty headers"""
-        headers = {}
-
-        result = self.validator.get_user_id(headers)
-        assert result is None
+        assert result == self.TEST_REQUEST_ID_2

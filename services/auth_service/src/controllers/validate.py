@@ -6,7 +6,7 @@ import time
 from typing import Union
 from fastapi import APIRouter
 from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
-from common.auth.security import TokenManager
+from common.auth.security.token_manager import TokenManager
 from common.auth.security.jwt_constants import JwtFields, TokenTypes, RequestDefaults
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields

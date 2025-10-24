@@ -6,7 +6,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 # Ignore warnings
-from ....auth.security import PasswordManager
+from ....auth.security.password_manager import PasswordManager
 from ....exceptions.shared_exceptions import (
     CNOPInvalidCredentialsException,
     CNOPUserNotFoundException

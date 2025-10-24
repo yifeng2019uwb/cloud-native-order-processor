@@ -20,7 +20,7 @@ from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from constants import MSG_SUCCESS_BALANCE_RETRIEVED
 from controllers.auth.dependencies import get_current_user
-from controllers.dependencies import get_request_id_from_request
+from common.auth.gateway.header_validator import get_request_id_from_request
 
 # Initialize our standardized logger
 logger = BaseLogger(Loggers.USER)

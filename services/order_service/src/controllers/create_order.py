@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, status, Request
 from api_models.order import OrderCreateRequest, OrderCreateResponse, OrderData
 from api_models.shared.common import ErrorResponse
 from common.data.entities.order.enums import OrderType, OrderStatus
+from common.data.entities.user import User
 from common.core.utils.transaction_manager import TransactionManager
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.dao.user.user_dao import UserDAO
@@ -35,9 +36,9 @@ from order_exceptions.exceptions import CNOPOrderValidationException
 from controllers.dependencies import (
     get_current_user, get_transaction_manager,
     get_asset_dao_dependency, get_user_dao_dependency,
-    get_balance_dao_dependency,
-    get_request_id_from_request
+    get_balance_dao_dependency
 )
+from common.auth.gateway.header_validator import get_request_id_from_request
 from validation.business_validators import validate_order_creation_business_rules
 
 # Initialize our standardized logger
@@ -79,7 +80,7 @@ router = APIRouter(tags=[ApiTags.ORDERS.value])
 async def create_order(
     order_data: OrderCreateRequest,
     request: Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     transaction_manager: TransactionManager = Depends(get_transaction_manager),
     asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
     user_dao: UserDAO = Depends(get_user_dao_dependency),
@@ -103,7 +104,7 @@ async def create_order(
     logger.info(
         action=LogActions.REQUEST_START,
         message=f"Order creation attempt from {request.client.host if request.client else 'unknown'}",
-        user=current_user["username"],
+        user=current_user.username,
         request_id=request_id,
         extra={
             LogFields.ORDER_TYPE: order_data.order_type.value,
@@ -122,7 +123,7 @@ async def create_order(
             quantity=order_data.quantity,
             order_price=order_data.price,
             expires_at=None,  # Not implemented for market orders yet
-            username=current_user["username"],
+            username=current_user.username,
             asset_dao=asset_dao,
             user_dao=user_dao,
             balance_dao=balance_dao,
@@ -137,7 +138,7 @@ async def create_order(
         if order_data.order_type in [OrderType.MARKET_BUY, OrderType.LIMIT_BUY]:
             # Buy order - validate USD balance and update asset balance
             result = await transaction_manager.create_buy_order_with_balance_update(
-                username=current_user["username"],
+                username=current_user.username,
                 asset_id=order_data.asset_id,
                 quantity=order_data.quantity,
                 price=current_price,
@@ -150,14 +151,14 @@ async def create_order(
                 message=f"Buy order executed successfully: order_id={result.order.order_id}, "
                        f"asset={order_data.asset_id}, quantity={order_data.quantity}, "
                        f"total_cost={total_amount}",
-                user=current_user['username'],
+                user=current_user.username,
                 request_id=request_id
             )
 
         elif order_data.order_type in [OrderType.MARKET_SELL, OrderType.LIMIT_SELL]:
             # Sell order - validate asset balance and update USD balance
             result = await transaction_manager.create_sell_order_with_balance_update(
-                username=current_user["username"],
+                username=current_user.username,
                 asset_id=order_data.asset_id,
                 quantity=order_data.quantity,
                 price=current_price,
@@ -170,7 +171,7 @@ async def create_order(
                 message=f"Sell order executed successfully: order_id={result.order.order_id}, "
                        f"asset={order_data.asset_id}, quantity={order_data.quantity}, "
                        f"asset_amount={total_amount}",
-                user=current_user['username'],
+                user=current_user.username,
                 request_id=request_id
             )
 
@@ -212,7 +213,7 @@ async def create_order(
             action=LogActions.VALIDATION_ERROR,
             message=f"Insufficient balance for order: order_type={order_data.order_type.value}, "
                    f"asset={order_data.asset_id}, quantity={order_data.quantity}, error={str(e)}",
-            user=current_user['username'],
+            user=current_user.username,
             request_id=request_id
         )
         # Wrap the exception in CNOPOrderValidationException
@@ -222,7 +223,7 @@ async def create_order(
         logger.warning(
             action=LogActions.ERROR,
             message=f"Lock acquisition failed for order: error={str(e)}",
-            user=current_user['username'],
+            user=current_user.username,
             request_id=request_id
         )
         raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
@@ -231,7 +232,7 @@ async def create_order(
         logger.error(
             action=LogActions.ERROR,
             message=f"Database operation failed for order: error={str(e)}",
-            user=current_user['username'],
+            user=current_user.username,
             request_id=request_id
         )
         raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
@@ -240,7 +241,7 @@ async def create_order(
         logger.warning(
             action=LogActions.VALIDATION_ERROR,
             message=f"Order validation failed: error={str(e)}",
-            user=current_user['username'],
+            user=current_user.username,
             request_id=request_id
         )
         # Re-raise the original exception without wrapping
@@ -251,7 +252,7 @@ async def create_order(
             action=LogActions.ERROR,
             message=f"Unexpected error during order creation: order_type={order_data.order_type.value}, "
                    f"asset={order_data.asset_id}, quantity={order_data.quantity}, error={str(e)}",
-            user=current_user['username'],
+            user=current_user.username,
             request_id=request_id
         )
         raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)

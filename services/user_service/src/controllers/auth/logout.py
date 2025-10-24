@@ -11,7 +11,7 @@ from api_models.auth.logout import (
     LogoutErrorResponse
 )
 from api_models.shared.common import ErrorResponse
-from common.auth.security import AuditLogger
+from common.auth.security.audit_logger import AuditLogger
 from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields
 from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
