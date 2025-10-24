@@ -4,12 +4,10 @@ Auth Service specific exceptions.
 These exceptions are internal to the Auth Service and not exposed to clients.
 """
 
-import uuid
-from datetime import datetime, timezone
 from typing import Dict, Any, Optional
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LoggerName, LogAction
 
-logger = BaseLogger(Loggers.AUTH)
+logger = BaseLogger(LoggerName.AUTH)
 
 
 class BaseInternalException(Exception):
@@ -30,19 +28,11 @@ class BaseInternalException(Exception):
         """
         self.message = message
         self.context = context or {}
-        self.error_id = str(uuid.uuid4())
-        self.timestamp = datetime.now(timezone.utc)
 
         # Auto-logging: Automatically logs when exception is created
         logger.error(
-            action=LogActions.ERROR,
-            message=f"{self.__class__.__name__}: {self.message}",
-            extra={
-                "error_id": self.error_id,
-                "context": context,
-                "timestamp": self.timestamp.isoformat(),
-                "exception_type": self.__class__.__name__
-            }
+            action=LogAction.ERROR,
+            message=f"{self.__class__.__name__}: {self.message}"
         )
 
         super().__init__(self.message)

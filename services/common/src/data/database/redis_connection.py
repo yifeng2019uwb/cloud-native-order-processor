@@ -13,7 +13,7 @@ from typing import Any, Dict, Optional
 
 import redis
 
-from ...shared.logging import BaseLogger, LogActions, Loggers
+from ...shared.logging import BaseLogger, LogAction, LoggerName
 from .redis_config import (RedisConfig, get_redis_config,
                            get_redis_connection_params)
 from .database_constants import (
@@ -21,7 +21,7 @@ from .database_constants import (
     RedisConfig as RedisConfigConstants
 )
 
-logger = BaseLogger(Loggers.CACHE, log_to_file=True)
+logger = BaseLogger(LoggerName.CACHE, log_to_file=True)
 
 class RedisConnectionManager:
     """Manages Redis connections with proper error handling and pooling"""
@@ -75,7 +75,7 @@ class RedisConnectionManager:
 
             self._client = redis.Redis(connection_pool=self._pool)
             logger.info(
-                action=LogActions.CACHE_OPERATION,
+                action=LogAction.CACHE_OPERATION,
                 message=f"Created Redis client for {self._config.host}:{self._config.port}"
             )
 
@@ -88,14 +88,14 @@ class RedisConnectionManager:
             client.ping()
             self._is_connected = True
             logger.info(
-                action=LogActions.HEALTH_CHECK,
+                action=LogAction.HEALTH_CHECK,
                 message="Redis connection test successful"
             )
             return True
         except (redis.ConnectionError, redis.TimeoutError, redis.RedisError) as e:
             self._is_connected = False
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Redis connection test failed: {e}"
             )
             return False
@@ -112,14 +112,14 @@ class RedisConnectionManager:
             yield client
         except (redis.ConnectionError, redis.TimeoutError) as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Redis connection error: {e}"
             )
             self._is_connected = False
             raise
         except redis.RedisError as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Redis operation error: {e}"
             )
             raise
@@ -136,7 +136,7 @@ class RedisConnectionManager:
 
         self._is_connected = False
         logger.info(
-            action=LogActions.CACHE_OPERATION,
+            action=LogAction.CACHE_OPERATION,
             message="Redis connections closed"
         )
 
@@ -176,7 +176,7 @@ def redis_set(key: str, value: str, expire: Optional[int] = None) -> bool:
                 return client.set(key, value)
     except redis.RedisError as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Failed to set Redis key {key}: {e}"
         )
         return False
@@ -188,7 +188,7 @@ def redis_get(key: str) -> Optional[str]:
             return client.get(key)
     except redis.RedisError as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Failed to get Redis key {key}: {e}"
         )
         return None
@@ -200,7 +200,7 @@ def redis_delete(key: str) -> bool:
             return bool(client.delete(key))
     except redis.RedisError as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Failed to delete Redis key {key}: {e}"
         )
         return False
@@ -212,7 +212,7 @@ def redis_exists(key: str) -> bool:
             return bool(client.exists(key))
     except redis.RedisError as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Failed to check Redis key {key}: {e}"
         )
         return False

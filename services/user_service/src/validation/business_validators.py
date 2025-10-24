@@ -13,11 +13,11 @@ from common.exceptions.shared_exceptions import (
     CNOPInternalServerException
 )
 from common.shared.constants.api_constants import ErrorMessages
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LogAction, LoggerName
 from user_exceptions import CNOPUserAlreadyExistsException, CNOPUserValidationException
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 
 
 def validate_user_permissions(username: str, action: str, user_dao: Any) -> bool:
@@ -40,7 +40,7 @@ def validate_user_permissions(username: str, action: str, user_dao: Any) -> bool
         user = user_dao.get_user_by_username(username)
         if not user:
             logger.warning(
-                action=LogActions.VALIDATION_ERROR,
+                action=LogAction.VALIDATION_ERROR,
                 message=f"User not found for permission check: {username}"
             )
             raise CNOPUserValidationException(ErrorMessages.USER_NOT_FOUND)
@@ -52,7 +52,7 @@ def validate_user_permissions(username: str, action: str, user_dao: Any) -> bool
         raise
     except Exception as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Error validating user permissions: {str(e)}"
         )
         raise CNOPUserValidationException("Permission validation failed")
@@ -72,28 +72,28 @@ def validate_username_uniqueness(username: str, user_dao: Any, exclude_username:
     Raises:
         UserAlreadyExistsException: If username already exists
     """
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Starting username uniqueness validation for: '{username}'")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Starting username uniqueness validation for: '{username}'")
 
     try:
-        logger.info(action=LogActions.REQUEST_START, message=f"Calling user_dao.get_user_by_username('{username}')")
+        logger.info(action=LogAction.REQUEST_START, message=f"Calling user_dao.get_user_by_username('{username}')")
         existing_user = user_dao.get_user_by_username(username)
 
         if existing_user:
-            logger.warning(action=LogActions.VALIDATION_ERROR, message=f"User found! Username '{username}' already exists")
+            logger.warning(action=LogAction.VALIDATION_ERROR, message=f"User found! Username '{username}' already exists")
             raise CNOPUserAlreadyExistsException(f"Username '{username}' already exists")
         else:
-            logger.info(action=LogActions.REQUEST_END, message=f"User not found! Username '{username}' is unique")
+            logger.info(action=LogAction.REQUEST_END, message=f"User not found! Username '{username}' is unique")
             return True
 
     except CNOPUserNotFoundException as e:
         # User doesn't exist, which means username is unique
-        logger.info(action=LogActions.REQUEST_END, message=f"User not found! Username '{username}' is unique. Exception: {str(e)}")
+        logger.info(action=LogAction.REQUEST_END, message=f"User not found! Username '{username}' is unique. Exception: {str(e)}")
         return True
     except CNOPUserAlreadyExistsException:
         # Re-raise this specific exception to maintain proper flow
         raise
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Unexpected exception in username validation: {str(e)}")
+        logger.error(action=LogAction.ERROR, message=f"Unexpected exception in username validation: {str(e)}")
         raise CNOPInternalServerException(f"Internal error during username validation: {str(e)}")
 
 
@@ -112,32 +112,32 @@ def validate_email_uniqueness(email: str, user_dao: Any, exclude_username: Optio
     Raises:
         UserAlreadyExistsException: If email already exists
     """
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Starting email uniqueness validation for: '{email}'")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Starting email uniqueness validation for: '{email}'")
 
     try:
-        logger.info(action=LogActions.REQUEST_START, message=f"Calling user_dao.get_user_by_email('{email}')")
+        logger.info(action=LogAction.REQUEST_START, message=f"Calling user_dao.get_user_by_email('{email}')")
         existing_user = user_dao.get_user_by_email(email)
 
         if existing_user:
             if exclude_username and existing_user.username == exclude_username:
-                logger.info(action=LogActions.REQUEST_END, message=f"Email '{email}' belongs to same user '{exclude_username}', allowing update")
+                logger.info(action=LogAction.REQUEST_END, message=f"Email '{email}' belongs to same user '{exclude_username}', allowing update")
                 return True
             else:
-                logger.warning(action=LogActions.VALIDATION_ERROR, message=f"User found! Email '{email}' already exists")
+                logger.warning(action=LogAction.VALIDATION_ERROR, message=f"User found! Email '{email}' already exists")
                 raise CNOPUserAlreadyExistsException(f"Email '{email}' already exists")
         else:
-            logger.info(action=LogActions.REQUEST_END, message=f"User not found! Email '{email}' is unique")
+            logger.info(action=LogAction.REQUEST_END, message=f"User not found! Email '{email}' is unique")
             return True
 
     except CNOPUserNotFoundException as e:
         # User doesn't exist, which means email is unique
-        logger.info(action=LogActions.REQUEST_END, message=f"User not found! Email '{email}' is unique. Exception: {str(e)}")
+        logger.info(action=LogAction.REQUEST_END, message=f"User not found! Email '{email}' is unique. Exception: {str(e)}")
         return True
     except CNOPUserAlreadyExistsException:
         # Re-raise this specific exception to maintain proper flow
         raise
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Unexpected exception in email validation: {str(e)}")
+        logger.error(action=LogAction.ERROR, message=f"Unexpected exception in email validation: {str(e)}")
         raise CNOPInternalServerException(f"Internal error during email validation: {str(e)}")
 
 

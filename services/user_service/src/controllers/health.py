@@ -3,16 +3,15 @@ Health check controller for user authentication service
 Path: services/user-service/src/controllers/health.py
 """
 from fastapi import APIRouter
-from typing import Dict, Any
 
 from common.shared.constants.api_constants import HTTPStatus
 from common.shared.constants.health_paths import HealthPaths
 from common.shared.constants.service_names import ServiceNames, ServiceVersions
 from common.shared.health.health_checks import HealthChecker, HealthCheckResponse
-from common.shared.logging import BaseLogger, Loggers
+from common.shared.logging import BaseLogger, LoggerName
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 router = APIRouter(tags=["health"])
 
 # Create user service health checker instance

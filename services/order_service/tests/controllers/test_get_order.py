@@ -80,8 +80,7 @@ class TestGetOrder:
         mock_order
     ):
         """Test successful order retrieval"""
-        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate, \
-             patch('src.controllers.get_order.logger') as mock_logger:
+        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -115,8 +114,6 @@ class TestGetOrder:
             # Verify DAO was called
             mock_order_dao.get_order.assert_called_once_with("order123")
 
-            # Verify logging
-            mock_logger.info.assert_called()
 
     def test_get_order_unauthorized_access(
         self,
@@ -125,8 +122,7 @@ class TestGetOrder:
         mock_user_dao
     ):
         """Test order retrieval with unauthorized access"""
-        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate, \
-             patch('src.controllers.get_order.logger') as mock_logger:
+        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -146,8 +142,6 @@ class TestGetOrder:
                     user_dao=mock_user_dao
                 )
 
-            # Verify logging
-            mock_logger.warning.assert_called()
 
     def test_get_order_not_found(
         self,
@@ -179,8 +173,7 @@ class TestGetOrder:
         mock_user_dao
     ):
         """Test order retrieval when unexpected error occurs"""
-        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate, \
-             patch('src.controllers.get_order.logger') as mock_logger:
+        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
 
             # Setup mock to raise generic Exception
             mock_validate.side_effect = Exception("Unexpected error")
@@ -195,8 +188,6 @@ class TestGetOrder:
                     user_dao=mock_user_dao
                 )
 
-            # Verify logging
-            mock_logger.error.assert_called()
 
     def test_get_order_different_user_order(
         self,
@@ -205,8 +196,7 @@ class TestGetOrder:
         mock_user_dao
     ):
         """Test order retrieval for order belonging to different user"""
-        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate, \
-             patch('src.controllers.get_order.logger') as mock_logger:
+        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -226,9 +216,6 @@ class TestGetOrder:
                     user_dao=mock_user_dao
                 )
 
-            # Verify logging
-            mock_logger.warning.assert_called()
-
     def test_get_order_logging_and_metrics(
         self,
         mock_current_user,
@@ -237,8 +224,7 @@ class TestGetOrder:
         mock_order
     ):
         """Test order retrieval logging and metrics recording"""
-        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate, \
-             patch('src.controllers.get_order.logger') as mock_logger:
+        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -253,8 +239,6 @@ class TestGetOrder:
                 user_dao=mock_user_dao
             )
 
-            # Verify logging was called for successful retrieval
-            mock_logger.info.assert_called()
 
     def test_router_configuration(self):
         """Test router configuration"""

@@ -23,7 +23,7 @@ from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPInternalServerException
 )
-from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
+from common.shared.logging import BaseLogger, LogAction, LogField, LogDefault, LoggerName
 from common.shared.constants.api_constants import ErrorMessages
 from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
@@ -41,7 +41,7 @@ from validation.business_validators import (
 )
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 router = APIRouter(tags=[ApiTags.AUTHENTICATION.value])
 
 
@@ -88,15 +88,9 @@ def register_user(
 
     # Log register attempt (without sensitive data)
     logger.info(
-        action=LogActions.REQUEST_START,
-        message=f"Register attempt from {request.client.host if request.client else 'unknown'}",
-        request_id=request_id,
-        extra={
-            LogFields.USERNAME: user_data.username,
-            LogFields.EMAIL: user_data.email,
-            LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT),
-            LogFields.TIMESTAMP: datetime.now(timezone.utc).isoformat()
-        }
+        action=LogAction.REQUEST_START,
+        message=f"Register attempt from {request.client.host if request.client else 'unknown'} for username: {user_data.username}, email: {user_data.email}",
+        request_id=request_id
     )
 
     try:
@@ -127,17 +121,14 @@ def register_user(
         balance_dao.create_balance(initial_balance)
 
         # Log successful registration
-        logger.info(action=LogActions.REQUEST_END, message=f"User registered successfully: {user_data.username}", request_id=request_id)
+        logger.info(action=LogAction.REQUEST_END, message=f"User registered successfully: {user_data.username}", request_id=request_id)
 
         # Audit log successful registration
         audit_logger.log_security_event(
-            LogActions.USER_REGISTRATION_SUCCESS,
+            LogAction.USER_REGISTRATION_SUCCESS,
             user_data.username,
-            {
-                LogFields.EMAIL: user_data.email,
-                LogFields.CLIENT_IP: request.client.host if request.client else LogExtraDefaults.UNKNOWN_IP,
-                LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT)
-            }
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get(LogField.USER_AGENT, LogDefault.UNKNOWN)
         )
 
         # Return simple success response - no user data
@@ -148,44 +139,34 @@ def register_user(
     except CNOPUserAlreadyExistsException as e:
         # Audit log failed registration due to user already exists
         audit_logger.log_security_event(
-            LogActions.USER_REGISTRATION_FAILED,
+            LogAction.USER_REGISTRATION_FAILED,
             user_data.username,
-            {
-                LogFields.ERROR_TYPE: "user_already_exists",
-                LogFields.EMAIL: user_data.email,
-                LogFields.CLIENT_IP: request.client.host if request.client else LogExtraDefaults.UNKNOWN_IP,
-                LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT)
-            }
+            details={LogField.AUDIT_REASON: "user_already_exists"},
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get(LogField.USER_AGENT, LogDefault.UNKNOWN)
         )
         # Re-raise the exception as it should be handled by the exception mapper
         raise
     except CNOPUserValidationException as e:
         # Audit log failed registration due to validation error
         audit_logger.log_security_event(
-            LogActions.USER_REGISTRATION_FAILED,
+            LogAction.USER_REGISTRATION_FAILED,
             user_data.username,
-            {
-                LogFields.ERROR_TYPE: LogFields.VALIDATION_ERROR,
-                LogFields.EMAIL: user_data.email,
-                LogFields.CLIENT_IP: request.client.host if request.client else LogExtraDefaults.UNKNOWN_IP,
-                LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT)
-            }
+            details={LogField.AUDIT_REASON: "validation_error"},
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get(LogField.USER_AGENT, LogDefault.UNKNOWN)
         )
         # Re-raise the exception as it should be handled by the exception mapper
         raise
     except Exception as e:
         # Audit log unexpected error during registration
         audit_logger.log_security_event(
-            LogActions.USER_REGISTRATION_FAILED,
+            LogAction.USER_REGISTRATION_FAILED,
             user_data.username,
-            {
-                LogFields.ERROR_TYPE: LogFields.ERROR,
-                LogFields.ERROR: str(e),
-                LogFields.EMAIL: user_data.email,
-                LogFields.CLIENT_IP: request.client.host if request.client else LogExtraDefaults.UNKNOWN_IP,
-                LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT)
-            }
+            details={LogField.AUDIT_REASON: f"unexpected_error: {str(e)}"},
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get(LogField.USER_AGENT, LogDefault.UNKNOWN)
         )
         # Log unexpected errors and convert to internal server exception
-        logger.error(action=LogActions.ERROR, message=f"Unexpected error during user registration: {str(e)}", request_id=request_id)
+        logger.error(action=LogAction.ERROR, message=f"Unexpected error during user registration: {str(e)}", request_id=request_id)
         raise CNOPInternalServerException(f"{ErrorMessages.INTERNAL_SERVER_ERROR} during registration: {str(e)}")

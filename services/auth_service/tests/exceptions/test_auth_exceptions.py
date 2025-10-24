@@ -30,9 +30,3 @@ class TestTokenInvalidException:
         exception = TokenInvalidException("Invalid token format")
         assert str(exception) == "TokenInvalidException: Invalid token format"
         assert exception.message == "Invalid token format"
-
-    def test_exception_has_error_id(self):
-        """Test that exception has unique error ID."""
-        exception = TokenInvalidException("Test error")
-        assert hasattr(exception, 'error_id')
-        assert len(exception.error_id) > 0

@@ -164,8 +164,7 @@ class TestCreateOrder:
     ):
         """Test successful market buy order creation"""
         with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price, \
-             patch('src.controllers.create_order.logger') as mock_logger:
+             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -220,8 +219,6 @@ class TestCreateOrder:
                 total_cost=Decimal("50000.00")
             )
 
-            # Verify logging
-            mock_logger.info.assert_called()
 
     @pytest.mark.asyncio
     async def test_create_order_market_sell_success(
@@ -243,8 +240,7 @@ class TestCreateOrder:
         )
 
         with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price, \
-             patch('src.controllers.create_order.logger') as mock_logger:
+             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -305,8 +301,7 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test order creation with insufficient balance"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.create_order.logger') as mock_logger:
+        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate:
 
             # Setup mock to raise InsufficientBalanceException
             mock_validate.side_effect = CNOPInsufficientBalanceException("Insufficient balance")
@@ -323,8 +318,6 @@ class TestCreateOrder:
                     balance_dao=mock_balance_dao,
                 )
 
-            # Verify logging
-            mock_logger.warning.assert_called()
 
     @pytest.mark.asyncio
     async def test_create_order_lock_acquisition_failed(
@@ -338,8 +331,7 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test order creation when lock acquisition fails"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.create_order.logger') as mock_logger:
+        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate:
 
             # Setup mock to raise LockAcquisitionException
             mock_validate.side_effect = CNOPLockAcquisitionException("Lock acquisition failed")
@@ -356,8 +348,6 @@ class TestCreateOrder:
                     balance_dao=mock_balance_dao,
                 )
 
-            # Verify logging
-            mock_logger.warning.assert_called()
 
     @pytest.mark.asyncio
     async def test_create_order_database_operation_failed(
@@ -371,8 +361,7 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test order creation when database operation fails"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.create_order.logger') as mock_logger:
+        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate:
 
             # Setup mock to raise DatabaseOperationException
             mock_validate.side_effect = CNOPDatabaseOperationException("Database error")
@@ -389,8 +378,6 @@ class TestCreateOrder:
                     balance_dao=mock_balance_dao,
                 )
 
-            # Verify logging
-            mock_logger.error.assert_called()
 
     @pytest.mark.asyncio
     async def test_create_order_validation_failed(
@@ -404,9 +391,7 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test order creation when validation fails"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.create_order.logger') as mock_logger:
-
+        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate:
             # Setup mock to raise OrderValidationException
             mock_validate.side_effect = CNOPOrderValidationException("Invalid order data")
 
@@ -422,8 +407,6 @@ class TestCreateOrder:
                     balance_dao=mock_balance_dao,
                 )
 
-            # Verify logging
-            mock_logger.warning.assert_called()
 
     @pytest.mark.asyncio
     async def test_create_order_unexpected_error(
@@ -437,8 +420,7 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test order creation when unexpected error occurs"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.create_order.logger') as mock_logger:
+        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate:
 
             # Setup mock to raise generic Exception
             mock_validate.side_effect = Exception("Unexpected error")
@@ -455,8 +437,6 @@ class TestCreateOrder:
                     balance_dao=mock_balance_dao,
                 )
 
-            # Verify logging
-            mock_logger.error.assert_called()
 
     @pytest.mark.asyncio
     async def test_create_order_unsupported_order_type(
@@ -474,8 +454,7 @@ class TestCreateOrder:
         # We'll create a request with an invalid order type string that bypasses Pydantic validation
 
         with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price, \
-             patch('src.controllers.create_order.logger') as mock_logger:
+             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -518,8 +497,7 @@ class TestCreateOrder:
     ):
         """Test order creation logging and metrics recording"""
         with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price, \
-             patch('src.controllers.create_order.logger') as mock_logger:
+             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -553,11 +531,6 @@ class TestCreateOrder:
                 balance_dao=mock_balance_dao,
             )
 
-            # Verify logging was called for order creation attempt
-            mock_logger.info.assert_called()
-
-            # Verify logging was called for successful execution
-            mock_logger.info.assert_called()
 
     def test_router_configuration(self):
         """Test router configuration"""

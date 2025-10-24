@@ -3,10 +3,10 @@ Order Service Middleware - Metrics Collection
 """
 import time
 from fastapi import Request, Response
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LoggerName, LogAction
 from metrics import metrics_collector
 
-logger = BaseLogger(Loggers.ORDER)
+logger = BaseLogger(LoggerName.ORDER)
 
 async def metrics_middleware(request: Request, call_next):
     """Middleware to collect request metrics automatically"""

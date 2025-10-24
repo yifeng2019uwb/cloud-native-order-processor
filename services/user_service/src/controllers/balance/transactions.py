@@ -13,7 +13,7 @@ from api_models.shared.common import ErrorResponse
 from common.data.database.dependencies import get_balance_dao
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import CNOPInternalServerException
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LogAction, LoggerName
 from common.shared.constants.api_constants import ErrorMessages
 from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
@@ -25,7 +25,7 @@ from common.auth.gateway.header_validator import get_request_id_from_request
 MSG_SUCCESS_TRANSACTIONS_RETRIEVED = "Transactions retrieved successfully"
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 router = APIRouter(tags=[ApiTags.BALANCE.value])
 
 
@@ -66,7 +66,7 @@ def get_user_transactions(
     request_id = get_request_id_from_request(request)
 
     try:
-        logger.info(action=LogActions.REQUEST_START, message=f"Transaction history request for user: {current_user.username}", request_id=request_id)
+        logger.info(action=LogAction.REQUEST_START, message=f"Transaction history request for user: {current_user.username}", request_id=request_id)
 
         # Get transactions from database
         transactions, _ = balance_dao.get_user_transactions(current_user.username)
@@ -84,7 +84,7 @@ def get_user_transactions(
                 created_at=transaction.created_at
             ))
 
-        logger.info(action=LogActions.REQUEST_END, message=f"Transaction history retrieved successfully for user: {current_user.username}", request_id=request_id)
+        logger.info(action=LogAction.REQUEST_END, message=f"Transaction history retrieved successfully for user: {current_user.username}", request_id=request_id)
 
         return TransactionListResponse(
             transactions=transaction_responses,
@@ -92,5 +92,5 @@ def get_user_transactions(
         )
 
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Failed to get transactions for user {current_user.username}: {str(e)}", request_id=request_id)
+        logger.error(action=LogAction.ERROR, message=f"Failed to get transactions for user {current_user.username}: {str(e)}", request_id=request_id)
         raise CNOPInternalServerException(f"Failed to get transactions: {str(e)}")

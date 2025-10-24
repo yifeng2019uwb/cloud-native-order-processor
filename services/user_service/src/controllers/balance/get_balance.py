@@ -13,7 +13,7 @@ from api_models.shared.common import ErrorResponse
 from common.data.database.dependencies import get_balance_dao
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LogAction, LoggerName
 from common.shared.constants.api_constants import ErrorMessages
 from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
@@ -23,7 +23,7 @@ from controllers.auth.dependencies import get_current_user
 from common.auth.gateway.header_validator import get_request_id_from_request
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 router = APIRouter(tags=[ApiTags.BALANCE.value])
 
 
@@ -64,12 +64,12 @@ def get_user_balance(
     request_id = get_request_id_from_request(request)
 
     try:
-        logger.info(action=LogActions.REQUEST_START, message=f"Balance request for user: {current_user.username}", request_id=request_id)
+        logger.info(action=LogAction.REQUEST_START, message=f"Balance request for user: {current_user.username}", request_id=request_id)
 
         # Get balance from database
         balance = balance_dao.get_balance(current_user.username)
 
-        logger.info(action=LogActions.REQUEST_END, message=f"Balance retrieved successfully for user: {current_user.username}", request_id=request_id)
+        logger.info(action=LogAction.REQUEST_END, message=f"Balance retrieved successfully for user: {current_user.username}", request_id=request_id)
 
         return BalanceResponse(
             current_balance=balance.current_balance,
@@ -79,5 +79,5 @@ def get_user_balance(
     except CNOPUserNotFoundException:
         raise
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Failed to get balance for user {current_user.username}: {str(e)}", request_id=request_id)
+        logger.error(action=LogAction.ERROR, message=f"Failed to get balance for user {current_user.username}: {str(e)}", request_id=request_id)
         raise CNOPInternalServerException(f"{ErrorMessages.INTERNAL_SERVER_ERROR} while retrieving balance: {str(e)}")

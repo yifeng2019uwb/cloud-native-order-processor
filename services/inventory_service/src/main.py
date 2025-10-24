@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 import asyncio
 
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LoggerName, LogAction
 from common.exceptions import CNOPAssetNotFoundException, CNOPInternalServerException
 from inventory_exceptions import (
     CNOPAssetAlreadyExistsException,
@@ -27,7 +27,7 @@ from common.shared.constants.api_constants import HTTPStatus, ErrorMessages
 from middleware import metrics_middleware
 
 # Initialize logger
-logger = BaseLogger(Loggers.INVENTORY)
+logger = BaseLogger(LoggerName.INVENTORY)
 
 # Create FastAPI app
 app = FastAPI(
@@ -60,44 +60,44 @@ async def startup_event():
     """Initialize inventory data on service startup"""
     try:
         from data.init_inventory import startup_inventory_initialization
-        logger.info(action=LogActions.SERVICE_START, message="Starting inventory initialization...")
+        logger.info(action=LogAction.SERVICE_START, message="Starting inventory initialization...")
 
         # Run initialization in background to not block startup
         asyncio.create_task(startup_inventory_initialization())
 
-        logger.info(action=LogActions.SERVICE_START, message="Inventory initialization started in background")
+        logger.info(action=LogAction.SERVICE_START, message="Inventory initialization started in background")
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Failed to start inventory initialization: {e}")
+        logger.error(action=LogAction.ERROR, message=f"Failed to start inventory initialization: {e}")
 
 # Custom exception handlers
 @app.exception_handler(CNOPAssetValidationException)
 def asset_validation_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Asset validation error: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Asset validation error: {exc}")
     return JSONResponse(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPAssetNotFoundException)
 def asset_not_found_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Asset not found: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Asset not found: {exc}")
     return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPAssetAlreadyExistsException)
 def asset_already_exists_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Asset already exists: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Asset already exists: {exc}")
     return JSONResponse(status_code=HTTPStatus.CONFLICT, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPInventoryServerException)
 def inventory_server_exception_handler(request, exc):
-    logger.error(action=LogActions.ERROR, message=f"Inventory server error: {exc}")
+    logger.error(action=LogAction.ERROR, message=f"Inventory server error: {exc}")
     return JSONResponse(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPInternalServerException)
 def internal_server_exception_handler(request, exc):
-    logger.error(action=LogActions.ERROR, message=f"Internal server error: {exc}")
+    logger.error(action=LogAction.ERROR, message=f"Internal server error: {exc}")
     return JSONResponse(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": str(exc)})
 
 @app.exception_handler(Exception)
 def general_exception_handler(request, exc):
-    logger.error(action=LogActions.ERROR, message=f"Unhandled error: {exc}")
+    logger.error(action=LogAction.ERROR, message=f"Unhandled error: {exc}")
     return JSONResponse(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": ErrorMessages.INTERNAL_SERVER_ERROR})
 
 # Add internal metrics endpoint

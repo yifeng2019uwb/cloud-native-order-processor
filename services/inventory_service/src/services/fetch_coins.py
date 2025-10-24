@@ -9,10 +9,10 @@ import httpx
 from typing import List, Dict, Any, Annotated
 from decimal import Decimal
 from pydantic import BaseModel, Field, AfterValidator
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LoggerName, LogAction
 from constants import COINGECKO_API_URL, COINGECKO_DEFAULT_PARAMS, COINGECKO_TIMEOUT
 
-logger = BaseLogger(Loggers.INVENTORY)
+logger = BaseLogger(LoggerName.INVENTORY)
 
 
 # Define reusable validated types
@@ -87,36 +87,36 @@ async def fetch_coins() -> List[CoinData]:
     try:
         coins = await _fetch_from_coingecko()
         if coins:
-            logger.info(action=LogActions.REQUEST_START, message=f"Fetched {len(coins)} coins from CoinGecko")
+            logger.info(action=LogAction.REQUEST_START, message=f"Fetched {len(coins)} coins from CoinGecko")
             return _map_coingecko_to_our_format(coins)
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"CoinGecko failed: {e}")
+        logger.error(action=LogAction.ERROR, message=f"CoinGecko failed: {e}")
 
-    logger.error(action=LogActions.ERROR, message="All coin providers failed")
+    logger.error(action=LogAction.ERROR, message="All coin providers failed")
     return []
 
 
 async def _fetch_from_coingecko() -> List[Dict[str, Any]]:
     """Fetch from CoinGecko API"""
     try:
-        logger.info(action=LogActions.REQUEST_START, message="Starting CoinGecko API call...")
+        logger.info(action=LogAction.REQUEST_START, message="Starting CoinGecko API call...")
 
         async with httpx.AsyncClient(timeout=COINGECKO_TIMEOUT) as client:
             response = await client.get(COINGECKO_API_URL, params=COINGECKO_DEFAULT_PARAMS)
             response.raise_for_status()
             coins = response.json()
 
-            logger.info(action=LogActions.REQUEST_END, message=f"CoinGecko API call successful, received {len(coins)} coins")
+            logger.info(action=LogAction.REQUEST_END, message=f"CoinGecko API call successful, received {len(coins)} coins")
             return coins
 
     except httpx.TimeoutException:
-        logger.error(action=LogActions.ERROR, message="CoinGecko API call timed out")
+        logger.error(action=LogAction.ERROR, message="CoinGecko API call timed out")
         return []
     except httpx.HTTPStatusError as e:
-        logger.error(action=LogActions.ERROR, message=f"CoinGecko API HTTP error: {e.response.status_code}")
+        logger.error(action=LogAction.ERROR, message=f"CoinGecko API HTTP error: {e.response.status_code}")
         return []
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"CoinGecko API call failed: {e}")
+        logger.error(action=LogAction.ERROR, message=f"CoinGecko API call failed: {e}")
         return []
 
 
@@ -163,7 +163,7 @@ def _map_coingecko_to_our_format(coins: List[Dict[str, Any]]) -> List[CoinData]:
             mapped_coins.append(coin_data)
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to validate coin data for {coin.get('symbol', 'UNKNOWN')}: {e}"
             )
             continue
@@ -173,8 +173,8 @@ def _map_coingecko_to_our_format(coins: List[Dict[str, Any]]) -> List[CoinData]:
 if __name__ == "__main__":
     async def test():
         coins = await fetch_coins()
-        logger.info(action=LogActions.REQUEST_END, message=f"Fetched {len(coins)} coins")
+        logger.info(action=LogAction.REQUEST_END, message=f"Fetched {len(coins)} coins")
         if coins:
-            logger.info(action=LogActions.REQUEST_END, message=f"First coin: {coins[0].symbol} - {coins[0].name}")
+            logger.info(action=LogAction.REQUEST_END, message=f"First coin: {coins[0].symbol} - {coins[0].name}")
 
     asyncio.run(test())

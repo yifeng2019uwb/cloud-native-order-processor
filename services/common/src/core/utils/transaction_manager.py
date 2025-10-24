@@ -9,7 +9,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Callable, Dict, Optional
+from typing import Optional
 from enum import Enum
 
 from ...data.entities.asset import AssetTransaction, AssetTransactionType, AssetBalance
@@ -21,10 +21,10 @@ from ...data.entities.entity_constants import TransactionFields
 from ...data.exceptions import (CNOPDatabaseOperationException,
                                 CNOPLockAcquisitionException)
 from ...exceptions.shared_exceptions import CNOPInsufficientBalanceException
-from ...shared.logging import BaseLogger, LogActions, Loggers, LogFields, LogExtraDefaults
+from ...shared.logging import BaseLogger, LogAction, LoggerName, LogField, LogDefault
 from .lock_manager import LockType, UserLock
 
-logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
+logger = BaseLogger(LoggerName.DATABASE, log_to_file=True)
 
 
 class TransactionResult:
@@ -98,19 +98,15 @@ class TransactionManager:
         try:
             # Log transaction start
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Deposit transaction started for user {username}",
-                user=username,
-                extra={
-                    LogFields.TRANSACTION_TYPE: TransactionType.DEPOSIT.value,
-                    LogFields.AMOUNT: str(amount)
-                }
+                user=username
             )
 
             async with UserLock(username, LockType.DEPOSIT):
                 # Log lock acquisition
                 logger.info(
-                    action=LogActions.DB_OPERATION,
+                    action=LogAction.DB_OPERATION,
                     message=f"Lock acquired for deposit operation: user={username}",
                     user=username
                 )
@@ -132,22 +128,15 @@ class TransactionManager:
                     self.balance_dao._update_balance_from_transaction(created_transaction)
                     # Log balance update success
                     logger.info(
-                        action=LogActions.DB_OPERATION,
+                        action=LogAction.DB_OPERATION,
                         message=f"Balance updated successfully for user {username}",
-                        user=username,
-                        extra={
-                            LogFields.AMOUNT: str(amount)
-                        }
+                        user=username
                     )
                 except Exception as e:
                     logger.error(
-                        action=LogActions.ERROR,
+                        action=LogAction.ERROR,
                         message=f"Balance update failed, cleaning up transaction: user={username}, error={str(e)}",
-                        user=username,
-                        extra={
-                            LogFields.ERROR: str(e),
-                            LogFields.AMOUNT: str(amount)
-                        }
+                        user=username
                     )
                     self.balance_dao.cleanup_failed_transaction(username, created_transaction.transaction_id)
                     raise CNOPDatabaseOperationException(f"Transaction failed: {str(e)}")
@@ -157,13 +146,9 @@ class TransactionManager:
 
                 # Log successful completion
                 logger.info(
-                    action=LogActions.DEPOSIT_SUCCESS,
+                    action=LogAction.DEPOSIT_SUCCESS,
                     message=f"Deposit completed successfully: user={username}, amount={amount}, new_balance={balance.current_balance}",
-                    user=username,
-                    extra={
-                        LogFields.AMOUNT: str(amount),
-                        LogFields.BALANCE: str(balance.current_balance)
-                    }
+                    user=username
                 )
 
                 return TransactionResult(
@@ -176,24 +161,16 @@ class TransactionManager:
 
         except CNOPLockAcquisitionException as e:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Lock acquisition failed for deposit: user={username}, error={str(e)}",
-                user=username,
-                extra={
-                    LogFields.ERROR: str(e),
-                    LogFields.AMOUNT: str(amount)
-                }
+                user=username
             )
             raise CNOPDatabaseOperationException("Service temporarily unavailable")
         except Exception as e:
             logger.error(
-                action=LogActions.DEPOSIT_FAILED,
+                action=LogAction.DEPOSIT_FAILED,
                 message=f"Deposit failed: user={username}, amount={amount}, error={str(e)}",
-                user=username,
-                extra={
-                    LogFields.ERROR: str(e),
-                    LogFields.AMOUNT: str(amount)
-                }
+                user=username
             )
             raise CNOPDatabaseOperationException(f"Deposit failed: {str(e)}")
 
@@ -249,7 +226,7 @@ class TransactionManager:
                 except Exception as e:
                     # If balance update fails, clean up the transaction record to maintain consistency
                     logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Balance update failed, cleaning up transaction: user={username}, error={str(e)}"
             )
                     # Clean up the failed transaction
@@ -261,7 +238,7 @@ class TransactionManager:
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
                 logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Withdrawal successful: user={username}, amount={amount}, lock_duration={lock_duration}s"
             )
 
@@ -275,7 +252,7 @@ class TransactionManager:
 
         except CNOPLockAcquisitionException as e:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Lock acquisition failed for withdrawal: user={username}, error={str(e)}"
             )
             raise CNOPDatabaseOperationException("Service temporarily unavailable")
@@ -284,7 +261,7 @@ class TransactionManager:
             raise
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Withdrawal failed: user={username}, amount={amount}, error={str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Withdrawal failed: {str(e)}")
@@ -376,7 +353,7 @@ class TransactionManager:
                     )
                 except Exception as e:
                     logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Error in Phase 4: {str(e)}"
             )
                     raise
@@ -397,7 +374,7 @@ class TransactionManager:
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
                 logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Buy order executed successfully: user={username}, order_id={created_order.order_id}, "
                            f"asset={created_order.asset_id}, quantity={asset_quantity}, "
                            f"total_cost={total_cost}, lock_duration={lock_duration}s")
@@ -415,7 +392,7 @@ class TransactionManager:
 
         except CNOPLockAcquisitionException as e:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Lock acquisition failed for buy order: user={username}, error={str(e)}"
             )
             raise CNOPDatabaseOperationException("Service temporarily unavailable")
@@ -424,7 +401,7 @@ class TransactionManager:
             raise
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Buy order creation failed: user={username}, error={str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Order creation failed: {str(e)}")
@@ -494,7 +471,7 @@ class TransactionManager:
                     )
                 except Exception as e:
                     logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Error in Phase 4 (asset balance update): {str(e)}"
             )
                     raise
@@ -515,7 +492,7 @@ class TransactionManager:
                 lock_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
                 logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Sell order created successfully: user={username}, order_id={created_order.order_id}, "
                            f"asset_amount={asset_amount}, lock_duration={lock_duration}s")
 
@@ -532,13 +509,13 @@ class TransactionManager:
 
         except CNOPLockAcquisitionException as e:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Lock acquisition failed for sell order: user={username}, error={str(e)}"
             )
             raise CNOPDatabaseOperationException("Service temporarily unavailable")
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Sell order creation failed: user={username}, error={str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Order creation failed: {str(e)}")

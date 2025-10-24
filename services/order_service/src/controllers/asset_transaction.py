@@ -22,7 +22,7 @@ from common.exceptions import (
     CNOPEntityNotFoundException
 )
 from common.exceptions.shared_exceptions import CNOPInternalServerException
-from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
+from common.shared.logging import BaseLogger, LoggerName, LogAction, LogField, LogDefault
 from common.shared.constants.api_constants import HTTPStatus
 from common.shared.constants.api_constants import APIResponseDescriptions
 from api_info_enum import ApiTags, ApiResponseKeys, API_ASSET_TRANSACTIONS
@@ -36,7 +36,7 @@ from common.auth.gateway.header_validator import get_request_id_from_request
 from validation.business_validators import validate_order_history_business_rules
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.ORDER)
+logger = BaseLogger(LoggerName.ORDER)
 router = APIRouter(tags=[ApiTags.ASSET_TRANSACTIONS.value])
 
 
@@ -84,17 +84,10 @@ def get_asset_transactions(
 
     # Log request
     logger.info(
-        action=LogActions.REQUEST_START,
-        message=f"Asset transactions request from {request.client.host if request.client else 'unknown'}",
+        action=LogAction.REQUEST_START,
+        message=f"Asset transactions request from {request.client.host if request.client else 'unknown'} for user {current_user.username}, asset: {asset_id}, limit: {limit}, offset: {offset}",
         user=current_user.username,
-        request_id=request_id,
-        extra={
-            LogFields.ASSET_ID: asset_id,
-            LogFields.LIMIT: limit,
-            LogFields.OFFSET: offset,
-            LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT) if request else LogExtraDefaults.UNKNOWN_USER_AGENT,
-            LogFields.TIMESTAMP: datetime.now(timezone.utc).isoformat()
-        }
+        request_id=request_id
     )
 
     try:
@@ -130,7 +123,7 @@ def get_asset_transactions(
         has_more = len(transaction_data_list) == limit
 
         logger.info(
-            action=LogActions.REQUEST_END,
+            action=LogAction.REQUEST_END,
             message=f"Asset transactions retrieved successfully: asset={asset_id}, count={len(transaction_data_list)}, has_more={has_more}",
             user=current_user.username,
             request_id=request_id
@@ -146,7 +139,7 @@ def get_asset_transactions(
 
     except CNOPEntityNotFoundException:
         logger.info(
-            action=LogActions.REQUEST_END,
+            action=LogAction.REQUEST_END,
             message=f"No asset transactions found: asset={asset_id}",
             user=current_user.username,
             request_id=request_id
@@ -161,7 +154,7 @@ def get_asset_transactions(
         )
     except CNOPDatabaseOperationException as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Database operation failed for asset transactions: asset={asset_id}, error={str(e)}",
             user=current_user.username,
             request_id=request_id
@@ -169,7 +162,7 @@ def get_asset_transactions(
         raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
     except Exception as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Unexpected error during asset transactions retrieval: asset={asset_id}, error={str(e)}",
             user=current_user.username,
             request_id=request_id

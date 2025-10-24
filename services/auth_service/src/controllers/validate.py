@@ -9,12 +9,12 @@ from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, Val
 from common.auth.security.token_manager import TokenManager
 from common.auth.security.jwt_constants import JwtFields, TokenTypes, RequestDefaults
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
-from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields
+from common.shared.logging import BaseLogger, LoggerName, LogAction, LogField
 from api_info_enum import ApiTags, ApiPaths
 from constants import TokenValidationMessages, TokenErrorTypes
 
 router = APIRouter(tags=[ApiTags.INTERNAL.value])
-logger = BaseLogger(Loggers.AUTH)
+logger = BaseLogger(LoggerName.AUTH)
 
 # API endpoint path constant
 API_VALIDATE_PATH = "/validate"
@@ -41,13 +41,13 @@ def validate_jwt_token(request: ValidateTokenRequest):
     request_id = request.request_id or f"{RequestDefaults.REQUEST_ID_PREFIX}{int(time.time() * 1000)}"
 
     try:
-        logger.info(action=LogActions.REQUEST_START, message=TokenValidationMessages.VALIDATING_JWT, extra={LogFields.REQUEST_ID: request_id})
+        logger.info(action=LogAction.REQUEST_START, message=TokenValidationMessages.VALIDATING_JWT, extra=f'{{"{LogField.REQUEST_ID}": "{request_id}"}}')
 
         # Validate token
         token_manager = TokenManager()
         user_context = token_manager.validate_token_comprehensive(request.token)
 
-        logger.info(action=LogActions.AUTH_SUCCESS, message=TokenValidationMessages.TOKEN_VALID, user=user_context[JwtFields.USERNAME], extra={LogFields.REQUEST_ID: request_id})
+        logger.info(action=LogAction.AUTH_SUCCESS, message=TokenValidationMessages.TOKEN_VALID, user=user_context[JwtFields.USERNAME], extra=f'{{"{LogField.REQUEST_ID}": "{request_id}"}}')
 
         return ValidateTokenResponse(
             valid=True,
@@ -59,7 +59,7 @@ def validate_jwt_token(request: ValidateTokenRequest):
         )
 
     except CNOPAuthTokenExpiredException:
-        logger.warning(action=LogActions.AUTH_FAILED, message=TokenValidationMessages.TOKEN_EXPIRED, extra={LogFields.REQUEST_ID: request_id})
+        logger.warning(action=LogAction.AUTH_FAILED, message=TokenValidationMessages.TOKEN_EXPIRED, extra=f'{{"{LogField.REQUEST_ID}": "{request_id}"}}')
 
         return ValidateTokenErrorResponse(
             valid=False,
@@ -69,7 +69,7 @@ def validate_jwt_token(request: ValidateTokenRequest):
         )
 
     except CNOPAuthTokenInvalidException as e:
-        logger.warning(action=LogActions.AUTH_FAILED, message=TokenValidationMessages.TOKEN_INVALID, extra={LogFields.REQUEST_ID: request_id, LogFields.ERROR: str(e)})
+        logger.warning(action=LogAction.AUTH_FAILED, message=TokenValidationMessages.TOKEN_INVALID, extra=f'{{"{LogField.REQUEST_ID}": "{request_id}", "{LogField.ERROR}": "{str(e)}"}}')
 
         return ValidateTokenErrorResponse(
             valid=False,
@@ -79,7 +79,7 @@ def validate_jwt_token(request: ValidateTokenRequest):
         )
 
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=TokenValidationMessages.VALIDATION_FAILED, extra={LogFields.REQUEST_ID: request_id, LogFields.ERROR: str(e)})
+        logger.error(action=LogAction.ERROR, message=TokenValidationMessages.VALIDATION_FAILED, extra=f'{{"{LogField.REQUEST_ID}": "{request_id}", "{LogField.ERROR}": "{str(e)}"}}')
 
         return ValidateTokenErrorResponse(
             valid=False,

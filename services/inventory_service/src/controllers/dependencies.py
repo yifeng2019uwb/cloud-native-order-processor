@@ -12,11 +12,11 @@ from fastapi import Request
 from common.data.database.dependencies import get_asset_dao
 from common.data.dao.inventory.asset_dao import AssetDAO
 
-from common.shared.logging import BaseLogger, Loggers
+from common.shared.logging import BaseLogger, LoggerName
 from common.shared.constants.api_constants import RequestHeaders, RequestHeaderDefaults
 
 
-logger = BaseLogger(Loggers.INVENTORY)
+logger = BaseLogger(LoggerName.INVENTORY)
 
 
 def get_request_id_from_request(request: Request) -> str:

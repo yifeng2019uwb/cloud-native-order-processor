@@ -8,13 +8,13 @@ from typing import List
 
 from ....exceptions import CNOPEntityValidationException
 from ....exceptions.shared_exceptions import CNOPOrderNotFoundException
-from ....shared.logging import BaseLogger, LogActions, Loggers
+from ....shared.logging import BaseLogger, LogAction, LoggerName
 from ...entities.order import Order, OrderItem
 from ...entities.order.enums import OrderStatus
 from ...exceptions import CNOPDatabaseOperationException
 from ...entities.entity_constants import OrderFields
 
-logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
+logger = BaseLogger(LoggerName.DATABASE, log_to_file=True)
 
 
 class OrderDAO:
@@ -43,14 +43,14 @@ class OrderDAO:
 
             # Save to database
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Creating order: id={order.order_id}, user={order.username}, "
                        f"asset={order.asset_id}, type={order.order_type.value}"
             )
             order_item.save()
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Order created successfully: id={order.order_id}, user={order.username}, "
                        f"asset={order.asset_id}, type={order.order_type.value}"
             )
@@ -58,7 +58,7 @@ class OrderDAO:
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to create order '{order.order_id}': {str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while creating order '{order.order_id}': {str(e)}") from e
@@ -86,7 +86,7 @@ class OrderDAO:
             raise CNOPOrderNotFoundException(f"Order '{order_id}' not found")
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to get order '{order_id}': {str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving order '{order_id}': {str(e)}") from e
@@ -109,7 +109,7 @@ class OrderDAO:
         """
         try:
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Retrieving orders for user: username={username}, limit={limit}, offset={offset}"
             )
 
@@ -128,7 +128,7 @@ class OrderDAO:
                 orders = orders[offset:]
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Retrieved {len(orders)} orders for user '{username}'"
             )
 
@@ -136,7 +136,7 @@ class OrderDAO:
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to get orders for user '{username}': {str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving orders for user '{username}': {str(e)}") from e
@@ -160,7 +160,7 @@ class OrderDAO:
         """
         try:
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Updating order status: id={order_id}, new_status={new_status.value}, reason={reason or 'none'}"
             )
 
@@ -176,7 +176,7 @@ class OrderDAO:
             order_item.save()
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Order status updated successfully: id={order_id}, new_status={new_status.value}, reason={reason or 'none'}"
             )
 
@@ -184,14 +184,14 @@ class OrderDAO:
 
         except OrderItem.DoesNotExist:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Order '{order_id}' not found for status update"
             )
             raise CNOPOrderNotFoundException(f"Order '{order_id}' not found")
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to update order status '{order_id}': {str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while updating order status for order '{order_id}': {str(e)}") from e
@@ -211,7 +211,7 @@ class OrderDAO:
         """
         try:
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Checking if order exists: id={order_id}"
             )
 
@@ -224,7 +224,7 @@ class OrderDAO:
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to check if order '{order_id}' exists: {str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while checking existence of order '{order_id}': {str(e)}") from e

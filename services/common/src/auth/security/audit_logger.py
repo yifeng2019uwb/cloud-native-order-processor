@@ -11,14 +11,15 @@ Responsibilities:
 - Security monitoring integration
 """
 
+import json
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from ...shared.logging import BaseLogger, LogActions, Loggers, LogFields
+from ...shared.logging import BaseLogger, LogAction, LoggerName, LogField
 
 # Create logger instance for security events
-logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
+logger = BaseLogger(LoggerName.AUDIT, log_to_file=True)
 
 
 class AuditLogger:
@@ -43,7 +44,7 @@ class AuditLogger:
         Log a security event.
 
         Args:
-            event_type: Type of security event (use LogActions constants)
+            event_type: Type of security event (use LogAction constants)
             username: Username associated with the event
             details: Optional additional event details
             ip_address: Optional IP address of the user
@@ -52,33 +53,34 @@ class AuditLogger:
         # Build extra context
         extra = {}
         if ip_address:
-            extra[LogFields.IP_ADDRESS] = ip_address
+            extra[LogField.IP_ADDRESS] = ip_address
         if user_agent:
-            extra[LogFields.USER_AGENT] = user_agent
+            extra[LogField.USER_AGENT] = user_agent
         if details:
             extra.update(details)
 
         # Log with appropriate level based on event type
-        if event_type in [LogActions.AUTH_SUCCESS, LogActions.SECURITY_EVENT]:
+        extra_str = json.dumps(extra) if extra else None
+        if event_type in [LogAction.AUTH_SUCCESS, LogAction.SECURITY_EVENT]:
             logger.info(
                 action=event_type,
                 message=f"Security event: {event_type} for user {username}",
                 user=username,
-                extra=extra
+                extra=extra_str
             )
-        elif event_type in [LogActions.AUTH_FAILED, LogActions.ACCESS_DENIED]:
+        elif event_type in [LogAction.AUTH_FAILED, LogAction.ACCESS_DENIED]:
             logger.warning(
                 action=event_type,
                 message=f"Security warning: {event_type} for user {username}",
                 user=username,
-                extra=extra
+                extra=extra_str
             )
         else:
             logger.info(
                 action=event_type,
                 message=f"Security event: {event_type} for user {username}",
                 user=username,
-                extra=extra
+                extra=extra_str
             )
 
     def log_login_success(self, username: str, ip_address: Optional[str] = None,
@@ -92,7 +94,7 @@ class AuditLogger:
             user_agent: Optional user agent string
         """
         self.log_security_event(
-            LogActions.AUTH_SUCCESS,
+            LogAction.AUTH_SUCCESS,
             username,
             ip_address=ip_address,
             user_agent=user_agent
@@ -110,9 +112,9 @@ class AuditLogger:
             user_agent: Optional user agent string
         """
         self.log_security_event(
-            LogActions.AUTH_FAILED,
+            LogAction.AUTH_FAILED,
             username,
-            details={LogFields.AUDIT_REASON: reason},
+            details={LogField.AUDIT_REASON: reason},
             ip_address=ip_address,
             user_agent=user_agent
         )
@@ -126,7 +128,7 @@ class AuditLogger:
             ip_address: Optional IP address
         """
         self.log_security_event(
-            LogActions.SECURITY_EVENT,  # Use our defined constant
+            LogAction.SECURITY_EVENT,  # Use our defined constant
             username,
             ip_address=ip_address
         )
@@ -140,7 +142,7 @@ class AuditLogger:
             ip_address: Optional IP address
         """
         self.log_security_event(
-            LogActions.SECURITY_EVENT,  # Use our defined constant
+            LogAction.SECURITY_EVENT,  # Use our defined constant
             username,
             ip_address=ip_address
         )
@@ -155,9 +157,9 @@ class AuditLogger:
             ip_address: Optional IP address
         """
         self.log_security_event(
-            LogActions.SECURITY_EVENT,
+            LogAction.SECURITY_EVENT,
             username,
-            details={LogFields.TOKEN_TYPE: token_type},
+            details={LogField.TOKEN_TYPE: token_type},
             ip_address=ip_address
         )
 
@@ -173,8 +175,8 @@ class AuditLogger:
             ip_address: Optional IP address
         """
         self.log_security_event(
-            LogActions.ACCESS_DENIED,  # Use our defined constant
+            LogAction.ACCESS_DENIED,  # Use our defined constant
             username,
-            details={LogFields.RESOURCE: resource, LogFields.AUDIT_REASON: reason},
+            details={LogField.RESOURCE: resource, LogField.AUDIT_REASON: reason},
             ip_address=ip_address
         )

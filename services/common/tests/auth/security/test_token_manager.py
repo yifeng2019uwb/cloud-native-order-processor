@@ -15,6 +15,7 @@ from src.auth.security.token_manager import TokenManager
 from src.data.entities.user import DEFAULT_USER_ROLE
 from src.exceptions.shared_exceptions import (CNOPTokenExpiredException,
                                               CNOPTokenInvalidException)
+from src.shared.logging import LogAction, LogField
 
 # Test constants
 TEST_JWT_SECRET = "test-secret-key-for-unit-tests-at-least-32-chars-long"

@@ -17,7 +17,7 @@ from common.exceptions import (
     CNOPEntityNotFoundException,
     CNOPLockAcquisitionException
 )
-from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
+from common.shared.logging import BaseLogger, LogAction, LogField, LogDefault, LoggerName
 from common.shared.constants.api_constants import ErrorMessages
 from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
@@ -31,7 +31,7 @@ MSG_ERROR_INVALID_AMOUNT = "Bad request - invalid amount"
 MSG_ERROR_USER_BALANCE_NOT_FOUND = "User balance not found"
 MSG_ERROR_OPERATION_BUSY = "Operation is busy - try again"
 
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 router = APIRouter(tags=[ApiTags.BALANCE.value])
 
 
@@ -90,15 +90,10 @@ async def deposit_funds(
 
     # Log deposit attempt (without sensitive data)
     logger.info(
-        action=LogActions.REQUEST_START,
-        message=f"Deposit attempt from {request.client.host if request.client else 'unknown'}",
+        action=LogAction.REQUEST_START,
+        message=f"Deposit attempt from {request.client.host if request.client else 'unknown'} for user {current_user.username}, amount: {deposit_data.amount}",
         user=current_user.username,
-        request_id=request_id,
-        extra={
-            LogFields.AMOUNT: str(deposit_data.amount),
-            LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT),
-            LogFields.TIMESTAMP: datetime.now(timezone.utc).isoformat()
-        }
+        request_id=request_id
     )
 
     try:
@@ -108,7 +103,7 @@ async def deposit_funds(
             amount=deposit_data.amount
         )
 
-        logger.info(action=LogActions.REQUEST_END, message=f"Deposit successful for user {current_user.username}: {deposit_data.amount}", user=current_user.username, request_id=request_id)
+        logger.info(action=LogAction.REQUEST_END, message=f"Deposit successful for user {current_user.username}: {deposit_data.amount}", user=current_user.username, request_id=request_id)
 
         return DepositResponse(
             success=True,
@@ -118,14 +113,14 @@ async def deposit_funds(
         )
 
     except CNOPLockAcquisitionException as e:
-        logger.warning(action=LogActions.ERROR, message=f"Lock acquisition failed for deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
+        logger.warning(action=LogAction.ERROR, message=f"Lock acquisition failed for deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException("Service temporarily unavailable")
     except CNOPEntityNotFoundException as e:
-        logger.error(action=LogActions.ERROR, message=f"User balance not found for deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
+        logger.error(action=LogAction.ERROR, message=f"User balance not found for deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPUserNotFoundException("User balance not found")
     except CNOPDatabaseOperationException as e:
-        logger.error(action=LogActions.ERROR, message=f"Database operation failed for deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
+        logger.error(action=LogAction.ERROR, message=f"Database operation failed for deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException("Service temporarily unavailable")
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Unexpected error during deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
+        logger.error(action=LogAction.ERROR, message=f"Unexpected error during deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException("Service temporarily unavailable")

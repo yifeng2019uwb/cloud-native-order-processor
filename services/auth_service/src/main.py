@@ -5,8 +5,9 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import uvicorn
 
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LoggerName, LogAction
 from common.exceptions import CNOPInternalServerException
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 from common.shared.constants.api_constants import HTTPStatus
@@ -22,7 +23,7 @@ from constants import (
 from middleware import metrics_middleware
 
 # Initialize logger
-logger = BaseLogger(Loggers.AUTH)
+logger = BaseLogger(LoggerName.AUTH)
 
 # Create FastAPI app
 app = FastAPI(
@@ -58,22 +59,22 @@ def internal_metrics():
 # Custom exception handlers
 @app.exception_handler(CNOPAuthTokenExpiredException)
 def token_expired_exception_handler(request, exc):
-    logger.warning(action=LogActions.AUTH_FAILED, message=f"Token expired: {exc}")
+    logger.warning(action=LogAction.AUTH_FAILED, message=f"Token expired: {exc}")
     return JSONResponse(status_code=HTTPStatus.UNAUTHORIZED, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPAuthTokenInvalidException)
 def token_invalid_exception_handler(request, exc):
-    logger.warning(action=LogActions.AUTH_FAILED, message=f"Token invalid: {exc}")
+    logger.warning(action=LogAction.AUTH_FAILED, message=f"Token invalid: {exc}")
     return JSONResponse(status_code=HTTPStatus.UNAUTHORIZED, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPInternalServerException)
 def internal_server_exception_handler(request, exc):
-    logger.error(action=LogActions.ERROR, message=f"Internal server error: {exc}")
+    logger.error(action=LogAction.ERROR, message=f"Internal server error: {exc}")
     return JSONResponse(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": str(exc)})
 
 @app.exception_handler(Exception)
 def general_exception_handler(request, exc):
-    logger.error(action=LogActions.ERROR, message=f"Unhandled error: {exc}")
+    logger.error(action=LogAction.ERROR, message=f"Unhandled error: {exc}")
     return JSONResponse(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": ErrorMessages.INTERNAL_SERVER_ERROR})
 
 @app.get("/")
@@ -93,5 +94,4 @@ def root():
     }
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -22,11 +22,11 @@ from ...data.entities.user import DEFAULT_USER_ROLE
 from ...exceptions.shared_exceptions import (CNOPTokenExpiredException,
                                              CNOPTokenInvalidException,
                                              CNOPConfigurationException)
-from ...shared.logging import BaseLogger, LogActions, Loggers, LogFields, LogExtraDefaults
+from ...shared.logging import BaseLogger, LogAction, LoggerName, LogField, LogDefault
 from .jwt_constants import JWTConfig, JwtFields, JwtResponseFields
 
 # Create logger instance for token management
-logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
+logger = BaseLogger(LoggerName.AUDIT, log_to_file=True)
 
 
 class AccessTokenResponse(BaseModel):
@@ -59,7 +59,7 @@ class TokenManager:
         # Warn if using a weak secret
         if len(self.jwt_secret) < 32:
             logger.warning(
-                action=LogActions.SECURITY_EVENT,
+                action=LogAction.SECURITY_EVENT,
                 message="JWT_SECRET_KEY should be at least 32 characters for security"
             )
 
@@ -97,10 +97,9 @@ class TokenManager:
         try:
             token = jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_algorithm)
             logger.info(
-                action=LogActions.SECURITY_EVENT,
+                action=LogAction.SECURITY_EVENT,
                 message=f"Access token created for user {username} with role {role}",
-                user=username,
-                extra={LogFields.ROLE: role, LogFields.EXPIRES_IN_HOURS: self.jwt_expiration_hours}
+                user=username
             )
 
             return AccessTokenResponse(
@@ -110,10 +109,9 @@ class TokenManager:
             )
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Error creating access token for user {username}",
-                user=username,
-                extra={LogFields.ERROR: str(e), LogFields.ERROR_TYPE: type(e).__name__}
+                user=username
             )
             raise CNOPTokenInvalidException("Token creation failed")
 
@@ -137,9 +135,8 @@ class TokenManager:
             # Check token type
             if payload.get(JwtFields.TYPE) != JWTConfig.ACCESS_TOKEN_TYPE:
                 logger.warning(
-                    action=LogActions.ERROR,
-                    message="Invalid token type",
-                    extra={LogFields.TOKEN_TYPE: payload.get(JwtFields.TYPE)}
+                    action=LogAction.ERROR,
+                    message="Invalid token type"
                 )
                 raise CNOPTokenInvalidException("Invalid token type")
 
@@ -147,13 +144,13 @@ class TokenManager:
             username: str = payload.get(JwtFields.SUBJECT)
             if username is None:
                 logger.warning(
-                    action=LogActions.ERROR,
+                    action=LogAction.ERROR,
                     message="Token missing subject (username)"
                 )
                 raise CNOPTokenInvalidException("Token missing subject")
 
             logger.debug(
-                action=LogActions.SECURITY_EVENT,
+                action=LogAction.SECURITY_EVENT,
                 message=f"Token verified for user: {username}",
                 user=username
             )
@@ -161,13 +158,13 @@ class TokenManager:
 
         except jwt.ExpiredSignatureError:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message="Token has expired"
             )
             raise CNOPTokenExpiredException("Token has expired")
         except JWTError:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message="Invalid token provided"
             )
             raise CNOPTokenInvalidException("Invalid token")
@@ -176,9 +173,8 @@ class TokenManager:
             raise
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
-                message=f"Unexpected error verifying token: {e}",
-                extra={LogFields.ERROR: str(e), LogFields.ERROR_TYPE: type(e).__name__}
+                action=LogAction.ERROR,
+                message=f"Unexpected error verifying token: {e}"
             )
             raise CNOPTokenInvalidException("Token verification failed")
 
@@ -198,7 +194,7 @@ class TokenManager:
         """
         try:
             logger.info(
-                action=LogActions.SECURITY_EVENT,
+                action=LogAction.SECURITY_EVENT,
                 message="Starting comprehensive token validation"
             )
 
@@ -208,9 +204,8 @@ class TokenManager:
             # Check token type
             if payload.get(JwtFields.TYPE) != JWTConfig.ACCESS_TOKEN_TYPE:
                 logger.warning(
-                    action=LogActions.ERROR,
-                    message=f"Invalid token type: %s (expected: {JWTConfig.ACCESS_TOKEN_TYPE})",
-                    extra={LogFields.TOKEN_TYPE: payload.get(JwtFields.TYPE)}
+                    action=LogAction.ERROR,
+                    message=f"Invalid token type: %s (expected: {JWTConfig.ACCESS_TOKEN_TYPE})"
                 )
                 raise CNOPTokenInvalidException("Invalid token type")
 
@@ -218,7 +213,7 @@ class TokenManager:
             username: str = payload.get(JwtFields.SUBJECT)
             if username is None:
                 logger.warning(
-                    action=LogActions.ERROR,
+                    action=LogAction.ERROR,
                     message="Token missing subject (username)"
                 )
                 raise CNOPTokenInvalidException("Token missing subject")
@@ -227,7 +222,7 @@ class TokenManager:
             exp_timestamp = payload.get(JwtFields.EXPIRATION)
             if exp_timestamp is None:
                 logger.warning(
-                    action=LogActions.ERROR,
+                    action=LogAction.ERROR,
                     message="Token missing expiration timestamp"
                 )
                 raise CNOPTokenInvalidException("Token missing expiration timestamp")
@@ -235,7 +230,7 @@ class TokenManager:
             # Check if token is expired
             if self.is_token_expired(token):
                 logger.warning(
-                    action=LogActions.ERROR,
+                    action=LogAction.ERROR,
                     message="Token has expired"
                 )
                 raise CNOPTokenExpiredException("Token has expired")
@@ -258,13 +253,13 @@ class TokenManager:
 
         except jwt.ExpiredSignatureError:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message="Token has expired"
             )
             raise CNOPTokenExpiredException("Token has expired")
         except JWTError:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message="Invalid token provided"
             )
             raise CNOPTokenInvalidException("Invalid token")
@@ -273,9 +268,8 @@ class TokenManager:
             raise
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
-                message=f"Unexpected error during comprehensive token validation: {e}",
-                extra={LogFields.ERROR: str(e), LogFields.ERROR_TYPE: type(e).__name__}
+                action=LogAction.ERROR,
+                message=f"Unexpected error during comprehensive token validation: {e}"
             )
             raise CNOPTokenInvalidException("Token validation failed")
 
@@ -298,9 +292,8 @@ class TokenManager:
             return payload
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
-                message=f"Error decoding token payload: {e}",
-                extra={LogFields.ERROR: str(e), LogFields.ERROR_TYPE: type(e).__name__}
+                action=LogAction.ERROR,
+                message=f"Error decoding token payload: {e}"
             )
             raise CNOPTokenInvalidException("Token decode failed")
 
@@ -321,7 +314,7 @@ class TokenManager:
 
             if exp_timestamp is None:
                 logger.warning(
-                    action=LogActions.ERROR,
+                    action=LogAction.ERROR,
                     message="Token missing expiration timestamp"
                 )
                 return True
@@ -332,7 +325,7 @@ class TokenManager:
 
         except Exception as e:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Error checking token expiration: {e}"
             )
             return True
@@ -357,7 +350,7 @@ class TokenManager:
 
             if not username:
                 logger.error(
-                    action=LogActions.ERROR,
+                    action=LogAction.ERROR,
                     message="Cannot refresh token: missing username"
                 )
                 raise CNOPTokenInvalidException("Cannot refresh token: missing username")
@@ -367,7 +360,7 @@ class TokenManager:
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to refresh token: {e}"
             )
             raise CNOPTokenInvalidException("Failed to refresh token")

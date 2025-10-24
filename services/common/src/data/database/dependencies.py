@@ -8,7 +8,7 @@ and dependency injection for all services.
 
 from typing import Any, Optional
 
-from ...shared.logging import BaseLogger, Loggers
+from ...shared.logging import BaseLogger, LoggerName
 from ..dao.asset.asset_balance_dao import AssetBalanceDAO
 from ..dao.asset.asset_transaction_dao import AssetTransactionDAO
 from ..dao.inventory.asset_dao import AssetDAO
@@ -18,7 +18,7 @@ from ..dao.user.user_dao import UserDAO
 from .dynamodb_connection import get_dynamodb_manager
 from .redis_connection import get_redis_manager
 
-logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
+logger = BaseLogger(LoggerName.DATABASE, log_to_file=True)
 
 def get_user_dao():
     """Get UserDAO instance with database connection"""

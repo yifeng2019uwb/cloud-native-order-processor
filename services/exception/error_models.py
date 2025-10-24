@@ -5,7 +5,7 @@ Implements RFC 7807 Problem Details for HTTP APIs
 https://tools.ietf.org/html/rfc7807
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 

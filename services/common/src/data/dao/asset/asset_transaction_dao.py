@@ -5,12 +5,12 @@ Asset Transaction DAO for managing asset transactions.
 from typing import List, Optional
 
 from ....exceptions.shared_exceptions import CNOPTransactionNotFoundException
-from ....shared.logging import BaseLogger, LogActions, Loggers
+from ....shared.logging import BaseLogger, LogAction, LoggerName
 from ...entities.asset import AssetTransaction, AssetTransactionItem
 from ...entities.entity_constants import AssetTransactionFields
 from ...exceptions import CNOPDatabaseOperationException
 
-logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
+logger = BaseLogger(LoggerName.DATABASE, log_to_file=True)
 
 
 class AssetTransactionDAO:
@@ -23,7 +23,7 @@ class AssetTransactionDAO:
     def create_asset_transaction(self, transaction: AssetTransaction) -> AssetTransaction:
         """Create a new asset transaction"""
         logger.info(
-            action=LogActions.DB_OPERATION,
+            action=LogAction.DB_OPERATION,
             message=f"Creating asset transaction: user={transaction.username}, "
                    f"asset={transaction.asset_id}, type={transaction.transaction_type.value}, "
                    f"quantity={transaction.quantity}, price={transaction.price}"
@@ -35,7 +35,7 @@ class AssetTransactionDAO:
             transaction_item.save()
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Asset transaction created successfully: user={transaction.username}, "
                        f"asset={transaction.asset_id}, type={transaction.transaction_type.value}, "
                        f"quantity={transaction.quantity}"
@@ -45,7 +45,7 @@ class AssetTransactionDAO:
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to create asset transaction: {str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while creating asset transaction: {str(e)}") from e
@@ -53,7 +53,7 @@ class AssetTransactionDAO:
     def get_asset_transaction(self, username: str, asset_id: str, timestamp: str) -> AssetTransaction:
         """Get specific asset transaction"""
         logger.info(
-            action=LogActions.DB_OPERATION,
+            action=LogAction.DB_OPERATION,
             message=f"Getting asset transaction: user={username}, asset={asset_id}, timestamp={timestamp}"
         )
 
@@ -65,7 +65,7 @@ class AssetTransactionDAO:
             )
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Asset transaction found: user={username}, asset={asset_id}, timestamp={timestamp}"
             )
 
@@ -73,14 +73,14 @@ class AssetTransactionDAO:
 
         except AssetTransactionItem.DoesNotExist:
             logger.warning(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Asset transaction not found: user={username}, asset={asset_id}, timestamp={timestamp}"
             )
             raise CNOPTransactionNotFoundException(f"Asset transaction not found for user '{username}', asset '{asset_id}', timestamp '{timestamp}'")
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to get asset transaction: {str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while getting asset transaction: {str(e)}") from e
@@ -88,7 +88,7 @@ class AssetTransactionDAO:
     def get_user_asset_transactions(self, username: str, asset_id: str, limit: Optional[int] = None) -> List[AssetTransaction]:
         """Get all transactions for a user and specific asset"""
         logger.info(
-            action=LogActions.DB_OPERATION,
+            action=LogAction.DB_OPERATION,
             message=f"Getting user asset transactions: user={username}, asset={asset_id}, limit={limit}"
         )
 
@@ -102,7 +102,7 @@ class AssetTransactionDAO:
                 transactions.append(item.to_asset_transaction())
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Found {len(transactions)} asset transactions for user={username}, asset={asset_id}"
             )
 
@@ -110,7 +110,7 @@ class AssetTransactionDAO:
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to get user asset transactions: {str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while getting user asset transactions: {str(e)}") from e
@@ -121,7 +121,7 @@ class AssetTransactionDAO:
         # For now, we'll return empty list and add GSI later when needed
         # Future enhancement: Add GSI on username field for efficient user transaction queries
         logger.warning(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message="get_user_transactions() requires GSI on username field for efficient querying"
         )
         return []
@@ -129,7 +129,7 @@ class AssetTransactionDAO:
     def delete_asset_transaction(self, username: str, asset_id: str, timestamp: str) -> bool:
         """Delete asset transaction"""
         logger.info(
-            action=LogActions.DB_OPERATION,
+            action=LogAction.DB_OPERATION,
             message=f"Deleting asset transaction: user={username}, asset={asset_id}, timestamp={timestamp}"
         )
 
@@ -142,7 +142,7 @@ class AssetTransactionDAO:
             transaction_item.delete()
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Asset transaction deleted successfully: user={username}, asset={asset_id}, timestamp={timestamp}"
             )
 
@@ -150,14 +150,14 @@ class AssetTransactionDAO:
 
         except AssetTransactionItem.DoesNotExist:
             logger.warning(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Asset transaction not found for deletion: user={username}, asset={asset_id}, timestamp={timestamp}"
             )
             return False
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to delete asset transaction: {str(e)}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while deleting asset transaction: {str(e)}") from e

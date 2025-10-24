@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from ..shared.logging import BaseLogger, LogActions, Loggers
+from ..shared.logging import BaseLogger, LogAction, LoggerName
 
 
 class BaseInternalException(Exception):

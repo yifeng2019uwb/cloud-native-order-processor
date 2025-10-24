@@ -4,9 +4,9 @@ Path: cloud-native-order-processor/services/user-service/src/routes/auth/__init_
 """
 
 from fastapi import APIRouter
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LogAction, LoggerName
 
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 
 # Create main auth router that combines all auth-related endpoints
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -15,9 +15,9 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 try:
     from .register import router as register_router
     router.include_router(register_router)
-    logger.info(action=LogActions.REQUEST_START, message="Registration router included successfully")
+    logger.info(action=LogAction.REQUEST_START, message="Registration router included successfully")
 except ImportError as e:
-    logger.warning(action=LogActions.ERROR, message=f"Could not include registration router: {e}")
+    logger.warning(action=LogAction.ERROR, message=f"Could not include registration router: {e}")
 
 # Future: Import other auth routers (login, logout, profile)
 try:

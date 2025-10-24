@@ -18,9 +18,9 @@ from ...data.entities.entity_constants import UserConstants, LockFields
 from ...data.database.database_constants import AWSConfig, TableNames
 from ...data.exceptions import (CNOPDatabaseOperationException,
                                         CNOPLockAcquisitionException)
-from ...shared.logging import BaseLogger, LogActions, Loggers
+from ...shared.logging import BaseLogger, LogAction, LoggerName
 
-logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
+logger = BaseLogger(LoggerName.DATABASE, log_to_file=True)
 
 
 class LockType(str, Enum):
@@ -91,7 +91,7 @@ class UserLock:
             )
             self.acquired = True
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Lock acquired: user={self.username}, operation={self.operation}, lock_id={self.lock_id}"
             )
             return self
@@ -103,7 +103,7 @@ class UserLock:
         if self.acquired and self.lock_id:
             release_lock(self.username, self.lock_id)
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Lock released: user={self.username}, operation={self.operation}, lock_id={self.lock_id}"
             )
             self.acquired = False
@@ -136,7 +136,7 @@ def acquire_lock(username: str, operation: LockType, timeout_seconds: int = None
             # If lock exists and is not expired, acquisition fails
             if existing_lock.expires_at > now.replace(tzinfo=None):
                 logger.warning(
-                    action=LogActions.DB_OPERATION,
+                    action=LogAction.DB_OPERATION,
                     message=f"Lock acquisition failed - lock already exists and not expired: user={username}, operation={operation}"
                 )
                 raise CNOPLockAcquisitionException(f"Could not acquire lock for user '{username}' - lock already exists and not expired")
@@ -160,14 +160,14 @@ def acquire_lock(username: str, operation: LockType, timeout_seconds: int = None
         lock_item.save()
 
         logger.info(
-            action=LogActions.DB_OPERATION,
+            action=LogAction.DB_OPERATION,
             message=f"Lock acquired successfully: user={username}, operation={operation}, lock_id={lock_id}"
         )
         return lock_id
 
     except Exception as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Failed to acquire lock: {str(e)}"
         )
         raise CNOPDatabaseOperationException(f"Database operation failed while acquiring lock: {str(e)}") from e
@@ -194,13 +194,13 @@ def release_lock(username: str, lock_id: str) -> bool:
             lock_item = UserLockItem.get(f"{LockFields.PK_PREFIX}{username}", LockFields.SK_VALUE)
             if lock_item.lock_id != lock_id:
                 logger.warning(
-                    action=LogActions.DB_OPERATION,
+                    action=LogAction.DB_OPERATION,
                     message=f"Lock release failed - lock ID mismatch: user={username}, expected={lock_id}, actual={lock_item.lock_id}"
                 )
                 return False
         except UserLockItem.DoesNotExist:
             logger.warning(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Lock release failed - lock not found: user={username}, lock_id={lock_id}"
             )
             return False
@@ -209,21 +209,21 @@ def release_lock(username: str, lock_id: str) -> bool:
         lock_item.delete(condition=UserLockItem.lock_id == lock_id)
 
         logger.info(
-            action=LogActions.DB_OPERATION,
+            action=LogAction.DB_OPERATION,
             message=f"Lock released successfully: user={username}, lock_id={lock_id}"
         )
         return True
 
     except DeleteError:
         logger.warning(
-            action=LogActions.DB_OPERATION,
+            action=LogAction.DB_OPERATION,
             message=f"Lock release failed - condition not met: user={username}, lock_id={lock_id}"
         )
         return False
 
     except Exception as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Failed to release lock: {str(e)}"
         )
         raise CNOPDatabaseOperationException(f"Database operation failed while releasing lock: {str(e)}") from e

@@ -65,12 +65,8 @@ class TestGetRedisConfig:
     """Test get_redis_config function"""
 
     @patch('src.data.database.redis_config.os.getenv')
-    @patch('src.data.database.redis_config.BaseLogger')
-    def test_get_redis_config_dev_environment(self, mock_base_logger, mock_getenv):
+    def test_get_redis_config_dev_environment(self, mock_getenv):
         """Test Redis configuration for dev environment"""
-        mock_logger = Mock()
-        mock_base_logger.return_value = mock_logger
-
         # Mock environment variables for dev
         mock_getenv.side_effect = lambda key, default=None: {
             "ENVIRONMENT": "dev",
@@ -90,15 +86,10 @@ class TestGetRedisConfig:
         assert config.ssl_cert_reqs is None
         assert config.socket_connect_timeout == 5
         assert config.socket_timeout == 5
-        # Note: Logger calls are not mocked properly, so we skip this assertion
 
     @patch('src.data.database.redis_config.os.getenv')
-    @patch('src.data.database.redis_config.BaseLogger')
-    def test_get_redis_config_prod_environment(self, mock_base_logger, mock_getenv):
+    def test_get_redis_config_prod_environment(self, mock_getenv):
         """Test Redis configuration for prod environment"""
-        mock_logger = Mock()
-        mock_base_logger.return_value = mock_logger
-
         # Mock environment variables for prod
         mock_getenv.side_effect = lambda key, default=None: {
             "ENVIRONMENT": "prod",
@@ -118,15 +109,10 @@ class TestGetRedisConfig:
         assert config.ssl_cert_reqs == "required"
         assert config.socket_connect_timeout == 10
         assert config.socket_timeout == 10
-        # Note: Logger calls are not mocked properly, so we skip this assertion
 
     @patch('src.data.database.redis_config.os.getenv')
-    @patch('src.data.database.redis_config.BaseLogger')
-    def test_get_redis_config_prod_with_aws_endpoint(self, mock_base_logger, mock_getenv):
+    def test_get_redis_config_prod_with_aws_endpoint(self, mock_getenv):
         """Test Redis configuration for prod environment with AWS endpoint"""
-        mock_logger = Mock()
-        mock_base_logger.return_value = mock_logger
-
         # Mock environment variables for prod with AWS endpoint
         mock_getenv.side_effect = lambda key, default=None: {
             "ENVIRONMENT": "prod",
@@ -148,15 +134,10 @@ class TestGetRedisConfig:
         assert config.ssl_cert_reqs == "required"
         assert config.socket_connect_timeout == 10
         assert config.socket_timeout == 10
-        # Note: Logger calls are not mocked properly, so we skip this assertion
 
     @patch('src.data.database.redis_config.os.getenv')
-    @patch('src.data.database.redis_config.BaseLogger')
-    def test_get_redis_config_default_values(self, mock_base_logger, mock_getenv):
+    def test_get_redis_config_default_values(self,  mock_getenv):
         """Test Redis configuration with default values when env vars are not set"""
-        mock_logger = Mock()
-        mock_base_logger.return_value = mock_logger
-
         # Mock environment variables with minimal values
         mock_getenv.side_effect = lambda key, default=None: {
             "ENVIRONMENT": "dev"
@@ -174,15 +155,10 @@ class TestGetRedisConfig:
         assert config.socket_timeout == 5
         assert config.retry_on_timeout is True
         assert config.health_check_interval == 30
-        # Note: Logger calls are not mocked properly, so we skip this assertion
 
     @patch('src.data.database.redis_config.os.getenv')
-    @patch('src.data.database.redis_config.BaseLogger')
-    def test_get_redis_config_case_insensitive_environment(self, mock_base_logger, mock_getenv):
+    def test_get_redis_config_case_insensitive_environment(self, mock_getenv):
         """Test Redis configuration with case-insensitive environment detection"""
-        mock_logger = Mock()
-        mock_base_logger.return_value = mock_logger
-
         # Mock environment variables with uppercase environment
         mock_getenv.side_effect = lambda key, default=None: {
             "ENVIRONMENT": "PROD",
@@ -198,7 +174,6 @@ class TestGetRedisConfig:
         assert config.ssl_cert_reqs == "required"
         assert config.socket_connect_timeout == 10
         assert config.socket_timeout == 10
-        # Note: Logger calls are not mocked properly, so we skip this assertion
 
 
 class TestGetRedisURL:

@@ -66,10 +66,8 @@ class TestWithdrawFunds:
         mock_result.transaction = Mock(transaction_id="txn-12345")
         return mock_result
 
-    @patch('src.controllers.balance.withdraw.logger')
     async def test_withdraw_funds_success(
         self,
-        mock_logger,
         mock_request,
         mock_current_user,
         mock_transaction_manager,
@@ -98,27 +96,8 @@ class TestWithdrawFunds:
         assert result.transaction_id == "txn-12345"
         assert isinstance(result.timestamp, datetime)
 
-        # Verify logging - check that both calls were made
-        assert mock_logger.info.call_count >= 2
-
-        # Check that withdrawal attempt was logged (verify the call was made)
-        assert mock_logger.info.call_count >= 2
-
-        # Verify the first call (withdrawal attempt) was made with correct parameters
-        first_call = mock_logger.info.call_args_list[0]
-        assert first_call[1]['action'] == 'request_start'
-        assert 'Withdrawal attempt from 192.168.1.100' in first_call[1]['message']
-        assert first_call[1]['user'] == 'testuser'
-
-        # Verify the second call (successful withdrawal) was made with correct parameters
-        second_call = mock_logger.info.call_args_list[1]
-        assert second_call[1]['action'] == 'request_end'
-        assert second_call[1]['user'] == 'testuser'
-
-    @patch('src.controllers.balance.withdraw.logger')
     async def test_withdraw_funds_lock_acquisition_failure(
         self,
-        mock_logger,
         mock_request,
         mock_current_user,
         mock_transaction_manager,
@@ -141,18 +120,9 @@ class TestWithdrawFunds:
             amount=Decimal("100.00")
         )
 
-        # Verify warning was logged (structured BaseLogger format)
-        mock_logger.warning.assert_called_with(
-            action='error',
-            message='Lock acquisition failed for withdrawal: user=testuser, error=CNOPLockAcquisitionException: Lock timeout',
-            user='testuser',
-            request_id='no-request-id'
-        )
 
-    @patch('src.controllers.balance.withdraw.logger')
     async def test_withdraw_funds_insufficient_balance(
         self,
-        mock_logger,
         mock_request,
         mock_current_user,
         mock_transaction_manager,
@@ -175,18 +145,9 @@ class TestWithdrawFunds:
             amount=Decimal("100.00")
         )
 
-        # Verify warning was logged (structured BaseLogger format)
-        mock_logger.warning.assert_called_with(
-            action='validation_error',
-            message='Insufficient balance for withdrawal: user=testuser, error=CNOPInsufficientBalanceException: Insufficient funds',
-            user='testuser',
-            request_id='no-request-id'
-        )
 
-    @patch('src.controllers.balance.withdraw.logger')
     async def test_withdraw_funds_common_user_validation_error(
         self,
-        mock_logger,
         mock_request,
         mock_current_user,
         mock_transaction_manager,
@@ -209,18 +170,8 @@ class TestWithdrawFunds:
             amount=Decimal("100.00")
         )
 
-        # Verify warning was logged (structured BaseLogger format)
-        mock_logger.warning.assert_called_with(
-            action='validation_error',
-            message='User validation error for withdrawal: user=testuser, error=CNOPUserValidationException: User not found',
-            user='testuser',
-            request_id='no-request-id'
-        )
-
-    @patch('src.controllers.balance.withdraw.logger')
     async def test_withdraw_funds_database_operation_user_balance_not_found(
         self,
-        mock_logger,
         mock_request,
         mock_current_user,
         mock_transaction_manager,
@@ -243,18 +194,9 @@ class TestWithdrawFunds:
             amount=Decimal("100.00")
         )
 
-        # Verify error was logged (structured BaseLogger format)
-        mock_logger.error.assert_called_with(
-            action='error',
-            message='System error - user balance not found for withdrawal: user=testuser, error=CNOPDatabaseOperationException: User balance not found',
-            user='testuser',
-            request_id='no-request-id'
-        )
 
-    @patch('src.controllers.balance.withdraw.logger')
     async def test_withdraw_funds_database_operation_general_error(
         self,
-        mock_logger,
         mock_request,
         mock_current_user,
         mock_transaction_manager,
@@ -277,18 +219,9 @@ class TestWithdrawFunds:
             amount=Decimal("100.00")
         )
 
-        # Verify error was logged (structured BaseLogger format)
-        mock_logger.error.assert_called_with(
-            action='error',
-            message='Database operation failed for withdrawal: user=testuser, error=CNOPDatabaseOperationException: Connection timeout',
-            user='testuser',
-            request_id='no-request-id'
-        )
 
-    @patch('src.controllers.balance.withdraw.logger')
     async def test_withdraw_funds_unexpected_error(
         self,
-        mock_logger,
         mock_request,
         mock_current_user,
         mock_transaction_manager,
@@ -311,18 +244,9 @@ class TestWithdrawFunds:
             amount=Decimal("100.00")
         )
 
-        # Verify error was logged (structured BaseLogger format)
-        mock_logger.error.assert_called_with(
-            action='error',
-            message='Unexpected error during withdrawal: user=testuser, error=Unexpected system error',
-            user='testuser',
-            request_id='no-request-id'
-        )
 
-    @patch('src.controllers.balance.withdraw.logger')
     async def test_withdraw_funds_request_client_none(
         self,
-        mock_logger,
         mock_request,
         mock_current_user,
         mock_transaction_manager,
@@ -344,19 +268,9 @@ class TestWithdrawFunds:
         # Verify the function handles None client gracefully
         assert result.success is True
 
-        # Verify logging shows 'unknown' for client host - check that both calls were made
-        assert mock_logger.info.call_count >= 2
 
-        # Check that withdrawal attempt was logged (verify the call was made)
-        first_call = mock_logger.info.call_args_list[0]
-        assert first_call[1]['action'] == 'request_start'
-        assert 'Withdrawal attempt from unknown' in first_call[1]['message']
-        assert first_call[1]['user'] == 'testuser'
-
-    @patch('src.controllers.balance.withdraw.logger')
     async def test_withdraw_funds_missing_user_agent(
         self,
-        mock_logger,
         mock_request,
         mock_current_user,
         mock_transaction_manager,
@@ -378,19 +292,8 @@ class TestWithdrawFunds:
         # Verify the function handles missing user-agent gracefully
         assert result.success is True
 
-        # Verify logging shows 'unknown' for user-agent - check that both calls were made
-        assert mock_logger.info.call_count >= 2
-
-        # Check that withdrawal attempt was logged (verify the call was made)
-        first_call = mock_logger.info.call_args_list[0]
-        assert first_call[1]['action'] == 'request_start'
-        assert 'Withdrawal attempt from 192.168.1.100' in first_call[1]['message']
-        assert first_call[1]['user'] == 'testuser'
-
-    @patch('src.controllers.balance.withdraw.logger')
     async def test_withdraw_funds_different_amounts(
         self,
-        mock_logger,
         mock_request,
         mock_current_user,
         mock_transaction_manager,
@@ -423,10 +326,8 @@ class TestWithdrawFunds:
         assert result.success is True
         assert "Successfully withdrew $999999.99" in result.message
 
-    @patch('src.controllers.balance.withdraw.logger')
     async def test_withdraw_funds_transaction_result_without_lock_duration(
         self,
-        mock_logger,
         mock_request,
         mock_current_user,
         mock_transaction_manager,

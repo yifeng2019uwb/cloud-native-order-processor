@@ -9,9 +9,9 @@ import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from ..exceptions import CNOPInternalServerException
-from ..shared.logging import BaseLogger, LogActions, Loggers
+from ..shared.logging import BaseLogger, LogAction, LoggerName
 
-logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
+logger = BaseLogger(LoggerName.AUDIT, log_to_file=True)
 
 class STSClient:
     """AWS STS client for role assumption"""
@@ -35,13 +35,13 @@ class STSClient:
             return response
         except NoCredentialsError:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message="No AWS credentials found"
             )
             raise CNOPInternalServerException("AWS credentials not configured")
         except ClientError as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"AWS STS error: {e}"
             )
             raise CNOPInternalServerException(f"AWS STS error: {e}")
@@ -61,13 +61,13 @@ class STSClient:
             return response
         except NoCredentialsError:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message="No AWS credentials found"
             )
             raise CNOPInternalServerException("AWS credentials not configured")
         except ClientError as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"AWS STS assume role error: {e}"
             )
             raise CNOPInternalServerException(f"AWS STS assume role error: {e}")
@@ -84,13 +84,13 @@ class STSClient:
             return response
         except NoCredentialsError:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message="No AWS credentials found"
             )
             raise CNOPInternalServerException("AWS credentials not configured")
         except ClientError as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"AWS STS get session token error: {e}"
             )
             raise CNOPInternalServerException(f"AWS STS get session token error: {e}")

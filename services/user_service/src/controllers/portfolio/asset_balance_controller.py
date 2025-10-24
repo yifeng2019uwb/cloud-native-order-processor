@@ -26,7 +26,7 @@ from controllers.dependencies import (
     get_asset_dao_dependency
 )
 from validation.business_validators import validate_user_permissions
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LogAction, LoggerName
 from user_exceptions import CNOPUserValidationException
 from common.exceptions.shared_exceptions import CNOPAssetBalanceNotFoundException
 from api_info_enum import ApiTags, ApiPaths
@@ -34,7 +34,7 @@ from validation_enums import ValidationActions
 from constants import MSG_SUCCESS_ASSET_BALANCE_RETRIEVED
 
 # Initialize logger
-logger = BaseLogger(Loggers.USER, log_to_file=True)
+logger = BaseLogger(LoggerName.USER, log_to_file=True)
 
 # Create router
 router = APIRouter(tags=[ApiTags.ASSET_BALANCE.value])
@@ -75,7 +75,7 @@ def get_user_asset_balance(
         validate_user_permissions(username, ValidationActions.GET_ASSET_BALANCE.value, user_dao)
 
         logger.info(
-            action=LogActions.REQUEST_START,
+            action=LogAction.REQUEST_START,
             message=f"Getting asset balance for user '{username}', asset '{asset_id}'"
         )
 
@@ -83,7 +83,7 @@ def get_user_asset_balance(
         balance = asset_balance_dao.get_asset_balance(username, asset_id)
         if not balance:
             logger.warning(
-                action=LogActions.VALIDATION_ERROR,
+                action=LogAction.VALIDATION_ERROR,
                 message=f"Asset balance not found for user '{username}', asset '{asset_id}'"
             )
             raise HTTPException(
@@ -97,7 +97,7 @@ def get_user_asset_balance(
             current_price = float(asset.current_price)
         except Exception as e:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to get current price for asset '{asset_id}': {e}. Using 0.0"
             )
             current_price = 0.0
@@ -124,7 +124,7 @@ def get_user_asset_balance(
         )
 
         logger.info(
-            action=LogActions.REQUEST_END,
+            action=LogAction.REQUEST_END,
             message=f"Successfully retrieved asset balance for user '{username}', asset '{asset_id}'"
         )
 
@@ -132,7 +132,7 @@ def get_user_asset_balance(
 
     except CNOPUserValidationException as e:
         logger.warning(
-            action=LogActions.VALIDATION_ERROR,
+            action=LogAction.VALIDATION_ERROR,
             message=f"Validation error getting asset balance: {e}"
         )
         raise HTTPException(
@@ -141,7 +141,7 @@ def get_user_asset_balance(
         )
     except CNOPAssetBalanceNotFoundException as e:
         logger.warning(
-            action=LogActions.VALIDATION_ERROR,
+            action=LogAction.VALIDATION_ERROR,
             message=f"Asset balance not found for user '{username}', asset '{asset_id}'"
         )
         raise HTTPException(
@@ -153,7 +153,7 @@ def get_user_asset_balance(
         raise
     except Exception as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Unexpected error getting asset balance for user '{username}', asset '{asset_id}': {e}"
         )
         raise HTTPException(

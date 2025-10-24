@@ -9,7 +9,7 @@ import pytest
 
 # Local imports
 from src.auth.security.audit_logger import AuditLogger
-from src.shared.logging import LogActions
+from src.shared.logging import LogAction, LogField
 
 
 class TestAuditLogger:
@@ -25,7 +25,7 @@ class TestAuditLogger:
     @patch('src.auth.security.audit_logger.logger')
     def test_log_security_event_success(self, mock_logger):
         """Test successful security event logging."""
-        event_type = LogActions.AUTH_SUCCESS
+        event_type = LogAction.AUTH_SUCCESS
         details = {"reason": "successful authentication"}
 
         self.audit_logger.log_security_event(
@@ -48,7 +48,7 @@ class TestAuditLogger:
     @patch('src.auth.security.audit_logger.logger')
     def test_log_security_event_minimal(self, mock_logger):
         """Test security event logging with minimal parameters."""
-        event_type = LogActions.SECURITY_EVENT
+        event_type = LogAction.SECURITY_EVENT
 
         self.audit_logger.log_security_event(event_type, self.test_username)
 
@@ -71,8 +71,8 @@ class TestAuditLogger:
         call_kwargs = mock_logger.info.call_args[1]  # Get keyword arguments
 
         # Verify the call arguments
-        assert call_kwargs['action'] == LogActions.AUTH_SUCCESS
-        assert call_kwargs['message'] == f"Security event: {LogActions.AUTH_SUCCESS} for user {self.test_username}"
+        assert call_kwargs['action'] == LogAction.AUTH_SUCCESS
+        assert call_kwargs['message'] == f"Security event: {LogAction.AUTH_SUCCESS} for user {self.test_username}"
         assert call_kwargs['user'] == self.test_username
 
     @patch('src.auth.security.audit_logger.logger')
@@ -85,8 +85,8 @@ class TestAuditLogger:
         call_kwargs = mock_logger.info.call_args[1]  # Get keyword arguments
 
         # Verify the call arguments
-        assert call_kwargs['action'] == LogActions.AUTH_SUCCESS
-        assert call_kwargs['message'] == f"Security event: {LogActions.AUTH_SUCCESS} for user {self.test_username}"
+        assert call_kwargs['action'] == LogAction.AUTH_SUCCESS
+        assert call_kwargs['message'] == f"Security event: {LogAction.AUTH_SUCCESS} for user {self.test_username}"
         assert call_kwargs['user'] == self.test_username
 
     @patch('src.auth.security.audit_logger.logger')
@@ -100,8 +100,8 @@ class TestAuditLogger:
         call_kwargs = mock_logger.warning.call_args[1]  # Get keyword arguments
 
         # Verify the call arguments
-        assert call_kwargs['action'] == LogActions.AUTH_FAILED
-        assert call_kwargs['message'] == f"Security warning: {LogActions.AUTH_FAILED} for user {self.test_username}"
+        assert call_kwargs['action'] == LogAction.AUTH_FAILED
+        assert call_kwargs['message'] == f"Security warning: {LogAction.AUTH_FAILED} for user {self.test_username}"
         assert call_kwargs['user'] == self.test_username
 
     @patch('src.auth.security.audit_logger.logger')
@@ -114,8 +114,8 @@ class TestAuditLogger:
         call_kwargs = mock_logger.info.call_args[1]  # Get keyword arguments
 
         # Verify the call arguments
-        assert call_kwargs['action'] == LogActions.SECURITY_EVENT
-        assert call_kwargs['message'] == f"Security event: {LogActions.SECURITY_EVENT} for user {self.test_username}"
+        assert call_kwargs['action'] == LogAction.SECURITY_EVENT
+        assert call_kwargs['message'] == f"Security event: {LogAction.SECURITY_EVENT} for user {self.test_username}"
         assert call_kwargs['user'] == self.test_username
 
     @patch('src.auth.security.audit_logger.logger')
@@ -128,8 +128,8 @@ class TestAuditLogger:
         call_kwargs = mock_logger.info.call_args[1]  # Get keyword arguments
 
         # Verify the call arguments
-        assert call_kwargs['action'] == LogActions.SECURITY_EVENT
-        assert call_kwargs['message'] == f"Security event: {LogActions.SECURITY_EVENT} for user {self.test_username}"
+        assert call_kwargs['action'] == LogAction.SECURITY_EVENT
+        assert call_kwargs['message'] == f"Security event: {LogAction.SECURITY_EVENT} for user {self.test_username}"
         assert call_kwargs['user'] == self.test_username
 
     @patch('src.auth.security.audit_logger.logger')
@@ -142,8 +142,8 @@ class TestAuditLogger:
         call_kwargs = mock_logger.info.call_args[1]  # Get keyword arguments
 
         # Verify the call arguments
-        assert call_kwargs['action'] == LogActions.SECURITY_EVENT
-        assert call_kwargs['message'] == f"Security event: {LogActions.SECURITY_EVENT} for user {self.test_username}"
+        assert call_kwargs['action'] == LogAction.SECURITY_EVENT
+        assert call_kwargs['message'] == f"Security event: {LogAction.SECURITY_EVENT} for user {self.test_username}"
         assert call_kwargs['user'] == self.test_username
 
     @patch('src.auth.security.audit_logger.logger')
@@ -156,17 +156,17 @@ class TestAuditLogger:
         call_kwargs = mock_logger.warning.call_args[1]  # Get keyword arguments
 
         # Verify the call arguments
-        assert call_kwargs['action'] == LogActions.ACCESS_DENIED
-        assert call_kwargs['message'] == f"Security warning: {LogActions.ACCESS_DENIED} for user {self.test_username}"
+        assert call_kwargs['action'] == LogAction.ACCESS_DENIED
+        assert call_kwargs['message'] == f"Security warning: {LogAction.ACCESS_DENIED} for user {self.test_username}"
         assert call_kwargs['user'] == self.test_username
 
     @patch('src.auth.security.audit_logger.logger')
     def test_info_level_events(self, mock_logger):
         """Test that certain events use info level."""
         info_events = [
-            LogActions.AUTH_SUCCESS,
-            LogActions.SECURITY_EVENT,
-            LogActions.ACCESS_GRANTED
+            LogAction.AUTH_SUCCESS,
+            LogAction.SECURITY_EVENT,
+            LogAction.ACCESS_GRANTED
         ]
 
         for event_type in info_events:
@@ -178,13 +178,13 @@ class TestAuditLogger:
     def test_warning_level_events(self, mock_logger):
         """Test that certain events use warning level."""
         warning_events = [
-            LogActions.AUTH_FAILED,
-            LogActions.ACCESS_DENIED
+            LogAction.AUTH_FAILED,
+            LogAction.ACCESS_DENIED
         ]
 
         for event_type in warning_events:
             mock_logger.reset_mock()
-            details = {"reason": "test"} if event_type == LogActions.AUTH_FAILED else {"resource": "test", "reason": "test"}
+            details = {"reason": "test"} if event_type == LogAction.AUTH_FAILED else {"resource": "test", "reason": "test"}
             self.audit_logger.log_security_event(event_type, self.test_username, details)
             mock_logger.warning.assert_called_once()
 
@@ -196,9 +196,9 @@ class TestAuditLogger:
         mock_logger.info.assert_called_once()
 
     def test_security_event_type_values(self):
-        """Test that LogActions enum has expected values."""
-        assert LogActions.AUTH_SUCCESS == "auth_success"
-        assert LogActions.AUTH_FAILED == "auth_failed"
-        assert LogActions.ACCESS_GRANTED == "access_granted"
-        assert LogActions.ACCESS_DENIED == "access_denied"
-        assert LogActions.SECURITY_EVENT == "security_event"
+        """Test that LogAction enum has expected values."""
+        assert LogAction.AUTH_SUCCESS == "auth_success"
+        assert LogAction.AUTH_FAILED == "auth_failed"
+        assert LogAction.ACCESS_GRANTED == "access_granted"
+        assert LogAction.ACCESS_DENIED == "access_denied"
+        assert LogAction.SECURITY_EVENT == "security_event"

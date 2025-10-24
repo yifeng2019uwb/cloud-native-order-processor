@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 
 import redis
 
-from ...shared.logging import BaseLogger, LogActions, Loggers
+from ...shared.logging import BaseLogger, LogAction, LoggerName
 from .database_constants import (
     build_redis_config,
     build_redis_pool_params,
@@ -22,7 +22,7 @@ from .database_constants import (
     RedisConfig as RedisConfigConstants,
 )
 
-logger = BaseLogger(Loggers.CACHE, log_to_file=True)
+logger = BaseLogger(LoggerName.CACHE, log_to_file=True)
 
 @dataclass
 class RedisConfig:
@@ -48,7 +48,7 @@ def get_redis_config() -> RedisConfig:
     config = build_redis_config()
 
     logger.info(
-        action=LogActions.CACHE_OPERATION,
+        action=LogAction.CACHE_OPERATION,
         message=f"Redis configuration for {environment}: {config['host']}:{config['port']}"
     )
     return RedisConfig(**config)

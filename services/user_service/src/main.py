@@ -1,12 +1,13 @@
 """
 User Service - FastAPI Application Entry Point
 """
+import uvicorn
 from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LogAction, LoggerName
 from controllers.auth.login import router as login_router
 from controllers.auth.register import router as register_router
 from controllers.auth.profile import router as profile_router
@@ -42,7 +43,7 @@ from common.exceptions import (
 )
 
 # Initialize logger
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 
 # Create FastAPI app
 app = FastAPI(
@@ -84,37 +85,37 @@ def internal_metrics():
 # Custom exception handlers
 @app.exception_handler(CNOPUserValidationException)
 def validation_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"{ErrorMessages.VALIDATION_ERROR}: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"{ErrorMessages.VALIDATION_ERROR}: {exc}")
     return JSONResponse(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPUserAlreadyExistsException)
 def user_exists_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"{MSG_ERROR_USER_EXISTS}: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"{MSG_ERROR_USER_EXISTS}: {exc}")
     return JSONResponse(status_code=HTTPStatus.CONFLICT, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPUserNotFoundException)
 def user_not_found_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"{ErrorMessages.USER_NOT_FOUND}: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"{ErrorMessages.USER_NOT_FOUND}: {exc}")
     return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPInsufficientBalanceException)
 def insufficient_balance_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"{ErrorMessages.INSUFFICIENT_BALANCE}: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"{ErrorMessages.INSUFFICIENT_BALANCE}: {exc}")
     return JSONResponse(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPInvalidCredentialsException)
 def invalid_credentials_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"{ErrorMessages.AUTHENTICATION_FAILED}: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"{ErrorMessages.AUTHENTICATION_FAILED}: {exc}")
     return JSONResponse(status_code=HTTPStatus.UNAUTHORIZED, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPInternalServerException)
 def internal_server_exception_handler(request, exc):
-    logger.error(action=LogActions.ERROR, message=f"{ErrorMessages.INTERNAL_SERVER_ERROR}: {exc}")
+    logger.error(action=LogAction.ERROR, message=f"{ErrorMessages.INTERNAL_SERVER_ERROR}: {exc}")
     return JSONResponse(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": str(exc)})
 
 @app.exception_handler(Exception)
 def general_exception_handler(request, exc):
-    logger.error(action=LogActions.ERROR, message=f"Unhandled error: {exc}")
+    logger.error(action=LogAction.ERROR, message=f"Unhandled error: {exc}")
     return JSONResponse(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": ErrorMessages.INTERNAL_SERVER_ERROR})
 
 # Root endpoint
@@ -143,5 +144,4 @@ def root():
     }
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

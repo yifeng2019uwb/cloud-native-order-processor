@@ -1,12 +1,12 @@
 from typing import Dict, List
 
 from ....exceptions.shared_exceptions import CNOPAssetNotFoundException
-from ....shared.logging import BaseLogger, LogActions, Loggers
+from ....shared.logging import BaseLogger, LogAction, LoggerName
 # AssetFields no longer needed with product_id schema
 from ...entities.inventory.asset import Asset, AssetItem
 from ...exceptions import CNOPDatabaseOperationException
 
-logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
+logger = BaseLogger(LoggerName.DATABASE, log_to_file=True)
 
 
 class AssetDAO:
@@ -21,7 +21,7 @@ class AssetDAO:
         """Create a new asset"""
         try:
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Creating asset: id={asset.asset_id}, name={asset.name}, category={asset.category}"
             )
 
@@ -30,7 +30,7 @@ class AssetDAO:
             asset_item.save()
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Asset created successfully: id={asset.asset_id}, name={asset.name}, category={asset.category}"
             )
 
@@ -38,7 +38,7 @@ class AssetDAO:
             return asset_item.to_asset()
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to create asset '{asset.asset_id}': {e}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while creating asset '{asset.asset_id}': {str(e)}") from e
@@ -47,7 +47,7 @@ class AssetDAO:
         """Get an asset by its ID"""
         try:
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Getting asset by ID: {asset_id}"
             )
 
@@ -55,7 +55,7 @@ class AssetDAO:
             asset_item = AssetItem.get(asset_id)
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Asset found: id={asset_id}, name={asset_item.name}"
             )
 
@@ -64,13 +64,13 @@ class AssetDAO:
 
         except AssetItem.DoesNotExist:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Asset '{asset_id}' not found"
             )
             raise CNOPAssetNotFoundException(f"Asset '{asset_id}' not found")
         except Exception as exc:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to get asset '{asset_id}': {exc}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving asset '{asset_id}': {str(exc)}") from exc
@@ -79,7 +79,7 @@ class AssetDAO:
         """Get all assets, optionally filter by active status"""
         try:
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Getting all assets, active_only: {active_only}"
             )
 
@@ -92,7 +92,7 @@ class AssetDAO:
                 assets = [asset_item.to_asset() for asset_item in AssetItem.scan()]
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Found {len(assets)} assets"
             )
 
@@ -100,7 +100,7 @@ class AssetDAO:
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to get all assets: {e}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving all assets: {str(e)}") from e
@@ -124,7 +124,7 @@ class AssetDAO:
 
         try:
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Batch retrieving {len(asset_ids)} assets"
             )
 
@@ -137,13 +137,13 @@ class AssetDAO:
                 except AssetItem.DoesNotExist:
                     # Asset not found, skip it (as per original behavior)
                     logger.warning(
-                        action=LogActions.DB_OPERATION,
+                        action=LogAction.DB_OPERATION,
                         message=f"Asset '{asset_id}' not found, skipping"
                     )
                     continue
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Successfully retrieved {len(assets)} out of {len(asset_ids)} requested assets"
             )
 
@@ -151,7 +151,7 @@ class AssetDAO:
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to batch retrieve assets: {e}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while batch retrieving assets: {str(e)}") from e
@@ -160,7 +160,7 @@ class AssetDAO:
         """Update an asset"""
         try:
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Updating asset: id={asset.asset_id}, name={asset.name}"
             )
 
@@ -181,7 +181,7 @@ class AssetDAO:
             asset_item.save()
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Asset updated successfully: id={asset.asset_id}, name={asset.name}"
             )
 
@@ -189,13 +189,13 @@ class AssetDAO:
             return asset_item.to_asset()
         except AssetItem.DoesNotExist:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Asset '{asset.asset_id}' not found for update"
             )
             raise CNOPAssetNotFoundException(f"Asset '{asset.asset_id}' not found")
         except Exception as exc:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to update asset '{asset.asset_id}': {exc}"
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while updating asset '{asset.asset_id}': {str(exc)}") from exc

@@ -4,33 +4,43 @@ Log Constants
 Centralized constants for log action names, field names, and default values across all services.
 This ensures consistency and prevents hardcoding of log strings.
 """
+from enum import Enum
 
-# Logger Names - Simplified logger naming for all services
-class Loggers:
+
+# Logger Names - Use Enum since these are fixed choices
+class LoggerName(str, Enum):
     """Service logger names."""
     AUTH = "auth"
     USER = "user"
     ORDER = "order"
     INVENTORY = "inventory"
     GATEWAY = "gateway"
-
-    # Infrastructure
     DATABASE = "database"
     CACHE = "cache"
     AUDIT = "audit"
 
 
-# Log Actions - Simple, essential actions we actually use
-class LogActions:
+# Log Levels - Use Enum since these are standard levels
+class LogLevel(str, Enum):
+    """Standard log levels."""
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARN = "WARN"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
+
+
+# Log Actions - Simple constants since these are just strings
+class LogAction:
     """Core log actions used across all services."""
 
-    # Authentication & Authorization
+    # Auth
     AUTH_SUCCESS = "auth_success"
     AUTH_FAILED = "auth_failed"
     ACCESS_GRANTED = "access_granted"
     ACCESS_DENIED = "access_denied"
 
-    # User Management
+    # User
     USER_REGISTRATION_SUCCESS = "user_registration_success"
     USER_REGISTRATION_FAILED = "user_registration_failed"
     USER_LOGIN_SUCCESS = "user_login_success"
@@ -39,18 +49,18 @@ class LogActions:
     USER_PROFILE_UPDATE = "user_profile_update"
     USER_PASSWORD_CHANGE = "user_password_change"
 
-    # System Operations
+    # System
     SERVICE_START = "service_start"
     REQUEST_START = "request_start"
     REQUEST_END = "request_end"
     HEALTH_CHECK = "health_check"
 
-    # Data Operations
+    # Data
     DB_CONNECT = "db_connect"
     DB_OPERATION = "db_operation"
     CACHE_OPERATION = "cache_operation"
 
-    # Financial Operations
+    # Financial
     DEPOSIT_SUCCESS = "deposit_success"
     DEPOSIT_FAILED = "deposit_failed"
     WITHDRAWAL_SUCCESS = "withdrawal_success"
@@ -64,33 +74,31 @@ class LogActions:
     ERROR = "error"
     VALIDATION_ERROR = "validation_error"
 
-    # Security & Audit
+    # Security
     SECURITY_EVENT = "security_event"
-    AUDIT_LOGIN = "audit_login"
-    AUDIT_LOGOUT = "audit_logout"
-    AUDIT_ACCESS = "audit_access"
-    AUDIT_ACTION = "audit_action"
     SUSPICIOUS_ACTIVITY = "suspicious_activity"
     RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
 
 
-# Log Field Names - Constants for extra data field names
-class LogFields:
-    """Log field names used in extra data for structured logging."""
+# Log Field Names - Simple constants for structured logging
+class LogField:
+    """Log field names for extra data in structured logging."""
 
-    # Request Information
+    # Request
     USER_AGENT = "user_agent"
     CLIENT_IP = "client_ip"
+    IP_ADDRESS = "ip_address"
     REQUEST_ID = "request_id"
     TIMESTAMP = "timestamp"
 
-    # User Information
+    # User
     USERNAME = "username"
     EMAIL = "email"
     USER_ID = "user_id"
     ROLE = "role"
+    SESSION_ID = "session_id"
 
-    # Business Data
+    # Business
     AMOUNT = "amount"
     ASSET_ID = "asset_id"
     ORDER_ID = "order_id"
@@ -101,48 +109,37 @@ class LogFields:
     TRANSACTION_TYPE = "transaction_type"
     BALANCE = "balance"
 
-    # Request Parameters
-    LIMIT = "limit"
-    OFFSET = "offset"
-
-    # Error Information
+    # Error
     ERROR = "error"
     ERROR_TYPE = "error_type"
-    ERROR_ID = "error_id"
+    FAILURE_REASON = "failure_reason"
+    AUDIT_REASON = "audit_reason"
 
-    # Token Information
-    TOKEN_TYPE = "token_type"
-    EXPIRES_IN_HOURS = "expires_in_hours"
-
-    # System Information
+    # System
     SERVICE = "service"
-    VERSION = "version"
     ENVIRONMENT = "environment"
     STATUS = "status"
 
-    # Database Information
-    DATABASE = "database"
-    CHECK_INTERVAL = "check_interval"
-    LAST_CHECK = "last_check"
-
-    # Security Information
-    IP_ADDRESS = "ip_address"
-
-    # Audit Information
-    AUDIT_REASON = "audit_reason"
-    AUDIT_DETAILS = "audit_details"
-    SESSION_ID = "session_id"
-    TOKEN_ID = "token_id"
-    FAILURE_REASON = "failure_reason"
-    SUCCESS_REASON = "success_reason"
+    # Security
+    TOKEN_TYPE = "token_type"
     RESOURCE = "resource"
 
 
-# Log Extra Defaults - Default values for log extra fields
-class LogExtraDefaults:
-    """Default values for log extra fields when not available."""
-
+# Defaults - Simple constants for configuration
+class LogDefault:
+    """Default values for logging configuration."""
+    LOG_FILE_PATH = "logs"
+    SERVICES_DIR = "services"
+    TMP_PATH = "/tmp"
     UNKNOWN = "unknown"
-    UNKNOWN_VALUE = "unknown"
-    UNKNOWN_IP = "unknown"
-    UNKNOWN_USER_AGENT = "unknown"
+    TIMESTAMP_SUFFIX = "Z"
+    LOG_FILE_EXTENSION = ".log"
+    LOG_FILE_PATH_ENV = "LOG_FILE_PATH"
+    SECURITY_ACTION_PREFIX = "security_"
+    FAILED_KEYWORD = "failed"
+    DENIED_KEYWORD = "denied"
+    FILE_APPEND_MODE = "a"
+    FILE_ENCODING = "utf-8"
+    NEWLINE = "\n"
+    UUID_HEX_LENGTH = 8
+    LOG_FILE_ATTR = "log_file"

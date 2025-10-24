@@ -11,9 +11,9 @@ from typing import Any, Dict, Optional
 from ...data.database.redis_connection import (get_redis_manager,
                                                test_redis_connection)
 from ...shared.constants.health_constants import HealthCheckConstants
-from ...shared.logging import BaseLogger, LogActions, Loggers
+from ...shared.logging import BaseLogger, LogAction, LoggerName
 
-logger = BaseLogger(Loggers.CACHE, log_to_file=True)
+logger = BaseLogger(LoggerName.CACHE, log_to_file=True)
 
 class RedisHealthChecker:
     """Redis health checker for service monitoring"""
@@ -40,12 +40,12 @@ class RedisHealthChecker:
 
             if status:
                 logger.info(
-                    action=LogActions.HEALTH_CHECK,
+                    action=LogAction.HEALTH_CHECK,
                     message=f"Redis health check: {HealthCheckConstants.STATUS_OK}"
                 )
             else:
                 logger.warning(
-                    action=LogActions.ERROR,
+                    action=LogAction.ERROR,
                     message=f"Redis health check: {HealthCheckConstants.STATUS_FAILED}"
                 )
 
@@ -53,7 +53,7 @@ class RedisHealthChecker:
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Redis health check error: {e}"
             )
             self._last_status = False
@@ -83,7 +83,7 @@ class RedisHealthChecker:
             })
         except Exception as e:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Could not get Redis connection details: {e}"
             )
 

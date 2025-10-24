@@ -11,11 +11,11 @@ from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.database.dynamodb_connection import get_dynamodb_manager
 from common.data.entities.inventory import Asset
 from common.exceptions import CNOPEntityNotFoundException, CNOPAssetNotFoundException
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LoggerName, LogAction
 from constants import DEFAULT_ASSET_AMOUNT, DEFAULT_ASSET_CATEGORY
 from services.fetch_coins import CoinData
 
-logger = BaseLogger(Loggers.INVENTORY)
+logger = BaseLogger(LoggerName.INVENTORY)
 
 
 def get_category(coin: dict) -> str:
@@ -74,38 +74,38 @@ async def upsert_coins_to_inventory(coins: List[CoinData]) -> int:
             asset = coin_to_asset(coin)
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Processing coin: {asset.asset_id}, current_price: {coin.current_price}"
             )
 
             try:
                 logger.info(
-                    action=LogActions.DB_OPERATION,
+                    action=LogAction.DB_OPERATION,
                     message=f"Checking if asset exists: {asset.asset_id}"
                 )
                 existing_asset = asset_dao.get_asset_by_id(asset.asset_id)
                 logger.info(
-                    action=LogActions.DB_OPERATION,
+                    action=LogAction.DB_OPERATION,
                     message=f"Asset exists, updating: {asset.asset_id}"
                 )
                 asset_dao.update_asset(asset)
                 logger.info(
-                    action=LogActions.DB_OPERATION,
+                    action=LogAction.DB_OPERATION,
                     message=f"Updated asset: {asset.asset_id}"
                 )
             except (CNOPEntityNotFoundException, CNOPAssetNotFoundException):
                 logger.info(
-                    action=LogActions.DB_OPERATION,
+                    action=LogAction.DB_OPERATION,
                     message=f"Asset doesn't exist, creating: {asset.asset_id}"
                 )
                 asset_dao.create_asset(asset)
                 logger.info(
-                    action=LogActions.DB_OPERATION,
+                    action=LogAction.DB_OPERATION,
                     message=f"Created asset: {asset.asset_id}"
                 )
             except Exception as e:
                 logger.error(
-                    action=LogActions.ERROR,
+                    action=LogAction.ERROR,
                     message=f"Database operation failed for {asset.asset_id}: {e}"
                 )
                 continue
@@ -114,7 +114,7 @@ async def upsert_coins_to_inventory(coins: List[CoinData]) -> int:
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to upsert asset {coin.symbol}: {e}"
             )
             continue
@@ -125,7 +125,7 @@ async def upsert_coins_to_inventory(coins: List[CoinData]) -> int:
 async def initialize_inventory_data(force_recreate: bool = False) -> None:
     """Initialize inventory data on service startup by fetching from data providers"""
     logger.info(
-        action=LogActions.SERVICE_START,
+        action=LogAction.SERVICE_START,
         message="Starting inventory data initialization..."
     )
     try:
@@ -134,20 +134,20 @@ async def initialize_inventory_data(force_recreate: bool = False) -> None:
         coins = await fetch_coins()
         if not coins:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message="No coins received from fetch service"
             )
             return
 
         count = await upsert_coins_to_inventory(coins)
         logger.info(
-            action=LogActions.SERVICE_START,
+            action=LogAction.SERVICE_START,
             message=f"Successfully upserted {count} assets from data providers"
         )
 
     except Exception as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Failed to initialize inventory data: {e}"
         )
 

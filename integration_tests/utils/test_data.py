@@ -5,7 +5,7 @@ Handles UUID generation and cleanup for test isolation
 import uuid
 import time
 from typing import Dict, List, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 class TestDataManager:
     """Manages test data with UUID-based isolation and cleanup"""
@@ -36,7 +36,7 @@ class TestDataManager:
         asset_id = f"{self.asset_prefix}_{self.test_run_id}_{str(uuid.uuid4())[:8]}"
         asset_data = {
             'name': f"Test Asset {asset_id}",
-            'description': f"Test asset created at {datetime.utcnow().isoformat()}",
+            'description': f"Test asset created at {datetime.now(timezone.utc).isoformat()}",
             'category': category,
             'value': 100.0,
             'test_id': asset_id

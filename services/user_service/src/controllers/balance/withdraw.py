@@ -21,7 +21,7 @@ from common.exceptions import (
     CNOPLockAcquisitionException,
     CNOPInsufficientBalanceException
 )
-from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
+from common.shared.logging import BaseLogger, LogAction, LogField, LogDefault, LoggerName
 from common.shared.constants.api_constants import ErrorMessages
 from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
@@ -35,7 +35,7 @@ MSG_SUCCESS_WITHDRAW = "Withdrawal successful"
 MSG_ERROR_INSUFFICIENT_BALANCE = "Bad request - insufficient balance"
 MSG_ERROR_OPERATION_BUSY = "Operation is busy - try again"
 
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 router = APIRouter(tags=[ApiTags.BALANCE.value])
 
 
@@ -90,15 +90,10 @@ async def withdraw_funds(
 
     # Log withdrawal attempt (without sensitive data)
     logger.info(
-        action=LogActions.REQUEST_START,
-        message=f"Withdrawal attempt from {request.client.host if request.client else 'unknown'}",
+        action=LogAction.REQUEST_START,
+        message=f"Withdrawal attempt from {request.client.host if request.client else 'unknown'} for user {current_user.username}, amount: {withdraw_data.amount}",
         user=current_user.username,
-        request_id=request_id,
-        extra={
-            LogFields.AMOUNT: str(withdraw_data.amount),
-            LogFields.USER_AGENT: request.headers.get(LogFields.USER_AGENT, LogExtraDefaults.UNKNOWN_USER_AGENT),
-            LogFields.TIMESTAMP: datetime.now(timezone.utc).isoformat()
-        }
+        request_id=request_id
     )
 
     try:
@@ -108,7 +103,7 @@ async def withdraw_funds(
             amount=withdraw_data.amount
         )
 
-        logger.info(action=LogActions.REQUEST_END, message=f"Withdrawal successful for user {current_user.username}: {withdraw_data.amount}", user=current_user.username, request_id=request_id)
+        logger.info(action=LogAction.REQUEST_END, message=f"Withdrawal successful for user {current_user.username}: {withdraw_data.amount}", user=current_user.username, request_id=request_id)
 
         return WithdrawResponse(
             success=True,
@@ -118,24 +113,24 @@ async def withdraw_funds(
         )
 
     except CNOPLockAcquisitionException as e:
-        logger.warning(action=LogActions.ERROR, message=f"Lock acquisition failed for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
+        logger.warning(action=LogAction.ERROR, message=f"Lock acquisition failed for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
 
     except CNOPInsufficientBalanceException as e:
-        logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Insufficient balance for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
+        logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Insufficient balance for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         # Wrap the exception in CNOPUserValidationException
         raise CNOPUserValidationException(str(e))
     except CNOPUserValidationException as e:
-        logger.warning(action=LogActions.VALIDATION_ERROR, message=f"User validation error for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
+        logger.warning(action=LogAction.VALIDATION_ERROR, message=f"User validation error for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         # Re-raise the original exception without wrapping
         raise
     except CNOPDatabaseOperationException as e:
         if "User balance not found" in str(e):
-            logger.error(action=LogActions.ERROR, message=f"System error - user balance not found for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
+            logger.error(action=LogAction.ERROR, message=f"System error - user balance not found for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
             raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
         else:
-            logger.error(action=LogActions.ERROR, message=f"Database operation failed for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
+            logger.error(action=LogAction.ERROR, message=f"Database operation failed for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
             raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Unexpected error during withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
+        logger.error(action=LogAction.ERROR, message=f"Unexpected error during withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)

@@ -15,7 +15,7 @@ from common.data.dao.order.order_dao import OrderDAO
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.dao.user.user_dao import UserDAO
 from common.exceptions.shared_exceptions import CNOPInternalServerException
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LoggerName, LogAction
 from common.shared.constants.api_constants import HTTPStatus
 from common.shared.constants.api_constants import APIResponseDescriptions
 from api_info_enum import ApiTags, ApiResponseKeys, API_ORDERS_ROOT
@@ -30,7 +30,7 @@ from common.auth.security.auth_dependencies import AuthenticatedUser
 from validation.business_validators import validate_order_listing_business_rules
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.ORDER)
+logger = BaseLogger(LoggerName.ORDER)
 router = APIRouter(tags=[ApiTags.ORDERS.value])
 
 
@@ -99,7 +99,7 @@ def list_orders(
         paginated_orders = filtered_orders[offset:offset + limit]
 
         logger.info(
-            action=LogActions.REQUEST_END,
+            action=LogAction.REQUEST_END,
             message=f"Orders listed: count={len(paginated_orders)}",
             user=current_user.username,
             request_id=request_id
@@ -131,7 +131,7 @@ def list_orders(
 
     except Exception as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Unexpected error listing orders: error={str(e)}",
             user=current_user.username,
             request_id=request_id

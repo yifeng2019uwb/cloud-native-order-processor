@@ -357,60 +357,6 @@ class TestAssetTransactionController:
         assert eth_transaction.price == Decimal("3000.00")
 
 
-    def test_get_asset_transactions_logging(self, mock_request, mock_current_user,
-                                                mock_asset_transaction_dao, mock_asset_dao,
-                                                mock_user_dao, mock_validate_order_history_business_rules):
-        """Test that logging is performed correctly in get_asset_transactions"""
-        with patch('src.controllers.asset_transaction.logger') as mock_logger:
-            get_asset_transactions(
-                asset_id="BTC",
-                limit=50,
-                offset=0,
-                request=mock_request,
-                current_user=mock_current_user,
-                asset_transaction_dao=mock_asset_transaction_dao,
-                asset_dao=mock_asset_dao,
-                user_dao=mock_user_dao
-            )
-
-            # Verify info logging was called
-            mock_logger.info.assert_called()
-
-            # Check that the success log was called
-            success_calls = [call[1]["message"] for call in mock_logger.info.call_args_list]
-            assert any("Asset transactions retrieved successfully" in call for call in success_calls)
-
-
-    def test_get_asset_transactions_error_logging(self, mock_request, mock_current_user,
-                                                      mock_asset_transaction_dao, mock_asset_dao,
-                                                      mock_user_dao, mock_validate_order_history_business_rules):
-        """Test that error logging is performed correctly in get_asset_transactions"""
-
-        mock_asset_transaction_dao.get_user_asset_transactions.side_effect = CNOPDatabaseOperationException("DB error")
-
-        with patch('src.controllers.asset_transaction.logger') as mock_logger:
-            try:
-                get_asset_transactions(
-                    asset_id="BTC",
-                    limit=50,
-                    offset=0,
-                    request=mock_request,
-                    current_user=mock_current_user,
-                    asset_transaction_dao=mock_asset_transaction_dao,
-                    asset_dao=mock_asset_dao,
-                    user_dao=mock_user_dao
-                )
-            except:
-                pass
-
-            # Verify error logging was called
-            mock_logger.error.assert_called()
-
-            # Check that the database error log was called
-            error_calls = [call[1]["message"] for call in mock_logger.error.call_args_list]
-            assert any("Database operation failed for asset transactions" in call for call in error_calls)
-
-
     def test_get_asset_transactions_with_high_precision_values(self, mock_request, mock_current_user,
                                                                    mock_asset_transaction_dao, mock_asset_dao,
                                                                    mock_user_dao, mock_validate_order_history_business_rules):

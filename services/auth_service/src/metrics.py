@@ -5,11 +5,11 @@ Auth Service Metrics - Simplified for Personal Project
 import time
 from prometheus_client import Counter, Histogram, Gauge, Info, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Response
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LoggerName, LogAction
 from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ServiceMetadata
 
-logger = BaseLogger(Loggers.AUTH)
+logger = BaseLogger(LoggerName.AUTH)
 
 # =============================================================================
 # METRICS CONSTANTS (Local constants for this service)
@@ -99,5 +99,5 @@ def get_metrics_response() -> Response:
             headers={CACHE_CONTROL_HEADER: NO_CACHE_VALUE}
         )
     except Exception as e:
-        logger.error(action=LogActions.ERROR, message=f"Metrics error: {e}")
+        logger.error(action=LogAction.ERROR, message=f"Metrics error: {e}")
         return Response(content=ERROR_CONTENT, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)

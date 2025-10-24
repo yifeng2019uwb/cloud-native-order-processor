@@ -23,7 +23,7 @@ from common.exceptions import (
     CNOPLockAcquisitionException
 )
 from common.exceptions.shared_exceptions import CNOPInternalServerException
-from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields, LogExtraDefaults
+from common.shared.logging import BaseLogger, LoggerName, LogAction, LogField, LogDefault
 from common.shared.constants.api_constants import HTTPStatus, APIResponseDescriptions, ErrorMessages
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys, API_ORDERS_ROOT
 from constants import (
@@ -42,7 +42,7 @@ from common.auth.gateway.header_validator import get_request_id_from_request
 from validation.business_validators import validate_order_creation_business_rules
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.ORDER)
+logger = BaseLogger(LoggerName.ORDER)
 router = APIRouter(tags=[ApiTags.ORDERS.value])
 
 
@@ -102,17 +102,10 @@ async def create_order(
 
     # Log order creation attempt
     logger.info(
-        action=LogActions.REQUEST_START,
-        message=f"Order creation attempt from {request.client.host if request.client else 'unknown'}",
+        action=LogAction.REQUEST_START,
+        message=f"Order creation attempt from {request.client.host if request.client else 'unknown'} for user {current_user.username}, type: {order_data.order_type.value}, asset: {order_data.asset_id}, quantity: {order_data.quantity}",
         user=current_user.username,
-        request_id=request_id,
-        extra={
-            LogFields.ORDER_TYPE: order_data.order_type.value,
-            LogFields.ASSET_ID: order_data.asset_id,
-            LogFields.QUANTITY: str(order_data.quantity),
-            LogFields.USER_AGENT: request.headers.get(USER_AGENT_HEADER, LogExtraDefaults.UNKNOWN_USER_AGENT),
-            LogFields.TIMESTAMP: datetime.now(timezone.utc).isoformat()
-        }
+        request_id=request_id
     )
 
     try:
@@ -147,7 +140,7 @@ async def create_order(
             )
 
             logger.info(
-                action=LogActions.REQUEST_END,
+                action=LogAction.REQUEST_END,
                 message=f"Buy order executed successfully: order_id={result.order.order_id}, "
                        f"asset={order_data.asset_id}, quantity={order_data.quantity}, "
                        f"total_cost={total_amount}",
@@ -167,7 +160,7 @@ async def create_order(
             )
 
             logger.info(
-                action=LogActions.REQUEST_END,
+                action=LogAction.REQUEST_END,
                 message=f"Sell order executed successfully: order_id={result.order.order_id}, "
                        f"asset={order_data.asset_id}, quantity={order_data.quantity}, "
                        f"asset_amount={total_amount}",
@@ -210,7 +203,7 @@ async def create_order(
 
     except CNOPInsufficientBalanceException as e:
         logger.warning(
-            action=LogActions.VALIDATION_ERROR,
+            action=LogAction.VALIDATION_ERROR,
             message=f"Insufficient balance for order: order_type={order_data.order_type.value}, "
                    f"asset={order_data.asset_id}, quantity={order_data.quantity}, error={str(e)}",
             user=current_user.username,
@@ -221,7 +214,7 @@ async def create_order(
 
     except CNOPLockAcquisitionException as e:
         logger.warning(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Lock acquisition failed for order: error={str(e)}",
             user=current_user.username,
             request_id=request_id
@@ -230,7 +223,7 @@ async def create_order(
 
     except CNOPDatabaseOperationException as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Database operation failed for order: error={str(e)}",
             user=current_user.username,
             request_id=request_id
@@ -239,7 +232,7 @@ async def create_order(
 
     except CNOPOrderValidationException as e:
         logger.warning(
-            action=LogActions.VALIDATION_ERROR,
+            action=LogAction.VALIDATION_ERROR,
             message=f"Order validation failed: error={str(e)}",
             user=current_user.username,
             request_id=request_id
@@ -249,7 +242,7 @@ async def create_order(
 
     except Exception as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Unexpected error during order creation: order_type={order_data.order_type.value}, "
                    f"asset={order_data.asset_id}, quantity={order_data.quantity}, error={str(e)}",
             user=current_user.username,

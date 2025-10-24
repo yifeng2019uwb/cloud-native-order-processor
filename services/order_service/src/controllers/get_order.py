@@ -18,7 +18,7 @@ from common.exceptions.shared_exceptions import (
     CNOPInternalServerException
 )
 from order_exceptions.exceptions import CNOPOrderValidationException
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LoggerName, LogAction
 from common.shared.constants.api_constants import HTTPStatus
 from common.shared.constants.api_constants import APIResponseDescriptions
 from api_info_enum import ApiTags, ApiResponseKeys, API_ORDER_BY_ID
@@ -32,7 +32,7 @@ from common.auth.gateway.header_validator import get_request_id_from_request
 from validation.business_validators import validate_order_retrieval_business_rules
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.ORDER)
+logger = BaseLogger(LoggerName.ORDER)
 router = APIRouter(tags=[ApiTags.ORDERS.value])
 
 
@@ -86,7 +86,7 @@ def get_order(
         # Check if order belongs to user
         if order.username != current_user.username:
             logger.warning(
-                action=LogActions.ACCESS_DENIED,
+                action=LogAction.ACCESS_DENIED,
                 message=f"Unauthorized access attempt: order_id={order_id}",
                 user=current_user.username,
                 request_id=request_id
@@ -94,7 +94,7 @@ def get_order(
             raise CNOPOrderNotFoundException(f"Order '{order_id}' not found")
 
         logger.info(
-            action=LogActions.REQUEST_END,
+            action=LogAction.REQUEST_END,
             message=f"Order retrieved: order_id={order_id}",
             user=current_user.username,
             request_id=request_id
@@ -125,7 +125,7 @@ def get_order(
         raise
     except Exception as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Unexpected error retrieving order: order_id={order_id}, error={str(e)}",
             user=current_user.username,
             request_id=request_id

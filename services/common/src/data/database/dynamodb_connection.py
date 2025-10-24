@@ -12,7 +12,7 @@ import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from ...exceptions.shared_exceptions import CNOPInternalServerException
-from ...shared.logging import BaseLogger, LogActions, Loggers
+from ...shared.logging import BaseLogger, LogAction, LoggerName
 from .database_constants import (
     EnvironmentVariables,
     DefaultValues,
@@ -25,7 +25,7 @@ from .database_constants import (
     get_aws_role_arn
 )
 
-logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
+logger = BaseLogger(LoggerName.DATABASE, log_to_file=True)
 
 # Universal session pattern for IRSA and AssumeRole
 
@@ -79,7 +79,7 @@ class DynamoDBManager:
         self.dynamodb = session.resource(DatabaseConfig.DYNAMODB_SERVICE_NAME, region_name=self.region)
         self.client = session.client(DatabaseConfig.DYNAMODB_SERVICE_NAME, region_name=self.region)
         logger.info(
-            action=LogActions.DB_CONNECT,
+            action=LogAction.DB_CONNECT,
             message="DynamoDB connection initialized using universal session pattern (IRSA/AssumeRole/local)"
         )
 
@@ -89,7 +89,7 @@ class DynamoDBManager:
         self.inventory_table = self.dynamodb.Table(self.inventory_table_name)
 
         logger.info(
-            action=LogActions.DB_CONNECT,
+            action=LogAction.DB_CONNECT,
             message=f"DynamoDB initialized - Users: {self.users_table_name}, Orders: {self.orders_table_name}, Inventory: {self.inventory_table_name}"
         )
 
@@ -103,7 +103,7 @@ class DynamoDBManager:
             return True
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"DynamoDB health check failed: {e}"
             )
             return False

@@ -16,7 +16,7 @@ from .token_manager import TokenManager
 from .jwt_constants import JwtFields, JWTConfig
 from ...data.entities.user import DEFAULT_USER_ROLE
 from ...shared.constants.api_constants import HTTPStatus, ErrorMessages, RequestHeaders
-from ...shared.logging import BaseLogger, Loggers, LogActions
+from ...shared.logging import BaseLogger, LoggerName, LogAction
 
 
 class AuthenticatedUser(BaseModel):
@@ -43,7 +43,7 @@ def get_current_user(request: Request) -> AuthenticatedUser:
     # Get Authorization header
     auth_header = request.headers.get(RequestHeaders.AUTHORIZATION)
     if not auth_header or not auth_header.startswith(f"{JWTConfig.TOKEN_TYPE_BEARER.title()} "):
-        logger.warning(action=LogActions.ACCESS_DENIED, message="Missing or invalid Authorization header")
+        logger.warning(action=LogAction.ACCESS_DENIED, message="Missing or invalid Authorization header")
         raise HTTPException(
             status_code=HTTPStatus.UNAUTHORIZED,
             detail=ErrorMessages.AUTHENTICATION_FAILED
@@ -67,11 +67,11 @@ def get_current_user(request: Request) -> AuthenticatedUser:
             request_id=request_id
         )
 
-        logger.info(action=LogActions.AUTH_SUCCESS, message=f"User authenticated via JWT: {authenticated_user.username}")
+        logger.info(action=LogAction.AUTH_SUCCESS, message=f"User authenticated via JWT: {authenticated_user.username}")
         return authenticated_user
 
     except Exception as e:
-        logger.warning(action=LogActions.ACCESS_DENIED, message=f"JWT validation failed: {str(e)}")
+        logger.warning(action=LogAction.ACCESS_DENIED, message=f"JWT validation failed: {str(e)}")
         raise HTTPException(
             status_code=HTTPStatus.UNAUTHORIZED,
             detail=ErrorMessages.AUTHENTICATION_FAILED
@@ -79,4 +79,4 @@ def get_current_user(request: Request) -> AuthenticatedUser:
 
 
 # Initialize logger for this module
-logger = BaseLogger(Loggers.AUDIT)
+logger = BaseLogger(LoggerName.AUDIT)

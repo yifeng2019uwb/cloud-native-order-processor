@@ -24,13 +24,13 @@ from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
 from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException, CNOPInternalServerException
 from user_exceptions import CNOPUserValidationException
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LogAction, LoggerName
 from common.auth.gateway.header_validator import get_request_id_from_request
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from constants import MSG_SUCCESS_LOGIN
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 router = APIRouter(tags=[ApiTags.AUTHENTICATION.value])
 
 
@@ -75,17 +75,17 @@ def login_user(
     request_id = get_request_id_from_request(request)
 
     try:
-        logger.info(action=LogActions.REQUEST_START, message=f"Login attempt for: {login_data.username}", request_id=request_id)
+        logger.info(action=LogAction.REQUEST_START, message=f"Login attempt for: {login_data.username}", request_id=request_id)
 
         # Layer 2: Business validation only
         # Authenticate user using username
         user = user_dao.authenticate_user(login_data.username, login_data.password)
         if not user:
-            logger.warning(action=LogActions.AUTH_FAILED, message=f"Authentication failed for: {login_data.username}", request_id=request_id)
+            logger.warning(action=LogAction.AUTH_FAILED, message=f"Authentication failed for: {login_data.username}", request_id=request_id)
             audit_logger.log_login_failure(login_data.username, "Invalid credentials", client_ip, user_agent)
             raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{login_data.username}'")
 
-        logger.info(action=LogActions.AUTH_SUCCESS, message=f"User authenticated successfully: {login_data.username}", request_id=request_id)
+        logger.info(action=LogAction.USER_LOGIN_SUCCESS, message=f"User authenticated successfully: {login_data.username}", request_id=request_id)
 
         # Create JWT token using centralized TokenManager
         token_response = token_manager.create_access_token(user.username, user.role)
@@ -117,5 +117,5 @@ def login_user(
         raise
     except Exception as e:
         # Log unexpected errors and re-raise as internal server error
-        logger.error(action=LogActions.ERROR, message=f"Unexpected error during login: {e}", request_id=request_id)
+        logger.error(action=LogAction.ERROR, message=f"Unexpected error during login: {e}", request_id=request_id)
         raise CNOPInternalServerException(f"{ErrorMessages.INTERNAL_SERVER_ERROR} during login: {e}")

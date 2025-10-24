@@ -18,6 +18,7 @@ from src.core.utils.transaction_manager import (TransactionManager,
 from src.data.entities.user.balance import Balance
 from src.data.entities.user.balance_enums import TransactionStatus, TransactionType
 from src.data.dao.asset.asset_balance_dao import AssetBalanceDAO
+from src.shared.logging import LogAction, LogField
 from src.data.dao.asset.asset_transaction_dao import AssetTransactionDAO
 from src.data.dao.inventory.asset_dao import AssetDAO
 from src.data.dao.order.order_dao import OrderDAO

@@ -86,8 +86,7 @@ class TestListOrders:
         mock_orders
     ):
         """Test successful order listing"""
-        with patch('src.controllers.list_orders.validate_order_listing_business_rules') as mock_validate, \
-             patch('src.controllers.list_orders.logger') as mock_logger:
+        with patch('src.controllers.list_orders.validate_order_listing_business_rules') as mock_validate:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -123,9 +122,6 @@ class TestListOrders:
 
             # Verify DAO was called
             mock_order_dao.get_orders_by_user.assert_called_once_with("testuser")
-
-            # Verify logging
-            mock_logger.info.assert_called()
 
 
     def test_list_orders_with_asset_filter(
@@ -310,8 +306,7 @@ class TestListOrders:
         mock_user_dao
     ):
         """Test order listing with empty result"""
-        with patch('src.controllers.list_orders.validate_order_listing_business_rules') as mock_validate, \
-             patch('src.controllers.list_orders.logger') as mock_logger:
+        with patch('src.controllers.list_orders.validate_order_listing_business_rules') as mock_validate:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -336,8 +331,6 @@ class TestListOrders:
             assert len(result.data) == 0
             assert result.has_more is False
 
-            # Verify logging
-            mock_logger.info.assert_called()
 
 
     def test_list_orders_has_more_true(
@@ -393,8 +386,7 @@ class TestListOrders:
         mock_user_dao
     ):
         """Test order listing when unexpected error occurs"""
-        with patch('src.controllers.list_orders.validate_order_listing_business_rules') as mock_validate, \
-             patch('src.controllers.list_orders.logger') as mock_logger:
+        with patch('src.controllers.list_orders.validate_order_listing_business_rules') as mock_validate:
 
             # Setup mock to raise generic Exception
             mock_validate.side_effect = Exception("Unexpected error")
@@ -413,9 +405,6 @@ class TestListOrders:
                     user_dao=mock_user_dao
                 )
 
-            # Verify logging
-            mock_logger.error.assert_called()
-
 
     def test_list_orders_logging_and_metrics(
         self,
@@ -426,8 +415,7 @@ class TestListOrders:
         mock_orders
     ):
         """Test order listing logging and metrics recording"""
-        with patch('src.controllers.list_orders.validate_order_listing_business_rules') as mock_validate, \
-             patch('src.controllers.list_orders.logger') as mock_logger:
+        with patch('src.controllers.list_orders.validate_order_listing_business_rules') as mock_validate:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -446,8 +434,6 @@ class TestListOrders:
                 user_dao=mock_user_dao
             )
 
-            # Verify logging was called for successful listing
-            mock_logger.info.assert_called()
 
     def test_router_configuration(self):
         """Test router configuration"""

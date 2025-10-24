@@ -21,7 +21,7 @@ from common.exceptions.shared_exceptions import (
     CNOPInternalServerException,
     CNOPUserNotFoundException
 )
-from common.shared.logging import BaseLogger, Loggers, LogActions, LogFields
+from common.shared.logging import BaseLogger, LogAction, LogField, LoggerName
 from user_exceptions import CNOPUserValidationException
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from validation_enums import ValidationActions
@@ -42,7 +42,7 @@ from common.auth.gateway.header_validator import get_request_id_from_request
 from validation.business_validators import validate_user_permissions
 
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 router = APIRouter(tags=[ApiTags.PORTFOLIO.value])
 
 
@@ -94,14 +94,10 @@ def get_user_portfolio(
 
     # Log portfolio request
     logger.info(
-        action=LogActions.REQUEST_START,
-        message=f"Portfolio request from {request.client.host if request.client else 'unknown'}",
+        action=LogAction.REQUEST_START,
+        message=f"Portfolio request from {request.client.host if request.client else 'unknown'} for user {username}",
         user=username,
-        request_id=request_id,
-        extra={
-            LogFields.USER_AGENT: request.headers.get(RequestHeaders.USER_AGENT, RequestHeaderDefaults.USER_AGENT_DEFAULT),
-            LogFields.TIMESTAMP: datetime.now(timezone.utc).isoformat()
-        }
+        request_id=request_id
     )
 
     try:
@@ -170,7 +166,7 @@ def get_user_portfolio(
         }
 
         logger.info(
-            action=LogActions.REQUEST_END,
+            action=LogAction.REQUEST_END,
             message=f"Portfolio retrieved successfully: total_value={total_portfolio_value}, asset_count={len(portfolio_assets)}",
             user=username,
             request_id=request_id
@@ -188,7 +184,7 @@ def get_user_portfolio(
         raise
     except CNOPDatabaseOperationException as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Database operation failed for portfolio: error={str(e)}",
             user=username,
             request_id=request_id
@@ -196,7 +192,7 @@ def get_user_portfolio(
         raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)
     except Exception as e:
         logger.error(
-            action=LogActions.ERROR,
+            action=LogAction.ERROR,
             message=f"Unexpected error during portfolio retrieval: error={str(e)}",
             user=username,
             request_id=request_id

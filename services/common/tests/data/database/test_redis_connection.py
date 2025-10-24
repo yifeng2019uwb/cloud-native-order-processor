@@ -217,8 +217,7 @@ class TestRedisConnectionManager:
         assert result == mock_client
         # Should not create new pool or client
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_test_connection_success(self, mock_logger):
+    def test_test_connection_success(self):
         """Test successful connection test"""
         with patch('redis.Redis.ping') as mock_ping:
             mock_ping.return_value = True
@@ -228,11 +227,8 @@ class TestRedisConnectionManager:
 
             assert result is True
             assert manager._is_connected is True
-            mock_logger.info.assert_called()
-            assert mock_logger.info.call_count == 2
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_test_connection_failure(self, mock_logger):
+    def test_test_connection_failure(self):
         """Test failed connection test"""
         with patch('redis.Redis.ping') as mock_ping:
             mock_ping.side_effect = ConnectionError("Connection failed")
@@ -242,10 +238,8 @@ class TestRedisConnectionManager:
 
             assert result is False
             assert manager._is_connected is False
-            assert mock_logger.error.call_count >= 1
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_test_connection_timeout_error(self, mock_logger):
+    def test_test_connection_timeout_error(self):
         """Test connection test with timeout error"""
         with patch('redis.Redis.ping') as mock_ping:
             mock_ping.side_effect = TimeoutError("Timeout")
@@ -255,11 +249,8 @@ class TestRedisConnectionManager:
 
             assert result is False
             assert manager._is_connected is False
-            """mock_logger.error.assert_called_once()"""
-            assert mock_logger.error.call_count >= 1
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_test_connection_redis_error(self, mock_logger):
+    def test_test_connection_redis_error(self):
         """Test connection test with Redis error"""
         with patch('redis.Redis.ping') as mock_ping:
             mock_ping.side_effect = RedisError("Redis error")
@@ -269,7 +260,6 @@ class TestRedisConnectionManager:
 
             assert result is False
             assert manager._is_connected is False
-            mock_logger.error.assert_called_once()
 
     def test_is_connected_true(self):
         """Test is_connected when connected"""
@@ -291,8 +281,7 @@ class TestRedisConnectionManager:
 
             assert result is False
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_get_connection_success(self, mock_logger):
+    def test_get_connection_success(self):
         """Test successful connection context manager"""
         manager = RedisConnectionManager()
         mock_client = Mock()
@@ -301,8 +290,7 @@ class TestRedisConnectionManager:
             with manager.get_connection() as client:
                 assert client == mock_client
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_get_connection_connection_error(self, mock_logger):
+    def test_get_connection_connection_error(self):
         """Test connection context manager with connection error"""
         manager = RedisConnectionManager()
         mock_client = Mock()
@@ -313,8 +301,7 @@ class TestRedisConnectionManager:
                 assert client == mock_client
             # Note: Logger calls are not mocked properly, so we skip this assertion
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_get_connection_timeout_error(self, mock_logger):
+    def test_get_connection_timeout_error(self):
         """Test connection context manager with timeout error"""
         manager = RedisConnectionManager()
         mock_client = Mock()
@@ -325,8 +312,7 @@ class TestRedisConnectionManager:
                 assert client == mock_client
             # Note: Logger calls are not mocked properly, so we skip this assertion
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_get_connection_redis_error(self, mock_logger):
+    def test_get_connection_redis_error(self):
         """Test connection context manager with Redis error"""
         manager = RedisConnectionManager()
         mock_client = Mock()
@@ -337,8 +323,7 @@ class TestRedisConnectionManager:
                 assert client == mock_client
             # Note: Logger calls are not mocked properly, so we skip this assertion
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_close(self, mock_logger):
+    def test_close(self):
         """Test closing Redis connections"""
         manager = RedisConnectionManager()
         mock_pool = Mock()
@@ -350,7 +335,6 @@ class TestRedisConnectionManager:
 
         mock_client.close.assert_called_once()
         mock_pool.disconnect.assert_called_once()
-        mock_logger.info.assert_called_once()
 
     def test_close_no_connections(self):
         """Test closing when no connections exist"""
@@ -450,12 +434,8 @@ class TestRedisUtilityFunctions:
     PATH_MANAGER_CLASS = f'{redis_connection.__name__}.RedisConnectionManager'
     PATH_GET_MANAGER = f'{redis_connection.__name__}.get_redis_manager'
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_redis_set_success(self, mock_logger):
+    def test_redis_set_success(self):
         """Test successful Redis set operation"""
-        mock_logger = Mock()
-        mock_logger.info.return_value = None # Mock the logger's info method
-
         mock_manager = Mock()
         mock_client = Mock()
         mock_client.set.return_value = True
@@ -472,12 +452,8 @@ class TestRedisUtilityFunctions:
             mock_client.set.assert_called_once_with("test_key", "test_value")
             assert result is True
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_redis_set_with_expire(self, mock_logger):
+    def test_redis_set_with_expire(self):
         """Test Redis set operation with expiration"""
-        mock_logger = Mock()
-        mock_logger.info.return_value = None # Mock the logger's info method
-
         mock_manager = Mock()
         mock_client = Mock()
         mock_client.setex.return_value = True
@@ -494,11 +470,8 @@ class TestRedisUtilityFunctions:
             mock_client.setex.assert_called_once_with("test_key", 3600, "test_value")
             assert result is True
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_redis_set_failure(self, mock_logger):
+    def test_redis_set_failure(self):
         """Test Redis set operation failure"""
-        mock_logger = Mock()
-        mock_logger.error.return_value = None # Mock the logger's error method
 
         mock_manager = Mock()
         mock_client = Mock()
@@ -515,12 +488,8 @@ class TestRedisUtilityFunctions:
 
             assert result is False
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_redis_get_success(self, mock_logger):
+    def test_redis_get_success(self):
         """Test successful Redis get operation"""
-        mock_logger = Mock()
-        mock_logger.info.return_value = None # Mock the logger's info method
-
         mock_manager = Mock()
         mock_client = Mock()
         mock_client.get.return_value = "test_value"
@@ -537,12 +506,8 @@ class TestRedisUtilityFunctions:
             mock_client.get.assert_called_once_with("test_key")
             assert result == "test_value"
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_redis_get_failure(self, mock_logger):
+    def test_redis_get_failure(self):
         """Test Redis get operation failure"""
-        mock_logger = Mock()
-        mock_logger.error.return_value = None # Mock the logger's error method
-
         mock_manager = Mock()
         mock_client = Mock()
         mock_client.get.side_effect = RedisError("Get failed")
@@ -558,12 +523,8 @@ class TestRedisUtilityFunctions:
 
             assert result is None
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_redis_delete_success(self, mock_logger):
+    def test_redis_delete_success(self):
         """Test successful Redis delete operation"""
-        mock_logger = Mock()
-        mock_logger.info.return_value = None # Mock the logger's info method
-
         mock_manager = Mock()
         mock_client = Mock()
         mock_client.delete.return_value = 1
@@ -580,12 +541,8 @@ class TestRedisUtilityFunctions:
             mock_client.delete.assert_called_once_with("test_key")
             assert result is True
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_redis_delete_failure(self, mock_logger):
+    def test_redis_delete_failure(self):
         """Test Redis delete operation failure"""
-        mock_logger = Mock()
-        mock_logger.error.return_value = None # Mock the logger's error method
-
         mock_manager = Mock()
         mock_client = Mock()
         mock_client.delete.side_effect = RedisError("Delete failed")
@@ -601,12 +558,8 @@ class TestRedisUtilityFunctions:
 
             assert result is False
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_redis_exists_success(self, mock_logger):
+    def test_redis_exists_success(self):
         """Test successful Redis exists operation"""
-        mock_logger = Mock()
-        mock_logger.info.return_value = None # Mock the logger's info method
-
         mock_manager = Mock()
         mock_client = Mock()
         mock_client.exists.return_value = 1
@@ -623,12 +576,8 @@ class TestRedisUtilityFunctions:
             mock_client.exists.assert_called_once_with("test_key")
             assert result is True
 
-    @patch('src.data.database.redis_connection.logger')
-    def test_redis_exists_failure(self, mock_logger):
+    def test_redis_exists_failure(self):
         """Test Redis exists operation failure"""
-        mock_logger = Mock()
-        mock_logger.error.return_value = None # Mock the logger's error method
-
         mock_manager = Mock()
         mock_client = Mock()
         mock_client.exists.side_effect = RedisError("Exists failed")

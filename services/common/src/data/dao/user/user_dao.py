@@ -11,11 +11,11 @@ from ....exceptions.shared_exceptions import (
     CNOPInvalidCredentialsException,
     CNOPUserNotFoundException
 )
-from ....shared.logging import BaseLogger, LogActions, Loggers
+from ....shared.logging import BaseLogger, LogAction, LoggerName
 from ...entities.entity_constants import UserFields
 from ...entities.user import User, UserItem
 
-logger = BaseLogger(Loggers.DATABASE, log_to_file=True)
+logger = BaseLogger(LoggerName.DATABASE, log_to_file=True)
 
 
 class UserDAO:
@@ -39,7 +39,7 @@ class UserDAO:
             user_item.save()
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"User created successfully: username={user.username}, email={user.email}"
             )
 
@@ -48,7 +48,7 @@ class UserDAO:
 
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to create user {user.username}: {str(e)}"
             )
             raise
@@ -57,7 +57,7 @@ class UserDAO:
         """Get user by username (Primary Key lookup)"""
         try:
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Looking up user by username: '{username}'"
             )
 
@@ -65,7 +65,7 @@ class UserDAO:
             user_item = UserItem.get(username, UserFields.SK_VALUE)
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"User found: {username}"
             )
 
@@ -74,13 +74,13 @@ class UserDAO:
 
         except UserItem.DoesNotExist:
             logger.warning(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"User not found: {username}"
             )
             raise CNOPUserNotFoundException(f"User with username '{username}' not found")
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to get user {username}: {str(e)}"
             )
             raise
@@ -89,21 +89,21 @@ class UserDAO:
         """Get user by email (GSI lookup)"""
         try:
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"Looking up user by email: '{email}'"
             )
 
             # Use PynamoDB GSI to query by email
             for user_item in UserItem.email_index.query(email):
                 logger.info(
-                    action=LogActions.DB_OPERATION,
+                    action=LogAction.DB_OPERATION,
                     message=f"User found by email: {email}"
                 )
                 return user_item.to_user()
 
             # No user found
             logger.warning(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"User not found by email: {email}"
             )
             raise CNOPUserNotFoundException(f"User with email '{email}' not found")
@@ -112,7 +112,7 @@ class UserDAO:
             raise
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to get user by email {email}: {str(e)}"
             )
             raise
@@ -129,7 +129,7 @@ class UserDAO:
 
             if not stored_hash:
                 logger.error(
-                    action=LogActions.ERROR,
+                    action=LogAction.ERROR,
                     message=f"No password hash found for user {username}"
                 )
                 raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{username}'")
@@ -137,13 +137,13 @@ class UserDAO:
             # Verify password
             if self.password_manager.verify_password(password, stored_hash):
                 logger.info(
-                    action=LogActions.DB_OPERATION,
+                    action=LogAction.DB_OPERATION,
                     message=f"User authenticated successfully: {username}"
                 )
                 return user
             else:
                 logger.warning(
-                    action=LogActions.ERROR,
+                    action=LogAction.ERROR,
                     message=f"Invalid password for user: {username}"
                 )
                 raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{username}'")
@@ -154,7 +154,7 @@ class UserDAO:
             raise
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to authenticate user {username}: {str(e)}"
             )
             raise
@@ -185,7 +185,7 @@ class UserDAO:
             user_item.save()
 
             logger.info(
-                action=LogActions.DB_OPERATION,
+                action=LogAction.DB_OPERATION,
                 message=f"User updated successfully: {user.username}"
             )
 
@@ -194,13 +194,13 @@ class UserDAO:
 
         except UserItem.DoesNotExist:
             logger.warning(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"User not found for update: {user.username}"
             )
             raise CNOPUserNotFoundException(f"User with username '{user.username}' not found")
         except Exception as e:
             logger.error(
-                action=LogActions.ERROR,
+                action=LogAction.ERROR,
                 message=f"Failed to update user {user.username}: {str(e)}"
             )
             raise

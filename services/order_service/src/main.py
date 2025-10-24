@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from common.shared.logging import BaseLogger, Loggers, LogActions
+from common.shared.logging import BaseLogger, LoggerName, LogAction
 from common.exceptions import (
     CNOPAssetNotFoundException,
     CNOPUserNotFoundException,
@@ -36,7 +36,7 @@ from common.data.entities.entity_constants import OrderFields
 from middleware import metrics_middleware
 
 # Initialize logger
-logger = BaseLogger(Loggers.ORDER)
+logger = BaseLogger(LoggerName.ORDER)
 
 # Create FastAPI app
 app = FastAPI(
@@ -75,42 +75,42 @@ def internal_metrics():
 # Custom exception handlers
 @app.exception_handler(CNOPOrderValidationException)
 def order_validation_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Order validation error: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Order validation error: {exc}")
     return JSONResponse(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPOrderAlreadyExistsException)
 def order_already_exists_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Order already exists: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Order already exists: {exc}")
     return JSONResponse(status_code=HTTPStatus.CONFLICT, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPUserNotFoundException)
 def user_not_found_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"User not found: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"User not found: {exc}")
     return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPAssetNotFoundException)
 def asset_not_found_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Asset not found: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Asset not found: {exc}")
     return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPOrderNotFoundException)
 def order_not_found_exception_handler(request, exc):
-    logger.warning(action=LogActions.VALIDATION_ERROR, message=f"Order not found: {exc}")
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Order not found: {exc}")
     return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPOrderServerException)
 def order_server_exception_handler(request, exc):
-    logger.error(action=LogActions.ERROR, message=f"Order server error: {exc}")
+    logger.error(action=LogAction.ERROR, message=f"Order server error: {exc}")
     return JSONResponse(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPInternalServerException)
 def internal_server_exception_handler(request, exc):
-    logger.error(action=LogActions.ERROR, message=f"Internal server error: {exc}")
+    logger.error(action=LogAction.ERROR, message=f"Internal server error: {exc}")
     return JSONResponse(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": str(exc)})
 
 @app.exception_handler(Exception)
 def general_exception_handler(request, exc):
-    logger.error(action=LogActions.ERROR, message=f"Unhandled error: {exc}")
+    logger.error(action=LogAction.ERROR, message=f"Unhandled error: {exc}")
     return JSONResponse(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": ErrorMessages.INTERNAL_SERVER_ERROR})
 
 # Root endpoint

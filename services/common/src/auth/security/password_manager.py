@@ -16,9 +16,9 @@ from typing import Optional
 import bcrypt
 
 from ...exceptions import CNOPEntityValidationException
-from ...shared.logging import BaseLogger, Loggers
+from ...shared.logging import BaseLogger, LoggerName
 
-logger = BaseLogger(Loggers.AUDIT, log_to_file=True)
+logger = BaseLogger(LoggerName.AUDIT, log_to_file=True)
 ENCODE_UTF_8 = 'utf-8'
 
 

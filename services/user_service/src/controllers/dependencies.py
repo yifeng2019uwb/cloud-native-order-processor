@@ -10,9 +10,9 @@ from common.data.dao.user.user_dao import UserDAO
 from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.core.utils import TransactionManager
-from common.shared.logging import BaseLogger, Loggers
+from common.shared.logging import BaseLogger, LoggerName
 # Initialize our standardized logger
-logger = BaseLogger(Loggers.USER)
+logger = BaseLogger(LoggerName.USER)
 
 
 def get_transaction_manager() -> TransactionManager:

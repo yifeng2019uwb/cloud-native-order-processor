@@ -4,7 +4,7 @@ Generates JSON and HTML reports for integration tests
 """
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Any
 
 class TestReporter:
@@ -13,7 +13,7 @@ class TestReporter:
     def __init__(self, reports_dir: str = "reports"):
         self.reports_dir = reports_dir
         self.test_results = []
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(timezone.utc)
         self.end_time = None
 
         # Create reports directory if it doesn't exist
@@ -30,13 +30,13 @@ class TestReporter:
             'status_code': status_code,
             'error': error,
             'service': service,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         self.test_results.append(result)
 
     def generate_json_report(self) -> str:
         """Generate JSON report"""
-        self.end_time = datetime.utcnow()
+        self.end_time = datetime.now(timezone.utc)
 
         report = {
             'test_run': {
@@ -58,7 +58,7 @@ class TestReporter:
             }
         }
 
-        filename = f"test_report_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+        filename = f"test_report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
         filepath = os.path.join(self.reports_dir, filename)
 
         with open(filepath, 'w') as f:
@@ -68,7 +68,7 @@ class TestReporter:
 
     def generate_html_report(self) -> str:
         """Generate simple HTML report"""
-        self.end_time = datetime.utcnow()
+        self.end_time = datetime.now(timezone.utc)
 
         passed = sum(1 for r in self.test_results if r['success'])
         failed = len(self.test_results) - passed
@@ -93,7 +93,7 @@ class TestReporter:
 <body>
     <div class="header">
         <h1>Integration Test Report</h1>
-        <p>Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
+        <p>Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
     </div>
 
     <div class="summary">
@@ -146,7 +146,7 @@ class TestReporter:
 </html>
 """
 
-        filename = f"test_report_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.html"
+        filename = f"test_report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.html"
         filepath = os.path.join(self.reports_dir, filename)
 
         with open(filepath, 'w') as f:
