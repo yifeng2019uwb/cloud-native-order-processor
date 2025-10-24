@@ -1,6 +1,7 @@
 # Standard library imports
 import os
 import sys
+from datetime import datetime, timezone
 
 # Third-party imports
 import pytest
@@ -212,7 +213,7 @@ class TestUserItem:
     def test_valid_user_item(self):
         """Test valid user item data"""
         from datetime import datetime
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         user_item_data = {
             "Pk": "testuser",
             "Sk": "USER",
@@ -252,7 +253,7 @@ class TestUserItem:
     def test_user_item_to_user(self):
         """Test converting UserItem to User"""
         from datetime import datetime
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         user_item = UserItem(
             Pk="testuser",
             Sk="USER",

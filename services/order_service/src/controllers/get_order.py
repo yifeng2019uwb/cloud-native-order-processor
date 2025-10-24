@@ -5,7 +5,7 @@ Path: services/order_service/src/controllers/get_order.py
 Handles order retrieval endpoint with business logic directly in controller
 - GET /orders/{order_id} - Get order by ID
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Union
 from fastapi import APIRouter, Depends, status, Request
 from api_models.order import GetOrderResponse, OrderData
@@ -116,7 +116,7 @@ def get_order(
             success=True,
             message=MSG_SUCCESS_ORDER_RETRIEVED,
             data=order_data_response,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
     except CNOPOrderNotFoundException:

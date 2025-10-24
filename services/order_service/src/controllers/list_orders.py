@@ -5,7 +5,7 @@ Path: services/order_service/src/controllers/list_orders.py
 Handles order listing endpoint with business logic directly in controller
 - GET /orders - List user orders with filters
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Union, Optional
 from fastapi import APIRouter, Depends, status, Query, Request
 from api_models.order import OrderListResponse, OrderSummary
@@ -126,7 +126,7 @@ def list_orders(
             message=MSG_SUCCESS_ORDERS_LISTED,
             data=order_summaries,
             has_more=has_more,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
     except Exception as e:

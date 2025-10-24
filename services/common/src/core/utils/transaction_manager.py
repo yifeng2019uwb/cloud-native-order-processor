@@ -118,7 +118,7 @@ class TransactionManager:
                 transaction = BalanceTransaction(
                     Pk=f"{TransactionFields.PK_PREFIX}{username}",
                     username=username,
-                    Sk=datetime.utcnow().isoformat(),
+                    Sk=datetime.now(timezone.utc).isoformat(),
                     transaction_type=TransactionType.DEPOSIT,
                     amount=amount,
                     description="deposit",
@@ -234,7 +234,7 @@ class TransactionManager:
                 transaction = BalanceTransaction(
                     Pk=f"{TransactionFields.PK_PREFIX}{username}",
                     username=username,
-                    Sk=datetime.utcnow().isoformat(),
+                    Sk=datetime.now(timezone.utc).isoformat(),
                     transaction_type=TransactionType.WITHDRAW,
                     amount=-amount,
                     description="Withdrawal",

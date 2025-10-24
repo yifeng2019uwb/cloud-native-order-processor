@@ -7,7 +7,7 @@ Combines sanitization + format validation in each function.
 
 import re
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Import proper exceptions
 from order_exceptions.exceptions import CNOPOrderValidationException
@@ -202,13 +202,28 @@ def validate_expires_at(v: datetime) -> datetime:
     if not isinstance(v, datetime):
         raise CNOPOrderValidationException("Expiration time must be a valid datetime")
 
-    if v <= datetime.utcnow():
-        raise CNOPOrderValidationException("Expiration time must be in the future")
+    current_time = datetime.now(timezone.utc)
 
-    # Check if expiration is too far in the future (e.g., more than 1 year)
-    max_expiry = datetime.utcnow().replace(year=datetime.utcnow().year + 1)
-    if v > max_expiry:
-        raise CNOPOrderValidationException("Expiration time cannot be more than 1 year in the future")
+    # Handle both naive and timezone-aware datetimes
+    if v.tzinfo is None:
+        # If input is naive, assume it's UTC and compare with naive current time
+        current_time_naive = current_time.replace(tzinfo=None)
+        if v <= current_time_naive:
+            raise CNOPOrderValidationException("Expiration time must be in the future")
+
+        # Check if expiration is too far in the future (e.g., more than 1 year)
+        max_expiry = current_time_naive.replace(year=current_time_naive.year + 1)
+        if v > max_expiry:
+            raise CNOPOrderValidationException("Expiration time cannot be more than 1 year in the future")
+    else:
+        # If input is timezone-aware, compare with timezone-aware current time
+        if v <= current_time:
+            raise CNOPOrderValidationException("Expiration time must be in the future")
+
+        # Check if expiration is too far in the future (e.g., more than 1 year)
+        max_expiry = current_time.replace(year=current_time.year + 1)
+        if v > max_expiry:
+            raise CNOPOrderValidationException("Expiration time cannot be more than 1 year in the future")
 
     return v
 

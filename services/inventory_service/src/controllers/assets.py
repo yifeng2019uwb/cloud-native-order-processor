@@ -219,7 +219,7 @@ def get_asset_by_id(
 
         # Convert to detailed response model with all comprehensive fields
         availability_status = STATUS_AVAILABLE if asset.is_active else STATUS_UNAVAILABLE
-        last_updated = asset.last_updated or datetime.utcnow().isoformat()
+        last_updated = asset.last_updated or datetime.now(timezone.utc).isoformat()
 
         return AssetDetailResponse(
             asset_id=asset.asset_id,

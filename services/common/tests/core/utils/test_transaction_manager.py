@@ -69,7 +69,7 @@ class TestTransactionManager:
             description="Test transaction",
             status=TransactionStatus.COMPLETED,
             reference_id="ref123",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             entity_type="balance_transaction"
         )
 
@@ -81,8 +81,8 @@ class TestTransactionManager:
             Sk="BALANCE",
             username="testuser123",
             current_balance=Decimal('100.00'),
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
             entity_type="balance"
         )
 
@@ -100,8 +100,8 @@ class TestTransactionManager:
             price=Decimal('50000.00'),
             total_amount=Decimal('50000.00'),
             status=OrderStatus.PENDING,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
 
     @pytest.mark.asyncio

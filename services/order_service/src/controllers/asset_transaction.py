@@ -141,7 +141,7 @@ def get_asset_transactions(
             message=MSG_SUCCESS_ASSET_TRANSACTIONS_RETRIEVED,
             data=transaction_data_list,
             has_more=has_more,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
     except CNOPEntityNotFoundException:
@@ -157,7 +157,7 @@ def get_asset_transactions(
             message="No asset transactions found",
             data=[],
             has_more=False,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
     except CNOPDatabaseOperationException as e:
         logger.error(

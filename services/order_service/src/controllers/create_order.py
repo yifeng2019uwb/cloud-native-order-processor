@@ -205,7 +205,7 @@ async def create_order(
             success=True,
             message=success_message,
             data=order_data_response,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
     except CNOPInsufficientBalanceException as e:

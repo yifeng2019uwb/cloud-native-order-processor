@@ -114,7 +114,7 @@ async def deposit_funds(
             success=True,
             message=f"Successfully deposited ${deposit_data.amount}",
             transaction_id=str(result.transaction.transaction_id),
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
     except CNOPLockAcquisitionException as e:

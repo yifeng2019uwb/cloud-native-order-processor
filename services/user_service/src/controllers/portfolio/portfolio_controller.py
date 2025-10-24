@@ -180,7 +180,7 @@ def get_user_portfolio(
             success=True,
             message=MSG_SUCCESS_PORTFOLIO_RETRIEVED,
             data=portfolio_data,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
     except CNOPUserValidationException:

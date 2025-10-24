@@ -5,7 +5,7 @@ Layer 2: Business validation functions for service layer
 Handles business rules, existence checks, and complex validation logic.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 

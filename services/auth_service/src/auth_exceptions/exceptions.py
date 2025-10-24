@@ -5,7 +5,7 @@ These exceptions are internal to the Auth Service and not exposed to clients.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from common.shared.logging import BaseLogger, Loggers, LogActions
 
@@ -31,7 +31,7 @@ class BaseInternalException(Exception):
         self.message = message
         self.context = context or {}
         self.error_id = str(uuid.uuid4())
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(timezone.utc)
 
         # Auto-logging: Automatically logs when exception is created
         logger.error(

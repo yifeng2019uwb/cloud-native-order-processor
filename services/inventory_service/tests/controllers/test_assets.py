@@ -8,7 +8,7 @@ import sys
 from unittest.mock import patch, MagicMock
 from fastapi import Request
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add the necessary paths to sys.path before importing the controller
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))  # for common
@@ -74,7 +74,7 @@ def create_test_asset_btc():
         atl_date="2013-07-06T00:00:00.000Z",
         last_updated="2025-08-30T21:49:33.955Z",
         sparkline_7d={"prices": [44000, 45000, 46000, 45000, 44000, 45000, 45000]},
-        updated_at=datetime.utcnow()
+        updated_at=datetime.now(timezone.utc)
     )
 
 
@@ -114,7 +114,7 @@ def create_test_asset_eth():
         atl_date="2020-01-20T00:00:00.000Z",
         last_updated="2025-08-30T21:49:33.955Z",
         sparkline_7d={"prices": [3100, 3000, 2900, 3000, 3100, 3000, 3000]},
-        updated_at=datetime.utcnow()
+        updated_at=datetime.now(timezone.utc)
     )
 
 

@@ -114,7 +114,7 @@ async def withdraw_funds(
             success=True,
             message=f"Successfully withdrew ${withdraw_data.amount}",
             transaction_id=str(result.transaction.transaction_id),
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
     except CNOPLockAcquisitionException as e:

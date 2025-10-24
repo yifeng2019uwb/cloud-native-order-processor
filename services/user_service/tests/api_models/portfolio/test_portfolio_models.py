@@ -4,7 +4,7 @@ Tests for portfolio API models
 import pytest
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from pydantic import ValidationError
 
@@ -147,7 +147,7 @@ class TestGetPortfolioResponse:
             success=True,
             message="Portfolio retrieved successfully",
             data=portfolio_data,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
         assert response.success is True
@@ -167,7 +167,7 @@ class TestGetPortfolioResponse:
             success="true",  # Will be converted to True
             message="Test message",
             data={},
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         assert response.success is True
 
@@ -178,7 +178,7 @@ class TestGetPortfolioResponse:
                 success=True,
                 message="",  # Empty message should fail
                 data={},
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
 
     def test_get_portfolio_response_invalid_timestamp(self):
@@ -221,7 +221,7 @@ class TestGetPortfolioResponse:
             success=True,
             message="Portfolio retrieved successfully",
             data=portfolio_data,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
         assert response.success is True
@@ -245,7 +245,7 @@ class TestGetPortfolioResponse:
             success=True,
             message="Portfolio retrieved successfully",
             data=portfolio_data,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
         # Test that the response can be serialized to JSON

@@ -16,7 +16,7 @@ import json
 import os
 import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
@@ -79,7 +79,7 @@ class BaseLogger:
 
     def _format_timestamp(self) -> str:
         """Format timestamp in ISO format with Z suffix."""
-        return datetime.utcnow().isoformat() + "Z"
+        return datetime.now(timezone.utc).isoformat() + "Z"
 
     def log(self, level: str, action: str, message: str,
             user: Optional[str] = None, duration_ms: Optional[int] = None,
