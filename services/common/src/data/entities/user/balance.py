@@ -57,6 +57,15 @@ class BalanceTransaction(BaseModel):
         }
     )
 
+    def get_pk(self) -> str:
+        """Build primary key for balance transaction using username"""
+        return f"{TransactionFields.PK_PREFIX}{self.username}"
+
+    @staticmethod
+    def build_pk(username: str) -> str:
+        """Build primary key for balance transaction using username"""
+        return f"{TransactionFields.PK_PREFIX}{username}"
+
 
 # ==================== PYNAMODB MODELS ====================
 
@@ -139,7 +148,7 @@ class BalanceTransactionItem(Model):
     def from_balance_transaction(cls, transaction: BalanceTransaction) -> BalanceTransactionItem:
         """Create BalanceTransactionItem from BalanceTransaction domain model"""
         transaction_item = cls()
-        transaction_item.Pk = f"{TransactionFields.PK_PREFIX}{transaction.username}"
+        transaction_item.Pk = transaction.get_pk()
         transaction_item.Sk = transaction.created_at.isoformat()
         transaction_item.username = transaction.username
         transaction_item.transaction_id = str(transaction.transaction_id)

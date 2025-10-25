@@ -84,9 +84,9 @@ raise CNOPUserNotFoundException("User not found")
 **Logging:**
 ```python
 # Services use shared logging
-from common.shared.logging import BaseLogger, Loggers, LogActions
-logger = BaseLogger(Loggers.USER)
-logger.info(action=LogActions.USER_CREATED, message="User created")
+from common.shared.logging import BaseLogger, LoggerName, LogAction
+logger = BaseLogger(LoggerName.USER)
+logger.info(action=LogAction.USER_REGISTRATION_SUCCESS, message="User created")
 ```
 
 ## 🧪 Testing

@@ -222,11 +222,8 @@ class BalanceDAO:
         """Get all transactions for a user with pagination."""
         try:
             # Use PynamoDB to query transactions
-            pk_value = f"{TransactionFields.PK_PREFIX}{username}"
-
-            # Query transactions using PynamoDB
             query_result = BalanceTransactionItem.query(
-                pk_value,
+                BalanceTransaction.build_pk(username),
                 limit=limit,
                 last_evaluated_key=start_key
             )
@@ -255,10 +252,8 @@ class BalanceDAO:
         try:
             # Find the transaction by querying and then delete it
             # Note: This matches the archived behavior of finding by transaction_id
-            pk_value = f"{TransactionFields.PK_PREFIX}{username}"
-
             # Query to find the specific transaction
-            for item in BalanceTransactionItem.query(pk_value):
+            for item in BalanceTransactionItem.query(BalanceTransaction.build_pk(username)):
                 if item.transaction_id == str(transaction_id):
                     item.delete()
                     logger.info(

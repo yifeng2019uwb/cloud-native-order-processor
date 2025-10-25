@@ -16,7 +16,9 @@ from src.exceptions.shared_exceptions import (
     CNOPInvalidCredentialsException,
     CNOPUserNotFoundException
     )
-from tests.data.dao.mock_constants import MockDatabaseMethods
+from tests.utils.dependency_constants import (
+    MODEL_SAVE, MODEL_GET, MODEL_QUERY)
+
 
 
 class TestUserDAO:
@@ -81,7 +83,7 @@ class TestUserDAO:
         # Wrong password should not verify
         assert user_dao.password_manager.verify_password("WrongPassword123!", hashed) is False
 
-    @patch.object(UserItem, MockDatabaseMethods.SAVE)
+    @patch.object(UserItem, MODEL_SAVE)
     def test_create_user_success(self, mock_save, user_dao):
         """Test successful user creation"""
         # save() returns None, so just let it do nothing
@@ -121,7 +123,7 @@ class TestUserDAO:
         # Business validation should be handled at the service layer
         pass
 
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem, MODEL_GET)
     def test_get_user_by_username_found(self, mock_get, user_dao):
         """Test getting user by username when user exists"""
         # Mock UserItem.get to return a real UserItem
@@ -147,7 +149,7 @@ class TestUserDAO:
         # Verify that get was called with correct parameters
         mock_get.assert_called_once_with('john_doe123', UserFields.SK_VALUE)
 
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem, MODEL_GET)
     def test_get_user_by_username_not_found(self, mock_get, user_dao):
         """Test getting user by username when user doesn't exist"""
         # Mock UserItem.get to raise DoesNotExist exception
@@ -159,7 +161,7 @@ class TestUserDAO:
         assert "User with username 'nonexistent' not found" in str(exc_info.value)
         mock_get.assert_called_once_with('nonexistent', UserFields.SK_VALUE)
 
-    @patch.object(UserItem.email_index, MockDatabaseMethods.QUERY)
+    @patch.object(UserItem.email_index, MODEL_QUERY)
     def test_get_user_by_email_found(self, mock_query, user_dao):
         """Test getting user by email when user exists"""
         # Create UserItem instance to return from query
@@ -185,7 +187,7 @@ class TestUserDAO:
         # Verify that query was called with correct email
         mock_query.assert_called_once_with('test@example.com')
 
-    @patch.object(UserItem.email_index, MockDatabaseMethods.QUERY)
+    @patch.object(UserItem.email_index, MODEL_QUERY)
     def test_get_user_by_email_not_found(self, mock_query, user_dao):
         """Test getting user by email when user doesn't exist"""
         # Mock empty database response
@@ -197,7 +199,7 @@ class TestUserDAO:
         assert "User with email 'nonexistent@example.com' not found" in str(exc_info.value)
         mock_query.assert_called_once_with('nonexistent@example.com')
 
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem, MODEL_GET)
     def test_authenticate_user_with_username_success(self, mock_get, user_dao):
         """Test successful user authentication with username"""
         # Mock password verification to return True
@@ -236,7 +238,7 @@ class TestUserDAO:
         # Verify that get was called with correct parameters
         mock_get.assert_called_once_with('john_doe123', UserFields.SK_VALUE)
 
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem, MODEL_GET)
     def test_authenticate_user_with_email_like_username(self, mock_get, user_dao):
         """Test successful user authentication with email-like username"""
         # Mock password verification to return True
@@ -275,7 +277,7 @@ class TestUserDAO:
         # Verify that get was called with correct parameters
         mock_get.assert_called_once_with('test@example.com', UserFields.SK_VALUE)
 
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem, MODEL_GET)
     def test_authenticate_user_wrong_password(self, mock_get, user_dao):
         """Test user authentication with wrong password"""
         # Mock get_user_by_username to return a user
@@ -319,8 +321,8 @@ class TestUserDAO:
 
         assert "User with username 'nonexistent' not found" in str(exc_info.value)
 
-    @patch.object(UserItem, MockDatabaseMethods.SAVE)
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem, MODEL_SAVE)
+    @patch.object(UserItem, MODEL_GET)
     def test_update_user_success(self, mock_get, mock_save, user_dao):
         """Test successful user update"""
         # Mock UserItem.get to return a real UserItem
@@ -356,8 +358,8 @@ class TestUserDAO:
         mock_get.assert_called_once_with('john_doe123', UserFields.SK_VALUE)
         mock_save.assert_called_once()
 
-    @patch.object(UserItem, MockDatabaseMethods.SAVE)
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem, MODEL_SAVE)
+    @patch.object(UserItem, MODEL_GET)
     def test_update_user_email_taken(self, mock_get, mock_save, user_dao):
         """Test update with email already taken by another user"""
         # Mock UserItem.get to return a real UserItem
@@ -392,8 +394,8 @@ class TestUserDAO:
         mock_get.assert_called_once_with('john_doe123', UserFields.SK_VALUE)
         mock_save.assert_called_once()
 
-    @patch.object(UserItem, MockDatabaseMethods.SAVE)
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem, MODEL_SAVE)
+    @patch.object(UserItem, MODEL_GET)
     def test_update_user_no_changes(self, mock_get, mock_save, user_dao):
         """Test update with no changes returns current user"""
         # Mock UserItem.get to return a UserItem
@@ -427,7 +429,7 @@ class TestUserDAO:
         mock_get.assert_called_once_with('john_doe123', UserFields.SK_VALUE)
         mock_save.assert_called_once()
 
-    @patch.object(UserItem, MockDatabaseMethods.SAVE)
+    @patch.object(UserItem, MODEL_SAVE)
     def test_create_user_database_exception(self, mock_save, user_dao, sample_user_create):
         """Test create user with database exception during save"""
         # Mock database exception during save
@@ -439,7 +441,7 @@ class TestUserDAO:
 
         assert "Database connection failed" in str(exc_info.value)
 
-    @patch.object(UserItem.email_index, MockDatabaseMethods.QUERY)
+    @patch.object(UserItem.email_index, MODEL_QUERY)
     def test_get_user_by_email_database_exception(self, mock_query, user_dao):
         """Test get user by email with database exception during query"""
         # Mock database exception during query
@@ -473,7 +475,7 @@ class TestUserDAO:
 
         assert "Username lookup failed" in str(exc_info.value)
 
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem,MODEL_GET)
     def test_authenticate_user_database_get_item_exception(self, mock_get, user_dao):
         """Test authenticate user when database get raises exception"""
         # Mock user lookup success
@@ -496,8 +498,8 @@ class TestUserDAO:
 
         assert "Database error" in str(exc_info.value)
 
-    @patch.object(UserItem, MockDatabaseMethods.SAVE)
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem, MODEL_SAVE)
+    @patch.object(UserItem, MODEL_GET)
     def test_update_user_database_exception(self, mock_get, mock_save, user_dao):
         """Test update user with database exception during save"""
         # Mock UserItem.get to return a UserItem
@@ -530,8 +532,8 @@ class TestUserDAO:
 
         assert "Database error" in str(exc_info.value)
 
-    @patch.object(UserItem, MockDatabaseMethods.SAVE)
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem, MODEL_SAVE)
+    @patch.object(UserItem, MODEL_GET)
     def test_update_user_with_same_email_for_same_user(self, mock_get, mock_save, user_dao):
         """Test updating user with the same email they already have"""
         # Mock UserItem.get to return a UserItem
@@ -565,8 +567,8 @@ class TestUserDAO:
         mock_get.assert_called_once_with('john_doe123', UserFields.SK_VALUE)
         mock_save.assert_called_once()
 
-    @patch.object(UserItem, MockDatabaseMethods.SAVE)
-    @patch.object(UserItem, MockDatabaseMethods.GET)
+    @patch.object(UserItem, MODEL_SAVE)
+    @patch.object(UserItem, MODEL_GET)
     def test_update_user_returns_none_from_database(self, mock_get, mock_save, user_dao):
         """Test update user when database save raises an exception"""
         # Mock UserItem.get to return a UserItem

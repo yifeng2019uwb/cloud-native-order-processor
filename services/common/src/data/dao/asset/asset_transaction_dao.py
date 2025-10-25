@@ -20,6 +20,7 @@ class AssetTransactionDAO:
         """Initialize AssetTransactionDAO (PynamoDB doesn't need db_connection)"""
         # PynamoDB models handle their own connection
 
+
     def create_asset_transaction(self, transaction: AssetTransaction) -> AssetTransaction:
         """Create a new asset transaction"""
         logger.info(
@@ -60,7 +61,7 @@ class AssetTransactionDAO:
         try:
             # Use PynamoDB get method
             transaction_item = AssetTransactionItem.get(
-                f"TRANS#{username}#{asset_id}",
+                AssetTransaction.build_pk(username, asset_id),
                 timestamp
             )
 
@@ -94,8 +95,10 @@ class AssetTransactionDAO:
 
         try:
             # Use PynamoDB query method - query by hash key only
-            pk = f"{AssetTransactionFields.PK_PREFIX}{username}#{asset_id}"
-            query_result = AssetTransactionItem.query(pk, limit=limit)
+            query_result = AssetTransactionItem.query(
+                AssetTransaction.build_pk(username, asset_id),
+                limit=limit
+            )
 
             transactions = []
             for item in query_result:

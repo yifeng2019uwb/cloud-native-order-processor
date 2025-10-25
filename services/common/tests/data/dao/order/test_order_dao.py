@@ -18,7 +18,8 @@ from src.data.entities.order import Order, OrderItem
 from src.data.entities.order.enums import OrderStatus, OrderType
 from src.data.exceptions import CNOPDatabaseOperationException
 from src.exceptions.shared_exceptions import CNOPOrderNotFoundException
-from tests.data.dao.mock_constants import MockDatabaseMethods
+from tests.utils.dependency_constants import MODEL_SAVE, MODEL_GET, MODEL_QUERY, DOES_NOT_EXIST
+
 
 
 class TestOrderDAO:
@@ -46,7 +47,7 @@ class TestOrderDAO:
             updated_at=now
         )
 
-    @patch.object(OrderItem, MockDatabaseMethods.SAVE)
+    @patch.object(OrderItem, MODEL_SAVE)
     def test_create_order_success(self, mock_save, order_dao, sample_order):
         """Test successful order creation"""
         # Mock save to return None
@@ -68,7 +69,7 @@ class TestOrderDAO:
         # Verify save was called
         mock_save.assert_called_once()
 
-    @patch.object(OrderItem, MockDatabaseMethods.SAVE)
+    @patch.object(OrderItem, MODEL_SAVE)
     def test_create_order_database_error(self, mock_save, order_dao, sample_order):
         """Test order creation with database error"""
         # Mock database error
@@ -80,7 +81,7 @@ class TestOrderDAO:
         assert "Database operation failed while creating order" in str(exc_info.value)
         assert "Database connection failed" in str(exc_info.value)
 
-    @patch.object(OrderItem, MockDatabaseMethods.GET)
+    @patch.object(OrderItem, MODEL_GET)
     def test_get_order_success(self, mock_get, order_dao):
         """Test successful order retrieval"""
         # Mock OrderItem.get to return a real OrderItem
@@ -112,7 +113,7 @@ class TestOrderDAO:
         # Verify get was called
         mock_get.assert_called_once_with('order_123', 'ORDER')
 
-    @patch.object(OrderItem, MockDatabaseMethods.GET)
+    @patch.object(OrderItem, MODEL_GET)
     def test_get_order_not_found(self, mock_get, order_dao):
         """Test order retrieval when order not found"""
         # Mock OrderItem.get to raise DoesNotExist exception
@@ -124,7 +125,7 @@ class TestOrderDAO:
         assert "Order 'nonexistent_order' not found" in str(exc_info.value)
         mock_get.assert_called_once_with('nonexistent_order', 'ORDER')
 
-    @patch.object(OrderItem, MockDatabaseMethods.GET)
+    @patch.object(OrderItem, MODEL_GET)
     def test_get_order_database_error(self, mock_get, order_dao):
         """Test order retrieval with database error"""
         # Mock database error
@@ -136,7 +137,7 @@ class TestOrderDAO:
         assert "Database operation failed while retrieving order" in str(exc_info.value)
         assert "Database connection failed" in str(exc_info.value)
 
-    @patch.object(OrderItem.user_orders_index, MockDatabaseMethods.QUERY)
+    @patch.object(OrderItem.user_orders_index, MODEL_QUERY)
     def test_get_orders_by_user_success(self, mock_query, order_dao):
         """Test successful retrieval of user orders"""
         # Mock query to return OrderItem instances
@@ -177,7 +178,7 @@ class TestOrderDAO:
         # Verify query was called
         mock_query.assert_called_once_with('user123', scan_index_forward=False, limit=50)
 
-    @patch.object(OrderItem.user_orders_index, MockDatabaseMethods.QUERY)
+    @patch.object(OrderItem.user_orders_index, MODEL_QUERY)
     def test_get_orders_by_user_with_limit_offset(self, mock_query, order_dao):
         """Test retrieval of user orders with limit and offset"""
         # Mock empty query result
@@ -192,7 +193,7 @@ class TestOrderDAO:
         # Verify query was called with correct limit
         mock_query.assert_called_once_with('user123', scan_index_forward=False, limit=10)
 
-    @patch.object(OrderItem.user_orders_index, MockDatabaseMethods.QUERY)
+    @patch.object(OrderItem.user_orders_index, MODEL_QUERY)
     def test_get_orders_by_user_database_error(self, mock_query, order_dao):
         """Test retrieval of user orders with database error"""
         # Mock database error
@@ -204,8 +205,8 @@ class TestOrderDAO:
         assert "Database operation failed while retrieving orders for user" in str(exc_info.value)
         assert "Query failed" in str(exc_info.value)
 
-    @patch.object(OrderItem, MockDatabaseMethods.SAVE)
-    @patch.object(OrderItem, MockDatabaseMethods.GET)
+    @patch.object(OrderItem, MODEL_SAVE)
+    @patch.object(OrderItem, MODEL_GET)
     def test_update_order_status_success(self, mock_get, mock_save, order_dao):
         """Test successful order status update"""
         # Mock OrderItem.get to return a real OrderItem
@@ -234,8 +235,8 @@ class TestOrderDAO:
         mock_get.assert_called_once_with('order_123', 'ORDER')
         mock_save.assert_called_once()
 
-    @patch.object(OrderItem, MockDatabaseMethods.SAVE)
-    @patch.object(OrderItem, MockDatabaseMethods.GET)
+    @patch.object(OrderItem, MODEL_SAVE)
+    @patch.object(OrderItem, MODEL_GET)
     def test_update_order_status_with_reason(self, mock_get, mock_save, order_dao):
         """Test order status update with reason"""
         # Mock OrderItem.get to return a real OrderItem
@@ -264,7 +265,7 @@ class TestOrderDAO:
         mock_get.assert_called_once_with('order_123', 'ORDER')
         mock_save.assert_called_once()
 
-    @patch.object(OrderItem, MockDatabaseMethods.GET)
+    @patch.object(OrderItem, MODEL_GET)
     def test_update_order_status_not_found(self, mock_get, order_dao):
         """Test order status update when order not found"""
         # Mock OrderItem.get to raise DoesNotExist exception
@@ -276,8 +277,8 @@ class TestOrderDAO:
         assert "Order 'nonexistent_order' not found" in str(exc_info.value)
         mock_get.assert_called_once_with('nonexistent_order', 'ORDER')
 
-    @patch.object(OrderItem, MockDatabaseMethods.SAVE)
-    @patch.object(OrderItem, MockDatabaseMethods.GET)
+    @patch.object(OrderItem, MODEL_SAVE)
+    @patch.object(OrderItem, MODEL_GET)
     def test_update_order_status_database_error(self, mock_get, mock_save, order_dao):
         """Test order status update with database error"""
         # Mock OrderItem.get to return a real OrderItem
@@ -301,7 +302,7 @@ class TestOrderDAO:
         assert "Database operation failed while updating order status" in str(exc_info.value)
         assert "Database connection failed" in str(exc_info.value)
 
-    @patch.object(OrderItem, MockDatabaseMethods.GET)
+    @patch.object(OrderItem, MODEL_GET)
     def test_order_exists_true(self, mock_get, order_dao):
         """Test order exists check when order exists"""
         # Mock OrderItem.get to return a real OrderItem
@@ -324,7 +325,7 @@ class TestOrderDAO:
         assert result is True
         mock_get.assert_called_once_with('order_123', 'ORDER')
 
-    @patch.object(OrderItem, MockDatabaseMethods.GET)
+    @patch.object(OrderItem, MODEL_GET)
     def test_order_exists_false(self, mock_get, order_dao):
         """Test order exists check when order doesn't exist"""
         # Mock OrderItem.get to raise DoesNotExist exception
@@ -337,7 +338,7 @@ class TestOrderDAO:
         assert result is False
         mock_get.assert_called_once_with('nonexistent_order', 'ORDER')
 
-    @patch.object(OrderItem, MockDatabaseMethods.GET)
+    @patch.object(OrderItem, MODEL_GET)
     def test_order_exists_database_error(self, mock_get, order_dao):
         """Test order exists check with database error"""
         # Mock database error

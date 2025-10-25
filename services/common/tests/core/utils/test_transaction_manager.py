@@ -15,7 +15,7 @@ import pytest
 from src.core.utils import lock_manager
 from src.core.utils.transaction_manager import (TransactionManager,
                                                 TransactionResult)
-from src.data.entities.user.balance import Balance
+from src.data.entities.user.balance import Balance, BalanceTransaction
 from src.data.entities.user.balance_enums import TransactionStatus, TransactionType
 from src.data.dao.asset.asset_balance_dao import AssetBalanceDAO
 from src.shared.logging import LogAction, LogField
@@ -23,15 +23,49 @@ from src.data.dao.asset.asset_transaction_dao import AssetTransactionDAO
 from src.data.dao.inventory.asset_dao import AssetDAO
 from src.data.dao.order.order_dao import OrderDAO
 from src.data.dao.user.balance_dao import BalanceDAO
+from tests.utils.dependency_constants import MODEL_SAVE, MODEL_GET, MODEL_QUERY, DOES_NOT_EXIST
 from src.data.dao.user.user_dao import UserDAO
 from src.data.entities.order import Order, OrderStatus, OrderType
-from src.data.entities.user import (Balance, BalanceTransaction,
-                                    TransactionStatus, TransactionType)
+# Remove duplicate imports - already imported above
 from src.data.exceptions import (CNOPDatabaseOperationException,
                                  CNOPLockAcquisitionException)
 from src.exceptions import CNOPEntityValidationException
 from src.exceptions.shared_exceptions import (CNOPEntityNotFoundException,
                                               CNOPInsufficientBalanceException)
+
+
+# =============================================================================
+# LOCAL TEST VARIABLES - Avoid hardcoded values in tests
+# =============================================================================
+
+# Test user data
+TEST_USERNAME = "testuser123"
+TEST_EMAIL = "test@example.com"
+
+# Test asset data
+TEST_ASSET_ID_BTC = "BTC"
+TEST_ASSET_ID_ETH = "ETH"
+
+# Test financial data
+TEST_DEPOSIT_AMOUNT_50 = Decimal("50.00")
+TEST_WITHDRAWAL_AMOUNT_25 = Decimal("25.00")
+TEST_BALANCE_AMOUNT_100 = Decimal("100.00")
+TEST_LARGE_AMOUNT_150 = Decimal("150.00")
+TEST_BTC_QUANTITY_1_0 = Decimal("1.0")
+TEST_BTC_PRICE_50000 = Decimal("50000.00")
+TEST_TOTAL_AMOUNT_50000 = Decimal("50000.00")
+
+TEXT_SK_BALANCE = "BALANCE"
+TEXT_SK_ORDER = "ORDER"
+
+TEST_LOCK_ID = "test-lock-id"
+
+TEST_CURRENT_TIMESTAMP = datetime.now(timezone.utc)
+
+
+# Test primary keys - use entity methods directly in tests when needed
+# Example: BalanceTransaction.build_pk(TEST_USERNAME)
+
 
 class TestTransactionManager:
     """Test TransactionManager class"""
@@ -61,30 +95,24 @@ class TestTransactionManager:
     def mock_transaction(self):
         """Mock transaction for testing"""
         return BalanceTransaction(
-            Pk="TRANS#testuser123",
-            username="testuser123",
-            Sk="2023-01-01T00:00:00",
+            username=TEST_USERNAME,
             transaction_id=UUID('12345678-1234-5678-9abc-123456789abc'),
             transaction_type=TransactionType.DEPOSIT,
-            amount=Decimal('50.00'),
+            amount=TEST_DEPOSIT_AMOUNT_50,
             description="Test transaction",
             status=TransactionStatus.COMPLETED,
             reference_id="ref123",
-            created_at=datetime.now(timezone.utc),
-            entity_type="balance_transaction"
+            created_at=datetime.now(timezone.utc)
         )
 
     @pytest.fixture
     def mock_balance(self):
         """Mock balance for testing"""
         return Balance(
-            Pk="BALANCE#testuser123",
-            Sk="BALANCE",
-            username="testuser123",
-            current_balance=Decimal('100.00'),
+            username=TEST_USERNAME,
+            current_balance=TEST_BALANCE_AMOUNT_100,
             created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
-            entity_type="balance"
+            updated_at=datetime.now(timezone.utc)
         )
 
     @pytest.fixture
@@ -92,14 +120,14 @@ class TestTransactionManager:
         """Mock order for testing"""
         return Order(
             Pk="order_123",
-            Sk="ORDER",
+            Sk=TEXT_SK_ORDER,
             order_id="order_123",
-            username="testuser123",
+            username=TEST_USERNAME,
             order_type=OrderType.MARKET_BUY,
-            asset_id="BTC",
-            quantity=Decimal('1.0'),
-            price=Decimal('50000.00'),
-            total_amount=Decimal('50000.00'),
+            asset_id=TEST_ASSET_ID_BTC,
+            quantity=TEST_BTC_QUANTITY_1_0,
+            price=TEST_BTC_PRICE_50000,
+            total_amount=TEST_TOTAL_AMOUNT_50000,
             status=OrderStatus.PENDING,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc)
@@ -114,7 +142,7 @@ class TestTransactionManager:
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
-            mock_acquire_lock.return_value = "test-lock-id"
+            mock_acquire_lock.return_value = TEST_LOCK_ID
             mock_release_lock.return_value = True
 
             # Mock balance update success
@@ -122,10 +150,14 @@ class TestTransactionManager:
             balance_dao.get_balance.return_value = mock_balance
             balance_dao.create_transaction.return_value = mock_transaction
 
-            result = await transaction_manager.deposit_funds("testuser123", Decimal('50.00'))
+            # Local test variables for this specific test
+            test_username = TEST_USERNAME
+            test_deposit_amount = TEST_DEPOSIT_AMOUNT_50
+
+            result = await transaction_manager.deposit_funds(test_username, test_deposit_amount)
 
             assert result.status == TransactionStatus.COMPLETED
-            assert result.transaction_amount == Decimal('50.00')
+            assert result.transaction_amount == test_deposit_amount
             assert result.balance == mock_balance
 
     @pytest.mark.asyncio
@@ -136,15 +168,19 @@ class TestTransactionManager:
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
-            mock_acquire_lock.return_value = "test-lock-id"
+            mock_acquire_lock.return_value = TEST_LOCK_ID
             mock_release_lock.return_value = True
 
             # Mock balance update failure
             balance_dao._update_balance_from_transaction.side_effect = Exception("Balance update failed")
             balance_dao.create_transaction.return_value = MagicMock()
 
+            # Local test variables for this specific test
+            test_username = TEST_USERNAME
+            test_deposit_amount = TEST_DEPOSIT_AMOUNT_50
+
             with pytest.raises(CNOPDatabaseOperationException, match="Transaction failed"):
-                await transaction_manager.deposit_funds("testuser123", Decimal('50.00'))
+                await transaction_manager.deposit_funds(test_username, test_deposit_amount)
 
     @pytest.mark.asyncio
     async def test_withdraw_funds_success(self, transaction_manager, mock_daos, mock_balance, mock_transaction):
@@ -154,7 +190,7 @@ class TestTransactionManager:
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
-            mock_acquire_lock.return_value = "test-lock-id"
+            mock_acquire_lock.return_value = TEST_LOCK_ID
             mock_release_lock.return_value = True
 
             # Mock sufficient balance
@@ -162,10 +198,14 @@ class TestTransactionManager:
             balance_dao._update_balance_from_transaction.return_value = None
             balance_dao.create_transaction.return_value = mock_transaction
 
-            result = await transaction_manager.withdraw_funds("testuser123", Decimal('25.00'))
+            # Local test variables for this specific test
+            test_username = TEST_USERNAME
+            test_withdrawal_amount = TEST_WITHDRAWAL_AMOUNT_25
+
+            result = await transaction_manager.withdraw_funds(test_username, test_withdrawal_amount)
 
             assert result.status == TransactionStatus.COMPLETED
-            assert result.transaction_amount == Decimal('25.00')
+            assert result.transaction_amount == test_withdrawal_amount
             assert result.balance == mock_balance
 
     @pytest.mark.asyncio
@@ -176,15 +216,19 @@ class TestTransactionManager:
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
-            mock_acquire_lock.return_value = "test-lock-id"
+            mock_acquire_lock.return_value = TEST_LOCK_ID
             mock_release_lock.return_value = True
 
             # Mock insufficient balance
             balance_dao.get_balance.return_value = mock_balance
             balance_dao._update_balance_from_transaction.side_effect = CNOPInsufficientBalanceException("Insufficient funds")
 
+            # Local test variables for this specific test
+            test_username = TEST_USERNAME
+            test_large_amount = TEST_LARGE_AMOUNT_150
+
             with pytest.raises(CNOPInsufficientBalanceException):
-                await transaction_manager.withdraw_funds("testuser123", Decimal('150.00'))
+                await transaction_manager.withdraw_funds(test_username, test_large_amount)
 
     @pytest.mark.asyncio
     async def test_withdraw_funds_user_not_found(self, transaction_manager, mock_daos):
@@ -194,7 +238,7 @@ class TestTransactionManager:
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
-            mock_acquire_lock.return_value = "test-lock-id"
+            mock_acquire_lock.return_value = TEST_LOCK_ID
             mock_release_lock.return_value = True
 
             # Mock user not found
@@ -211,7 +255,7 @@ class TestTransactionManager:
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
-            mock_acquire_lock.return_value = "test-lock-id"
+            mock_acquire_lock.return_value = TEST_LOCK_ID
             mock_release_lock.return_value = True
 
             # Mock successful operations - need sufficient balance for the order
@@ -221,17 +265,24 @@ class TestTransactionManager:
             balance_dao.get_balance.return_value = mock_balance
             balance_dao._update_balance_from_transaction.return_value = None
 
+            # Local test variables for this specific test
+            test_username = TEST_USERNAME
+            test_asset_id = TEST_ASSET_ID_BTC
+            test_quantity = TEST_BTC_QUANTITY_1_0
+            test_price = TEST_BTC_PRICE_50000
+            test_total_cost = TEST_TOTAL_AMOUNT_50000
+
             result = await transaction_manager.create_buy_order_with_balance_update(
-                username="testuser123",
-                asset_id="BTC",
-                quantity=Decimal('1.0'),
-                price=Decimal('50000.00'),
+                username=test_username,
+                asset_id=test_asset_id,
+                quantity=test_quantity,
+                price=test_price,
                 order_type=OrderType.MARKET_BUY,
-                total_cost=Decimal('50000.00')
+                total_cost=test_total_cost
             )
 
             assert result.status == TransactionStatus.COMPLETED
-            assert result.transaction_amount == Decimal('50000.00')
+            assert result.transaction_amount == test_total_cost
 
     @pytest.mark.asyncio
     async def test_create_sell_order_with_balance_update_success(self, transaction_manager, mock_daos, mock_order, mock_transaction):
@@ -241,7 +292,7 @@ class TestTransactionManager:
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
-            mock_acquire_lock.return_value = "test-lock-id"
+            mock_acquire_lock.return_value = TEST_LOCK_ID
             mock_release_lock.return_value = True
 
             # Mock successful operations
@@ -249,7 +300,7 @@ class TestTransactionManager:
             balance_dao.create_transaction.return_value = mock_transaction
 
             result = await transaction_manager.create_sell_order_with_balance_update(
-                username="testuser123",
+                username=TEST_USERNAME,
                 asset_id="BTC",
                 quantity=Decimal('1.0'),
                 price=Decimal('500.00'),
@@ -268,7 +319,7 @@ class TestTransactionManager:
             mock_acquire_lock.side_effect = CNOPLockAcquisitionException("Lock acquisition failed")
 
             with pytest.raises(CNOPDatabaseOperationException, match="Service temporarily unavailable"):
-                await transaction_manager.deposit_funds("testuser123", Decimal('50.00'))
+                await transaction_manager.deposit_funds(TEST_USERNAME, Decimal('50.00'))
 
     @pytest.mark.asyncio
     async def test_lock_release_failure(self, transaction_manager, mock_daos, mock_transaction, mock_balance):
@@ -278,7 +329,7 @@ class TestTransactionManager:
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
-            mock_acquire_lock.return_value = "test-lock-id"
+            mock_acquire_lock.return_value = TEST_LOCK_ID
             mock_release_lock.side_effect = Exception("Lock release failed")
 
             # Mock successful operations
@@ -288,7 +339,7 @@ class TestTransactionManager:
 
             # When lock release fails, the transaction manager should raise an exception
             with pytest.raises(CNOPDatabaseOperationException, match="Deposit failed: Lock release failed"):
-                await transaction_manager.deposit_funds("testuser123", Decimal('50.00'))
+                await transaction_manager.deposit_funds(TEST_USERNAME, Decimal('50.00'))
 
 
 
@@ -300,7 +351,7 @@ class TestTransactionManager:
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
-            mock_acquire_lock.return_value = "test-lock-id"
+            mock_acquire_lock.return_value = TEST_LOCK_ID
             mock_release_lock.return_value = True
 
             # Mock successful operations
@@ -309,11 +360,11 @@ class TestTransactionManager:
             balance_dao.create_transaction.return_value = mock_transaction
 
             # Test multiple operations
-            deposit_result = await transaction_manager.deposit_funds("testuser123", Decimal('100.00'))
+            deposit_result = await transaction_manager.deposit_funds(TEST_USERNAME, Decimal('100.00'))
             assert deposit_result.status == TransactionStatus.COMPLETED
 
             # Test withdrawal
-            withdraw_result = await transaction_manager.withdraw_funds("testuser123", Decimal('25.00'))
+            withdraw_result = await transaction_manager.withdraw_funds(TEST_USERNAME, Decimal('25.00'))
             assert withdraw_result.status == TransactionStatus.COMPLETED
 
     @pytest.mark.asyncio
@@ -324,7 +375,7 @@ class TestTransactionManager:
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
 
-            mock_acquire_lock.return_value = "test-lock-id"
+            mock_acquire_lock.return_value = TEST_LOCK_ID
             mock_release_lock.return_value = True
 
             # Test various error conditions
@@ -339,7 +390,7 @@ class TestTransactionManager:
                 balance_dao.create_transaction.return_value = MagicMock()
 
                 with pytest.raises(CNOPDatabaseOperationException, match=expected_message):
-                    await transaction_manager.deposit_funds("testuser123", Decimal('50.00'))
+                    await transaction_manager.deposit_funds(TEST_USERNAME, Decimal('50.00'))
 
 
 class TestTransactionResult:

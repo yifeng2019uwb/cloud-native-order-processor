@@ -14,7 +14,7 @@ from src.data.entities.inventory import Asset, AssetItem
 from src.data.entities.entity_constants import AssetFields
 from src.data.exceptions import CNOPDatabaseOperationException
 from src.exceptions.shared_exceptions import CNOPAssetNotFoundException
-from tests.data.dao.mock_constants import MockDatabaseMethods
+from tests.utils.dependency_constants import MODEL_SAVE, MODEL_GET, MODEL_SCAN
 
 
 class TestAssetDAO:
@@ -99,7 +99,7 @@ class TestAssetDAO:
 
     # ==================== CREATE ASSET TESTS ====================
 
-    @patch.object(AssetItem, MockDatabaseMethods.SAVE)
+    @patch.object(AssetItem, MODEL_SAVE)
     def test_create_asset_success(self, mock_save, asset_dao, sample_asset_create):
         """Test successful asset creation"""
         # save() returns None, so just let it do nothing
@@ -126,7 +126,7 @@ class TestAssetDAO:
         # Verify save was called
         mock_save.assert_called_once()
 
-    @patch.object(AssetItem, MockDatabaseMethods.SAVE)
+    @patch.object(AssetItem, MODEL_SAVE)
     def test_create_asset_database_error(self, mock_save, asset_dao, sample_asset_create):
         """Test create asset with database error"""
         # Mock database exception during save
@@ -140,7 +140,7 @@ class TestAssetDAO:
 
     # ==================== GET ASSET BY ID TESTS ====================
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
+    @patch.object(AssetItem, MODEL_GET)
     def test_get_asset_by_id_found(self, mock_get, asset_dao):
         """Test getting asset by ID when asset exists"""
         # Mock AssetItem.get to return a real AssetItem
@@ -184,7 +184,7 @@ class TestAssetDAO:
         # Verify get was called with correct parameters
         mock_get.assert_called_once_with('BTC')
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
+    @patch.object(AssetItem, MODEL_GET)
     def test_get_asset_by_id_not_found(self, mock_get, asset_dao):
         """Test get asset by ID when asset not found"""
         # Mock AssetItem.get to raise DoesNotExist exception
@@ -199,7 +199,7 @@ class TestAssetDAO:
         # Verify get was called with correct parameters
         mock_get.assert_called_once_with('NONEXISTENT')
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
+    @patch.object(AssetItem, MODEL_GET)
     def test_get_asset_by_id_database_error(self, mock_get, asset_dao):
         """Test get asset by ID with database error"""
         # Mock database error
@@ -211,7 +211,7 @@ class TestAssetDAO:
 
         assert "Database error" in str(exc_info.value)
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
+    @patch.object(AssetItem, MODEL_GET)
     def test_get_asset_by_id_missing_fields(self, mock_get, asset_dao):
         """Test getting asset with missing optional fields"""
         # Mock AssetItem with minimal fields
@@ -235,7 +235,7 @@ class TestAssetDAO:
 
     # ==================== GET ALL ASSETS TESTS ====================
 
-    @patch.object(AssetItem, MockDatabaseMethods.SCAN)
+    @patch.object(AssetItem, MODEL_SCAN)
     def test_get_all_assets_success(self, mock_scan, asset_dao):
         """Test getting all assets successfully"""
         # Mock AssetItem.scan to return AssetItem instances
@@ -283,7 +283,7 @@ class TestAssetDAO:
         # Verify scan was called without filter
         mock_scan.assert_called_once_with()
 
-    @patch.object(AssetItem, MockDatabaseMethods.SCAN)
+    @patch.object(AssetItem, MODEL_SCAN)
     def test_get_all_assets_active_only(self, mock_scan, asset_dao):
         """Test getting only active assets"""
         # Mock AssetItem.scan to return only active AssetItem instances
@@ -310,7 +310,7 @@ class TestAssetDAO:
         # Verify scan was called with filter
         mock_scan.assert_called_once()
 
-    @patch.object(AssetItem, MockDatabaseMethods.SCAN)
+    @patch.object(AssetItem, MODEL_SCAN)
     def test_get_all_assets_empty_result(self, mock_scan, asset_dao):
         """Test getting all assets when none exist"""
         # Mock empty scan result
@@ -322,7 +322,7 @@ class TestAssetDAO:
         # Should return empty list
         assert result == []
 
-    @patch.object(AssetItem, MockDatabaseMethods.SCAN)
+    @patch.object(AssetItem, MODEL_SCAN)
     def test_get_all_assets_filter_invalid_items(self, mock_scan, asset_dao):
         """Test getting all assets filters out items without asset fields"""
         # Mock scan to return mix of valid and invalid items
@@ -362,7 +362,7 @@ class TestAssetDAO:
         assert result[0].asset_id == 'BTC'
         assert result[1].asset_id == 'INVALID'
 
-    @patch.object(AssetItem, MockDatabaseMethods.SCAN)
+    @patch.object(AssetItem, MODEL_SCAN)
     def test_get_all_assets_database_error(self, mock_scan, asset_dao):
         """Test get all assets with database error"""
         # Mock database error
@@ -376,8 +376,8 @@ class TestAssetDAO:
 
     # ==================== UPDATE ASSET TESTS ====================
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
-    @patch.object(AssetItem, MockDatabaseMethods.SAVE)
+    @patch.object(AssetItem, MODEL_GET)
+    @patch.object(AssetItem, MODEL_SAVE)
     def test_update_asset_success(self, mock_save, mock_get, asset_dao):
         now = datetime.now(UTC).isoformat()
 
@@ -434,8 +434,8 @@ class TestAssetDAO:
         assert isinstance(result.created_at, datetime)
         assert isinstance(result.updated_at, datetime)
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
-    @patch.object(AssetItem, MockDatabaseMethods.SAVE)
+    @patch.object(AssetItem, MODEL_GET)
+    @patch.object(AssetItem, MODEL_SAVE)
     def test_update_asset_no_changes(self, mock_save, mock_get, asset_dao):
         """Test update asset with no changes returns current asset"""
         # Mock existing asset item
@@ -467,8 +467,8 @@ class TestAssetDAO:
         assert isinstance(result, Asset)
         assert result.asset_id == "BTC"
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
-    @patch.object(AssetItem, MockDatabaseMethods.SAVE)
+    @patch.object(AssetItem, MODEL_GET)
+    @patch.object(AssetItem, MODEL_SAVE)
     def test_update_asset_price_zero_forces_inactive(self, mock_save, mock_get, asset_dao):
         """Test updating price to zero forces is_active to False"""
         now = datetime.now(UTC).isoformat()
@@ -505,7 +505,7 @@ class TestAssetDAO:
         assert result.price_usd == Decimal("0.0")
         assert result.is_active is False
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
+    @patch.object(AssetItem, MODEL_GET)
     def test_update_asset_not_found(self, mock_get, asset_dao):
         """Test update asset when asset not found"""
         # Mock that asset doesn't exist
@@ -523,8 +523,8 @@ class TestAssetDAO:
         with pytest.raises(CNOPAssetNotFoundException):
             asset_dao.update_asset(asset_update)
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
-    @patch.object(AssetItem, MockDatabaseMethods.SAVE)
+    @patch.object(AssetItem, MODEL_GET)
+    @patch.object(AssetItem, MODEL_SAVE)
     def test_update_asset_database_error(self, mock_save, mock_get, asset_dao):
         """Test update asset with database error"""
         now = datetime.now(UTC).isoformat()
@@ -565,7 +565,7 @@ class TestAssetDAO:
 
     # ==================== EDGE CASE AND ERROR HANDLING TESTS ====================
 
-    @patch.object(AssetItem, MockDatabaseMethods.SCAN)
+    @patch.object(AssetItem, MODEL_SCAN)
     def test_get_all_assets_with_missing_fields(self, mock_scan, asset_dao):
         """Test get all assets handles items with missing fields gracefully"""
         now = datetime.now(UTC).isoformat()
@@ -605,8 +605,8 @@ class TestAssetDAO:
         assert isinstance(result[1].created_at, datetime)
         assert isinstance(result[1].updated_at, datetime)
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
-    @patch.object(AssetItem, MockDatabaseMethods.SAVE)
+    @patch.object(AssetItem, MODEL_GET)
+    @patch.object(AssetItem, MODEL_SAVE)
     def test_update_asset_builds_correct_expression(self, mock_save, mock_get, asset_dao):
         """Test that update asset works with multiple field updates"""
         now = datetime.now(UTC).isoformat()
@@ -655,8 +655,8 @@ class TestAssetDAO:
 
     # ==================== COMPREHENSIVE ERROR SCENARIO TESTS ====================
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
-    @patch.object(AssetItem, MockDatabaseMethods.SAVE)
+    @patch.object(AssetItem, MODEL_GET)
+    @patch.object(AssetItem, MODEL_SAVE)
     def test_create_asset_with_various_exceptions(self, mock_save, mock_get, asset_dao, sample_asset_create):
         """Test create asset handles various exception types"""
         # Mock that asset doesn't exist
@@ -681,8 +681,8 @@ class TestAssetDAO:
             assert str(exception) in str(exc_info.value)
     # ==================== BOUNDARY VALUE TESTS ====================
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
-    @patch.object(AssetItem, MockDatabaseMethods.SAVE)
+    @patch.object(AssetItem, MODEL_GET)
+    @patch.object(AssetItem, MODEL_SAVE)
     def test_asset_with_extreme_values(self, mock_save, mock_get, asset_dao):
         """Test asset creation with boundary values"""
         # Mock that asset doesn't exist
@@ -725,7 +725,7 @@ class TestAssetDAO:
         result = asset_dao.get_assets_by_ids([])
         assert result == {}
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
+    @patch.object(AssetItem, MODEL_GET)
     def test_get_assets_by_ids_success(self, mock_get, asset_dao):
         """Test successful batch retrieval of assets"""
         # Mock AssetItem.get to return AssetItem instances
@@ -778,7 +778,7 @@ class TestAssetDAO:
         mock_get.assert_any_call('BTC')
         mock_get.assert_any_call('ETH')
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
+    @patch.object(AssetItem, MODEL_GET)
     def test_get_assets_by_ids_with_unprocessed_keys(self, mock_get, asset_dao):
         """Test batch retrieval with some assets not found (simulating unprocessed keys)"""
         # Mock AssetItem.get to return some assets and raise DoesNotExist for others
@@ -812,7 +812,7 @@ class TestAssetDAO:
         assert isinstance(result['BTC'], Asset)
         assert result['BTC'].name == 'Bitcoin'
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
+    @patch.object(AssetItem, MODEL_GET)
     def test_get_assets_by_ids_missing_assets(self, mock_get, asset_dao):
         """Test batch retrieval when some assets are missing"""
         # Mock AssetItem.get to return some assets and raise DoesNotExist for others
@@ -846,7 +846,7 @@ class TestAssetDAO:
         assert isinstance(result['BTC'], Asset)
         assert result['BTC'].name == 'Bitcoin'
 
-    @patch.object(AssetItem, MockDatabaseMethods.GET)
+    @patch.object(AssetItem, MODEL_GET)
     def test_get_assets_by_ids_database_error(self, mock_get, asset_dao):
         """Test batch retrieval with database error"""
         # Mock database error on get

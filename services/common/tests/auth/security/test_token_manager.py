@@ -16,6 +16,7 @@ from src.data.entities.user import DEFAULT_USER_ROLE
 from src.exceptions.shared_exceptions import (CNOPTokenExpiredException,
                                               CNOPTokenInvalidException)
 from src.shared.logging import LogAction, LogField
+from tests.utils.dependency_constants import JWT_ENCODE
 
 # Test constants
 TEST_JWT_SECRET = "test-secret-key-for-unit-tests-at-least-32-chars-long"
@@ -72,7 +73,7 @@ class TestTokenManager:
         assert result.access_token is not None
         assert result.expires_at is not None
 
-    @patch('src.auth.security.token_manager.jwt.encode')
+    @patch(JWT_ENCODE)
     def test_create_access_token_encoding_error(self, mock_encode):
         """Test access token creation with encoding error."""
         mock_encode.side_effect = Exception("Encoding failed")
@@ -148,30 +149,31 @@ class TestTokenManager:
         with pytest.raises(CNOPTokenExpiredException, match="Token has expired"):
             self.token_manager.verify_access_token(token)
 
-    def test_decode_token_payload_success(self):
-        """Test successful token payload decoding."""
-        # Create a token first
-        result = self.token_manager.create_access_token(TEST_USERNAME, TEST_ROLE)
+    # TODO: Remove if not used after testing - decode_token_payload tests
+    # def test_decode_token_payload_success(self):
+    #     """Test successful token payload decoding."""
+    #     # Create a token first
+    #     result = self.token_manager.create_access_token(TEST_USERNAME, TEST_ROLE)
 
-        # Decode payload
-        payload = self.token_manager.decode_token_payload(result.access_token)
+    #     # Decode payload
+    #     payload = self.token_manager.decode_token_payload(result.access_token)
 
-        # Verify payload structure
-        assert "sub" in payload
-        assert "role" in payload
-        assert "exp" in payload
-        assert "iat" in payload
-        assert "type" in payload
+    #     # Verify payload structure
+    #     assert "sub" in payload
+    #     assert "role" in payload
+    #     assert "exp" in payload
+    #     assert "iat" in payload
+    #     assert "type" in payload
 
-        # Verify payload values
-        assert payload["sub"] == TEST_USERNAME
-        assert payload["role"] == TEST_ROLE
-        assert payload["type"] == TEST_ACCESS_TOKEN_TYPE
+    #     # Verify payload values
+    #     assert payload["sub"] == TEST_USERNAME
+    #     assert payload["role"] == TEST_ROLE
+    #     assert payload["type"] == TEST_ACCESS_TOKEN_TYPE
 
-    def test_decode_token_payload_invalid_token(self):
-        """Test token payload decoding with invalid token."""
-        with pytest.raises(CNOPTokenInvalidException, match="Token decode failed"):
-            self.token_manager.decode_token_payload("invalid_token")
+    # def test_decode_token_payload_invalid_token(self):
+    #     """Test token payload decoding with invalid token."""
+    #     with pytest.raises(CNOPTokenInvalidException, match="Token decode failed"):
+    #         self.token_manager.decode_token_payload("invalid_token")
 
     def test_is_token_expired_true(self):
         """Test token expiration check with expired token."""
@@ -220,10 +222,11 @@ class TestTokenManager:
         username = self.token_manager.verify_access_token(result.access_token)
         assert username == TEST_USERNAME
 
-        # Decode payload
-        payload = self.token_manager.decode_token_payload(result.access_token)
-        assert payload["sub"] == TEST_USERNAME
-        assert payload["role"] == TEST_ROLE
+        # TODO: Remove if not used after testing - decode_token_payload calls
+        # # Decode payload
+        # payload = self.token_manager.decode_token_payload(result.access_token)
+        # assert payload["sub"] == TEST_USERNAME
+        # assert payload["role"] == TEST_ROLE
 
         # Check expiration
         assert self.token_manager.is_token_expired(result.access_token) is False

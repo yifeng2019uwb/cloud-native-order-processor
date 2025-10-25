@@ -43,6 +43,15 @@ class AssetTransaction(BaseModel):
         }
     )
 
+    def get_pk(self) -> str:
+        """Build primary key for asset transaction using username and asset_id"""
+        return f"{AssetTransactionFields.PK_PREFIX}{self.username}#{self.asset_id}"
+
+    @staticmethod
+    def build_pk(username: str, asset_id: str) -> str:
+        """Build primary key for asset transaction using username and asset_id"""
+        return f"{AssetTransactionFields.PK_PREFIX}{username}#{asset_id}"
+
 
 class AssetTransactionItem(Model):
     """Asset Transaction PynamoDB model - handles DynamoDB operations"""

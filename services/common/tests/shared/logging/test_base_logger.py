@@ -13,37 +13,50 @@ import pytest
 
 # Local imports
 from src.shared.logging.base_logger import BaseLogger, create_logger, LogEntry
+from tests.utils.dependency_constants import LOGGER_WRITE_TO_FILE
 
-# Test constants
+# =============================================================================
+# LOCAL TEST VARIABLES - Avoid hardcoded values in tests
+# =============================================================================
+
+# Basic test data
 TEST_SERVICE_NAME = "test_service"
-TEST_ACTION = "test_action"
 TEST_MESSAGE = "Test message"
 TEST_USER = "test_user"
-TEST_EXTRA_DATA = "extra data"
-TEST_CUSTOM_REQUEST_ID = "custom-req-123"
-TEST_INFO_ACTION = "test_info"
-TEST_INFO_MESSAGE = "Info message"
+TEST_REQUEST_ID = "req-test123"
+
+# Log levels
+TEST_LOG_LEVEL_INFO = "INFO"
+TEST_LOG_LEVEL_WARN = "WARN"
+TEST_LOG_LEVEL_ERROR = "ERROR"
+
+# Log actions
+TEST_ACTION = "TEST_ACTION"
+TEST_INFO_ACTION = "TEST_INFO_ACTION"
+
+# Log messages
+TEST_INFO_MESSAGE = "Test info message"
+TEST_SPECIAL_MESSAGE = "Test message with special chars: @#$%^&*()"
+TEST_EXTRA_DATA = "Test extra data"
+
+# Test counts
+TEST_MESSAGE_COUNT = 5
+
+# JSON field names
+TEST_FIELD_LEVEL = "level"
+TEST_FIELD_ACTION = "action"
+TEST_FIELD_MESSAGE = "message"
+TEST_FIELD_SERVICE = "service"
+TEST_FIELD_USER = "user"
+TEST_FIELD_REQUEST_ID = "request_id"
+TEST_FIELD_TIMESTAMP = "timestamp"
+
 TEST_WARNING_ACTION = "test_warning"
 TEST_WARNING_MESSAGE = "Warning message"
 TEST_ERROR_ACTION = "test_error"
 TEST_ERROR_MESSAGE = "Error message"
 TEST_SPECIAL_MESSAGE = "Test message with émojis 🚀 and unicode"
 TEST_LOG_LEVEL_INFO = "INFO"
-TEST_REQUEST_ID_PREFIX = "req-"
-TEST_REQUEST_ID_LENGTH = 12
-TEST_TIMESTAMP_SUFFIX = "Z"
-TEST_TIMESTAMP_SEPARATOR = "T"
-TEST_MESSAGE_COUNT = 3
-
-# JSON field constants
-TEST_FIELD_LEVEL = "level"
-TEST_FIELD_ACTION = "action"
-TEST_FIELD_MESSAGE = "message"
-TEST_FIELD_SERVICE = "service"
-TEST_FIELD_USER = "user"
-TEST_FIELD_EXTRA = "extra"
-TEST_FIELD_REQUEST_ID = "request_id"
-TEST_FIELD_TIMESTAMP = "timestamp"
 
 
 class TestBaseLogger:
@@ -61,19 +74,31 @@ class TestBaseLogger:
 
     def test_generate_request_id(self):
         """Test request ID generation."""
+        # Local test variables for this specific test
+        expected_prefix = "req-"
+        expected_length = 12
+
         request_id = self.logger._generate_request_id()
-        assert request_id.startswith(TEST_REQUEST_ID_PREFIX)
-        assert len(request_id) == TEST_REQUEST_ID_LENGTH
+
+        # Verify using expected variables
+        assert request_id.startswith(expected_prefix)
+        assert len(request_id) == expected_length
 
     def test_format_timestamp(self):
         """Test timestamp formatting."""
+        # Local test variables for this specific test
+        expected_suffix = "Z"
+        expected_separator = "T"
+
         timestamp = self.logger._format_timestamp()
-        assert timestamp.endswith(TEST_TIMESTAMP_SUFFIX)
-        assert TEST_TIMESTAMP_SEPARATOR in timestamp
+
+        # Verify using expected variables
+        assert timestamp.endswith(expected_suffix)
+        assert expected_separator in timestamp
 
     def test_log_basic(self):
         """Test basic logging functionality."""
-        with patch.object(self.logger, '_write_to_file') as mock_write:
+        with patch.object(self.logger, LOGGER_WRITE_TO_FILE) as mock_write:
             self.logger.log(TEST_LOG_LEVEL_INFO, TEST_ACTION, TEST_MESSAGE)
 
             # Verify file write was called
@@ -92,12 +117,12 @@ class TestBaseLogger:
 
     def test_log_with_optional_fields(self):
         """Test logging with optional fields."""
-        with patch.object(self.logger, '_write_to_file') as mock_write:
+        with patch.object(self.logger, LOGGER_WRITE_TO_FILE) as mock_write:
             self.logger.log(
                 TEST_LOG_LEVEL_INFO, TEST_ACTION, TEST_MESSAGE,
                 user=TEST_USER,
                 extra=TEST_EXTRA_DATA,
-                request_id=TEST_CUSTOM_REQUEST_ID
+                request_id=TEST_FIELD_REQUEST_ID
             )
 
             logged_data = LogEntry.model_validate_json(mock_write.call_args[0][0])
@@ -105,11 +130,11 @@ class TestBaseLogger:
             # Verify optional fields
             assert logged_data.user == TEST_USER
             assert logged_data.extra == TEST_EXTRA_DATA
-            assert logged_data.request_id == TEST_CUSTOM_REQUEST_ID
+            assert logged_data.request_id == TEST_FIELD_REQUEST_ID
 
     def test_log_levels(self):
         """Test that all log levels work correctly."""
-        with patch.object(self.logger, '_write_to_file') as mock_write:
+        with patch.object(self.logger, LOGGER_WRITE_TO_FILE) as mock_write:
             # Test info level
             self.logger.info(TEST_INFO_ACTION, TEST_INFO_MESSAGE)
             mock_write.assert_called()
@@ -130,7 +155,7 @@ class TestBaseLogger:
 
     def test_json_encoding(self):
         """Test JSON encoding handles special characters correctly."""
-        with patch.object(self.logger, '_write_to_file') as mock_write:
+        with patch.object(self.logger, LOGGER_WRITE_TO_FILE) as mock_write:
             # Test with special characters
             self.logger.info(TEST_ACTION, TEST_SPECIAL_MESSAGE)
 
@@ -140,7 +165,7 @@ class TestBaseLogger:
 
     def test_request_id_uniqueness(self):
         """Test that request IDs are unique across multiple logs."""
-        with patch.object(self.logger, '_write_to_file') as mock_write:
+        with patch.object(self.logger, LOGGER_WRITE_TO_FILE) as mock_write:
             # Log multiple messages
             for i in range(TEST_MESSAGE_COUNT):
                 self.logger.info(TEST_ACTION, f"Message {i}")

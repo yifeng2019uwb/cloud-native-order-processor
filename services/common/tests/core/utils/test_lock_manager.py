@@ -15,9 +15,13 @@ from botocore.exceptions import ClientError
 from src.core.utils import lock_manager
 from src.core.utils.lock_manager import (LockType, LockTimeout, UserLock, UserLockItem, acquire_lock,
                                          release_lock)
-from tests.data.dao.mock_constants import MockDatabaseMethods
+from tests.utils.dependency_constants import MODEL_SAVE, MODEL_GET, MODEL_DELETE
 from src.data.exceptions import (CNOPDatabaseOperationException,
                                  CNOPLockAcquisitionException)
+
+TEST_LOCK_VALUE = "lock-123"
+TEST_USERNAME = "testuser123"
+TEST_OPERATION = LockType.DEPOSIT
 
 
 class TestUserLock:
@@ -35,14 +39,14 @@ class TestUserLock:
 
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
-                mock_acquire_lock.return_value = "lock-123"
+                mock_acquire_lock.return_value = TEST_LOCK_VALUE
                 mock_release_lock.return_value = True
 
                 async with UserLock(username, operation):
                     pass
 
                 mock_acquire_lock.assert_called_once_with(username, operation, 2)
-                mock_release_lock.assert_called_once_with(username, "lock-123")
+                mock_release_lock.assert_called_once_with(username, TEST_LOCK_VALUE)
 
     @pytest.mark.asyncio
     async def test_user_lock_acquisition_failed(self):
@@ -65,14 +69,14 @@ class TestUserLock:
 
         with patch(self.PATH_ACQUIRE_LOCK) as mock_acquire_lock, \
              patch(self.PATH_RELEASE_LOCK) as mock_release_lock:
-                mock_acquire_lock.return_value = "lock-123"
+                mock_acquire_lock.return_value = TEST_LOCK_VALUE
                 mock_release_lock.return_value = True
 
                 with pytest.raises(ValueError):
                     async with UserLock(username, operation):
                         raise ValueError("Test exception")
 
-                mock_release_lock.assert_called_once_with(username, "lock-123")
+                mock_release_lock.assert_called_once_with(username, TEST_LOCK_VALUE)
 
     @pytest.mark.asyncio
     async def test_user_lock_no_release_if_not_acquired(self):
@@ -94,8 +98,8 @@ class TestUserLock:
 class TestAcquireLock:
     """Test acquire_lock function"""
 
-    @patch.object(UserLockItem, MockDatabaseMethods.GET)
-    @patch.object(UserLockItem, MockDatabaseMethods.SAVE)
+    @patch.object(UserLockItem, MODEL_GET)
+    @patch.object(UserLockItem, MODEL_SAVE)
     def test_acquire_lock_success(self, mock_save, mock_get):
         """Test successful lock acquisition"""
         username = "test-user-123"
@@ -115,8 +119,8 @@ class TestAcquireLock:
         mock_get.assert_called_once()
         mock_save.assert_called_once()
 
-    @patch.object(UserLockItem, MockDatabaseMethods.GET)
-    @patch.object(UserLockItem, MockDatabaseMethods.SAVE)
+    @patch.object(UserLockItem, MODEL_GET)
+    @patch.object(UserLockItem, MODEL_SAVE)
     def test_acquire_lock_conditional_check_failed(self, mock_save, mock_get):
         """Test lock acquisition when lock already exists"""
         username = "test-user-123"
@@ -132,8 +136,8 @@ class TestAcquireLock:
         with pytest.raises(CNOPDatabaseOperationException, match="Database operation failed while acquiring lock"):
             acquire_lock(username, operation)
 
-    @patch.object(UserLockItem, MockDatabaseMethods.GET)
-    @patch.object(UserLockItem, MockDatabaseMethods.SAVE)
+    @patch.object(UserLockItem, MODEL_GET)
+    @patch.object(UserLockItem,MODEL_SAVE)
     def test_acquire_lock_database_error(self, mock_save, mock_get):
         """Test lock acquisition when database error occurs"""
         username = "test-user-123"
@@ -149,8 +153,8 @@ class TestAcquireLock:
 class TestReleaseLock:
     """Test release_lock function"""
 
-    @patch.object(UserLockItem, MockDatabaseMethods.GET)
-    @patch.object(UserLockItem, MockDatabaseMethods.DELETE)
+    @patch.object(UserLockItem, MODEL_GET)
+    @patch.object(UserLockItem, MODEL_DELETE)
     def test_release_lock_success(self, mock_delete, mock_get):
         """Test successful lock release"""
         username = "test-user-123"
@@ -170,8 +174,8 @@ class TestReleaseLock:
         mock_get.assert_called_once()
         mock_delete.assert_called_once()
 
-    @patch.object(UserLockItem, MockDatabaseMethods.GET)
-    @patch.object(UserLockItem, MockDatabaseMethods.DELETE)
+    @patch.object(UserLockItem, MODEL_GET)
+    @patch.object(UserLockItem, MODEL_DELETE)
     def test_release_lock_conditional_check_failed(self, mock_delete, mock_get):
         """Test lock release when lock was already released"""
         username = "test-user-123"
@@ -184,8 +188,8 @@ class TestReleaseLock:
 
         assert result is False
 
-    @patch.object(UserLockItem, MockDatabaseMethods.GET)
-    @patch.object(UserLockItem, MockDatabaseMethods.DELETE)
+    @patch.object(UserLockItem, MODEL_GET)
+    @patch.object(UserLockItem, MODEL_DELETE)
     def test_release_lock_database_error(self, mock_delete, mock_get):
         """Test lock release when database error occurs"""
         username = "test-user-123"

@@ -8,14 +8,32 @@ import pytest
 # Add the common directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
+from tests.utils.dependency_constants import (
+    BOTO3_SESSION, BOTO3_CLIENT, BOTO3_RESOURCE, DYNAMODB_BOTO3_SESSION, DYNAMODB_BOTO3_CLIENT,
+    DYNAMODB_BOTO3_RESOURCE, ENV_AWS_REGION, ENV_INVENTORY_TABLE, ENV_USERS_TABLE,ENV_ORDERS_TABLE)
+
+
+# =============================================================================
+# LOCAL TEST VARIABLES - Avoid hardcoded values in tests
+# =============================================================================
+
+# Test environment variables
+TEST_USERS_TABLE = 'test-users-table'
+TEST_ORDERS_TABLE = 'test-orders-table'
+TEST_INVENTORY_TABLE = 'test-inventory-table'
+TEST_AWS_REGION = 'us-west-2'
+
+TEST_FIELD_TABLE = "Table"
+TEST_FIELD_TABLE_NAME = "TableName"
+
 # Set environment variables before importing the module
-os.environ.setdefault('USERS_TABLE', 'test-users-table')
-os.environ.setdefault('ORDERS_TABLE', 'test-orders-table')
-os.environ.setdefault('INVENTORY_TABLE', 'test-inventory-table')
-os.environ.setdefault('AWS_REGION', 'us-west-2')
+os.environ.setdefault(ENV_USERS_TABLE, TEST_USERS_TABLE)
+os.environ.setdefault(ENV_ORDERS_TABLE, TEST_ORDERS_TABLE)
+os.environ.setdefault(ENV_INVENTORY_TABLE, TEST_INVENTORY_TABLE)
+os.environ.setdefault(ENV_AWS_REGION, TEST_AWS_REGION)
 
 # Mock boto3 before any imports
-with patch('boto3.resource'), patch('boto3.client'):
+with patch(BOTO3_RESOURCE), patch(BOTO3_CLIENT):
     from src.data.database.dynamodb_connection import (DynamoDBConnection,
                                                        DynamoDBManager,
                                                        get_dynamodb_manager)
@@ -25,13 +43,7 @@ with patch('boto3.resource'), patch('boto3.client'):
 class TestDynamoDBManager:
     """Test DynamoDBManager class"""
 
-    @patch.dict(os.environ, {
-        'USERS_TABLE': 'test-users-table',
-        'ORDERS_TABLE': 'test-orders-table',
-        'INVENTORY_TABLE': 'test-inventory-table',
-        'AWS_REGION': 'us-west-2'
-    })
-    @patch('src.data.database.dynamodb_connection.boto3.Session')
+    @patch(DYNAMODB_BOTO3_SESSION)
     def test_dynamodb_manager_init_success(self, mock_boto3_session):
         mock_session = MagicMock()
         mock_resource = MagicMock()
@@ -43,22 +55,16 @@ class TestDynamoDBManager:
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
 
         manager = DynamoDBManager()
-        assert manager.users_table_name == 'test-users-table'
-        assert manager.orders_table_name == 'test-orders-table'
-        assert manager.inventory_table_name == 'test-inventory-table'
-        assert manager.region == 'us-west-2'
+        assert manager.users_table_name == TEST_USERS_TABLE
+        assert manager.orders_table_name == TEST_ORDERS_TABLE
+        assert manager.inventory_table_name == TEST_INVENTORY_TABLE
+        assert manager.region == TEST_AWS_REGION
         assert manager.users_table == mock_users_table
         assert manager.orders_table == mock_orders_table
         assert manager.inventory_table == mock_inventory_table
 
 
-    @patch.dict(os.environ, {
-        'USERS_TABLE': 'test-users-table',
-        'ORDERS_TABLE': 'test-orders-table',
-        'INVENTORY_TABLE': 'test-inventory-table',
-        'AWS_REGION': 'eu-west-1'
-    })
-    @patch('src.data.database.dynamodb_connection.boto3.Session')
+    @patch(DYNAMODB_BOTO3_SESSION)
     def test_dynamodb_manager_custom_region(self, mock_boto3_session):
         mock_session = MagicMock()
         mock_resource = MagicMock()
@@ -70,18 +76,12 @@ class TestDynamoDBManager:
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
 
         manager = DynamoDBManager()
-        assert manager.region == 'eu-west-1'
+        assert manager.region == TEST_AWS_REGION
         assert manager.users_table == mock_users_table
         assert manager.orders_table == mock_orders_table
         assert manager.inventory_table == mock_inventory_table
 
-    @patch.dict(os.environ, {
-        'USERS_TABLE': 'test-users-table',
-        'ORDERS_TABLE': 'test-orders-table',
-        'INVENTORY_TABLE': 'test-inventory-table',
-        'AWS_REGION': 'us-west-2'
-    })
-    @patch('src.data.database.dynamodb_connection.boto3.Session')
+    @patch(DYNAMODB_BOTO3_SESSION)
     def test_health_check_success(self, mock_boto3_session):
         mock_session = MagicMock()
         mock_resource = MagicMock()
@@ -91,24 +91,18 @@ class TestDynamoDBManager:
         mock_boto3_session.return_value = mock_session
         mock_session.resource.return_value = mock_resource
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
-        mock_users_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-users-table'}}
-        mock_orders_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-orders-table'}}
-        mock_inventory_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-inventory-table'}}
+        mock_users_table.meta.client.describe_table.return_value = {TEST_FIELD_TABLE: {TEST_FIELD_TABLE_NAME: TEST_USERS_TABLE}}
+        mock_orders_table.meta.client.describe_table.return_value = {TEST_FIELD_TABLE: {TEST_FIELD_TABLE_NAME: TEST_ORDERS_TABLE}}
+        mock_inventory_table.meta.client.describe_table.return_value = {TEST_FIELD_TABLE: {TEST_FIELD_TABLE_NAME: TEST_INVENTORY_TABLE}}
 
         manager = DynamoDBManager()
         result = manager.health_check()
         assert result is True
-        mock_users_table.meta.client.describe_table.assert_called_once_with(TableName='test-users-table')
-        mock_orders_table.meta.client.describe_table.assert_called_once_with(TableName='test-orders-table')
-        mock_inventory_table.meta.client.describe_table.assert_called_once_with(TableName='test-inventory-table')
+        mock_users_table.meta.client.describe_table.assert_called_once_with(TableName=TEST_USERS_TABLE)
+        mock_orders_table.meta.client.describe_table.assert_called_once_with(TableName=TEST_ORDERS_TABLE)
+        mock_inventory_table.meta.client.describe_table.assert_called_once_with(TableName=TEST_INVENTORY_TABLE)
 
-    @patch.dict(os.environ, {
-        'USERS_TABLE': 'test-users-table',
-        'ORDERS_TABLE': 'test-orders-table',
-        'INVENTORY_TABLE': 'test-inventory-table',
-        'AWS_REGION': 'us-west-2'
-    })
-    @patch('src.data.database.dynamodb_connection.boto3.Session')
+    @patch(DYNAMODB_BOTO3_SESSION)
     def test_health_check_failure(self, mock_boto3_session):
         mock_session = MagicMock()
         mock_resource = MagicMock()
@@ -124,13 +118,7 @@ class TestDynamoDBManager:
         result = manager.health_check()
         assert result is False
 
-    @patch.dict(os.environ, {
-        'USERS_TABLE': 'test-users-table',
-        'ORDERS_TABLE': 'test-orders-table',
-        'INVENTORY_TABLE': 'test-inventory-table',
-        'AWS_REGION': 'us-west-2'
-    })
-    @patch('src.data.database.dynamodb_connection.boto3.Session')
+    @patch(DYNAMODB_BOTO3_SESSION)
     def test_get_connection(self, mock_boto3_session):
         mock_session = MagicMock()
         mock_resource = MagicMock()
@@ -170,20 +158,23 @@ class TestDynamoDBConnection:
     def test_dynamodb_connection_table_access(self):
         """Test that DynamoDBConnection provides table access"""
         # Create mock tables with different names for verification
+        users_table_name = "users"
+        orders_table_name = "orders"
+        inventory_table_name = "inventory"
         mock_users_table = Mock()
-        mock_users_table.name = 'users'
+        mock_users_table.name = users_table_name
         mock_orders_table = Mock()
-        mock_orders_table.name = 'orders'
+        mock_orders_table.name = orders_table_name
         mock_inventory_table = Mock()
-        mock_inventory_table.name = 'inventory'
+        mock_inventory_table.name = inventory_table_name
 
         # Initialize connection
         connection = DynamoDBConnection(mock_users_table, mock_orders_table, mock_inventory_table)
 
         # Verify table access
-        assert connection.users_table.name == 'users'
-        assert connection.orders_table.name == 'orders'
-        assert connection.inventory_table.name == 'inventory'
+        assert connection.users_table.name == users_table_name
+        assert connection.orders_table.name == orders_table_name
+        assert connection.inventory_table.name == inventory_table_name
 
 
 class TestGetDynamoDBManagerFunction:
@@ -218,13 +209,7 @@ class TestGetDynamoDBManagerFunction:
 class TestDynamoDBIntegration:
     """Integration tests for DynamoDB components"""
 
-    @patch.dict(os.environ, {
-        'USERS_TABLE': 'test-users-table',
-        'ORDERS_TABLE': 'test-orders-table',
-        'INVENTORY_TABLE': 'test-inventory-table',
-        'AWS_REGION': 'us-west-2'
-    })
-    @patch('src.data.database.dynamodb_connection.boto3.Session')
+    @patch(DYNAMODB_BOTO3_SESSION)
     def test_end_to_end_connection_flow(self, mock_boto3_session):
         mock_session = MagicMock()
         mock_resource = MagicMock()
@@ -234,9 +219,9 @@ class TestDynamoDBIntegration:
         mock_boto3_session.return_value = mock_session
         mock_session.resource.return_value = mock_resource
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
-        mock_users_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-users-table'}}
-        mock_orders_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-orders-table'}}
-        mock_inventory_table.meta.client.describe_table.return_value = {'Table': {'TableName': 'test-inventory-table'}}
+        mock_users_table.meta.client.describe_table.return_value = {TEST_FIELD_TABLE: {TEST_FIELD_TABLE_NAME: TEST_USERS_TABLE}}
+        mock_orders_table.meta.client.describe_table.return_value = {TEST_FIELD_TABLE: {TEST_FIELD_TABLE_NAME: TEST_ORDERS_TABLE}}
+        mock_inventory_table.meta.client.describe_table.return_value = {TEST_FIELD_TABLE: {TEST_FIELD_TABLE_NAME: TEST_INVENTORY_TABLE}}
 
         manager = DynamoDBManager()
         health_result = manager.health_check()
@@ -249,13 +234,7 @@ class TestDynamoDBIntegration:
         assert connection.orders_table == mock_orders_table
         assert connection.inventory_table == mock_inventory_table
 
-    @patch.dict(os.environ, {
-        'USERS_TABLE': 'test-users-table',
-        'ORDERS_TABLE': 'test-orders-table',
-        'INVENTORY_TABLE': 'test-inventory-table',
-        'AWS_REGION': 'us-west-2'
-    })
-    @patch('src.data.database.dynamodb_connection.boto3.Session')
+    @patch(DYNAMODB_BOTO3_SESSION)
     def test_table_name_configuration(self, mock_boto3_session):
         mock_session = MagicMock()
         mock_resource = MagicMock()
@@ -267,10 +246,10 @@ class TestDynamoDBIntegration:
         mock_resource.Table.side_effect = [mock_users_table, mock_orders_table, mock_inventory_table]
 
         manager = DynamoDBManager()
-        assert manager.users_table_name == 'test-users-table'
-        assert manager.orders_table_name == 'test-orders-table'
-        assert manager.inventory_table_name == 'test-inventory-table'
+        assert manager.users_table_name == TEST_USERS_TABLE
+        assert manager.orders_table_name == TEST_ORDERS_TABLE
+        assert manager.inventory_table_name == TEST_INVENTORY_TABLE
         table_calls = [call[0][0] for call in mock_resource.Table.call_args_list]
-        assert 'test-users-table' in table_calls
-        assert 'test-orders-table' in table_calls
-        assert 'test-inventory-table' in table_calls
+        assert TEST_USERS_TABLE in table_calls
+        assert TEST_ORDERS_TABLE in table_calls
+        assert TEST_INVENTORY_TABLE in table_calls

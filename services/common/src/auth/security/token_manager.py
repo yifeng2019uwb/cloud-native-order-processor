@@ -38,6 +38,18 @@ class AccessTokenResponse(BaseModel):
     expires_at: str = Field(..., description="Token expiration timestamp")
 
 
+class TokenContext(BaseModel):
+    """Token context model for internal service use"""
+
+    username: str = Field(..., description="Username from token subject")
+    role: str = Field(..., description="User role from token")
+    expiration: datetime = Field(..., description="Token expiration timestamp")
+    issued_at: datetime = Field(..., description="Token issued at timestamp")
+    issuer: Optional[str] = Field(None, description="Token issuer")
+    audience: Optional[str] = Field(None, description="Token audience")
+    token_type: str = Field(..., description="Token type")
+
+
 class TokenManager:
     """
     Centralized token management for JWT and session operations.
@@ -172,10 +184,7 @@ class TokenManager:
             # Re-raise CNOPTokenInvalidException without wrapping
             raise
         except Exception as e:
-            logger.error(
-                action=LogAction.ERROR,
-                message=f"Unexpected error verifying token: {e}"
-            )
+            logger.error(action=LogAction.ERROR,message=f"Unexpected error verifying token: {e}")
             raise CNOPTokenInvalidException("Token verification failed")
 
     def validate_token_comprehensive(self, token: str) -> Dict[str, Any]:
@@ -273,29 +282,30 @@ class TokenManager:
             )
             raise CNOPTokenInvalidException("Token validation failed")
 
-    def decode_token_payload(self, token: str) -> Dict[str, Any]:
-        """
-        Decode token payload without verification.
+    # TODO: Remove if not used after testing - decode_token_payload method
+    # def decode_token_payload(self, token: str) -> Dict[str, Any]:
+    #     """
+    #     Decode token payload without verification.
 
-        Args:
-            token: Token to decode
+    #     Args:
+    #         token: Token to decode
 
-        Returns:
-            Token payload as dictionary
+    #     Returns:
+    #         Token payload as dictionary
 
-        Raises:
-            CNOPTokenInvalidException: If token is malformed
-        """
-        try:
-            # Decode without verification (for debugging only)
-            payload = jwt.decode(token, self.jwt_secret, options={JWTConfig.VERIFY_SIGNATURE: False}, algorithms=[self.jwt_algorithm])
-            return payload
-        except Exception as e:
-            logger.error(
-                action=LogAction.ERROR,
-                message=f"Error decoding token payload: {e}"
-            )
-            raise CNOPTokenInvalidException("Token decode failed")
+    #     Raises:
+    #         CNOPTokenInvalidException: If token is malformed
+    #     """
+    #     try:
+    #         # Decode without verification (for debugging only)
+    #         payload = jwt.decode(token, self.jwt_secret, options={JWTConfig.VERIFY_SIGNATURE: False}, algorithms=[self.jwt_algorithm])
+    #         return payload
+    #     except Exception as e:
+    #         logger.error(
+    #             action=LogAction.ERROR,
+    #             message=f"Error decoding token payload: {e}"
+    #         )
+    #         raise CNOPTokenInvalidException("Token decode failed")
 
     def is_token_expired(self, token: str) -> bool:
         """
@@ -330,37 +340,38 @@ class TokenManager:
             )
             return True
 
-    def refresh_token(self, token: str) -> str:
-        """
-        Refresh an expired token.
+    # TODO: Remove if not used after testing - refresh_token method
+    # def refresh_token(self, token: str) -> str:
+    #     """
+    #     Refresh an expired token.
 
-        Args:
-            token: JWT token string
+    #     Args:
+    #         token: JWT token string
 
-        Returns:
-            str: New JWT token
+    #     Returns:
+    #         str: New JWT token
 
-        Raises:
-            CNOPTokenInvalidException: If token cannot be refreshed
-        """
-        try:
-            # Decode the old token to extract user info
-            payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
-            username = payload.get(JwtFields.SUBJECT)
+    #     Raises:
+    #         CNOPTokenInvalidException: If token cannot be refreshed
+    #     """
+    #     try:
+    #         # Decode the old token to extract user info
+    #         payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
+    #         username = payload.get(JwtFields.SUBJECT)
 
-            if not username:
-                logger.error(
-                    action=LogAction.ERROR,
-                    message="Cannot refresh token: missing username"
-                )
-                raise CNOPTokenInvalidException("Cannot refresh token: missing username")
+    #         if not username:
+    #             logger.error(
+    #                 action=LogAction.ERROR,
+    #                 message="Cannot refresh token: missing username"
+    #             )
+    #             raise CNOPTokenInvalidException("Cannot refresh token: missing username")
 
-            # Create new token with extended expiration
-            return self.create_access_token(username)
+    #         # Create new token with extended expiration
+    #         return self.create_access_token(username)
 
-        except Exception as e:
-            logger.error(
-                action=LogAction.ERROR,
-                message=f"Failed to refresh token: {e}"
-            )
-            raise CNOPTokenInvalidException("Failed to refresh token")
+    #     except Exception as e:
+    #         logger.error(
+    #             action=LogAction.ERROR,
+    #             message=f"Failed to refresh token: {e}"
+    #         )
+    #         raise CNOPTokenInvalidException("Failed to refresh token")

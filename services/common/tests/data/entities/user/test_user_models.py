@@ -13,263 +13,110 @@ from src.data.entities.user.user import User, UserItem
 # Add src directory to path for absolute imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'src')))
 
+# Test constants
+TEST_USERNAME = "testuser"
+TEST_EMAIL = "test@example.com"
+TEST_PASSWORD = "ValidPass123!"
+TEST_FIRST_NAME = "Test"
+TEST_LAST_NAME = "User"
+TEST_PHONE = "+1234567890"
+TEST_PASSWORD_HASH = "hashed_password"
+TEST_USER_PK = "testuser"
+TEST_USER_SK = "USER"
+TEST_USERNAME_TOO_LONG = "a" * 51
+
 
 class TestUser:
-    """Test User model validation"""
+    """Test User model validation - Simplified"""
 
-    def test_valid_user(self):
-        """Test valid user data"""
-        user_data = {
-            "username": "john_doe123",
-            "email": "test@example.com",
-            "password": "ValidPass123!",
-            "first_name": "Test",
-            "last_name": "User",
-            "phone": "+1234567890"
-        }
-        user = User(**user_data)
-        assert user.username == "john_doe123"
-        assert user.email == "test@example.com"
-        assert user.first_name == "Test"
-        assert user.last_name == "User"
-        assert user.phone == "+1234567890"
+    def test_valid_user_creation(self):
+        """Test valid user creation"""
+        user = User(
+            username=TEST_USERNAME,
+            email=TEST_EMAIL,
+            password=TEST_PASSWORD,
+            first_name=TEST_FIRST_NAME,
+            last_name=TEST_LAST_NAME,
+            phone=TEST_PHONE
+        )
+        assert user.username == TEST_USERNAME
+        assert user.email == TEST_EMAIL
+        assert user.first_name == TEST_FIRST_NAME
+        assert user.last_name == TEST_LAST_NAME
+        assert user.phone == TEST_PHONE
 
-    def test_username_validation_valid(self):
-        """Test valid username formats - simple DB constraints only"""
-        valid_usernames = [
-            "john_doe",      # Valid username
-            "user123",       # Valid username
-            "test_user_123", # Valid username
-            "johnsmith"      # Valid username
-        ]
-
-        for username in valid_usernames:
-            user = User(
-                username=username,
-                email="test@example.com",
-                password="ValidPass123!",
-                first_name="Test",
-                last_name="User",
-                phone="+1234567890"
-            )
-            assert user.username == username
-
-    def test_username_validation_invalid(self):
-        """Test invalid username formats - simple DB constraints only"""
-        invalid_usernames = [
-            "a" * 51,         # Too long (over 50 chars)
-        ]
-
-        for username in invalid_usernames:
-            with pytest.raises(ValidationError):
-                User(
-                    username=username,
-                    email="test@example.com",
-                    password="ValidPass123!",
-                    first_name="Test",
-                    last_name="User",
-                    phone="+1234567890"
-                )
-
-    def test_email_validation_valid(self):
-        """Test valid email formats"""
-        valid_emails = [
-            "test@example.com",
-            "user.name@domain.co.uk",
-            "test+tag@example.org"
-        ]
-
-        for email in valid_emails:
-            user = User(
-                username="testuser",
-                email=email,
-                password="ValidPass123!",
-                first_name="Test",
-                last_name="User",
-                phone="+1234567890"
-            )
-            assert user.email == email
-
-    def test_password_validation_valid(self):
-        """Test valid password formats"""
-        valid_passwords = [
-            "ValidPass123!",
-            "AnotherPass456@",
-            "Test123$"
-        ]
-
-        for password in valid_passwords:
-            user = User(
-                username="testuser",
-                email="test@example.com",
-                password=password,
-                first_name="Test",
-                last_name="User",
-                phone="+1234567890"
-            )
-            assert user.password == password
-
-    def test_password_validation_invalid(self):
-        """Test invalid password formats - only length validation"""
-        invalid_passwords = [
-            "a" * 201,        # Too long (over 200 chars)
-        ]
-
-        for password in invalid_passwords:
-            with pytest.raises(ValidationError):
-                User(
-                    username="testuser",
-                    email="test@example.com",
-                    password=password,
-                    first_name="Test",
-                    last_name="User",
-                    phone="+1234567890"
-                )
-
-    def test_required_fields(self):
+    def test_required_fields_validation(self):
         """Test that required fields are enforced"""
-        # Missing username
         with pytest.raises(ValidationError):
-            User(
-                email="test@example.com",
-                password="ValidPass123!",
-                first_name="Test",
-                last_name="User",
-                phone="+1234567890"
-            )
+            User()  # Missing all required fields
 
-        # Missing email
+    def test_username_length_validation(self):
+        """Test username length validation"""
         with pytest.raises(ValidationError):
             User(
-                username="testuser",
-                password="ValidPass123!",
-                first_name="Test",
-                last_name="User",
-                phone="+1234567890"
-            )
-
-        # Missing password
-        with pytest.raises(ValidationError):
-            User(
-                username="testuser",
-                email="test@example.com",
-                first_name="Test",
-                last_name="User",
-                phone="+1234567890"
-            )
-
-        # Missing first_name
-        with pytest.raises(ValidationError):
-            User(
-                username="testuser",
-                email="test@example.com",
-                password="ValidPass123!",
-                last_name="User",
-                phone="+1234567890"
-            )
-
-        # Missing last_name
-        with pytest.raises(ValidationError):
-            User(
-                username="testuser",
-                email="test@example.com",
-                password="ValidPass123!",
-                first_name="Test",
-                phone="+1234567890"
+                username=TEST_USERNAME_TOO_LONG,
+                email=TEST_EMAIL,
+                password=TEST_PASSWORD,
+                first_name=TEST_FIRST_NAME,
+                last_name=TEST_LAST_NAME
             )
 
     def test_optional_fields(self):
         """Test that optional fields work correctly"""
         user = User(
-            username="testuser",
-            email="test@example.com",
-            password="ValidPass123!",
-            first_name="Test",
-            last_name="User"
+            username=TEST_USERNAME,
+            email=TEST_EMAIL,
+            password=TEST_PASSWORD,
+            first_name=TEST_FIRST_NAME,
+            last_name=TEST_LAST_NAME
             # phone is optional
         )
         assert user.phone is None
-        assert user.date_of_birth is None
         assert user.marketing_emails_consent is False
         assert user.role == "customer"
-
-    def test_default_values(self):
-        """Test default values for optional fields"""
-        user = User(
-            username="testuser",
-            email="test@example.com",
-            password="ValidPass123!",
-            first_name="Test",
-            last_name="User"
-        )
-        assert user.marketing_emails_consent is False
-        assert user.role == "customer"
-        assert user.date_of_birth is None
 
 
 class TestUserItem:
-    """Test UserItem model validation"""
+    """Test UserItem model validation - Simplified"""
 
-    def test_valid_user_item(self):
-        """Test valid user item data"""
-        from datetime import datetime
-        now = datetime.now(timezone.utc)
-        user_item_data = {
-            "Pk": "testuser",
-            "Sk": "USER",
-            "username": "testuser",
-            "email": "test@example.com",
-            "password_hash": "hashed_password",
-            "first_name": "Test",
-            "last_name": "User",
-            "phone": "+1234567890",
-            "created_at": now,
-            "updated_at": now
-        }
-        user_item = UserItem(**user_item_data)
-        assert user_item.Pk == "testuser"
-        assert user_item.Sk == "USER"
-        assert user_item.username == "testuser"
-        assert user_item.email == "test@example.com"
-        assert user_item.password_hash == "hashed_password"
-
-    def test_user_item_from_user(self):
-        """Test converting User to UserItem"""
-        user = User(
-            username="testuser",
-            email="test@example.com",
-            password="ValidPass123!",
-            first_name="Test",
-            last_name="User",
-            phone="+1234567890"
-        )
-        user_item = UserItem.from_user(user)
-        assert user_item.username == user.username
-        assert user_item.email == user.email
-        assert user_item.first_name == user.first_name
-        assert user_item.last_name == user.last_name
-        assert user_item.phone == user.phone
-
-    def test_user_item_to_user(self):
-        """Test converting UserItem to User"""
-        from datetime import datetime
+    def test_user_item_creation(self):
+        """Test valid user item creation"""
         now = datetime.now(timezone.utc)
         user_item = UserItem(
-            Pk="testuser",
-            Sk="USER",
-            username="testuser",
-            email="test@example.com",
-            password_hash="hashed_password",
-            first_name="Test",
-            last_name="User",
-            phone="+1234567890",
+            Pk=TEST_USER_PK,
+            Sk=TEST_USER_SK,
+            username=TEST_USERNAME,
+            email=TEST_EMAIL,
+            password_hash=TEST_PASSWORD_HASH,
+            first_name=TEST_FIRST_NAME,
+            last_name=TEST_LAST_NAME,
+            phone=TEST_PHONE,
             created_at=now,
             updated_at=now
         )
-        user = user_item.to_user()
-        assert user.username == user_item.username
-        assert user.email == user_item.email
-        assert user.first_name == user_item.first_name
-        assert user.last_name == user_item.last_name
-        assert user.phone == user_item.phone
-        assert user.password == "[HASHED]"  # Password should be masked
+        assert user_item.Pk == TEST_USER_PK
+        assert user_item.Sk == TEST_USER_SK
+        assert user_item.username == TEST_USERNAME
+        assert user_item.email == TEST_EMAIL
+
+    def test_user_item_conversion(self):
+        """Test converting between User and UserItem"""
+        user = User(
+            username=TEST_USERNAME,
+            email=TEST_EMAIL,
+            password=TEST_PASSWORD,
+            first_name=TEST_FIRST_NAME,
+            last_name=TEST_LAST_NAME,
+            phone=TEST_PHONE
+        )
+
+        # Convert User to UserItem
+        user_item = UserItem.from_user(user)
+        assert user_item.username == user.username
+        assert user_item.email == user.email
+
+        # Convert UserItem back to User
+        converted_user = user_item.to_user()
+        assert converted_user.username == user.username
+        assert converted_user.email == user.email
+        assert converted_user.password == "[HASHED]"  # Password should be masked

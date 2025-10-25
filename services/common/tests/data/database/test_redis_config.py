@@ -11,6 +11,23 @@ from src.data.database.redis_config import (RedisConfig, get_redis_config,
                                             get_redis_namespace, get_redis_url,
                                             is_local_kubernetes)
 from src.data.database.database_constants import is_production
+from tests.utils.dependency_constants import OS_GETENV, REDIS_CONFIG_OS_GETENV, REDIS_CONFIG_GET_REDIS_CONFIG
+
+# =============================================================================
+# LOCAL TEST VARIABLES - Avoid hardcoded values in tests
+# =============================================================================
+
+# Test environment values
+TEST_ENVIRONMENT_DEV = "dev"
+TEST_ENVIRONMENT_PROD = "prod"
+TEST_REDIS_HOST_LOCAL = "localhost"
+TEST_REDIS_HOST_DEV = "redis.local"
+TEST_REDIS_PORT_DEFAULT = "6379"
+TEST_REDIS_PORT_DEV = "6380"
+TEST_REDIS_DB_DEFAULT = "0"
+TEST_REDIS_DB_DEV = "1"
+TEST_REDIS_PASSWORD_DEV = "devpass"
+TEST_REDIS_PASSWORD_PROD = "prodpass"
 
 
 class TestRedisConfig:
@@ -64,7 +81,7 @@ class TestRedisConfig:
 class TestGetRedisConfig:
     """Test get_redis_config function"""
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_get_redis_config_dev_environment(self, mock_getenv):
         """Test Redis configuration for dev environment"""
         # Mock environment variables for dev
@@ -87,7 +104,7 @@ class TestGetRedisConfig:
         assert config.socket_connect_timeout == 5
         assert config.socket_timeout == 5
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_get_redis_config_prod_environment(self, mock_getenv):
         """Test Redis configuration for prod environment"""
         # Mock environment variables for prod
@@ -110,7 +127,7 @@ class TestGetRedisConfig:
         assert config.socket_connect_timeout == 10
         assert config.socket_timeout == 10
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_get_redis_config_prod_with_aws_endpoint(self, mock_getenv):
         """Test Redis configuration for prod environment with AWS endpoint"""
         # Mock environment variables for prod with AWS endpoint
@@ -135,7 +152,7 @@ class TestGetRedisConfig:
         assert config.socket_connect_timeout == 10
         assert config.socket_timeout == 10
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_get_redis_config_default_values(self,  mock_getenv):
         """Test Redis configuration with default values when env vars are not set"""
         # Mock environment variables with minimal values
@@ -156,7 +173,7 @@ class TestGetRedisConfig:
         assert config.retry_on_timeout is True
         assert config.health_check_interval == 30
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_get_redis_config_case_insensitive_environment(self, mock_getenv):
         """Test Redis configuration with case-insensitive environment detection"""
         # Mock environment variables with uppercase environment
@@ -179,7 +196,7 @@ class TestGetRedisConfig:
 class TestGetRedisURL:
     """Test get_redis_url function"""
 
-    @patch('src.data.database.redis_config.get_redis_config')
+    @patch(REDIS_CONFIG_GET_REDIS_CONFIG)
     def test_get_redis_url_no_ssl_no_password(self, mock_get_config):
         """Test Redis URL generation without SSL and password"""
         mock_config = Mock()
@@ -194,7 +211,7 @@ class TestGetRedisURL:
 
         assert url == "redis://localhost:6379/0"
 
-    @patch('src.data.database.redis_config.get_redis_config')
+    @patch(REDIS_CONFIG_GET_REDIS_CONFIG)
     def test_get_redis_url_with_ssl_no_password(self, mock_get_config):
         """Test Redis URL generation with SSL but no password"""
         mock_config = Mock()
@@ -209,7 +226,7 @@ class TestGetRedisURL:
 
         assert url == "rediss://redis.example.com:6380/1"
 
-    @patch('src.data.database.redis_config.get_redis_config')
+    @patch(REDIS_CONFIG_GET_REDIS_CONFIG)
     def test_get_redis_url_with_ssl_and_password(self, mock_get_config):
         """Test Redis URL generation with SSL and password"""
         mock_config = Mock()
@@ -224,7 +241,7 @@ class TestGetRedisURL:
 
         assert url == "rediss://:secret123@redis.secure.com:6379/0"
 
-    @patch('src.data.database.redis_config.get_redis_config')
+    @patch(REDIS_CONFIG_GET_REDIS_CONFIG)
     def test_get_redis_url_no_ssl_with_password(self, mock_get_config):
         """Test Redis URL generation without SSL but with password"""
         mock_config = Mock()
@@ -243,7 +260,7 @@ class TestGetRedisURL:
 class TestGetRedisConnectionParams:
     """Test get_redis_connection_params function"""
 
-    @patch('src.data.database.redis_config.get_redis_config')
+    @patch(REDIS_CONFIG_GET_REDIS_CONFIG)
     def test_get_redis_connection_params_basic(self, mock_get_config):
         """Test Redis connection parameters without SSL and password"""
         mock_config = Mock()
@@ -274,7 +291,7 @@ class TestGetRedisConnectionParams:
         }
         assert params == expected_params
 
-    @patch('src.data.database.redis_config.get_redis_config')
+    @patch(REDIS_CONFIG_GET_REDIS_CONFIG)
     def test_get_redis_connection_params_with_password(self, mock_get_config):
         """Test Redis connection parameters with password"""
         mock_config = Mock()
@@ -306,7 +323,7 @@ class TestGetRedisConnectionParams:
         }
         assert params == expected_params
 
-    @patch('src.data.database.redis_config.get_redis_config')
+    @patch(REDIS_CONFIG_GET_REDIS_CONFIG)
     def test_get_redis_connection_params_with_ssl(self, mock_get_config):
         """Test Redis connection parameters with SSL"""
         mock_config = Mock()
@@ -339,7 +356,7 @@ class TestGetRedisConnectionParams:
         }
         assert params == expected_params
 
-    @patch('src.data.database.redis_config.get_redis_config')
+    @patch(REDIS_CONFIG_GET_REDIS_CONFIG)
     def test_get_redis_connection_params_with_ssl_and_password(self, mock_get_config):
         """Test Redis connection parameters with SSL and password"""
         mock_config = Mock()
@@ -377,7 +394,7 @@ class TestGetRedisConnectionParams:
 class TestEnvironmentHelpers:
     """Test environment detection helper functions"""
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_is_production_true(self, mock_getenv):
         """Test is_production when environment is prod"""
         mock_getenv.return_value = "prod"
@@ -387,7 +404,7 @@ class TestEnvironmentHelpers:
         assert result is True
         mock_getenv.assert_called_once_with("ENVIRONMENT", "dev")
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_is_production_false(self, mock_getenv):
         """Test is_production when environment is not prod"""
         mock_getenv.return_value = "dev"
@@ -397,7 +414,7 @@ class TestEnvironmentHelpers:
         assert result is False
         mock_getenv.assert_called_once_with("ENVIRONMENT", "dev")
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_is_production_case_insensitive(self, mock_getenv):
         """Test is_production with case-insensitive environment detection"""
         mock_getenv.return_value = "PROD"
@@ -407,7 +424,7 @@ class TestEnvironmentHelpers:
         assert result is True
         mock_getenv.assert_called_once_with("ENVIRONMENT", "dev")
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_is_production_default_value(self, mock_getenv):
         """Test is_production when environment variable is not set"""
         # Mock getenv to return the default value "dev" when ENVIRONMENT is not set
@@ -418,7 +435,7 @@ class TestEnvironmentHelpers:
         assert result is False
         mock_getenv.assert_called_once_with("ENVIRONMENT", "dev")
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_is_local_kubernetes_true(self, mock_getenv):
         """Test is_local_kubernetes when environment is dev"""
         mock_getenv.return_value = "dev"
@@ -428,7 +445,7 @@ class TestEnvironmentHelpers:
         assert result is True
         mock_getenv.assert_called_once_with("ENVIRONMENT", "dev")
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_is_local_kubernetes_false(self, mock_getenv):
         """Test is_local_kubernetes when environment is not dev"""
         mock_getenv.return_value = "prod"
@@ -438,7 +455,7 @@ class TestEnvironmentHelpers:
         assert result is False
         mock_getenv.assert_called_once_with("ENVIRONMENT", "dev")
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_is_local_kubernetes_case_insensitive(self, mock_getenv):
         """Test is_local_kubernetes with case-insensitive environment detection"""
         mock_getenv.return_value = "DEV"
@@ -448,7 +465,7 @@ class TestEnvironmentHelpers:
         assert result is True
         mock_getenv.assert_called_once_with("ENVIRONMENT", "dev")
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_is_local_kubernetes_default_value(self, mock_getenv):
         """Test is_local_kubernetes when environment variable is not set"""
         # Mock getenv to return the default value "dev" when ENVIRONMENT is not set
@@ -459,7 +476,7 @@ class TestEnvironmentHelpers:
         assert result is True
         mock_getenv.assert_called_once_with("ENVIRONMENT", "dev")
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_get_redis_namespace_dev(self, mock_getenv):
         """Test get_redis_namespace for dev environment"""
         mock_getenv.return_value = "dev"
@@ -469,7 +486,7 @@ class TestEnvironmentHelpers:
         assert namespace == "order-processor:dev"
         mock_getenv.assert_called_once_with("ENVIRONMENT", "dev")
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_get_redis_namespace_prod(self, mock_getenv):
         """Test get_redis_namespace for prod environment"""
         mock_getenv.return_value = "prod"
@@ -479,7 +496,7 @@ class TestEnvironmentHelpers:
         assert namespace == "order-processor:prod"
         mock_getenv.assert_called_once_with("ENVIRONMENT", "dev")
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_get_redis_namespace_case_insensitive(self, mock_getenv):
         """Test get_redis_namespace with case-insensitive environment detection"""
         mock_getenv.return_value = "STAGING"
@@ -489,7 +506,7 @@ class TestEnvironmentHelpers:
         assert namespace == "order-processor:staging"
         mock_getenv.assert_called_once_with("ENVIRONMENT", "dev")
 
-    @patch('src.data.database.redis_config.os.getenv')
+    @patch(REDIS_CONFIG_OS_GETENV)
     def test_get_redis_namespace_default_value(self, mock_getenv):
         """Test get_redis_namespace when environment variable is not set"""
         # Mock getenv to return the default value "dev" when ENVIRONMENT is not set

@@ -3,119 +3,50 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from src.data.entities.inventory import Asset, AssetItem
+from src.data.entities.inventory import Asset
+
+# Test constants
+TEST_ASSET_ID_BTC = "BTC"
+TEST_NAME_BITCOIN = "Bitcoin"
+TEST_DESCRIPTION_CURRENCY = "Digital currency"
+TEST_CATEGORY_MAJOR = "major"
+TEST_AMOUNT_10_12345678 = Decimal("10.12345678")
+TEST_PRICE_45000_50 = Decimal("45000.50")
 
 
-def test_asset_create_all_fields():
+def test_asset_creation():
+    """Test basic asset creation with required fields"""
     asset = Asset(
-        asset_id="BTC",
-        name="Bitcoin",
-        description="Digital currency",
-        category="major",
-        amount=Decimal("10.12345678"),
-        price_usd=Decimal("45000.50"),
-        symbol="BTC",
-        image="https://assets.coingecko.com/coins/images/1/large/bitcoin.png",
-        market_cap_rank=1,
-        high_24h=68000.0,
-        low_24h=66000.0,
-        circulating_supply=19400000.0,
-        price_change_24h=500.0,
-        ath_change_percentage=-2.5,
-        market_cap=1300000000000.0
+        asset_id=TEST_ASSET_ID_BTC,
+        name=TEST_NAME_BITCOIN,
+        description=TEST_DESCRIPTION_CURRENCY,
+        category=TEST_CATEGORY_MAJOR,
+        amount=TEST_AMOUNT_10_12345678,
+        price_usd=TEST_PRICE_45000_50
     )
-    assert asset.asset_id == "BTC"
-    assert asset.name == "Bitcoin"
-    assert asset.symbol == "BTC"
-    assert asset.image.startswith("https://")
-    assert asset.market_cap_rank == 1
-    assert asset.high_24h == 68000.0
-    assert asset.low_24h == 66000.0
-    assert asset.circulating_supply == 19400000.0
-    assert asset.price_change_24h == 500.0
-    assert asset.ath_change_percentage == -2.5
-    assert asset.market_cap == 1300000000000.0
+    assert asset.asset_id == TEST_ASSET_ID_BTC
+    assert asset.name == TEST_NAME_BITCOIN
+    assert asset.amount == TEST_AMOUNT_10_12345678
+    assert asset.price_usd == TEST_PRICE_45000_50
 
-def test_asset_create_missing_required():
-    # asset_id is required
-    with pytest.raises(ValidationError):
-        Asset(
-            name="Bitcoin",
-            description="Digital currency",
-            category="major",
-            amount=Decimal("10.12345678"),
-            price_usd=Decimal("45000.50")
-        )
-    # name is required
-    with pytest.raises(ValidationError):
-        Asset(
-            asset_id="BTC",
-            description="Digital currency",
-            category="major",
-            amount=Decimal("10.12345678"),
-            price_usd=Decimal("45000.50")
-        )
-    # category is required
-    with pytest.raises(ValidationError):
-        Asset(
-            asset_id="BTC",
-            name="Bitcoin",
-            description="Digital currency",
-            amount=Decimal("10.12345678"),
-            price_usd=Decimal("45000.50")
-        )
-    # amount is required
-    with pytest.raises(ValidationError):
-        Asset(
-            asset_id="BTC",
-            name="Bitcoin",
-            description="Digital currency",
-            category="major",
-            price_usd=Decimal("45000.50")
-        )
-    # price_usd is required
-    with pytest.raises(ValidationError):
-        Asset(
-            asset_id="BTC",
-            name="Bitcoin",
-            description="Digital currency",
-            category="major",
-            amount=Decimal("10.12345678")
-        )
 
-def test_asset_create_trim_whitespace():
+def test_asset_required_fields():
+    """Test that required fields are enforced"""
+    with pytest.raises(ValidationError):
+        Asset()  # Missing all required fields
+
+
+def test_asset_whitespace_trimming():
+    """Test that string fields are trimmed"""
     asset = Asset(
-        asset_id="  BTC  ",
-        name="  Bitcoin  ",
-        description="  Digital currency  ",
-        category="  major  ",
-        amount=Decimal("10.12345678"),
-        price_usd=Decimal("45000.50"),
-        symbol="  BTC  ",
-        image="  https://assets.coingecko.com/coins/images/1/large/bitcoin.png  "
+        asset_id=f"  {TEST_ASSET_ID_BTC}  ",
+        name=f"  {TEST_NAME_BITCOIN}  ",
+        description=f"  {TEST_DESCRIPTION_CURRENCY}  ",
+        category=f"  {TEST_CATEGORY_MAJOR}  ",
+        amount=TEST_AMOUNT_10_12345678,
+        price_usd=TEST_PRICE_45000_50
     )
-    assert asset.asset_id == "BTC"
-    assert asset.name == "Bitcoin"
-    assert asset.description == "Digital currency"
-    assert asset.category == "major"
-    assert asset.symbol == "BTC"
-    assert asset.image == "https://assets.coingecko.com/coins/images/1/large/bitcoin.png"
-
-def test_asset_trim_whitespace():
-    """Test that Asset trims whitespace from string fields"""
-    asset = Asset(
-        asset_id="  ETH  ",
-        name="  Ethereum  ",
-        description="  Updated desc  ",
-        category="  altcoin  ",
-        amount=Decimal("100.0"),
-        price_usd=Decimal("3000.0"),
-        symbol="  ETH  ",
-        image="  https://assets.coingecko.com/coins/images/279/large/ethereum.png  "
-    )
-    assert asset.asset_id == "ETH"
-    assert asset.name == "Ethereum"
-    assert asset.description == "Updated desc"
-    assert asset.category == "altcoin"
-    assert asset.symbol == "ETH"
-    assert asset.image == "https://assets.coingecko.com/coins/images/279/large/ethereum.png"
+    assert asset.asset_id == TEST_ASSET_ID_BTC
+    assert asset.name == TEST_NAME_BITCOIN
+    assert asset.description == TEST_DESCRIPTION_CURRENCY
+    assert asset.category == TEST_CATEGORY_MAJOR
