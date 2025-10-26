@@ -29,11 +29,19 @@ class TokenValidationMessages:
 # =============================================================================
 # CORS CONFIGURATION
 # =============================================================================
+class CORSConfig:
+    """CORS configuration constants"""
+    ALLOW_ORIGINS = ["*"]  # Configure appropriately for production
+    ALLOW_CREDENTIALS = True
+    ALLOW_METHODS = ["*"]
+    ALLOW_HEADERS = ["*"]
+
+# CORS config dictionary for FastAPI middleware
 CORS_CONFIG = {
-    "allow_origins": ["*"],  # Configure appropriately for production
-    "allow_credentials": True,
-    "allow_methods": ["*"],
-    "allow_headers": ["*"]
+    "allow_origins": CORSConfig.ALLOW_ORIGINS,
+    "allow_credentials": CORSConfig.ALLOW_CREDENTIALS,
+    "allow_methods": CORSConfig.ALLOW_METHODS,
+    "allow_headers": CORSConfig.ALLOW_HEADERS
 }
 
 # =============================================================================

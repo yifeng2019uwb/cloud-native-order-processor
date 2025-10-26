@@ -14,7 +14,7 @@ Responsibilities:
 import json
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from ...shared.logging import BaseLogger, LogAction, LoggerName, LogField
 
@@ -37,7 +37,7 @@ class AuditLogger:
     def log_security_event(self,
                           event_type: str,
                           username: str,
-                          details: Optional[Dict[str, Any]] = None,
+                          details: Optional[str] = None,
                           ip_address: Optional[str] = None,
                           user_agent: Optional[str] = None) -> None:
         """
@@ -46,7 +46,7 @@ class AuditLogger:
         Args:
             event_type: Type of security event (use LogAction constants)
             username: Username associated with the event
-            details: Optional additional event details
+            details: Optional additional event details as structured string
             ip_address: Optional IP address of the user
             user_agent: Optional user agent string
         """
@@ -57,7 +57,7 @@ class AuditLogger:
         if user_agent:
             extra[LogField.USER_AGENT] = user_agent
         if details:
-            extra.update(details)
+            extra[LogField.AUDIT_REASON] = details
 
         # Log with appropriate level based on event type
         extra_str = json.dumps(extra) if extra else None
@@ -114,7 +114,7 @@ class AuditLogger:
         self.log_security_event(
             LogAction.AUTH_FAILED,
             username,
-            details={LogField.AUDIT_REASON: reason},
+            details=f"{LogField.AUDIT_REASON}={reason}",
             ip_address=ip_address,
             user_agent=user_agent
         )
@@ -159,7 +159,7 @@ class AuditLogger:
         self.log_security_event(
             LogAction.SECURITY_EVENT,
             username,
-            details={LogField.TOKEN_TYPE: token_type},
+            details=f"{LogField.TOKEN_TYPE}={token_type}",
             ip_address=ip_address
         )
 
@@ -177,6 +177,6 @@ class AuditLogger:
         self.log_security_event(
             LogAction.ACCESS_DENIED,  # Use our defined constant
             username,
-            details={LogField.RESOURCE: resource, LogField.AUDIT_REASON: reason},
+            details=f"{LogField.RESOURCE}={resource}|{LogField.AUDIT_REASON}={reason}",
             ip_address=ip_address
         )

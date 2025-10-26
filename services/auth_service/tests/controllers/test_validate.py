@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from src.controllers.validate import router, validate_jwt_token, _determine_token_type
 from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
-from common.auth.security.token_manager import TokenContext, TokenManager
+from common.auth.security.token_manager import TokenContext, TokenManager, TokenMetadata
 from common.auth.security.jwt_constants import TokenTypes, TokenErrorTypes, JwtFields
 from tests.utils.dependency_constants import AUTH_SERVICE_TOKEN_MANAGER
 
@@ -20,7 +20,10 @@ TEST_USERNAME = "testuser"
 TEST_ROLE = "customer"
 TEST_EXPIRATION = datetime.fromisoformat("2025-12-31T23:59:59+00:00")
 TEST_ISSUED_AT = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
-TEST_METADATA = {"algorithm": "HS256"}
+TEST_ALGORITHM = "HS256"
+TEST_ISSUED_BY = "test-service"
+TEST_METADATA = {"algorithm": TEST_ALGORITHM}
+TEST_REQUEST_ID_PREFIX = "req-"
 
 # Test tokens
 TEST_VALID_TOKEN = "valid.jwt.token"
@@ -69,7 +72,8 @@ class TestValidateJWTTokenEndpoint:
             role=TEST_ROLE,
             expiration=TEST_EXPIRATION,
             issued_at=TEST_ISSUED_AT,
-            token_type=TokenTypes.ACCESS
+            token_type=TokenTypes.ACCESS,
+            metadata=TokenMetadata(algorithm=TEST_ALGORITHM, issued_by=TEST_ISSUED_BY)
         )
 
         # Patch the TokenManager class where it's used
@@ -84,7 +88,7 @@ class TestValidateJWTTokenEndpoint:
             # Verify response has generated request_id
             assert response.valid is True
             assert response.request_id is not None
-            assert response.request_id.startswith("req-")
+            assert response.request_id.startswith(TEST_REQUEST_ID_PREFIX)
             assert response.user == TEST_USERNAME
 
     def test_token_expired_exception(self):

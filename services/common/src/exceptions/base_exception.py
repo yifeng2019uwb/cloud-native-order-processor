@@ -2,9 +2,7 @@
 Base exception class with auto-logging for all services
 Path: services/common/src/exceptions/base_exception.py
 """
-import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from ..shared.logging import BaseLogger, LogAction, LoggerName
 
@@ -17,18 +15,14 @@ class BaseInternalException(Exception):
     for debugging and audit purposes.
     """
 
-    def __init__(self, message: str, **context):
+    def __init__(self, message: str):
         """
-        Initialize exception with message and context
+        Initialize exception with message
 
         Args:
             message: Human-readable error message
-            **context: Additional context information for debugging
         """
         self.message = message
-        self.context = context or {}
-        self.error_id = str(uuid.uuid4())
-        self.timestamp = datetime.now(timezone.utc)
 
         super().__init__(self.message)
 
@@ -38,17 +32,7 @@ class BaseInternalException(Exception):
 
     def __repr__(self) -> str:
         """Detailed representation for debugging"""
-        return f"{self.__class__.__name__}(message='{self.message}', context={self.context})"
-
-    def get_context(self) -> Dict[str, Any]:
-        """Get the context information for debugging"""
-        return {
-            "error_id": self.error_id,
-            "timestamp": self.timestamp.isoformat(),
-            "exception_type": self.__class__.__name__,
-            "message": self.message,
-            **self.context
-        }
+        return f"{self.__class__.__name__}(message='{self.message}')"
 
 
 # ========================================
@@ -63,18 +47,14 @@ class CNOPException(Exception):
     All CNOP-specific exceptions should inherit from this class.
     """
 
-    def __init__(self, message: str, **context):
+    def __init__(self, message: str):
         """
-        Initialize CNOP exception with message and context
+        Initialize CNOP exception with message
 
         Args:
             message: Human-readable error message
-            **context: Additional context information for debugging
         """
         self.message = message
-        self.context = context or {}
-        self.error_id = str(uuid.uuid4())
-        self.timestamp = datetime.now(timezone.utc)
 
         super().__init__(self.message)
 
@@ -84,17 +64,7 @@ class CNOPException(Exception):
 
     def __repr__(self) -> str:
         """Detailed representation for debugging"""
-        return f"{self.__class__.__name__}(message='{self.message}', context={self.context})"
-
-    def get_context(self) -> Dict[str, Any]:
-        """Get the context information for debugging"""
-        return {
-            "error_id": self.error_id,
-            "timestamp": self.timestamp.isoformat(),
-            "exception_type": self.__class__.__name__,
-            "message": self.message,
-            **self.context
-        }
+        return f"{self.__class__.__name__}(message='{self.message}')"
 
 
 class CNOPInternalException(CNOPException):

@@ -38,7 +38,8 @@ TEST_ORDER_VALUE_15 = Decimal("15.00")  # Above minimum
 TEST_EXPIRATION_DAYS_1 = 1
 TEST_EXPIRATION_DAYS_31 = 31  # Too many days
 TEST_REASON_CANCELLED = "User requested cancellation"
-TEST_CONTEXT_DATA = {"reason": "test"}
+TEST_CONTEXT_REASON = "test"
+TEST_CONTEXT_DATA = {"reason": TEST_CONTEXT_REASON}
 
 
 class TestOrderIdGenerator:

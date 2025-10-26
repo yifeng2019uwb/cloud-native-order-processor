@@ -13,7 +13,7 @@ Responsibilities:
 
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from jose import JWTError, jwt
 from pydantic import BaseModel, Field
@@ -38,6 +38,13 @@ class AccessTokenResponse(BaseModel):
     expires_at: str = Field(..., description="Token expiration timestamp")
 
 
+class TokenMetadata(BaseModel):
+    """Simple token metadata model"""
+
+    algorithm: str = Field(default="HS256", description="JWT algorithm used")
+    issued_by: Optional[str] = Field(None, description="Service that issued the token")
+
+
 class TokenContext(BaseModel):
     """Token context model for internal service use"""
 
@@ -48,7 +55,7 @@ class TokenContext(BaseModel):
     issuer: Optional[str] = Field(None, description="Token issuer")
     audience: Optional[str] = Field(None, description="Token audience")
     token_type: str = Field(..., description="Token type")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Token metadata")
+    metadata: TokenMetadata = Field(default_factory=lambda: TokenMetadata(), description="Token metadata")
 
 
 class TokenManager:
@@ -254,7 +261,10 @@ class TokenManager:
                 issuer=payload.get(JwtFields.ISSUER),
                 audience=payload.get(JwtFields.AUDIENCE),
                 token_type=payload.get(JwtFields.TYPE, JWTConfig.ACCESS_TOKEN_TYPE),
-                metadata={JwtFields.ROLE: payload.get(JwtFields.ROLE, DEFAULT_USER_ROLE)}
+                metadata=TokenMetadata(
+                    algorithm=JWTConfig.ALGORITHM_HS256,
+                    issued_by=payload.get(JwtFields.ISSUER)
+                )
             )
 
             return context

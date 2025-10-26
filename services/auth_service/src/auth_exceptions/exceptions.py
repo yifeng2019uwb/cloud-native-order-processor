@@ -4,7 +4,7 @@ Auth Service specific exceptions.
 These exceptions are internal to the Auth Service and not exposed to clients.
 """
 
-from typing import Dict, Any, Optional
+from typing import Optional
 from common.shared.logging import BaseLogger, LoggerName, LogAction
 
 logger = BaseLogger(LoggerName.AUTH)
@@ -18,16 +18,14 @@ class BaseInternalException(Exception):
     for debugging and audit purposes.
     """
 
-    def __init__(self, message: str, **context):
+    def __init__(self, message: str):
         """
-        Initialize exception with message and context
+        Initialize exception with message
 
         Args:
             message: Human-readable error message
-            **context: Additional context information for debugging
         """
         self.message = message
-        self.context = context or {}
 
         # Auto-logging: Automatically logs when exception is created
         logger.error(
@@ -43,17 +41,7 @@ class BaseInternalException(Exception):
 
     def __repr__(self) -> str:
         """Detailed representation for debugging"""
-        return f"{self.__class__.__name__}(message='{self.message}', context={self.context})"
-
-    def get_context(self) -> Dict[str, Any]:
-        """Get the context information for debugging"""
-        return {
-            "error_id": self.error_id,
-            "timestamp": self.timestamp.isoformat(),
-            "exception_type": self.__class__.__name__,
-            "message": self.message,
-            **self.context
-        }
+        return f"{self.__class__.__name__}(message='{self.message}')"
 
 
 class TokenExpiredException(BaseInternalException):

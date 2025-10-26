@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
 # Import the actual classes and functions from source files
 from src.auth.security.auth_dependencies import AuthenticatedUser, get_current_user
-from src.auth.security.token_manager import TokenContext
+from src.auth.security.token_manager import TokenContext, TokenMetadata
 from src.shared.constants.api_constants import HTTPStatus, ErrorMessages, RequestHeaders
 from src.auth.security.jwt_constants import JwtFields, JWTConfig
 from src.data.entities.user import DEFAULT_USER_ROLE
@@ -128,6 +128,8 @@ class TestGetCurrentUser:
     TEST_REQUEST_ID = "req-12345"
     TEST_TOKEN = "test-jwt-token"
     TEST_AUTH_HEADER = f"{JWTConfig.TOKEN_TYPE_BEARER.title()} {TEST_TOKEN}"
+    TEST_INVALID_AUTH_FORMAT = "InvalidFormat"
+    TEST_INVALID_TOKEN_MESSAGE = "Invalid token"
     TEST_USER_CONTEXT = TokenContext(
         username=TEST_USERNAME,
         role=TEST_ROLE,
@@ -136,7 +138,7 @@ class TestGetCurrentUser:
         issuer=None,
         audience=None,
         token_type=JWTConfig.ACCESS_TOKEN_TYPE,
-        metadata={JwtFields.ROLE: TEST_ROLE}
+        metadata=TokenMetadata(algorithm="HS256", issued_by="test-service")
     )
 
     # Mock path constants
@@ -182,7 +184,7 @@ class TestGetCurrentUser:
             issuer=None,
             audience=None,
             token_type=JWTConfig.ACCESS_TOKEN_TYPE,
-            metadata={}
+            metadata=TokenMetadata()
         )
 
         with patch(self.MOCK_TOKEN_MANAGER_PATH) as mock_token_manager_class:
@@ -222,7 +224,7 @@ class TestGetCurrentUser:
     def test_get_current_user_invalid_authorization_header_format(self):
         """Test authentication with invalid Authorization header format"""
         mock_request = Mock()
-        mock_request.headers = {RequestHeaders.AUTHORIZATION: "InvalidFormat"}
+        mock_request.headers = {RequestHeaders.AUTHORIZATION: self.TEST_INVALID_AUTH_FORMAT}
 
         with pytest.raises(HTTPException) as exc_info:
             get_current_user(mock_request)
@@ -252,7 +254,7 @@ class TestGetCurrentUser:
         with patch(self.MOCK_TOKEN_MANAGER_PATH) as mock_token_manager_class:
             mock_token_manager = Mock()
             mock_token_manager_class.return_value = mock_token_manager
-            mock_token_manager.validate_token_comprehensive.side_effect = Exception("Invalid token")
+            mock_token_manager.validate_token_comprehensive.side_effect = Exception(self.TEST_INVALID_TOKEN_MESSAGE)
 
             with pytest.raises(HTTPException) as exc_info:
                 get_current_user(mock_request)

@@ -2,8 +2,10 @@
 API models for JWT token validation endpoint.
 """
 
-from typing import Optional, Dict, Any
+from typing import Optional
 from pydantic import BaseModel, Field
+
+from common.auth.security.token_manager import TokenMetadata
 
 
 class ValidateTokenRequest(BaseModel):
@@ -20,7 +22,7 @@ class ValidateTokenResponse(BaseModel):
     user: str = Field(..., description="Username from token")
     expires_at: str = Field(..., description="Token expiration timestamp")
     created_at: Optional[str] = Field(None, description="Token creation timestamp")
-    metadata: Dict[str, Any] = Field(..., description="Token metadata")
+    metadata: TokenMetadata = Field(..., description="Token metadata")
     request_id: Optional[str] = Field(None, description="Request ID for correlation")
 
 
