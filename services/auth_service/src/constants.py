@@ -16,7 +16,7 @@ RESPONSE_FIELD_VALIDATE = "validate"
 RESPONSE_FIELD_METRICS = "metrics"
 
 # =============================================================================
-# TOKEN VALIDATION
+# TOKEN VALIDATION MESSAGES
 # =============================================================================
 class TokenValidationMessages:
     """Messages for token validation responses"""
@@ -26,8 +26,25 @@ class TokenValidationMessages:
     VALIDATING_JWT = "Validating JWT"
     TOKEN_VALID = "Token valid"
 
-class TokenErrorTypes:
-    """Error types for token validation"""
-    TOKEN_EXPIRED = "token_expired"
-    TOKEN_INVALID = "token_invalid"
-    VALIDATION_ERROR = "validation_error"
+# =============================================================================
+# CORS CONFIGURATION
+# =============================================================================
+CORS_CONFIG = {
+    "allow_origins": ["*"],  # Configure appropriately for production
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"]
+}
+
+# =============================================================================
+# SERVER CONFIGURATION
+# =============================================================================
+SERVER_HOST = "0.0.0.0"
+SERVER_PORT = 8000
+SERVER_RELOAD = True
+
+# =============================================================================
+# METRICS STATUS LABELS
+# =============================================================================
+METRICS_STATUS_SUCCESS = "success"
+METRICS_STATUS_ERROR = "error"

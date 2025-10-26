@@ -137,7 +137,7 @@ class TestAcquireLock:
             acquire_lock(username, operation)
 
     @patch.object(UserLockItem, MODEL_GET)
-    @patch.object(UserLockItem,MODEL_SAVE)
+    @patch.object(UserLockItem, MODEL_SAVE)
     def test_acquire_lock_database_error(self, mock_save, mock_get):
         """Test lock acquisition when database error occurs"""
         username = "test-user-123"

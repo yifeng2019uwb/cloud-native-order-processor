@@ -149,31 +149,6 @@ class TestTokenManager:
         with pytest.raises(CNOPTokenExpiredException, match="Token has expired"):
             self.token_manager.verify_access_token(token)
 
-    # TODO: Remove if not used after testing - decode_token_payload tests
-    # def test_decode_token_payload_success(self):
-    #     """Test successful token payload decoding."""
-    #     # Create a token first
-    #     result = self.token_manager.create_access_token(TEST_USERNAME, TEST_ROLE)
-
-    #     # Decode payload
-    #     payload = self.token_manager.decode_token_payload(result.access_token)
-
-    #     # Verify payload structure
-    #     assert "sub" in payload
-    #     assert "role" in payload
-    #     assert "exp" in payload
-    #     assert "iat" in payload
-    #     assert "type" in payload
-
-    #     # Verify payload values
-    #     assert payload["sub"] == TEST_USERNAME
-    #     assert payload["role"] == TEST_ROLE
-    #     assert payload["type"] == TEST_ACCESS_TOKEN_TYPE
-
-    # def test_decode_token_payload_invalid_token(self):
-    #     """Test token payload decoding with invalid token."""
-    #     with pytest.raises(CNOPTokenInvalidException, match="Token decode failed"):
-    #         self.token_manager.decode_token_payload("invalid_token")
 
     def test_is_token_expired_true(self):
         """Test token expiration check with expired token."""
@@ -221,12 +196,6 @@ class TestTokenManager:
         # Verify token
         username = self.token_manager.verify_access_token(result.access_token)
         assert username == TEST_USERNAME
-
-        # TODO: Remove if not used after testing - decode_token_payload calls
-        # # Decode payload
-        # payload = self.token_manager.decode_token_payload(result.access_token)
-        # assert payload["sub"] == TEST_USERNAME
-        # assert payload["role"] == TEST_ROLE
 
         # Check expiration
         assert self.token_manager.is_token_expired(result.access_token) is False

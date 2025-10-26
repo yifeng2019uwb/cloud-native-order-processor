@@ -7,11 +7,11 @@ from typing import Union
 from fastapi import APIRouter
 from api_models.validate import ValidateTokenRequest, ValidateTokenResponse, ValidateTokenErrorResponse
 from common.auth.security.token_manager import TokenManager
-from common.auth.security.jwt_constants import JwtFields, TokenTypes, RequestDefaults
+from common.auth.security.jwt_constants import RequestDefaults, JwtFields, TokenTypes, TokenErrorTypes
 from common.auth.exceptions import CNOPAuthTokenExpiredException, CNOPAuthTokenInvalidException
 from common.shared.logging import BaseLogger, LoggerName, LogAction, LogField
 from api_info_enum import ApiTags, ApiPaths
-from constants import TokenValidationMessages, TokenErrorTypes
+from constants import TokenValidationMessages
 
 router = APIRouter(tags=[ApiTags.INTERNAL.value])
 logger = BaseLogger(LoggerName.AUTH)
@@ -47,14 +47,14 @@ def validate_jwt_token(request: ValidateTokenRequest):
         token_manager = TokenManager()
         user_context = token_manager.validate_token_comprehensive(request.token)
 
-        logger.info(action=LogAction.AUTH_SUCCESS, message=TokenValidationMessages.TOKEN_VALID, user=user_context[JwtFields.USERNAME], extra=f'{{"{LogField.REQUEST_ID}": "{request_id}"}}')
+        logger.info(action=LogAction.AUTH_SUCCESS, message=TokenValidationMessages.TOKEN_VALID, user=user_context.username, extra=f'{{"{LogField.REQUEST_ID}": "{request_id}"}}')
 
         return ValidateTokenResponse(
             valid=True,
-            user=user_context[JwtFields.USERNAME],
-            expires_at=str(user_context.get(JwtFields.EXPIRATION, RequestDefaults.EMPTY_STRING)),
-            created_at=str(user_context.get(JwtFields.ISSUED_AT, RequestDefaults.EMPTY_STRING)),
-            metadata=user_context.get(JwtFields.METADATA, RequestDefaults.EMPTY_DICT),
+            user=user_context.username,
+            expires_at=str(user_context.expiration),
+            created_at=str(user_context.issued_at),
+            metadata=user_context.metadata,
             request_id=request_id
         )
 

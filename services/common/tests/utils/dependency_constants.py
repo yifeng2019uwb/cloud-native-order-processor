@@ -122,6 +122,10 @@ ASSET_TRANSACTION_ITEM_TO_ASSET_TRANSACTION = "to_asset_transaction"
 JWT_ENCODE = "src.auth.security.token_manager.jwt.encode"
 JWT_DECODE = "src.auth.security.token_manager.jwt.decode"
 
+# Auth dependencies mock paths
+AUTH_DEPENDENCIES_TOKEN_MANAGER = "src.auth.security.auth_dependencies.TokenManager"
+AUTH_DEPENDENCIES_GET_REQUEST_ID = "src.auth.security.auth_dependencies.get_request_id_from_request"
+
 # =============================================================================
 # REDIS METHOD DEPENDENCIES
 # =============================================================================

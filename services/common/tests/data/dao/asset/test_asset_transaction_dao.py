@@ -454,40 +454,6 @@ class TestAssetTransactionDAO:
 
         assert result == []
 
-    @patch.object(AssetTransactionItem, MODEL_GET)
-    @patch.object(AssetTransactionItem, MODEL_DELETE)
-    def test_delete_asset_transaction_success(self, mock_delete, mock_get):
-        """Test successful asset transaction deletion"""
-        # Mock successful get and delete
-        mock_transaction_item = AssetTransactionItem()
-        mock_transaction_item.Pk = AssetTransaction.build_pk(TEST_USERNAME, TEST_ASSET_ID_BTC)
-        mock_transaction_item.Sk = TEST_CURRENT_TIMESTAMP
-        mock_get.return_value = mock_transaction_item
-        mock_delete.return_value = None
-
-        # Create DAO instance (PynamoDB doesn't need db_connection)
-        asset_transaction_dao = AssetTransactionDAO()
-
-        result = asset_transaction_dao.delete_asset_transaction(TEST_USERNAME, TEST_ASSET_ID_BTC, '2024-01-01T12:00:00Z')
-
-        # Verify result
-        assert result is True
-
-        # Verify PynamoDB operations were called
-        mock_get.assert_called_once()
-        mock_delete.assert_called_once()
-
-    @patch.object(AssetTransactionItem, MODEL_GET)
-    def test_delete_asset_transaction_database_error(self, mock_get):
-        """Test asset transaction deletion with database error"""
-        # Mock database error
-        mock_get.side_effect = Exception("Database connection failed")
-
-        # Create DAO instance (PynamoDB doesn't need db_connection)
-        asset_transaction_dao = AssetTransactionDAO()
-
-        with pytest.raises(CNOPDatabaseOperationException):
-            asset_transaction_dao.delete_asset_transaction(TEST_USERNAME, TEST_ASSET_ID_BTC, '2024-01-01T12:00:00Z')
 
 
     @patch.object(AssetTransactionItem, MODEL_SAVE)

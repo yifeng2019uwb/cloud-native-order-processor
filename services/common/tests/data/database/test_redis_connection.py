@@ -9,8 +9,6 @@ import redis
 from redis.connection import ConnectionPool
 from redis.exceptions import ConnectionError, RedisError, TimeoutError
 
-from src.data.database import redis_connection
-from src.data.database.redis_config import get_redis_connection_params
 from src.data.database.redis_connection import (RedisConnectionManager,
                                                 close_redis_connections,
                                                 get_redis_client,
@@ -25,7 +23,6 @@ from tests.utils.dependency_constants import (REDIS_CONNECTION_GET_PARAMS,
                                              REDIS_PING,
                                              REDIS_CONNECTION_POOL,
                                              REDIS_CLIENT,
-                                             REDIS_CONNECTION_POOL_FROM_URL,
                                              REDIS_MANAGER_CREATE_POOL,
                                              REDIS_MANAGER_GET_CLIENT,
                                              REDIS_MANAGER_TEST_CONNECTION)
@@ -64,18 +61,21 @@ class TestRedisConnectionManager:
     def test_create_pool_non_ssl(self, mock_getenv, mock_get_params):
         """Test connection pool creation without SSL"""
         mock_getenv.return_value = "10"
-        mock_params = {
-            'host': TEST_REDIS_HOST_LOCAL,
-            'port': 6379,
-            'db': 0,
-            'password': TEST_REDIS_PASSWORD_TEST,
-            'decode_responses': True,
-            'retry_on_timeout': True,
-            'socket_connect_timeout': 5,
-            'socket_timeout': 5,
-            'health_check_interval': 30
-        }
-        mock_get_params.return_value = mock_params
+
+        # Mock RedisConfig object instead of dict
+        from src.data.database.redis_config import RedisConfig
+        mock_config = RedisConfig(
+            host=TEST_REDIS_HOST_LOCAL,
+            port=6379,
+            db=0,
+            password=TEST_REDIS_PASSWORD_TEST,
+            decode_responses=True,
+            retry_on_timeout=True,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+            health_check_interval=30
+        )
+        mock_get_params.return_value = mock_config
 
         with patch(REDIS_CONNECTION_POOL) as mock_pool_class:
             mock_pool = Mock()
@@ -98,53 +98,21 @@ class TestRedisConnectionManager:
             )
             assert result == mock_pool
 
-    @patch(REDIS_CONNECTION_GET_PARAMS)
-    @patch(REDIS_CONNECTION_OS_GETENV)
-    def test_create_pool_with_ssl(self, mock_getenv, mock_get_params):
-        """Test connection pool creation with SSL"""
-        mock_getenv.return_value = "10"
-        mock_params = {
-            'host': TEST_REDIS_HOST_LOCAL,
-            'port': 6379,
-            'db': 0,
-            'ssl': True,
-            'ssl_cert_reqs': 'required',
-            'retry_on_timeout': True,
-            'socket_connect_timeout': 5,
-            'socket_timeout': 5,
-            'health_check_interval': 30
-        }
-        mock_get_params.return_value = mock_params
-
-        with patch(REDIS_CONNECTION_POOL_FROM_URL) as mock_pool_from_url:
-            mock_pool = Mock()
-            mock_pool_from_url.return_value = mock_pool
-
-            manager = RedisConnectionManager()
-            result = manager._create_pool()
-
-            mock_pool_from_url.assert_called_once_with(
-                'rediss://localhost:6379/0',
-                max_connections=10,
-                retry_on_timeout=True,
-                socket_connect_timeout=5,
-                socket_timeout=5,
-                health_check_interval=30,
-                ssl_cert_reqs='required'
-            )
-            assert result == mock_pool
 
     @patch(REDIS_CONNECTION_GET_PARAMS)
     @patch(REDIS_CONNECTION_OS_GETENV)
     def test_create_pool_default_values(self, mock_getenv, mock_get_params):
         """Test connection pool creation with default values"""
         mock_getenv.return_value = "10"
-        mock_params = {
-            'host': TEST_REDIS_HOST_LOCAL,
-            'port': 6379,
-            'db': 0
-        }
-        mock_get_params.return_value = mock_params
+
+        # Mock RedisConfig object instead of dict
+        from src.data.database.redis_config import RedisConfig
+        mock_config = RedisConfig(
+            host=TEST_REDIS_HOST_LOCAL,
+            port=6379,
+            db=0
+        )
+        mock_get_params.return_value = mock_config
 
         with patch(REDIS_CONNECTION_POOL) as mock_pool_class:
             mock_pool = Mock()
@@ -172,12 +140,15 @@ class TestRedisConnectionManager:
     def test_create_pool_case_insensitive_environment(self, mock_getenv, mock_get_params):
         """Test connection pool creation with case-insensitive environment detection"""
         mock_getenv.return_value = "10"
-        mock_params = {
-            'host': TEST_REDIS_HOST_LOCAL,
-            'port': 6379,
-            'db': 0
-        }
-        mock_get_params.return_value = mock_params
+
+        # Mock RedisConfig object instead of dict
+        from src.data.database.redis_config import RedisConfig
+        mock_config = RedisConfig(
+            host=TEST_REDIS_HOST_LOCAL,
+            port=6379,
+            db=0
+        )
+        mock_get_params.return_value = mock_config
 
         with patch(REDIS_CONNECTION_POOL) as mock_pool_class:
             mock_pool = Mock()

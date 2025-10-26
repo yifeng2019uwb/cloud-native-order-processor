@@ -18,7 +18,8 @@ from metrics import get_metrics_response
 from api_info_enum import ServiceMetadata, ApiPaths, ApiTags, ApiResponseKeys, API_AUTH_PREFIX
 from constants import (
     RESPONSE_FIELD_SERVICE, RESPONSE_FIELD_VERSION, RESPONSE_FIELD_STATUS, RESPONSE_FIELD_TIMESTAMP,
-    RESPONSE_FIELD_ENDPOINTS, RESPONSE_FIELD_DOCS, RESPONSE_FIELD_HEALTH, RESPONSE_FIELD_VALIDATE, RESPONSE_FIELD_METRICS
+    RESPONSE_FIELD_ENDPOINTS, RESPONSE_FIELD_DOCS, RESPONSE_FIELD_HEALTH, RESPONSE_FIELD_VALIDATE, RESPONSE_FIELD_METRICS,
+    CORS_CONFIG, SERVER_HOST, SERVER_PORT, SERVER_RELOAD
 )
 from middleware import metrics_middleware
 
@@ -35,13 +36,7 @@ app = FastAPI(
 )
 
 # CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, **CORS_CONFIG)
 
 # Add metrics middleware
 app.middleware("http")(metrics_middleware)
@@ -94,4 +89,4 @@ def root():
     }
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host=SERVER_HOST, port=SERVER_PORT, reload=SERVER_RELOAD)

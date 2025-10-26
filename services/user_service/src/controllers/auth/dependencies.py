@@ -4,7 +4,7 @@ FastAPI dependencies for authentication
 from fastapi import Depends, HTTPException, Request
 from common.shared.constants.api_constants import HTTPStatus, ErrorMessages, RequestHeaders, RequestHeaderDefaults
 from common.auth.security.token_manager import TokenManager
-from common.auth.security.jwt_constants import JwtFields, JWTConfig, RequestDefaults
+from common.auth.security.jwt_constants import JWTConfig, RequestDefaults, JwtFields
 from common.auth.gateway.header_validator import get_request_id_from_request
 from common.shared.logging import BaseLogger, LogAction, LoggerName
 from common.data.entities.user import User, DEFAULT_USER_ROLE

@@ -44,6 +44,7 @@ class JwtResponseFields:
     TOKEN_TYPE = "token_type"
     EXPIRES_IN = "expires_in"
     EXPIRES_AT = "expires_at"
+    METADATA = "metadata"
 
 class TokenErrorTypes:
     """Error types for token validation"""

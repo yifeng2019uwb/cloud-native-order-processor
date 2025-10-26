@@ -62,8 +62,8 @@ def get_current_user(request: Request) -> AuthenticatedUser:
 
         # Create authenticated user object
         authenticated_user = AuthenticatedUser(
-            username=user_context[JwtFields.USERNAME],
-            role=user_context.get(JwtFields.ROLE, DEFAULT_USER_ROLE),
+            username=user_context.username,
+            role=user_context.role or DEFAULT_USER_ROLE,
             request_id=request_id
         )
 

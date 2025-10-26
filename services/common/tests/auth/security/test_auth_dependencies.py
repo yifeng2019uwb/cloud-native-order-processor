@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
 # Import the actual classes and functions from source files
 from src.auth.security.auth_dependencies import AuthenticatedUser, get_current_user
+from src.auth.security.token_manager import TokenContext
 from src.shared.constants.api_constants import HTTPStatus, ErrorMessages, RequestHeaders
 from src.auth.security.jwt_constants import JwtFields, JWTConfig
 from src.data.entities.user import DEFAULT_USER_ROLE
@@ -127,10 +128,16 @@ class TestGetCurrentUser:
     TEST_REQUEST_ID = "req-12345"
     TEST_TOKEN = "test-jwt-token"
     TEST_AUTH_HEADER = f"{JWTConfig.TOKEN_TYPE_BEARER.title()} {TEST_TOKEN}"
-    TEST_USER_CONTEXT = {
-        JwtFields.USERNAME: TEST_USERNAME,
-        JwtFields.ROLE: TEST_ROLE
-    }
+    TEST_USER_CONTEXT = TokenContext(
+        username=TEST_USERNAME,
+        role=TEST_ROLE,
+        expiration=datetime.now(),
+        issued_at=datetime.now(),
+        issuer=None,
+        audience=None,
+        token_type=JWTConfig.ACCESS_TOKEN_TYPE,
+        metadata={JwtFields.ROLE: TEST_ROLE}
+    )
 
     # Mock path constants
     MOCK_TOKEN_MANAGER_PATH = 'src.auth.security.auth_dependencies.TokenManager'
@@ -166,10 +173,17 @@ class TestGetCurrentUser:
             RequestHeaders.REQUEST_ID: self.TEST_REQUEST_ID
         }
 
-        # User context without role
-        user_context_without_role = {
-            JwtFields.USERNAME: self.TEST_USERNAME
-        }
+        # User context without role (empty string)
+        user_context_without_role = TokenContext(
+            username=self.TEST_USERNAME,
+            role="",
+            expiration=datetime.now(),
+            issued_at=datetime.now(),
+            issuer=None,
+            audience=None,
+            token_type=JWTConfig.ACCESS_TOKEN_TYPE,
+            metadata={}
+        )
 
         with patch(self.MOCK_TOKEN_MANAGER_PATH) as mock_token_manager_class:
             mock_token_manager = Mock()

@@ -48,6 +48,7 @@ class TokenContext(BaseModel):
     issuer: Optional[str] = Field(None, description="Token issuer")
     audience: Optional[str] = Field(None, description="Token audience")
     token_type: str = Field(..., description="Token type")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Token metadata")
 
 
 class TokenManager:
@@ -187,7 +188,7 @@ class TokenManager:
             logger.error(action=LogAction.ERROR,message=f"Unexpected error verifying token: {e}")
             raise CNOPTokenInvalidException("Token verification failed")
 
-    def validate_token_comprehensive(self, token: str) -> Dict[str, Any]:
+    def validate_token_comprehensive(self, token: str) -> TokenContext:
         """
         Validate JWT token and extract comprehensive user context.
 
@@ -195,7 +196,7 @@ class TokenManager:
             token: JWT token string
 
         Returns:
-            Dictionary with comprehensive user context including username, role, expiration, etc.
+            TokenContext object with comprehensive user context including username, role, expiration, etc.
 
         Raises:
             CNOPTokenExpiredException: If token is expired
@@ -244,19 +245,17 @@ class TokenManager:
                 )
                 raise CNOPTokenExpiredException("Token has expired")
 
-            # Extract additional context
-            context = {
-                JwtFields.USERNAME: username,
-                JwtFields.ROLE: payload.get(JwtFields.ROLE),
-                JwtFields.EXPIRATION: exp_timestamp,
-                JwtFields.ISSUED_AT: payload.get(JwtFields.ISSUED_AT),
-                JwtFields.ISSUER: payload.get(JwtFields.ISSUER),
-                JwtFields.AUDIENCE: payload.get(JwtFields.AUDIENCE),
-                JwtFields.TYPE: payload.get(JwtFields.TYPE),
-                JwtFields.METADATA: {
-                    JwtFields.ROLE: payload.get(JwtFields.ROLE)
-                }
-            }
+            # Create TokenContext object
+            context = TokenContext(
+                username=username,
+                role=payload.get(JwtFields.ROLE, DEFAULT_USER_ROLE),
+                expiration=exp_timestamp,
+                issued_at=payload.get(JwtFields.ISSUED_AT),
+                issuer=payload.get(JwtFields.ISSUER),
+                audience=payload.get(JwtFields.AUDIENCE),
+                token_type=payload.get(JwtFields.TYPE, JWTConfig.ACCESS_TOKEN_TYPE),
+                metadata={JwtFields.ROLE: payload.get(JwtFields.ROLE, DEFAULT_USER_ROLE)}
+            )
 
             return context
 
@@ -282,30 +281,6 @@ class TokenManager:
             )
             raise CNOPTokenInvalidException("Token validation failed")
 
-    # TODO: Remove if not used after testing - decode_token_payload method
-    # def decode_token_payload(self, token: str) -> Dict[str, Any]:
-    #     """
-    #     Decode token payload without verification.
-
-    #     Args:
-    #         token: Token to decode
-
-    #     Returns:
-    #         Token payload as dictionary
-
-    #     Raises:
-    #         CNOPTokenInvalidException: If token is malformed
-    #     """
-    #     try:
-    #         # Decode without verification (for debugging only)
-    #         payload = jwt.decode(token, self.jwt_secret, options={JWTConfig.VERIFY_SIGNATURE: False}, algorithms=[self.jwt_algorithm])
-    #         return payload
-    #     except Exception as e:
-    #         logger.error(
-    #             action=LogAction.ERROR,
-    #             message=f"Error decoding token payload: {e}"
-    #         )
-    #         raise CNOPTokenInvalidException("Token decode failed")
 
     def is_token_expired(self, token: str) -> bool:
         """
@@ -339,39 +314,3 @@ class TokenManager:
                 message=f"Error checking token expiration: {e}"
             )
             return True
-
-    # TODO: Remove if not used after testing - refresh_token method
-    # def refresh_token(self, token: str) -> str:
-    #     """
-    #     Refresh an expired token.
-
-    #     Args:
-    #         token: JWT token string
-
-    #     Returns:
-    #         str: New JWT token
-
-    #     Raises:
-    #         CNOPTokenInvalidException: If token cannot be refreshed
-    #     """
-    #     try:
-    #         # Decode the old token to extract user info
-    #         payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
-    #         username = payload.get(JwtFields.SUBJECT)
-
-    #         if not username:
-    #             logger.error(
-    #                 action=LogAction.ERROR,
-    #                 message="Cannot refresh token: missing username"
-    #             )
-    #             raise CNOPTokenInvalidException("Cannot refresh token: missing username")
-
-    #         # Create new token with extended expiration
-    #         return self.create_access_token(username)
-
-    #     except Exception as e:
-    #         logger.error(
-    #             action=LogAction.ERROR,
-    #             message=f"Failed to refresh token: {e}"
-    #         )
-    #         raise CNOPTokenInvalidException("Failed to refresh token")

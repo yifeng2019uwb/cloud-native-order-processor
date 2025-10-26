@@ -8,18 +8,13 @@ retry logic, and health monitoring for all services.
 
 import os
 from contextlib import contextmanager
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 import redis
 
 from ...shared.logging import BaseLogger, LogAction, LoggerName
-from .redis_config import (RedisConfig, get_redis_config,
-                           get_redis_connection_params)
-from .database_constants import (
-    get_redis_max_connections,
-    RedisConfig as RedisConfigConstants
-)
+from .redis_config import get_redis_config, get_redis_connection_params
+from .database_constants import EnvironmentVariables, DefaultValues
 
 logger = BaseLogger(LoggerName.CACHE, log_to_file=True)
 
@@ -34,38 +29,23 @@ class RedisConnectionManager:
 
     def _create_pool(self) -> redis.ConnectionPool:
         """Create Redis connection pool"""
-        params = get_redis_connection_params()
+        config = get_redis_connection_params()
 
-        # Pool configuration
-        pool_params = {
-            RedisConfigConstants.MAX_CONNECTIONS_KEY: get_redis_max_connections(),
-            RedisConfigConstants.RETRY_ON_TIMEOUT_KEY:
-                params.get(RedisConfigConstants.RETRY_ON_TIMEOUT_KEY, RedisConfigConstants.RETRY_ON_TIMEOUT),
-            RedisConfigConstants.SOCKET_CONNECT_TIMEOUT_KEY:
-                params.get(RedisConfigConstants.SOCKET_CONNECT_TIMEOUT_KEY, RedisConfigConstants.SOCKET_CONNECT_TIMEOUT),
-            RedisConfigConstants.SOCKET_TIMEOUT_KEY:
-                params.get(RedisConfigConstants.SOCKET_TIMEOUT_KEY, RedisConfigConstants.SOCKET_TIMEOUT),
-            RedisConfigConstants.HEALTH_CHECK_INTERVAL_KEY:
-                params.get(RedisConfigConstants.HEALTH_CHECK_INTERVAL_KEY, RedisConfigConstants.HEALTH_CHECK_INTERVAL),
-        }
+        # Simple pool configuration
+        max_connections = int(os.getenv(EnvironmentVariables.REDIS_MAX_CONNECTIONS, str(DefaultValues.DEFAULT_REDIS_MAX_CONNECTIONS)))
 
-        # Create pool based on SSL configuration
-        if params.get(RedisConfigConstants.SSL_KEY):
-            return redis.ConnectionPool.from_url(
-                f"rediss://{params['host']}:{params['port']}/{params['db']}",
-                **pool_params,
-                ssl_cert_reqs=params.get(RedisConfigConstants.SSL_CERT_REQS_KEY, RedisConfigConstants.SSL_CERT_REQUIRED)
-            )
-        else:
-            return redis.ConnectionPool(
-
-                host=params[RedisConfigConstants.HOST_KEY],
-                port=params[RedisConfigConstants.PORT_KEY],
-                db=params[RedisConfigConstants.DB_KEY],
-                password=params.get(RedisConfigConstants.PASSWORD_KEY),
-                decode_responses=params.get(RedisConfigConstants.DECODE_RESPONSES_KEY, True),
-                **pool_params
-            )
+        return redis.ConnectionPool(
+            host=config.host,
+            port=config.port,
+            db=config.db,
+            password=config.password,
+            decode_responses=config.decode_responses,
+            socket_connect_timeout=config.socket_connect_timeout,
+            socket_timeout=config.socket_timeout,
+            retry_on_timeout=config.retry_on_timeout,
+            health_check_interval=config.health_check_interval,
+            max_connections=max_connections
+        )
 
     def get_client(self) -> redis.Redis:
         """Get Redis client with connection pooling"""
