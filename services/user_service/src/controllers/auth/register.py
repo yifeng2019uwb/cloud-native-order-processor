@@ -7,14 +7,11 @@ Layer 1: Field validation (handled in API models)
 """
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Union
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from api_models.auth.registration import (
     UserRegistrationRequest,
-    RegistrationSuccessResponse,
-    RegistrationErrorResponse
+    RegistrationResponse
 )
-from api_models.shared.common import ErrorResponse
 from common.auth.security.token_manager import TokenManager
 from common.auth.security.audit_logger import AuditLogger
 from common.data.database.dependencies import get_user_dao, get_balance_dao
@@ -25,10 +22,9 @@ from common.exceptions.shared_exceptions import (
 )
 from common.shared.logging import BaseLogger, LogAction, LogField, LogDefault, LoggerName
 from common.shared.constants.api_constants import ErrorMessages
-from common.shared.constants.api_constants import APIResponseDescriptions
-from common.shared.constants.api_constants import HTTPStatus
-from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
-from constants import MSG_SUCCESS_REGISTER, MSG_ERROR_USER_EXISTS
+from api_info_enum import ApiTags, ApiPaths
+
+# Constants for audit reasons
 from common.auth.gateway.header_validator import get_request_id_from_request
 from user_exceptions.exceptions import (
     CNOPUserAlreadyExistsException,
@@ -44,36 +40,21 @@ from validation.business_validators import (
 logger = BaseLogger(LoggerName.USER)
 router = APIRouter(tags=[ApiTags.AUTHENTICATION.value])
 
+AUDIT_REASON_USER_ALREADY_EXISTS = "user_already_exists"
+AUDIT_REASON_VALIDATION_ERROR = "validation_error"
+AUDIT_REASON_UNEXPECTED_ERROR = "unexpected_error"
 
 @router.post(
     ApiPaths.REGISTER.value,
-    response_model=Union[RegistrationSuccessResponse, RegistrationErrorResponse],
-    status_code=status.HTTP_201_CREATED,
-    responses={
-        HTTPStatus.CREATED: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_REGISTER,
-            ApiResponseKeys.MODEL.value: RegistrationSuccessResponse
-        },
-        HTTPStatus.CONFLICT: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_USER_EXISTS,
-            ApiResponseKeys.MODEL.value: RegistrationErrorResponse
-        },
-        HTTPStatus.UNPROCESSABLE_ENTITY: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.SERVICE_UNAVAILABLE: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        }
-    }
+    response_model=RegistrationResponse,
+    status_code=status.HTTP_201_CREATED
 )
 def register_user(
     user_data: UserRegistrationRequest,
     request: Request,
     user_dao = Depends(get_user_dao),
     balance_dao = Depends(get_balance_dao)
-) -> RegistrationSuccessResponse:
+) -> RegistrationResponse:
     """
     Register a new user account with comprehensive validation and security
 
@@ -132,16 +113,14 @@ def register_user(
         )
 
         # Return simple success response - no user data
-        return RegistrationSuccessResponse(
-            message="User registered successfully"
-        )
+        return RegistrationResponse()
 
     except CNOPUserAlreadyExistsException as e:
         # Audit log failed registration due to user already exists
         audit_logger.log_security_event(
             LogAction.USER_REGISTRATION_FAILED,
             user_data.username,
-            details={LogField.AUDIT_REASON: "user_already_exists"},
+            details={LogField.AUDIT_REASON: AUDIT_REASON_USER_ALREADY_EXISTS},
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get(LogField.USER_AGENT, LogDefault.UNKNOWN)
         )
@@ -152,7 +131,7 @@ def register_user(
         audit_logger.log_security_event(
             LogAction.USER_REGISTRATION_FAILED,
             user_data.username,
-            details={LogField.AUDIT_REASON: "validation_error"},
+            details={LogField.AUDIT_REASON: AUDIT_REASON_VALIDATION_ERROR},
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get(LogField.USER_AGENT, LogDefault.UNKNOWN)
         )
@@ -163,7 +142,7 @@ def register_user(
         audit_logger.log_security_event(
             LogAction.USER_REGISTRATION_FAILED,
             user_data.username,
-            details={LogField.AUDIT_REASON: f"unexpected_error: {str(e)}"},
+            details={LogField.AUDIT_REASON: f"{AUDIT_REASON_UNEXPECTED_ERROR}: {str(e)}"},
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get(LogField.USER_AGENT, LogDefault.UNKNOWN)
         )

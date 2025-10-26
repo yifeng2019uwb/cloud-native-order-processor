@@ -7,11 +7,9 @@ Handles portfolio management endpoints with calculated market values
 """
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Union
 from fastapi import APIRouter, Depends, status, Request
 from common.data.entities.user import User
 from api_models.portfolio.portfolio_models import GetPortfolioRequest, GetPortfolioResponse, PortfolioAssetData
-from api_models.shared.common import ErrorResponse
 from common.data.dao.user.balance_dao import BalanceDAO
 from common.data.dao.user.user_dao import UserDAO
 from common.data.dao.asset.asset_balance_dao import AssetBalanceDAO
@@ -25,9 +23,6 @@ from common.shared.logging import BaseLogger, LogAction, LogField, LoggerName
 from user_exceptions import CNOPUserValidationException
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from validation_enums import ValidationActions
-from constants import (
-    MSG_SUCCESS_PORTFOLIO_RETRIEVED, MSG_SUCCESS_ASSET_BALANCE_RETRIEVED
-)
 from common.shared.constants.api_constants import RequestHeaders, RequestHeaderDefaults
 from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
@@ -48,29 +43,7 @@ router = APIRouter(tags=[ApiTags.PORTFOLIO.value])
 
 @router.get(
     ApiPaths.PORTFOLIO.value,
-    response_model=Union[GetPortfolioResponse, ErrorResponse],
-    responses={
-        HTTPStatus.OK: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_PORTFOLIO_RETRIEVED,
-            ApiResponseKeys.MODEL.value: GetPortfolioResponse
-        },
-        HTTPStatus.UNAUTHORIZED: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_UNAUTHORIZED,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.NOT_FOUND: {
-            ApiResponseKeys.DESCRIPTION.value: ErrorMessages.USER_NOT_FOUND,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.UNPROCESSABLE_ENTITY: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.SERVICE_UNAVAILABLE: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        }
-    }
+    response_model=GetPortfolioResponse
 )
 def get_user_portfolio(
     request: Request,
@@ -155,16 +128,6 @@ def get_user_portfolio(
                 if asset.market_value:
                     asset.percentage = (asset.market_value / total_portfolio_value) * Decimal('100')
 
-        # Create portfolio response data
-        portfolio_data = {
-            "username": username,
-            "usd_balance": total_usd,
-            "total_asset_value": total_asset_value,
-            "total_portfolio_value": total_portfolio_value,
-            "asset_count": len(portfolio_assets),
-            "assets": portfolio_assets
-        }
-
         logger.info(
             action=LogAction.REQUEST_END,
             message=f"Portfolio retrieved successfully: total_value={total_portfolio_value}, asset_count={len(portfolio_assets)}",
@@ -172,12 +135,7 @@ def get_user_portfolio(
             request_id=request_id
         )
 
-        return GetPortfolioResponse(
-            success=True,
-            message=MSG_SUCCESS_PORTFOLIO_RETRIEVED,
-            data=portfolio_data,
-            timestamp=datetime.now(timezone.utc)
-        )
+        return GetPortfolioResponse(assets=portfolio_assets)
 
     except CNOPUserValidationException:
         # Re-raise validation exceptions

@@ -1,14 +1,15 @@
 """
 Tests for portfolio controller
 """
-import pytest
 import os
 import sys
+import pytest
 from unittest.mock import Mock, MagicMock, patch, AsyncMock
 from datetime import datetime, timezone
 from decimal import Decimal
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
+from common.data.entities.user import User
 from common.exceptions import (
     CNOPDatabaseOperationException
 )
@@ -17,18 +18,24 @@ from common.exceptions.shared_exceptions import (
     CNOPEntityNotFoundException,
     CNOPInternalServerException
 )
+from common.shared.constants.api_constants import RequestHeaders
+
+# Test constants
+TEST_REQUEST_ID = "test-request-id"
+TEST_USERNAME = "testuser"
+TEST_EMAIL = "test@example.com"
 
 
-def create_mock_request(request_id="test-request-id"):
+def create_mock_request(request_id=TEST_REQUEST_ID):
     """Helper function to create a mock request object with headers"""
     mock_request = MagicMock()
-    from common.shared.constants.api_constants import RequestHeaders
     mock_request.headers = {RequestHeaders.REQUEST_ID: request_id}
     return mock_request
 
-# Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'common', 'src'))
+# Add src to path for src imports
+test_file_dir = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(test_file_dir, '..', '..', '..', 'src'))
+sys.path.insert(0, os.path.join(test_file_dir, '..', '..', '..', '..', 'common', 'src'))
 
 # At the top of your test file, define the DAO interface
 USER_DAO_SPEC = [
@@ -65,6 +72,8 @@ ASSET_BALANCE_DAO_SPEC = [
 
 # Import the function directly - we'll mock dependencies in individual tests
 from src.controllers.portfolio.portfolio_controller import get_user_portfolio
+from src.api_models.portfolio.portfolio_models import GetPortfolioResponse
+from tests.utils.dependency_constants import VALIDATE_USER_PERMISSIONS
 
 
 class TestPortfolioController:
@@ -82,7 +91,7 @@ class TestPortfolioController:
     @pytest.fixture
     def mock_current_user(self):
         """Mock current user"""
-        from common.data.entities.user import User
+
         return User(
             username="testuser",
             email="test@example.com",
@@ -168,7 +177,7 @@ class TestPortfolioController:
 
 
 
-    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    @patch(VALIDATE_USER_PERMISSIONS)
     def test_get_user_portfolio_success(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                             mock_balance_dao, mock_asset_balance_dao,
                                             mock_user_dao, mock_asset_dao):
@@ -193,18 +202,12 @@ class TestPortfolioController:
         mock_balance_dao.get_balance.assert_called_once_with("testuser")
         mock_asset_balance_dao.get_all_asset_balances.assert_called_once_with("testuser")
 
-        # Verify response
-        assert result.success is True
-        assert result.message == "Portfolio retrieved successfully"
-
-        # Check portfolio data
-        portfolio_data = result.data
-        assert portfolio_data["username"] == "testuser"
-        assert portfolio_data["usd_balance"] == Decimal("10000.00")
-        assert portfolio_data["asset_count"] == 2
+        # Verify response - now returns assets directly
+        assert result is not None
+        assert len(result.assets) == 2
 
         # Check asset calculations
-        assets = portfolio_data["assets"]
+        assets = result.assets
         assert len(assets) == 2
 
         # BTC asset
@@ -221,10 +224,6 @@ class TestPortfolioController:
         assert eth_asset.current_price == Decimal("3000.00")
         assert eth_asset.market_value == Decimal("30000.00")  # 10.0 * 3000
 
-        # Check total values
-        assert portfolio_data["total_asset_value"] == Decimal("97500.00")  # 67500 + 30000
-        assert portfolio_data["total_portfolio_value"] == Decimal("107500.00")  # 10000 + 97500
-
         # Check percentages (approximate due to decimal precision)
         btc_percentage = float(btc_asset.percentage)
         eth_percentage = float(eth_asset.percentage)
@@ -232,7 +231,7 @@ class TestPortfolioController:
         assert 27.0 < eth_percentage < 28.0  # 30000/107500 ≈ 27.91%
 
 
-    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    @patch(VALIDATE_USER_PERMISSIONS)
     def test_get_user_portfolio_unauthorized_access(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                                         mock_balance_dao, mock_asset_balance_dao,
                                                         mock_user_dao, mock_asset_dao):
@@ -253,7 +252,7 @@ class TestPortfolioController:
             )
 
 
-    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    @patch(VALIDATE_USER_PERMISSIONS)
     def test_get_user_portfolio_no_usd_balance(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                                     mock_balance_dao, mock_asset_balance_dao,
                                                     mock_user_dao, mock_asset_dao):
@@ -270,14 +269,16 @@ class TestPortfolioController:
             asset_dao=mock_asset_dao
         )
 
-        assert result.success is True
+        assert result is not None
+        assert len(result.assets) == 2
 
-        portfolio_data = result.data
-        assert portfolio_data["usd_balance"] == Decimal("0")
-        assert portfolio_data["total_portfolio_value"] == Decimal("97500.00")  # Only asset value
+        # Verify asset values
+        assets = result.assets
+        total_asset_value = sum(asset.market_value for asset in assets)
+        assert total_asset_value == Decimal("97500.00")  # Only asset value
 
 
-    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    @patch(VALIDATE_USER_PERMISSIONS)
     def test_get_user_portfolio_no_assets(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                             mock_balance_dao, mock_asset_balance_dao,
                                             mock_user_dao, mock_asset_dao):
@@ -294,16 +295,11 @@ class TestPortfolioController:
             asset_dao=mock_asset_dao
         )
 
-        assert result.success is True
-
-        portfolio_data = result.data
-        assert portfolio_data["asset_count"] == 0
-        assert len(portfolio_data["assets"]) == 0
-        assert portfolio_data["total_asset_value"] == Decimal("0")
-        assert portfolio_data["total_portfolio_value"] == Decimal("10000.00")  # Only USD balance
+        assert result is not None
+        assert len(result.assets) == 0
 
 
-    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    @patch(VALIDATE_USER_PERMISSIONS)
     def test_get_user_portfolio_zero_total_value(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                                     mock_balance_dao, mock_asset_balance_dao,
                                                     mock_user_dao, mock_asset_dao):
@@ -321,17 +317,11 @@ class TestPortfolioController:
             asset_dao=mock_asset_dao
         )
 
-        assert result.success is True
-
-        portfolio_data = result.data
-        assert portfolio_data["total_portfolio_value"] == Decimal("0")
-
-        # Percentages should be zero when total is zero
-        assets = portfolio_data["assets"]
-        assert len(assets) == 0
+        assert result is not None
+        assert len(result.assets) == 0
 
 
-    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    @patch(VALIDATE_USER_PERMISSIONS)
     def test_get_user_portfolio_database_error(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                                 mock_balance_dao, mock_asset_balance_dao,
                                                 mock_user_dao, mock_asset_dao):
@@ -350,7 +340,7 @@ class TestPortfolioController:
             )
 
 
-    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    @patch(VALIDATE_USER_PERMISSIONS)
     def test_get_user_portfolio_unexpected_error(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                                     mock_balance_dao, mock_asset_balance_dao,
                                                     mock_user_dao, mock_asset_dao):
@@ -369,7 +359,7 @@ class TestPortfolioController:
             )
 
 
-    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    @patch(VALIDATE_USER_PERMISSIONS)
     def test_get_user_portfolio_with_high_precision_values(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                                             mock_balance_dao, mock_asset_balance_dao,
                                                             mock_user_dao, mock_asset_dao):
@@ -404,13 +394,10 @@ class TestPortfolioController:
             asset_dao=mock_asset_dao
         )
 
-        assert result.success is True
+        assert result is not None
+        assert len(result.assets) == 1
 
-        portfolio_data = result.data
-        assets = portfolio_data["assets"]
-        assert len(assets) == 1
-
-        btc_asset = assets[0]
+        btc_asset = result.assets[0]
         assert btc_asset.quantity == Decimal("1.12345678")
         assert btc_asset.current_price == Decimal("45000.12345")
 
@@ -419,7 +406,7 @@ class TestPortfolioController:
         assert btc_asset.market_value == expected_market_value
 
 
-    @patch('src.controllers.portfolio.portfolio_controller.validate_user_permissions')
+    @patch(VALIDATE_USER_PERMISSIONS)
     def test_get_user_portfolio_with_single_asset(self, mock_validate_user_permissions, mock_request, mock_current_user,
                                                     mock_balance_dao, mock_asset_balance_dao,
                                                     mock_user_dao, mock_asset_dao):
@@ -443,14 +430,10 @@ class TestPortfolioController:
             asset_dao=mock_asset_dao
         )
 
-        assert result.success is True
+        assert result is not None
+        assert len(result.assets) == 1
 
-        portfolio_data = result.data
-        assets = portfolio_data["assets"]
-        assert len(assets) == 1
-
-        btc_asset = assets[0]
+        btc_asset = result.assets[0]
         assert btc_asset.asset_id == "BTC"
         assert btc_asset.market_value == Decimal("45000.00")
         assert btc_asset.percentage == Decimal("100")  # 100% allocation
-        assert portfolio_data["total_portfolio_value"] == Decimal("45000.00")

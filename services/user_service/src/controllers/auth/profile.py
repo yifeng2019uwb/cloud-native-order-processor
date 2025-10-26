@@ -5,15 +5,12 @@ Path: services/user_service/src/controllers/auth/profile.py
 Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
-from typing import Union
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from api_models.auth.profile import (
     UserProfileResponse,
     UserProfileUpdateRequest,
-    ProfileUpdateSuccessResponse,
-    ProfileUpdateErrorResponse
+    ProfileResponse
 )
-from api_models.shared.common import ErrorResponse
 from common.data.database.dependencies import get_user_dao
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import (
@@ -21,14 +18,7 @@ from common.exceptions.shared_exceptions import (
 )
 from common.shared.logging import BaseLogger, LogAction, LoggerName
 from common.shared.constants.api_constants import ErrorMessages
-from common.shared.constants.api_constants import APIResponseDescriptions
-from api_info_enum import ApiResponseKeys
-from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths
-from constants import (
-    MSG_SUCCESS_PROFILE_RETRIEVED, MSG_SUCCESS_PROFILE_UPDATED,
-    MSG_ERROR_EMAIL_IN_USE, MSG_ERROR_INVALID_UPDATE_DATA
-)
 from user_exceptions.exceptions import CNOPUserAlreadyExistsException, CNOPUserValidationException
 from validation.business_validators import (
     validate_email_uniqueness,
@@ -44,17 +34,7 @@ router = APIRouter(tags=[ApiTags.AUTHENTICATION.value])
 
 @router.get(
     ApiPaths.PROFILE.value,
-    response_model=UserProfileResponse,
-    responses={
-        HTTPStatus.OK: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_PROFILE_RETRIEVED,
-            ApiResponseKeys.MODEL.value: UserProfileResponse
-        },
-        HTTPStatus.UNAUTHORIZED: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        }
-    }
+    response_model=UserProfileResponse
 )
 
 def get_profile(
@@ -90,32 +70,14 @@ def get_profile(
 
 @router.put(
     ApiPaths.PROFILE.value,
-    response_model=Union[ProfileUpdateSuccessResponse, ProfileUpdateErrorResponse],
-    responses={
-        HTTPStatus.OK: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_PROFILE_UPDATED,
-            ApiResponseKeys.MODEL.value: ProfileUpdateSuccessResponse
-        },
-        HTTPStatus.BAD_REQUEST: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_INVALID_UPDATE_DATA,
-            ApiResponseKeys.MODEL.value: ProfileUpdateErrorResponse
-        },
-        HTTPStatus.UNAUTHORIZED: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.CONFLICT: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_EMAIL_IN_USE,
-            ApiResponseKeys.MODEL.value: ProfileUpdateErrorResponse
-        }
-    }
+    response_model=ProfileResponse
 )
 def update_profile(
     profile_data: UserProfileUpdateRequest,
     request: Request,
     current_user: User = Depends(get_current_user),
     user_dao = Depends(get_user_dao)
-) -> ProfileUpdateSuccessResponse:
+) -> ProfileResponse:
     """
     Update current user profile (JWT-only approach)
 
@@ -135,30 +97,27 @@ def update_profile(
         if profile_data.date_of_birth:
             validate_age_requirements(profile_data.date_of_birth)
 
-        # Create updated User object with new values
-        updated_user_data = {
-            "username": current_user.username,
-            "email": profile_data.email or current_user.email,
-            "password": current_user.password,  # Keep existing password
-            "first_name": profile_data.first_name or current_user.first_name,
-            "last_name": profile_data.last_name or current_user.last_name,
-            "phone": profile_data.phone or current_user.phone,
-            "date_of_birth": profile_data.date_of_birth or current_user.date_of_birth,
-            "marketing_emails_consent": current_user.marketing_emails_consent,
-            "role": current_user.role,
-            "created_at": current_user.created_at,
-            "updated_at": current_user.updated_at
-        }
-
-        updated_user = user_dao.update_user(User(**updated_user_data))
+        # Create updated User object directly
+        updated_user = user_dao.update_user(User(
+            username=current_user.username,
+            email=profile_data.email or current_user.email,
+            password=current_user.password,  # Keep existing password
+            first_name=profile_data.first_name or current_user.first_name,
+            last_name=profile_data.last_name or current_user.last_name,
+            phone=profile_data.phone or current_user.phone,
+            date_of_birth=profile_data.date_of_birth or current_user.date_of_birth,
+            marketing_emails_consent=current_user.marketing_emails_consent,
+            role=current_user.role,
+            created_at=current_user.created_at,
+            updated_at=current_user.updated_at
+        ))
 
         if not updated_user:
-            raise CNOPUserNotFoundException(f"{ErrorMessages.USER_NOT_FOUND}: '{current_user.username}'")
+            raise CNOPUserNotFoundException(f"{ErrorMessages.USER_NOT_FOUND}: {current_user.username}")
 
         logger.info(action=LogAction.REQUEST_END, message=f"Profile updated successfully for user: {current_user.username}", request_id=request_id)
 
-        return ProfileUpdateSuccessResponse(
-            message="Profile updated successfully",
+        return ProfileResponse(
             user=UserProfileResponse(
                 username=updated_user.username,
                 email=updated_user.email,

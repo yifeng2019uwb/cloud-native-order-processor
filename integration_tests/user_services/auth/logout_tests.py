@@ -43,8 +43,8 @@ class UserLogoutTests:
 
         assert response.status_code == 200
         data = response.json()
-        assert 'success' in data
-        assert data['success'] == True
+        assert 'message' in data
+        assert data['message'] == "Logged out successfully"
 
     def test_logout_missing_body(self):
         """Test logout with missing request body is rejected"""

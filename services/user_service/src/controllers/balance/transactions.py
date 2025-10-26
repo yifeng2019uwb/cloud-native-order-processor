@@ -6,17 +6,12 @@ Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
 from datetime import datetime, timezone
-from typing import Union
-from fastapi import APIRouter, HTTPException, Depends, status, Request
+from fastapi import APIRouter, Depends, status, Request
 from api_models.balance import TransactionListResponse, TransactionResponse
-from api_models.shared.common import ErrorResponse
 from common.data.database.dependencies import get_balance_dao
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import CNOPInternalServerException
 from common.shared.logging import BaseLogger, LogAction, LoggerName
-from common.shared.constants.api_constants import ErrorMessages
-from common.shared.constants.api_constants import APIResponseDescriptions
-from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from controllers.auth.dependencies import get_current_user
 from common.auth.gateway.header_validator import get_request_id_from_request
@@ -31,25 +26,7 @@ router = APIRouter(tags=[ApiTags.BALANCE.value])
 
 @router.get(
     ApiPaths.TRANSACTIONS.value,
-    response_model=Union[TransactionListResponse, ErrorResponse],
-    responses={
-        HTTPStatus.OK: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_TRANSACTIONS_RETRIEVED,
-            ApiResponseKeys.MODEL.value: TransactionListResponse
-        },
-        HTTPStatus.UNAUTHORIZED: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_UNAUTHORIZED,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.NOT_FOUND: {
-            ApiResponseKeys.DESCRIPTION.value: ErrorMessages.USER_NOT_FOUND,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.SERVICE_UNAVAILABLE: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        }
-    }
+    response_model=TransactionListResponse
 )
 def get_user_transactions(
     request: Request,

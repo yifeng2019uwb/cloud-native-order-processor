@@ -5,39 +5,32 @@ Path: cloud-native-order-processor/services/user-service/src/models/__init__.py
 
 # Import shared models
 from .shared.common import (
-    SuccessResponse,
-    ErrorResponse,
-    TokenResponse,
     UserBaseInfo
 )
 
 # Import registration models
 from .auth.registration import (
     UserRegistrationRequest,
-    RegistrationSuccessResponse,
-    RegistrationErrorResponse
+    RegistrationResponse
 )
 
 # Import login models
 from .auth.login import (
     UserLoginRequest,
-    LoginSuccessResponse,
-    LoginErrorResponse
+    LoginResponse
 )
 
 # Import logout models
 from .auth.logout import (
     LogoutRequest,
-    LogoutSuccessResponse,
-    LogoutErrorResponse
+    LogoutResponse
 )
 
 # Import profile models
 from .auth.profile import (
     UserProfileResponse,
     UserProfileUpdateRequest,
-    ProfileUpdateSuccessResponse,
-    ProfileUpdateErrorResponse
+    ProfileResponse
 )
 
 # Import balance models
@@ -53,31 +46,24 @@ from .balance import (
 
 __all__ = [
     # Shared models
-    "SuccessResponse",
-    "ErrorResponse",
-    "TokenResponse",
     "UserBaseInfo",
 
     # Registration models
     "UserRegistrationRequest",
-    "RegistrationSuccessResponse",
-    "RegistrationErrorResponse",
+    "RegistrationResponse",
 
     # Login models
     "UserLoginRequest",
-    "LoginSuccessResponse",
-    "LoginErrorResponse",
+    "LoginResponse",
 
     # Logout models
     "LogoutRequest",
-    "LogoutSuccessResponse",
-    "LogoutErrorResponse",
+    "LogoutResponse",
 
     # Profile models
     "UserProfileResponse",
     "UserProfileUpdateRequest",
-    "ProfileUpdateSuccessResponse",
-    "ProfileUpdateErrorResponse",
+    "ProfileResponse",
 
     # Balance models
     "BalanceResponse",

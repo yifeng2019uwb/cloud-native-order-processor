@@ -6,27 +6,23 @@ Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
 from datetime import datetime, timezone
-from typing import Union
-from fastapi import APIRouter, HTTPException, Depends, status, Request
+from fastapi import APIRouter, HTTPException, Depends, Request
 from api_models.auth.login import (
     UserLoginRequest,
-    LoginSuccessResponse,
-    LoginErrorResponse,
-    UserLoginResponse
+    LoginResponse
 )
-from api_models.shared.common import ErrorResponse, UserBaseInfo
 from common.data.entities.user import User
 from common.data.database.dependencies import get_user_dao
 from common.auth.security.token_manager import TokenManager
 from common.auth.security.audit_logger import AuditLogger
+from common.auth.security.jwt_constants import JWTConfig
 from common.shared.constants.api_constants import ErrorMessages
-from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
 from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException, CNOPInternalServerException
 from user_exceptions import CNOPUserValidationException
 from common.shared.logging import BaseLogger, LogAction, LoggerName
 from common.auth.gateway.header_validator import get_request_id_from_request
-from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
+from api_info_enum import ApiTags, ApiPaths
 from constants import MSG_SUCCESS_LOGIN
 
 # Initialize our standardized logger
@@ -36,27 +32,13 @@ router = APIRouter(tags=[ApiTags.AUTHENTICATION.value])
 
 @router.post(
     ApiPaths.LOGIN.value,
-    response_model=Union[LoginSuccessResponse, LoginErrorResponse],
-    responses={
-        HTTPStatus.OK: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_LOGIN,
-            ApiResponseKeys.MODEL.value: LoginSuccessResponse
-        },
-        HTTPStatus.UNAUTHORIZED: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
-            ApiResponseKeys.MODEL.value: LoginErrorResponse
-        },
-        HTTPStatus.UNPROCESSABLE_ENTITY: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        }
-    }
+    response_model=LoginResponse
 )
 def login_user(
     login_data: UserLoginRequest,
     request: Request,
     user_dao=Depends(get_user_dao)
-) -> LoginSuccessResponse:
+) -> LoginResponse:
     """
     Authenticate user with username and password
 
@@ -92,18 +74,13 @@ def login_user(
 
         # Log successful login and token creation
         audit_logger.log_login_success(user.username, client_ip, user_agent)
-        audit_logger.log_token_created(user.username, "access_token", client_ip)
+        audit_logger.log_token_created(user.username, JWTConfig.ACCESS_TOKEN_TYPE, client_ip)
 
-        login_response = UserLoginResponse(
+        # Return success response
+        return LoginResponse(
             access_token=token_response.access_token,
             token_type=token_response.token_type,
             expires_in=token_response.expires_in
-        )
-
-        # Wrap in LoginSuccessResponse
-        return LoginSuccessResponse(
-            message="Login successful",
-            data=login_response
         )
 
     except CNOPInvalidCredentialsException:

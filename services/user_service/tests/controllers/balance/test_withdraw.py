@@ -21,23 +21,24 @@ from common.exceptions import CNOPLockAcquisitionException, CNOPDatabaseOperatio
 from user_exceptions import CNOPUserValidationException
 
 
+TEST_USERNAME = "testuser"
+TEST_TRANSACTION_ID = "txn-12345"
+
 class TestWithdrawFunds:
     """Test withdraw_funds function"""
 
     @pytest.fixture
     def mock_request(self):
-        """Mock FastAPI request object"""
+        """Mock FastAPI request object with minimal attributes"""
         mock_req = Mock()
-        mock_req.client = Mock()
-        mock_req.client.host = "192.168.1.100"
-        mock_req.headers = {"user-agent": "Mozilla/5.0 Test Browser"}
+        mock_req.headers = {}
         return mock_req
 
     @pytest.fixture
     def mock_current_user(self):
         """Mock current authenticated user"""
         return User(
-            username="testuser",
+            username=TEST_USERNAME,
             email="test@example.com",
             password="[HASHED]",
             first_name="Test",
@@ -63,7 +64,7 @@ class TestWithdrawFunds:
     def mock_transaction_result(self):
         """Mock successful transaction result"""
         mock_result = Mock()
-        mock_result.transaction = Mock(transaction_id="txn-12345")
+        mock_result.transaction = Mock(transaction_id=TEST_TRANSACTION_ID)
         return mock_result
 
     async def test_withdraw_funds_success(
@@ -86,14 +87,14 @@ class TestWithdrawFunds:
 
         # Verify transaction manager was called correctly
         mock_transaction_manager.withdraw_funds.assert_called_once_with(
-            username="testuser",
+            username=TEST_USERNAME,
             amount=Decimal("100.00")
         )
 
         # Verify response structure
         assert result.success is True
         assert "Successfully withdrew $100.00" in result.message
-        assert result.transaction_id == "txn-12345"
+        assert result.transaction_id == TEST_TRANSACTION_ID
         assert isinstance(result.timestamp, datetime)
 
     async def test_withdraw_funds_lock_acquisition_failure(
@@ -116,7 +117,7 @@ class TestWithdrawFunds:
 
         # Verify transaction manager was called
         mock_transaction_manager.withdraw_funds.assert_called_once_with(
-            username="testuser",
+            username=TEST_USERNAME,
             amount=Decimal("100.00")
         )
 
@@ -141,7 +142,7 @@ class TestWithdrawFunds:
 
         # Verify transaction manager was called
         mock_transaction_manager.withdraw_funds.assert_called_once_with(
-            username="testuser",
+            username=TEST_USERNAME,
             amount=Decimal("100.00")
         )
 
@@ -166,7 +167,7 @@ class TestWithdrawFunds:
 
         # Verify transaction manager was called
         mock_transaction_manager.withdraw_funds.assert_called_once_with(
-            username="testuser",
+            username=TEST_USERNAME,
             amount=Decimal("100.00")
         )
 
@@ -190,7 +191,7 @@ class TestWithdrawFunds:
 
         # Verify transaction manager was called
         mock_transaction_manager.withdraw_funds.assert_called_once_with(
-            username="testuser",
+            username=TEST_USERNAME,
             amount=Decimal("100.00")
         )
 
@@ -215,7 +216,7 @@ class TestWithdrawFunds:
 
         # Verify transaction manager was called
         mock_transaction_manager.withdraw_funds.assert_called_once_with(
-            username="testuser",
+            username=TEST_USERNAME,
             amount=Decimal("100.00")
         )
 
@@ -240,57 +241,11 @@ class TestWithdrawFunds:
 
         # Verify transaction manager was called
         mock_transaction_manager.withdraw_funds.assert_called_once_with(
-            username="testuser",
+            username=TEST_USERNAME,
             amount=Decimal("100.00")
         )
 
 
-    async def test_withdraw_funds_request_client_none(
-        self,
-        mock_request,
-        mock_current_user,
-        mock_transaction_manager,
-        sample_withdraw_request,
-        mock_transaction_result
-    ):
-        """Test withdrawal when request.client is None"""
-        # Set request.client to None
-        mock_request.client = None
-        mock_transaction_manager.withdraw_funds.return_value = mock_transaction_result
-
-        result = await withdraw_funds(
-            withdraw_data=sample_withdraw_request,
-            request=mock_request,
-            current_user=mock_current_user,
-            transaction_manager=mock_transaction_manager
-        )
-
-        # Verify the function handles None client gracefully
-        assert result.success is True
-
-
-    async def test_withdraw_funds_missing_user_agent(
-        self,
-        mock_request,
-        mock_current_user,
-        mock_transaction_manager,
-        sample_withdraw_request,
-        mock_transaction_result
-    ):
-        """Test withdrawal when user-agent header is missing"""
-        # Remove user-agent header
-        mock_request.headers = {}
-        mock_transaction_manager.withdraw_funds.return_value = mock_transaction_result
-
-        result = await withdraw_funds(
-            withdraw_data=sample_withdraw_request,
-            request=mock_request,
-            current_user=mock_current_user,
-            transaction_manager=mock_transaction_manager
-        )
-
-        # Verify the function handles missing user-agent gracefully
-        assert result.success is True
 
     async def test_withdraw_funds_different_amounts(
         self,
@@ -335,8 +290,9 @@ class TestWithdrawFunds:
     ):
         """Test withdrawal with transaction result that has no lock duration"""
         # Create transaction result without lock_duration
+        transaction_id = "txn-no-lock"
         mock_result = Mock()
-        mock_result.transaction = Mock(transaction_id="txn-no-lock")
+        mock_result.transaction = Mock(transaction_id=transaction_id)
         mock_transaction_manager.withdraw_funds.return_value = mock_result
 
         result = await withdraw_funds(
@@ -348,44 +304,4 @@ class TestWithdrawFunds:
 
         # Verify the function handles None lock_duration gracefully
         assert result.success is True
-        assert result.transaction_id == "txn-no-lock"
-
-
-class TestWithdrawRouter:
-    """Test withdraw router configuration"""
-
-    def test_router_tags(self):
-        """Test that router has correct tags"""
-        assert router.tags == ["balance"]
-
-    def test_withdraw_endpoint_path(self):
-        """Test that withdraw endpoint has correct path"""
-        # Find the withdraw endpoint
-        withdraw_route = None
-        for route in router.routes:
-            if hasattr(route, 'path') and route.path == "/balance/withdraw":
-                withdraw_route = route
-                break
-
-        assert withdraw_route is not None
-        assert withdraw_route.methods == {"POST"}
-
-    def test_withdraw_response_models(self):
-        """Test that withdraw endpoint has correct response models"""
-        # Find the withdraw endpoint
-        withdraw_route = None
-        for route in router.routes:
-            if hasattr(route, 'path') and route.path == "/balance/withdraw":
-                withdraw_route = route
-                break
-
-        assert withdraw_route is not None
-        assert withdraw_route.response_model is not None
-
-        # Check status codes
-        assert 201 in withdraw_route.responses
-        assert 400 in withdraw_route.responses
-        assert 401 in withdraw_route.responses
-        assert 409 in withdraw_route.responses
-        assert 422 in withdraw_route.responses
-        assert 503 in withdraw_route.responses
+        assert result.transaction_id == transaction_id

@@ -4,11 +4,17 @@ Unit tests for User Service Metrics functionality
 import pytest
 from unittest.mock import patch, MagicMock
 from common.shared.constants.api_constants import HTTPStatus
+from tests.utils.dependency_constants import (
+    PROMETHEUS_INFO,
+    PROMETHEUS_COUNTER,
+    PROMETHEUS_GAUGE,
+    PROMETHEUS_HISTOGRAM
+)
 
-@patch('prometheus_client.Info')
-@patch('prometheus_client.Counter')
-@patch('prometheus_client.Gauge')
-@patch('prometheus_client.Histogram')
+@patch(PROMETHEUS_INFO)
+@patch(PROMETHEUS_COUNTER)
+@patch(PROMETHEUS_GAUGE)
+@patch(PROMETHEUS_HISTOGRAM)
 def test_metrics_import(mock_histogram, mock_gauge, mock_counter, mock_info):
     """Test that metrics module can be imported without error"""
     # Mock the Info object
@@ -18,10 +24,10 @@ def test_metrics_import(mock_histogram, mock_gauge, mock_counter, mock_info):
     import src.metrics
     # If we get here, the import succeeded
 
-@patch('prometheus_client.Info')
-@patch('prometheus_client.Counter')
-@patch('prometheus_client.Gauge')
-@patch('prometheus_client.Histogram')
+@patch(PROMETHEUS_INFO)
+@patch(PROMETHEUS_COUNTER)
+@patch(PROMETHEUS_GAUGE)
+@patch(PROMETHEUS_HISTOGRAM)
 def test_metrics_functions_exist(mock_histogram, mock_gauge, mock_counter, mock_info):
     """Test that metrics functions exist and are callable"""
     # Mock the Info object
@@ -45,10 +51,10 @@ def test_metrics_functions_exist(mock_histogram, mock_gauge, mock_counter, mock_
     assert callable(metrics.metrics_collector.record_auth_operation)
     assert callable(metrics.metrics_collector.record_balance_operation)
 
-@patch('prometheus_client.Info')
-@patch('prometheus_client.Counter')
-@patch('prometheus_client.Gauge')
-@patch('prometheus_client.Histogram')
+@patch(PROMETHEUS_INFO)
+@patch(PROMETHEUS_COUNTER)
+@patch(PROMETHEUS_GAUGE)
+@patch(PROMETHEUS_HISTOGRAM)
 def test_metrics_collector_methods(mock_histogram, mock_gauge, mock_counter, mock_info):
     """Test that metrics collector methods work correctly"""
     # Mock the Info object

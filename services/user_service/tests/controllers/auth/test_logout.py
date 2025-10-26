@@ -1,46 +1,42 @@
+"""
+Tests for logout controller - Focus on business logic
+"""
 import pytest
 from fastapi import HTTPException
 from unittest.mock import patch, MagicMock
 from controllers.auth.logout import logout_user
-from api_models.auth.logout import LogoutRequest, LogoutSuccessResponse
+from api_models.auth.logout import LogoutRequest, LogoutResponse
+
+TEST_EMAIL = "test@example.com"
+TEST_USERNAME = "testuser"
 
 def test_logout_success():
+    """Test successful logout"""
     # Mock user data
     mock_user = MagicMock()
-    mock_user.email = "test@example.com"
-    mock_user.username = "testuser"
+    mock_user.email = TEST_EMAIL
+    mock_user.username = TEST_USERNAME
 
     # Mock logout data (empty request for JWT stateless approach)
     logout_data = LogoutRequest()
 
-    # Mock the datetime to return a predictable timestamp
-    with patch("controllers.auth.logout.datetime") as mock_datetime:
-        mock_timestamp = MagicMock()
-        mock_datetime.now.return_value = mock_timestamp
+    # Call the function with current_user as a direct parameter (bypassing Depends)
+    result = logout_user(logout_data, current_user=mock_user)
 
-        # Call the function with current_user as a direct parameter (bypassing Depends)
-        result = logout_user(logout_data, current_user=mock_user)
+    # Verify result
+    assert isinstance(result, LogoutResponse)
+    assert result.message == "Logged out successfully"
 
-        # Verify result
-        assert result.message == "Logged out successfully"
-        assert result.success is True
-        assert result.timestamp is not None
 
-def test_logout_exception_handling():
-    # Mock user data
+def test_logout_with_different_users():
+    """Test logout with different user scenarios"""
+    # Test with different user
     mock_user = MagicMock()
-    mock_user.email = "test@example.com"
-    mock_user.username = "testuser"
+    mock_user.email = "different@example.com"
+    mock_user.username = "differentuser"
 
-    # Mock logout data
     logout_data = LogoutRequest()
+    result = logout_user(logout_data, current_user=mock_user)
 
-    # Mock datetime to raise an exception
-    with patch("controllers.auth.logout.datetime") as mock_datetime:
-        mock_datetime.now.side_effect = Exception("Time error")
-
-        # Test that the function handles exceptions gracefully
-        with pytest.raises(Exception) as exc_info:
-            logout_user(logout_data, current_user=mock_user)
-
-        assert "Time error" in str(exc_info.value)
+    assert isinstance(result, LogoutResponse)
+    assert result.message == "Logged out successfully"

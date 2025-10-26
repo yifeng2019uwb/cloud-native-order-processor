@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch
 
 from main import app, root
+from tests.utils.dependency_constants import GET_METRICS_RESPONSE
 
 
 class TestMainApplication:
@@ -59,7 +60,7 @@ class TestRootEndpoint:
 class TestMetricsEndpoint:
     """Test cases for the internal metrics endpoint."""
 
-    @patch('src.main.get_metrics_response')
+    @patch(GET_METRICS_RESPONSE)
     def test_internal_metrics_endpoint(self, mock_get_metrics_response):
         """Test that internal metrics endpoint calls get_metrics_response."""
         from fastapi import Response

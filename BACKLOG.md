@@ -31,6 +31,42 @@
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
+#### **ARCH-001: Implement Service-Level Request Context Handling**
+- **Component**: Architecture & Cross-Cutting Concerns
+- **Type**: Architectural Improvement
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Description**: Refactor request context handling (request_id, client_ip, user_agent) from individual API endpoints to service-level architecture. Currently each API endpoint manually handles `request: Request` parameter for metadata extraction, violating DRY principle and creating repetitive code.
+- **Current Problem**:
+  - Each API endpoint has `request: Request` parameter for metadata extraction
+  - Repetitive code: `request_id = get_request_id_from_request(request)` in every endpoint
+  - `client_ip` and `user_agent` are hardcoded to `None` (not properly extracted)
+  - Violates DRY principle and creates maintenance overhead
+- **Acceptance Criteria**:
+  - **Create RequestContext model** with request_id, client_ip, user_agent fields
+  - **Implement service-level dependency injection** for request context
+  - **Remove `request: Request` parameters** from all API endpoints
+  - **Create middleware or dependency** to automatically extract request metadata
+  - **Update all controllers** to use RequestContext instead of raw Request object
+  - **Ensure backward compatibility** with existing logging and audit functionality
+- **Architecture Options**:
+  1. **Dependency Injection**: `RequestContext = Depends(get_request_context)`
+  2. **Service Layer Pattern**: Move request handling to service layer
+  3. **Decorator Pattern**: `@with_request_context` decorator
+  4. **Middleware Pattern**: FastAPI middleware for automatic context extraction
+- **Dependencies**: None (can be implemented independently)
+- **Files to Update**:
+  - All controller files with `request: Request` parameters
+  - Create `services/common/src/shared/models/request_context.py`
+  - Create `services/common/src/shared/dependencies/request_context.py`
+  - Update all service main.py files for dependency registration
+- **Benefits**:
+  - **Cleaner API endpoints** - no more raw Request objects
+  - **DRY principle compliance** - single place for request metadata handling
+  - **Better testability** - easier to mock RequestContext vs raw Request
+  - **Consistent request handling** across all services
+  - **Future-proof architecture** for additional request metadata needs
+
 #### **INFRA-009: Comprehensive Service Architecture Optimization and Modernization**
 - **Component**: Infrastructure & Code Quality
 - **Type**: Major Refactoring

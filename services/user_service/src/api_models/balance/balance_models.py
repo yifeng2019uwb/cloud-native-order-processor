@@ -17,6 +17,7 @@ from validation.field_validators import (
     validate_amount
 )
 
+AMOUNT_FIELD = "amount"
 
 class BalanceResponse(BaseModel):
     """Response model for getting current balance"""
@@ -28,7 +29,7 @@ class DepositRequest(BaseModel):
     """Request model for depositing funds"""
     amount: Decimal = Field(..., gt=0, le=1000000, description="Deposit amount (0.01 to 1,000,000)")
 
-    @field_validator('amount')
+    @field_validator(AMOUNT_FIELD)
     @classmethod
     def validate_amount_format(cls, v: Decimal) -> Decimal:
         """Layer 1: Basic format validation for amount"""
@@ -46,7 +47,7 @@ class WithdrawRequest(BaseModel):
     """Request model for withdrawing funds"""
     amount: Decimal = Field(..., gt=0, le=1000000, description="Withdrawal amount (0.01 to 1,000,000)")
 
-    @field_validator('amount')
+    @field_validator(AMOUNT_FIELD)
     @classmethod
     def validate_amount_format(cls, v: Decimal) -> Decimal:
         """Layer 1: Basic format validation for amount"""

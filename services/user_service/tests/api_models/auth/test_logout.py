@@ -1,22 +1,25 @@
+"""
+Tests for logout API models - Focus on field validation
+"""
 import pytest
-from api_models.auth.logout import LogoutRequest, LogoutSuccessResponse, LogoutErrorResponse
+from pydantic import ValidationError
+from api_models.auth.logout import LogoutRequest, LogoutResponse
 
-def test_logout_request_serialization():
-    req = LogoutRequest()
-    data = req.model_dump()
-    assert data == {}
 
-def test_logout_success_response_serialization():
-    resp = LogoutSuccessResponse()
-    data = resp.model_dump()
-    assert data["success"] is True
-    assert data["message"] == "Logged out successfully"
-    assert "timestamp" in data
+def test_logout_request_valid():
+    """Test valid LogoutRequest creation"""
+    request = LogoutRequest()
+    assert request is not None
 
-def test_logout_error_response_serialization():
-    resp = LogoutErrorResponse()
-    data = resp.model_dump()
-    assert data["success"] is False
-    assert data["error"] == "LOGOUT_FAILED"
-    assert data["message"] == "Logout failed. Please try again."
-    assert "timestamp" in data
+
+def test_logout_response_valid():
+    """Test valid LogoutResponse creation"""
+    response = LogoutResponse()
+    assert response.message == "Logged out successfully"
+
+
+def test_logout_response_custom_message():
+    """Test LogoutResponse with custom message"""
+    custom_message = "Custom logout message"
+    response = LogoutResponse(message=custom_message)
+    assert response.message == custom_message

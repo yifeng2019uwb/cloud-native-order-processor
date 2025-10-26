@@ -49,8 +49,8 @@ class UserRegistrationTests:
 
         assert response.status_code == 201
         data = response.json()
-        assert UserFields.SUCCESS in data
-        assert data[UserFields.SUCCESS] == True
+        assert UserFields.MESSAGE in data
+        assert data[UserFields.MESSAGE] == "User registered successfully"
         return test_user
 
     def test_registration_minimal_success(self):
@@ -71,8 +71,8 @@ class UserRegistrationTests:
 
         assert response.status_code == 201
         data = response.json()
-        assert UserFields.SUCCESS in data
-        assert data[UserFields.SUCCESS] == True
+        assert UserFields.MESSAGE in data
+        assert data[UserFields.MESSAGE] == "User registered successfully"
 
     def test_registration_duplicate_username(self):
         """Test registration with duplicate username (should fail)"""

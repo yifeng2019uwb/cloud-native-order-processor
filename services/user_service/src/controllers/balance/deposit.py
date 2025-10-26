@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from typing import Union
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from api_models.balance import DepositRequest, DepositResponse
-from api_models.shared.common import ErrorResponse
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
 from common.exceptions import (
@@ -37,38 +36,8 @@ router = APIRouter(tags=[ApiTags.BALANCE.value])
 
 @router.post(
     ApiPaths.DEPOSIT.value,
-    response_model=Union[DepositResponse, ErrorResponse],
-    status_code=status.HTTP_201_CREATED,
-    responses={
-        HTTPStatus.CREATED: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_DEPOSIT,
-            ApiResponseKeys.MODEL.value: DepositResponse
-        },
-        HTTPStatus.BAD_REQUEST: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_INVALID_AMOUNT,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.UNAUTHORIZED: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_UNAUTHORIZED,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.NOT_FOUND: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_USER_BALANCE_NOT_FOUND,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.CONFLICT: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_OPERATION_BUSY,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.UNPROCESSABLE_ENTITY: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.SERVICE_UNAVAILABLE: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        }
-    }
+    response_model=DepositResponse,
+    status_code=status.HTTP_201_CREATED
 )
 async def deposit_funds(
     deposit_data: DepositRequest,

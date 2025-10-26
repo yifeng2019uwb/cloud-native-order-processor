@@ -3,20 +3,14 @@ User Logout API Endpoint
 Path: cloud-native-order-processor/services/user-service/src/controllers/auth/logout.py
 """
 from datetime import datetime, timezone
-from typing import Union
 from fastapi import APIRouter, Depends, status
 from api_models.auth.logout import (
     LogoutRequest,
-    LogoutSuccessResponse,
-    LogoutErrorResponse
+    LogoutResponse
 )
-from api_models.shared.common import ErrorResponse
 from common.auth.security.audit_logger import AuditLogger
 from common.shared.logging import BaseLogger, LogAction, LogField, LoggerName
-from common.shared.constants.api_constants import APIResponseDescriptions
-from common.shared.constants.api_constants import HTTPStatus
-from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
-from constants import MSG_SUCCESS_LOGOUT
+from api_info_enum import ApiTags, ApiPaths
 from .dependencies import get_current_user
 
 # Initialize our standardized logger
@@ -26,27 +20,13 @@ router = APIRouter(tags=[ApiTags.AUTHENTICATION.value])
 
 @router.post(
     ApiPaths.LOGOUT.value,
-    response_model=Union[LogoutSuccessResponse, LogoutErrorResponse],
-    responses={
-        HTTPStatus.OK: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_LOGOUT,
-            ApiResponseKeys.MODEL.value: LogoutSuccessResponse
-        },
-        HTTPStatus.UNAUTHORIZED: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_UNAUTHORIZED,
-            ApiResponseKeys.MODEL.value: LogoutErrorResponse
-        },
-        HTTPStatus.UNPROCESSABLE_ENTITY: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        }
-    }
+    response_model=LogoutResponse
 )
 
 def logout_user(
     logout_data: LogoutRequest,
     current_user = Depends(get_current_user)
-) -> LogoutSuccessResponse:
+) -> LogoutResponse:
     """Logout user (stateless JWT approach)"""
     # Initialize security managers
     audit_logger = AuditLogger()
@@ -63,10 +43,7 @@ def logout_user(
         # Audit log successful logout
         audit_logger.log_logout(current_user.username)
 
-        return LogoutSuccessResponse(
-            message="Logged out successfully",
-            timestamp=datetime.now(timezone.utc)
-        )
+        return LogoutResponse()
 
     except Exception as e:
         logger.error(action=LogAction.ERROR, message=f"Logout failed for user: {str(e)}")
@@ -78,9 +55,5 @@ def logout_user(
             {LogField.ERROR: str(e)}
         )
 
-        return LogoutErrorResponse(
-            success=False,
-            error="LOGOUT_FAILED",
-            message="Logout failed. Please try again.",
-            timestamp=datetime.now(timezone.utc)
-        )
+        # Let the exception bubble up to be handled by RFC 7807 handlers
+        raise

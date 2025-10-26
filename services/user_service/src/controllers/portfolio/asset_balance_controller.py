@@ -15,8 +15,8 @@ from common.shared.constants.api_constants import HTTPStatus
 from common.shared.constants.api_constants import ErrorMessages
 
 from api_models.portfolio.portfolio_models import (
-    GetAssetBalanceResponse,
-    AssetBalanceData
+    GetAssetBalanceRequest,
+    GetAssetBalanceResponse
 )
 from controllers.auth.dependencies import get_current_user
 from controllers.dependencies import (
@@ -31,7 +31,6 @@ from user_exceptions import CNOPUserValidationException
 from common.exceptions.shared_exceptions import CNOPAssetBalanceNotFoundException
 from api_info_enum import ApiTags, ApiPaths
 from validation_enums import ValidationActions
-from constants import MSG_SUCCESS_ASSET_BALANCE_RETRIEVED
 
 # Initialize logger
 logger = BaseLogger(LoggerName.USER, log_to_file=True)
@@ -41,7 +40,7 @@ router = APIRouter(tags=[ApiTags.ASSET_BALANCE.value])
 
 @router.get(ApiPaths.ASSET_BALANCE.value, response_model=GetAssetBalanceResponse)
 def get_user_asset_balance(
-    asset_id: str,
+    request: GetAssetBalanceRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     user_dao: Annotated[object, Depends(get_user_dao_dependency)],
     balance_dao: Annotated[object, Depends(get_balance_dao_dependency)],
@@ -55,7 +54,7 @@ def get_user_asset_balance(
     FastAPI runs in thread pool automatically.
 
     Args:
-        asset_id: Asset identifier (e.g., BTC, ETH)
+        request: GetAssetBalanceRequest containing asset_id
         current_user: Authenticated user data from JWT
         user_dao: User data access object
         balance_dao: Balance data access object
@@ -70,6 +69,7 @@ def get_user_asset_balance(
     """
     try:
         username = current_user.username
+        asset_id = request.asset_id
 
         # Validate user permissions
         validate_user_permissions(username, ValidationActions.GET_ASSET_BALANCE.value, user_dao)
@@ -106,7 +106,7 @@ def get_user_asset_balance(
         total_value = float(balance.quantity) * current_price
 
         # Create response data
-        balance_data = AssetBalanceData(
+        response = GetAssetBalanceResponse(
             asset_id=balance.asset_id,
             asset_name=asset.name if 'asset' in locals() else balance.asset_id,
             quantity=balance.quantity,
@@ -114,13 +114,6 @@ def get_user_asset_balance(
             total_value=total_value,
             created_at=balance.created_at,
             updated_at=balance.updated_at
-        )
-
-        response = GetAssetBalanceResponse(
-            success=True,
-            message=MSG_SUCCESS_ASSET_BALANCE_RETRIEVED,
-            data=balance_data,
-            timestamp=datetime.now(UTC)
         )
 
         logger.info(

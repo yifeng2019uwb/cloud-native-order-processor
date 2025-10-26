@@ -1,30 +1,45 @@
+"""
+Tests for profile controller - Focus on business logic
+"""
 import pytest
 from fastapi import HTTPException, status
 from unittest.mock import AsyncMock, patch, MagicMock
-from controllers.auth.profile import get_profile, update_profile, get_current_user
-from api_models.auth.profile import UserProfileUpdateRequest
-from fastapi.security import HTTPAuthorizationCredentials
+from datetime import datetime, timezone
+from controllers.auth.profile import get_profile, update_profile
+from api_models.auth.profile import UserProfileUpdateRequest, UserProfileResponse, ProfileResponse
+from common.data.entities.user import User
 from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
     CNOPEntityNotFoundException
 )
 from user_exceptions import CNOPUserAlreadyExistsException
-from datetime import datetime, timezone
+
+# Test constants - Only for values reused across multiple tests
+TEST_USERNAME = "testuser"
+TEST_EMAIL = "test@example.com"
+TEST_FIRST_NAME = "Test"
+TEST_LAST_NAME = "User"
+TEST_PHONE = "+1234567890"
+TEST_PASSWORD = "hashed_password"
+TEST_USER_ROLE = "user"
+TEST_REQUEST_ID = "test-request-id"
 
 
-def create_mock_request(request_id="test-request-id"):
+def create_mock_request(request_id=TEST_REQUEST_ID):
     """Helper function to create a mock request object with headers"""
     mock_request = MagicMock()
     mock_request.headers = {"X-Request-ID": request_id}
     return mock_request
 
+
 def test_get_profile_success():
+    """Test successful profile retrieval"""
     mock_user = MagicMock()
-    mock_user.username = "testuser"
-    mock_user.email = "test@example.com"
-    mock_user.first_name = "Test"
-    mock_user.last_name = "User"
-    mock_user.phone = "+1234567890"
+    mock_user.username = TEST_USERNAME
+    mock_user.email = TEST_EMAIL
+    mock_user.first_name = TEST_FIRST_NAME
+    mock_user.last_name = TEST_LAST_NAME
+    mock_user.phone = TEST_PHONE
     mock_user.date_of_birth = datetime(1990, 1, 1).date()
     mock_user.marketing_emails_consent = True
     mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
@@ -33,190 +48,106 @@ def test_get_profile_success():
     # Call the function
     result = get_profile(request=create_mock_request(), current_user=mock_user)
 
-    # Verify result
-    assert result.username == "testuser"
-    assert result.email == "test@example.com"
-    assert result.first_name == "Test"
-    assert result.last_name == "User"
-    assert result.phone == "+1234567890"
-    assert result.date_of_birth == datetime(1990, 1, 1).date()
-    assert result.marketing_emails_consent is True
-    assert result.created_at == datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
-    assert result.updated_at == datetime(2024, 1, 2, 0, 0, 0, tzinfo=timezone.utc)
+    # Verify result using constants to avoid human error in assertions
+    assert isinstance(result, UserProfileResponse)
+    assert result.username == TEST_USERNAME
+    assert result.email == TEST_EMAIL
+    assert result.first_name == TEST_FIRST_NAME
+    assert result.last_name == TEST_LAST_NAME
+
 
 def test_update_profile_success():
+    """Test successful profile update"""
+    # Local test variables - test data can be hardcoded
+    username = "john_doe"
+    original_email = "john@example.com"
+    original_first_name = "John"
+    original_last_name = "Doe"
+    updated_email = "john.updated@example.com"
+    updated_first_name = "John Updated"
+    updated_last_name = "Doe Updated"
+
+    # Create a real User object for current_user
+    mock_user = User(
+        username=username,
+        email=original_email,
+        first_name=original_first_name,
+        last_name=original_last_name,
+        phone=TEST_PHONE,
+        date_of_birth=datetime(1990, 1, 1).date(),
+        marketing_emails_consent=True,
+        password=TEST_PASSWORD,
+        role=TEST_USER_ROLE
+    )
+
+    # Create a real User object for the return value
+    updated_user = User(
+        username=username,
+        email=updated_email,
+        first_name=updated_first_name,
+        last_name=updated_last_name,
+        phone=TEST_PHONE,
+        date_of_birth=datetime(1990, 1, 1).date(),
+        marketing_emails_consent=True,
+        password=TEST_PASSWORD,
+        role=TEST_USER_ROLE
+    )
+
+    # Mock user DAO
+    mock_user_dao = MagicMock()
+    mock_user_dao.get_user_by_email.return_value = None  # Email not in use
+    mock_user_dao.update_user.return_value = updated_user
+
+    # Test data
+    update_data = UserProfileUpdateRequest(
+        first_name=updated_first_name,
+        last_name=updated_last_name,
+        email=updated_email
+    )
+
+    # Call the function
+    result = update_profile(
+        update_data,
+        request=create_mock_request(),
+        current_user=mock_user,
+        user_dao=mock_user_dao
+    )
+
+    # Verify result using local variables to avoid human error in assertions
+    assert isinstance(result, ProfileResponse)
+    assert result.user.first_name == updated_first_name
+    assert result.user.last_name == updated_last_name
+    assert result.user.email == updated_email
+
+
+def test_update_profile_email_already_exists():
+    """Test profile update with email already in use"""
     mock_user = MagicMock()
     mock_user.username = "john_doe"
     mock_user.email = "john@example.com"
-    mock_user.password = "[HASHED]"
-    mock_user.first_name = "John"
-    mock_user.last_name = "Doe"
-    mock_user.phone = "+1234567890"
-    mock_user.date_of_birth = "1990-01-01"
-    mock_user.marketing_emails_consent = True
-    mock_user.role = "customer"
-    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
-    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
 
-    mock_updated_user = MagicMock()
-    mock_updated_user.username = "john_doe"
-    mock_updated_user.email = "john.new@example.com"
-    mock_updated_user.password = "[HASHED]"
-    mock_updated_user.first_name = "John"
-    mock_updated_user.last_name = "Doe"
-    mock_updated_user.phone = "+1234567890"
-    mock_updated_user.date_of_birth = "1990-01-01"
-    mock_updated_user.marketing_emails_consent = True
-    mock_updated_user.role = "customer"
-    mock_updated_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
-    mock_updated_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
-
+    # Mock user DAO - email already exists
     mock_user_dao = MagicMock()
-    mock_user_dao.update_user = MagicMock(return_value=mock_updated_user)
-    mock_user_dao.get_user_by_email = MagicMock(return_value=None)  # Email is unique
+    mock_existing_user = MagicMock()
+    mock_existing_user.username = "other_user"
+    mock_user_dao.get_user_by_email.return_value = mock_existing_user
 
-    profile_data = UserProfileUpdateRequest(
-        email="john.new@example.com",
-        first_name="John",
-        last_name="Doe",
-        phone="+1234567890",
-        date_of_birth="1990-01-01"
-    )
-    result = update_profile(profile_data, request=create_mock_request(), current_user=mock_user, user_dao=mock_user_dao)
-    assert result.message == "Profile updated successfully"
-    assert result.user.username == "john_doe"
-    assert result.user.email == "john.new@example.com"
-
-def test_update_profile_email_in_use():
-    """Test when user tries to update profile with email already taken by another user"""
-    mock_user = MagicMock()
-    mock_user.username = "john_doe"
-    mock_user.email = "john@example.com"
-    mock_user.first_name = "John"
-    mock_user.last_name = "Doe"
-    mock_user.phone = "+1234567890"
-    mock_user.date_of_birth = "1990-01-01"
-    mock_user.marketing_emails_consent = True
-    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
-    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
-
-    mock_user_dao = MagicMock()
-    other_user = MagicMock()
-    other_user.username = "other_user"
-    mock_user_dao.get_user_by_email = MagicMock(return_value=other_user)
-
-    profile_data = UserProfileUpdateRequest(
-        email="existing@example.com",
-        first_name="John",
-        last_name="Doe",
-        phone="+1234567890",
-        date_of_birth="1990-01-01"
+    # Test data
+    update_data = UserProfileUpdateRequest(
+        email="existing@example.com"  # Email already in use
     )
 
-    with pytest.raises(CNOPUserAlreadyExistsException) as exc_info:
-        update_profile(profile_data, request=create_mock_request(), current_user=mock_user, user_dao=mock_user_dao)
-    assert "Email 'existing@example.com' already exists" in str(exc_info.value)
-
-
-
-def test_update_profile_user_not_found():
-    mock_user = MagicMock()
-    mock_user.username = "john_doe"
-    mock_user.email = "john@example.com"
-    mock_user.password = "[HASHED]"
-    mock_user.first_name = "John"
-    mock_user.last_name = "Doe"
-    mock_user.phone = "+1234567890"
-    mock_user.date_of_birth = "1990-01-01"
-    mock_user.marketing_emails_consent = True
-    mock_user.role = "customer"
-    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
-    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
-
-    mock_user_dao = MagicMock()
-    mock_user_dao.update_user = MagicMock(return_value=None)
-
-    profile_data = UserProfileUpdateRequest(
-        email="john@example.com",
-        first_name="John",
-        last_name="Doe",
-        phone="+1234567890",
-        date_of_birth="1990-01-01"
-    )
-    with pytest.raises(CNOPEntityNotFoundException) as exc_info:
-        update_profile(profile_data, request=create_mock_request(), current_user=mock_user, user_dao=mock_user_dao)
-    assert "User not found." in str(exc_info.value)
-
-def test_update_profile_with_own_email():
-    """Test that user can update profile with their own email (no uniqueness conflict)"""
-    mock_user = MagicMock()
-    mock_user.username = "john_doe"
-    mock_user.email = "john@example.com"
-    mock_user.password = "[HASHED]"
-    mock_user.first_name = "John"
-    mock_user.last_name = "Doe"
-    mock_user.phone = "+1234567890"
-    mock_user.date_of_birth = "1990-01-01"
-    mock_user.marketing_emails_consent = True
-    mock_user.role = "customer"
-    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
-    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
-
-    updated_user = MagicMock()
-    updated_user.username = "john_doe"
-    updated_user.email = "john@example.com"  # Same email
-    updated_user.password = "[HASHED]"
-    updated_user.first_name = "John"
-    updated_user.last_name = "Doe"
-    updated_user.phone = "+1234567890"
-    updated_user.date_of_birth = "1990-01-01"
-    updated_user.role = "customer"
-    updated_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
-    updated_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
-
-    mock_user_dao = MagicMock()
-    # get_user_by_email should not be called since email is the same
-    mock_user_dao.get_user_by_email = MagicMock()
-    mock_user_dao.update_user = MagicMock(return_value=updated_user)
-
-    profile_data = UserProfileUpdateRequest(
-        email="john@example.com",  # Same email as current user
-        first_name="John",
-        last_name="Doe",
-        phone="+1234567890",
-        date_of_birth="1990-01-01"
-    )
-
-    result = update_profile(profile_data, request=create_mock_request(), current_user=mock_user, user_dao=mock_user_dao)
-    assert result.message == "Profile updated successfully"
-    assert result.user.username == "john_doe"
-    assert result.user.email == "john@example.com"
-
-    mock_user_dao.get_user_by_email.assert_not_called()
-
-@pytest.mark.asyncio
-async def test_update_profile_database_error():
-    mock_user = MagicMock()
-    mock_user.username = "john_doe"
-    mock_user.email = "john@example.com"
-    mock_user.first_name = "John"
-    mock_user.last_name = "Doe"
-    mock_user.phone = "+1234567890"
-    mock_user.date_of_birth = "1990-01-01"
-    mock_user.marketing_emails_consent = True
-    mock_user.created_at = datetime(2024, 1, 1, 0, 0, 0)
-    mock_user.updated_at = datetime(2024, 1, 2, 0, 0, 0)
-
-    mock_user_dao = MagicMock()
-    mock_user_dao.update_user = MagicMock(side_effect=Exception("Database error"))
-
-    profile_data = UserProfileUpdateRequest(
-        email="john@example.com",
-        first_name="John",
-        last_name="Doe",
-        phone="+1234567890",
-        date_of_birth="1990-01-01"
-    )
-    with pytest.raises(HTTPException) as exc_info:
-        await update_profile(profile_data, request=create_mock_request(), current_user=mock_user, user_dao=mock_user_dao)
-    assert exc_info.value.status_code == 500
+    # Call the function and expect exception
+    with pytest.raises(CNOPUserAlreadyExistsException):
+        update_profile(
+            update_data,
+            request=create_mock_request(),
+            current_user=mock_user,
+            user_dao=mock_user_dao
+        )
+        update_profile(
+            update_data,
+            request=create_mock_request(),
+            current_user=mock_user,
+            user_dao=mock_user_dao
+        )

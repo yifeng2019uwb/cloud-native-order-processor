@@ -6,10 +6,8 @@ Layer 2: Business validation (in service layer)
 Layer 1: Field validation (handled in API models)
 """
 from datetime import datetime, timezone
-from typing import Union
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from api_models.balance import WithdrawRequest, WithdrawResponse
-from api_models.shared.common import ErrorResponse
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import (
     CNOPUserNotFoundException,
@@ -41,34 +39,8 @@ router = APIRouter(tags=[ApiTags.BALANCE.value])
 
 @router.post(
     ApiPaths.WITHDRAW.value,
-    response_model=Union[WithdrawResponse, ErrorResponse],
-    status_code=status.HTTP_201_CREATED,
-    responses={
-        HTTPStatus.CREATED: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_WITHDRAW,
-            ApiResponseKeys.MODEL.value: WithdrawResponse
-        },
-        HTTPStatus.BAD_REQUEST: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_INSUFFICIENT_BALANCE,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.UNAUTHORIZED: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_UNAUTHORIZED,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.CONFLICT: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_OPERATION_BUSY,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.UNPROCESSABLE_ENTITY: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.SERVICE_UNAVAILABLE: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        }
-    }
+    response_model=WithdrawResponse,
+    status_code=status.HTTP_201_CREATED
 )
 async def withdraw_funds(
     withdraw_data: WithdrawRequest,
