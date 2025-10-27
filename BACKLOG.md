@@ -230,6 +230,10 @@
 
 ## ✅ **COMPLETED TASKS**
 
+#### **ORDER-001: Fix Order Service Unit Tests and Frontend Portfolio Issues** ✅ **COMPLETED**
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Summary**: Fixed order service unit tests (91 tests passing, 88% coverage). Fixed frontend portfolio API paths by removing trailing slashes to prevent 301 redirects. Updated portfolio types to match backend structure (market_value, percentage). Updated Dashboard and TradingPage to use portfolio API. Changed transaction type from ORDER_REFUND to ORDER_SALE for sell orders. Fixed transaction history table column mapping and ordering (newest first).
+
 #### **SEC-007: Enforce JWT Security and Eliminate Hardcoded Values** ✅ **COMPLETED**
 - **Priority**: 🔥 **HIGH PRIORITY**
 - **Summary**: Enforced JWT_SECRET_KEY as required environment variable with no unsafe defaults. Added CNOPConfigurationException for missing config. Created AccessTokenResponse Pydantic model to replace dict returns. Added security warning for weak secrets (<32 chars). Updated auth service validate controller to use constants (TokenValidationMessages, TokenErrorTypes, TokenPayloadFields, RequestDefaults). All hardcoded strings eliminated. All unit and integration tests passing.
