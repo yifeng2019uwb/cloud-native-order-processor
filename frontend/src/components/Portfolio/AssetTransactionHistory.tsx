@@ -22,28 +22,29 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
     loadTransactions();
   }, [assetId]);
 
-        const loadTransactions = async () => {
-        try {
-          setLoading(true);
-          setError(null);
-          const response = await assetTransactionApiService.getAssetTransactions(assetId);
+  const loadTransactions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await assetTransactionApiService.getAssetTransactions(assetId);
 
-          console.log('Asset transaction response:', response); // Debug log
+      console.log('Asset transaction response:', response); // Debug log
 
-          if (response.success) {
-            console.log('Transaction data:', response.data); // Debug log
-            setTransactions(response.data);
-            setHasMore(response.has_more);
-          } else {
-            setError('Failed to load transaction history');
-          }
-        } catch (err) {
-          setError('Asset transaction history is temporarily unavailable. Backend API needs to be fixed.');
-          console.error('Error loading asset transactions:', err);
-        } finally {
-          setLoading(false);
-        }
-      };
+      // Backend returns { data: [...], has_more: boolean } directly
+      if (response && response.data) {
+        console.log('Transaction data:', response.data); // Debug log
+        setTransactions(response.data);
+        setHasMore(response.has_more || false);
+      } else {
+        setError('Failed to load transaction history');
+      }
+    } catch (err) {
+      setError('Asset transaction history is temporarily unavailable. Backend API needs to be fixed.');
+      console.error('Error loading asset transactions:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -125,6 +126,9 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -139,13 +143,10 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {transactions.map((transaction, index) => {
+                {[...transactions].reverse().map((transaction, index) => {
                   const quantity = parseFloat(transaction.quantity);
                   const price = parseFloat(transaction.price);
                   const totalValue = quantity * price;
@@ -169,9 +170,9 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
                       </td>
                       <td className="px-3 py-2 text-sm text-gray-900">
                         {quantity.toFixed(6)}
-                        <div className="text-gray-500 text-xs">
-                          @${price.toFixed(2)}
-                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-900">
+                        ${price.toFixed(2)}
                       </td>
                       <td className="px-3 py-2 text-sm text-gray-900">
                         ${totalValue.toFixed(2)}

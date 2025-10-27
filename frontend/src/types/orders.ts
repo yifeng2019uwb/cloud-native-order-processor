@@ -38,12 +38,8 @@ export interface OrderListResponse {
   timestamp: string;
 }
 
-export interface OrderCreateResponse {
-  success: boolean;
-  message: string;
-  data: Order;
-  timestamp: string;
-}
+// Backend returns: { data: OrderData }
+export type OrderCreateResponse = Order;
 
 export interface OrderDetailResponse {
   success: boolean;

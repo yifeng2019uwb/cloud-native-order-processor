@@ -10,7 +10,7 @@ class TransactionType(str, Enum):
     DEPOSIT = "deposit"
     WITHDRAW = "withdraw"
     ORDER_PAYMENT = "order_payment"
-    ORDER_REFUND = "order_refund"
+    ORDER_SALE = "order_sale"  # Cash from selling assets
     SYSTEM_ADJUSTMENT = "system_adjustment"
 
 

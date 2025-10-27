@@ -1,10 +1,10 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
-import { API_URLS } from '@/constants';
+import { API_URLS, API_PATHS, buildQueryString } from '@/constants';
 import type {
+  Order,
   CreateOrderRequest,
   OrderListRequest,
   OrderListResponse,
-  OrderCreateResponse,
   OrderDetailResponse,
   OrderApiError
 } from '@/types';
@@ -83,44 +83,27 @@ class OrderApiService {
   }
 
   // Order API methods
-  async createOrder(orderData: CreateOrderRequest): Promise<OrderCreateResponse> {
-    const response = await this.api.post<OrderCreateResponse>('', orderData);
-    return response.data;
+  async createOrder(orderData: CreateOrderRequest): Promise<Order> {
+    // Backend returns { data: OrderData }
+    const response = await this.api.post(API_PATHS.ORDERS, orderData);
+    // Axios response has response.data as the JSON body
+    return response.data.data;
   }
 
   async getOrder(orderId: string): Promise<OrderDetailResponse> {
-    const response = await this.api.get<OrderDetailResponse>(`/${orderId}`);
+    const response = await this.api.get<OrderDetailResponse>(API_PATHS.ORDER_BY_ID(orderId));
     return response.data;
   }
 
   async listOrders(params?: OrderListRequest): Promise<OrderListResponse> {
-    const queryParams = new URLSearchParams();
-
-    if (params?.limit) {
-      queryParams.append('limit', params.limit.toString());
-    }
-
-    if (params?.offset) {
-      queryParams.append('offset', params.offset.toString());
-    }
-
-    if (params?.status) {
-      queryParams.append('status', params.status);
-    }
-
-    if (params?.order_type) {
-      queryParams.append('order_type', params.order_type);
-    }
-
-    if (params?.asset_id) {
-      queryParams.append('asset_id', params.asset_id);
-    }
-
-    const queryString = queryParams.toString();
-
-    // Construct the correct URL path
-    const url = queryString ? `?${queryString}` : '';
-
+    const queryString = buildQueryString({
+      limit: params?.limit?.toString(),
+      offset: params?.offset?.toString(),
+      status: params?.status,
+      order_type: params?.order_type,
+      asset_id: params?.asset_id
+    });
+    const url = `${API_PATHS.ORDERS}${queryString}`;
     const response = await this.api.get<OrderListResponse>(url);
     return response.data;
   }

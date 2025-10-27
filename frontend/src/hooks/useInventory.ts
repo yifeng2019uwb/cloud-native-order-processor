@@ -44,10 +44,10 @@ export const useInventory = (): UseInventoryReturn => {
       const response = await inventoryApiService.listAssets(params);
       setState(prev => ({
         ...prev,
-        assets: response.assets,
+        assets: response.data,  // Backend returns 'data' not 'assets'
         totalCount: response.total_count,
         activeCount: response.active_count,
-        filteredCount: response.filtered_count,
+        filteredCount: response.data.length,  // Use data length for filtered count
         loading: false,
         error: null
       }));

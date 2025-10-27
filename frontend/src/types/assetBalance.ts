@@ -50,11 +50,8 @@ export interface AssetBalanceListResponse {
   timestamp: string;
 }
 
-export interface AssetBalanceDetailResponse {
-  success: boolean;
-  asset_balance: AssetBalance;
-  timestamp: string;
-}
+// Backend returns AssetBalance directly without wrapper
+export type AssetBalanceDetailResponse = AssetBalance;
 
 export interface AssetTransactionListResponse {
   success: boolean;

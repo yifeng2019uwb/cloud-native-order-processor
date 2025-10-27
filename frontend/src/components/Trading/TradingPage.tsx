@@ -4,8 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { orderApiService } from '@/services/orderApi';
 import { balanceApiService } from '@/services/balanceApi';
 import { inventoryApiService } from '@/services/inventoryApi';
-import { assetBalanceApiService } from '@/services/assetBalanceApi';
-import type { Asset, Order, CreateOrderRequest, Balance, AssetBalance } from '@/types';
+import { portfolioApiService } from '@/services/portfolioApi';
+import type { Asset, Order, CreateOrderRequest, Balance } from '@/types';
 
 const TradingPage: React.FC = () => {
   const { user, logout } = useAuth();
@@ -13,7 +13,7 @@ const TradingPage: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
   const [balance, setBalance] = useState<Balance | null>(null);
-  const [assetBalances, setAssetBalances] = useState<AssetBalance[]>([]);
+  const [portfolio, setPortfolio] = useState<any>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [orderForm, setOrderForm] = useState({
@@ -59,28 +59,28 @@ const TradingPage: React.FC = () => {
     if (orderForm.orderType === 'market_sell') {
       // For sell orders, only show assets user owns
       const ownedAssets = assets.filter(asset =>
-        assetBalances.some(ab => ab.asset_id === asset.asset_id)
+        portfolio?.assets?.some((pa: any) => pa.asset_id === asset.asset_id)
       );
       setFilteredAssets(ownedAssets);
     } else {
       // For buy orders, show all assets
       setFilteredAssets(assets);
     }
-  }, [orderForm.orderType, assets, assetBalances]);
+  }, [orderForm.orderType, assets, portfolio]);
 
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [assetsRes, balanceRes, assetBalancesRes, ordersRes] = await Promise.all([
+      const [assetsRes, balanceRes, portfolioRes, ordersRes] = await Promise.all([
         inventoryApiService.listAssets(),
         balanceApiService.getBalance().catch(() => null),
-        assetBalanceApiService.listAssetBalances().catch(() => ({ success: false, message: '', data: [], timestamp: '' })),
+        portfolioApiService.getPortfolio(user?.username || '').catch(() => null),
         orderApiService.listOrders().catch(() => ({ success: false, message: '', data: [], has_more: false, timestamp: '' }))
       ]);
 
-      if (assetsRes.assets) {
+      if (assetsRes.data) {
         // Sort assets alphabetically by name for easier selection
-        const sortedAssets = [...assetsRes.assets].sort((a, b) =>
+        const sortedAssets = [...assetsRes.data].sort((a, b) =>
           a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
         );
         setAssets(sortedAssets);
@@ -100,8 +100,8 @@ const TradingPage: React.FC = () => {
         setBalance(balanceData);
       }
 
-      if (assetBalancesRes.success) {
-        setAssetBalances(assetBalancesRes.data);
+      if (portfolioRes) {
+        setPortfolio(portfolioRes);
       }
 
       if (ordersRes.success && ordersRes.data && Array.isArray(ordersRes.data)) {
@@ -136,8 +136,8 @@ const TradingPage: React.FC = () => {
         balanceCheck: remainingBalance >= 0
       };
     } else {
-      const assetBalance = assetBalances.find(ab => ab.asset_id === selectedAsset.asset_id);
-      const availableQuantity = parseFloat(assetBalance?.quantity || '0');
+      const assetBalance = portfolio?.assets?.find((pa: any) => pa.asset_id === selectedAsset.asset_id);
+      const availableQuantity = parseFloat(assetBalance?.quantity?.toString() || '0');
       const remainingQuantity = availableQuantity - quantity;
       return {
         asset: selectedAsset,
@@ -186,19 +186,18 @@ const TradingPage: React.FC = () => {
         order_type: orderForm.orderType
       };
 
-      const result = await orderApiService.createOrder(orderData);
+      await orderApiService.createOrder(orderData);
 
-      if (result.success) {
-        // Reset form
-        setOrderForm({ quantity: '', orderType: 'market_buy' });
-        setShowConfirmation(false);
-        setOrderPreview(null);
+      // Order created successfully (backend returns { data: Order })
+      // Reset form
+      setOrderForm({ quantity: '', orderType: 'market_buy' });
+      setShowConfirmation(false);
+      setOrderPreview(null);
 
-        // Reload data
-        await loadData();
+      // Reload data
+      await loadData();
 
-        alert(`Order ${result.data.order_id} created successfully!`);
-      }
+      alert(`Order created successfully!`);
     } catch (err: any) {
       setError(err.message || 'Failed to create order');
       console.error('Order creation error:', err);
@@ -253,7 +252,7 @@ const TradingPage: React.FC = () => {
             <div className="text-right">
               <p className="text-sm text-gray-600">Asset Holdings</p>
               <p className="text-lg font-medium">
-                {assetBalances?.length || 0} assets owned
+                {portfolio?.assets?.length || 0} assets owned
               </p>
             </div>
           </div>
@@ -299,7 +298,7 @@ const TradingPage: React.FC = () => {
                           if (searchTerm) {
                             // For sell orders, only search through assets user owns
                             const assetsToSearch = orderForm.orderType === 'market_sell' ?
-                              assets.filter(asset => assetBalances.some(ab => ab.asset_id === asset.asset_id)) :
+                              assets.filter(asset => portfolio?.assets?.some((pa: any) => pa.asset_id === asset.asset_id)) :
                               assets;
 
                             const filtered = assetsToSearch.filter(asset =>
@@ -339,7 +338,7 @@ const TradingPage: React.FC = () => {
                           } else {
                             // For sell orders, only show assets user owns
                             const assetsToShow = orderForm.orderType === 'market_sell' ?
-                              assets.filter(asset => assetBalances.some(ab => ab.asset_id === asset.asset_id)) :
+                              assets.filter(asset => portfolio?.assets?.some((pa: any) => pa.asset_id === asset.asset_id)) :
                               assets;
                             setFilteredAssets(assetsToShow);
                           }
@@ -347,7 +346,7 @@ const TradingPage: React.FC = () => {
                       />
                       <div className="text-xs text-gray-500 mt-1">
                         {filteredAssets.length} of {orderForm.orderType === 'market_sell' ?
-                          assets.filter(asset => assetBalances.some(ab => ab.asset_id === asset.asset_id)).length :
+                          assets.filter(asset => portfolio?.assets?.some((pa: any) => pa.asset_id === asset.asset_id)).length :
                           assets.length
                         } assets
                         {orderForm.orderType === 'market_sell' && (
@@ -370,7 +369,7 @@ const TradingPage: React.FC = () => {
                                 {asset.asset_id} - ${asset.price_usd?.toFixed(2)}
                                 {orderForm.orderType === 'market_sell' && (
                                   <span className="text-blue-600">
-                                    {' '}(Own: {assetBalances.find(ab => ab.asset_id === asset.asset_id)?.quantity || '0'})
+                                    {' '}(Own: {portfolio?.assets?.find((pa: any) => pa.asset_id === asset.asset_id)?.quantity || '0'})
                                   </span>
                                 )}
                               </div>
@@ -396,7 +395,7 @@ const TradingPage: React.FC = () => {
                         <option key={asset.asset_id} value={asset.asset_id}>
                           {asset.name} ({asset.asset_id}) - ${asset.price_usd?.toFixed(2)}
                           {orderForm.orderType === 'market_sell' && (
-                            ` - Own: ${assetBalances.find(ab => ab.asset_id === asset.asset_id)?.quantity || '0'}`
+                            ` - Own: ${portfolio?.assets?.find((pa: any) => pa.asset_id === asset.asset_id)?.quantity || '0'}`
                           )}
                         </option>
                       ))}
@@ -425,7 +424,7 @@ const TradingPage: React.FC = () => {
                             } else {
                               // For sell orders, only show assets user owns
                               const ownedAssets = assets.filter(asset =>
-                                assetBalances.some(ab => ab.asset_id === asset.asset_id)
+                                portfolio?.assets?.some((pa: any) => pa.asset_id === asset.asset_id)
                               );
                               setFilteredAssets(ownedAssets);
                             }
@@ -447,7 +446,7 @@ const TradingPage: React.FC = () => {
                             if (e.target.value === 'market_sell') {
                               // For sell orders, only show assets user owns
                               const ownedAssets = assets.filter(asset =>
-                                assetBalances.some(ab => ab.asset_id === asset.asset_id)
+                                portfolio?.assets?.some((pa: any) => pa.asset_id === asset.asset_id)
                               );
                               setFilteredAssets(ownedAssets);
                             } else {

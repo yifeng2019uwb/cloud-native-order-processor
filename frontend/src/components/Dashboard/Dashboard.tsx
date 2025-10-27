@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { balanceApiService } from '@/services/balanceApi';
-import { assetBalanceApiService } from '@/services/assetBalanceApi';
-import type { Balance, AssetBalance } from '@/types';
+import { portfolioApiService } from '@/services/portfolioApi';
+import type { Balance } from '@/types';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [balance, setBalance] = useState<Balance | null>(null);
-  const [assetBalances, setAssetBalances] = useState<AssetBalance[]>([]);
+  const [portfolio, setPortfolio] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const handleLogout = () => {
@@ -24,9 +24,9 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const [balanceRes, assetBalancesRes] = await Promise.all([
+      const [balanceRes, portfolioRes] = await Promise.all([
         balanceApiService.getBalance().catch(() => null),
-        assetBalanceApiService.listAssetBalances().catch(() => ({ success: false, message: '', data: [], timestamp: '' }))
+        portfolioApiService.getPortfolio(user?.username || '').catch(() => null)
       ]);
 
       if (balanceRes && typeof balanceRes.current_balance === 'string') {
@@ -38,8 +38,8 @@ const Dashboard: React.FC = () => {
         });
       }
 
-      if (assetBalancesRes && assetBalancesRes.data) {
-        setAssetBalances(assetBalancesRes.data);
+      if (portfolioRes) {
+        setPortfolio(portfolioRes);
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -49,17 +49,11 @@ const Dashboard: React.FC = () => {
   };
 
   const calculateTotalAssetValue = () => {
-    if (!assetBalances || assetBalances.length === 0) return 0;
+    if (!portfolio?.assets || portfolio.assets.length === 0) return 0;
 
-    // Calculate total using the total_value field from API response
-    return assetBalances.reduce((total, asset) => {
-      // Use total_value if available, otherwise fallback to quantity * current_price
-      if (asset.total_value !== undefined) {
-        return total + parseFloat(asset.total_value.toString());
-      } else if (asset.current_price !== undefined && asset.quantity) {
-        return total + (parseFloat(asset.quantity) * parseFloat(asset.current_price.toString()));
-      }
-      return total;
+    // Calculate total using market_value from portfolio API
+    return portfolio.assets.reduce((total: number, asset: any) => {
+      return total + parseFloat(asset.market_value?.toString() || '0');
     }, 0);
   };
 
@@ -166,7 +160,7 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="bg-gray-50 px-5 py-3">
                     <div className="text-xs text-gray-500">
-                      {assetBalances.length} asset{assetBalances.length !== 1 ? 's' : ''} held
+                      {portfolio?.assets?.length || 0} asset{(portfolio?.assets?.length || 0) !== 1 ? 's' : ''} held
                     </div>
                   </div>
                 </div>

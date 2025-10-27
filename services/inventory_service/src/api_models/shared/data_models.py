@@ -18,6 +18,8 @@ class AssetData(BaseModel):
     image: Optional[str]
     market_cap_rank: Optional[int]
     price_change_percentage_24h: Optional[float]
+    market_cap: Optional[float]
+    total_volume_24h: Optional[float]
 
 
 class AssetDetailData(BaseModel):

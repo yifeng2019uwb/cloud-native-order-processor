@@ -1,13 +1,10 @@
 // Portfolio related types
 export interface PortfolioItem {
   asset_id: string;
-  asset_name: string;
   quantity: number;
   current_price: number;
-  current_value: number;
-  cost_basis?: number;
-  unrealized_pnl?: number;
-  unrealized_pnl_percentage?: number;
+  market_value: number;
+  percentage: number;
 }
 
 export interface Portfolio {
@@ -25,10 +22,9 @@ export interface PortfolioRequest {
   include_pnl?: boolean;
 }
 
+// Backend returns assets array directly without wrapper
 export interface PortfolioResponse {
-  success: boolean;
-  portfolio: Portfolio;
-  timestamp: string;
+  assets: PortfolioItem[];
 }
 
 export interface PortfolioApiError {

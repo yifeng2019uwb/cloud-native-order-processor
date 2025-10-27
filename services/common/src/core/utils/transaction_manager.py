@@ -453,9 +453,9 @@ class TransactionManager:
                     Pk=f"{TransactionFields.PK_PREFIX}{username}",
                     username=username,
                     Sk=now_timestamp,
-                    transaction_type=TransactionType.DEPOSIT,  # Use DEPOSIT for sell order receipt
+                    transaction_type=TransactionType.ORDER_SALE,  # Cash from selling assets
                     amount=asset_amount,  # Positive for receipt
-                    description=f"Receipt for sell order {created_order.order_id}",
+                    description=f"Sale proceeds from order {created_order.order_id}",
                     status=TransactionStatus.COMPLETED,
                     reference_id=created_order.order_id
                 )

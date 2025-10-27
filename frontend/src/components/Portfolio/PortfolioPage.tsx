@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import AssetTransactionHistory from './AssetTransactionHistory';
-import { assetBalanceApiService } from '@/services/assetBalanceApi';
 import { orderApiService } from '@/services/orderApi';
-import type { AssetBalance, Order } from '@/types';
+import { portfolioApiService } from '@/services/portfolioApi';
+import type { Order } from '@/types';
 
 const PortfolioPage: React.FC = () => {
   const { user, logout } = useAuth();
-  const [assetBalances, setAssetBalances] = useState<AssetBalance[]>([]);
+  const [portfolio, setPortfolio] = useState<any>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,13 +38,25 @@ const PortfolioPage: React.FC = () => {
 
     try {
       setIsLoading(true);
-      const [assetBalancesRes, ordersRes] = await Promise.all([
-        assetBalanceApiService.listAssetBalances().catch(() => ({ success: false, message: '', data: [], timestamp: '' })),
+      setError(null);
+
+      console.log('Loading portfolio data for user:', user.username);
+
+      const [portfolioRes, ordersRes] = await Promise.all([
+        portfolioApiService.getPortfolio(user.username).catch((err) => {
+          console.error('Portfolio API error:', err);
+          return null;
+        }),
         orderApiService.listOrders().catch(() => ({ success: false, message: '', data: [], has_more: false, timestamp: '' }))
       ]);
 
-      if (assetBalancesRes.success) {
-        setAssetBalances(assetBalancesRes.data);
+      console.log('Portfolio response:', portfolioRes);
+      console.log('Orders response:', ordersRes);
+
+      if (portfolioRes) {
+        setPortfolio(portfolioRes);
+      } else {
+        setError('Failed to load portfolio data');
       }
 
       if (ordersRes.success) {
@@ -58,29 +70,13 @@ const PortfolioPage: React.FC = () => {
     }
   };
 
-  const calculatePortfolioSummary = () => {
-    if (!assetBalances || assetBalances.length === 0) {
-      return { totalValue: 0 };
-    }
+  const portfolioAssets = portfolio?.assets || [];
+  const totalValue = portfolio?.assets?.reduce((sum: number, asset: any) => {
+    return sum + (parseFloat(asset.market_value?.toString() || '0'));
+  }, 0) || 0;
 
-    // Calculate total value using the total_value field from API response
-    let totalAssetValue = 0;
-
-    assetBalances.forEach(balance => {
-      // Use total_value if available, otherwise fallback to quantity * current_price
-      if (balance.total_value !== undefined) {
-        totalAssetValue += parseFloat(balance.total_value.toString());
-      } else if (balance.current_price !== undefined && balance.quantity) {
-        totalAssetValue += parseFloat(balance.quantity) * parseFloat(balance.current_price.toString());
-      }
-    });
-
-    return {
-      totalValue: totalAssetValue
-    };
-  };
-
-  const portfolioSummary = calculatePortfolioSummary();
+  console.log('Portfolio state:', portfolio);
+  console.log('Portfolio assets:', portfolioAssets);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -122,13 +118,13 @@ const PortfolioPage: React.FC = () => {
             <div className="text-center">
               <p className="text-sm text-gray-600">Total Value</p>
               <p className="text-2xl font-bold text-blue-600">
-                ${portfolioSummary.totalValue.toFixed(2)}
+                ${totalValue.toFixed(2)}
               </p>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-600">Assets Owned</p>
               <p className="text-2xl font-bold text-gray-900">
-                {assetBalances?.length || 0}
+                {portfolioAssets?.length || 0}
               </p>
             </div>
           </div>
@@ -168,7 +164,7 @@ const PortfolioPage: React.FC = () => {
                   </p>
                 </div>
 
-                {assetBalances && assetBalances.length > 0 ? (
+                {portfolioAssets && portfolioAssets.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
@@ -176,37 +172,33 @@ const PortfolioPage: React.FC = () => {
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Asset</th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Current Price</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Value</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Updated</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Market Value</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Allocation</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {(assetBalances || []).map(assetBalance => (
+                        {(portfolioAssets || []).map((asset: any) => (
                           <tr
-                            key={assetBalance.asset_id}
+                            key={asset.asset_id}
                             className="hover:bg-gray-50 cursor-pointer transition-colors"
-                            onClick={() => handleAssetClick(assetBalance.asset_id)}
+                            onClick={() => handleAssetClick(asset.asset_id)}
                           >
                             <td className="px-3 py-2 text-sm">
                               <div>
-                                <div className="font-medium text-gray-900">{assetBalance.asset_id}</div>
-                                <div className="text-gray-500">{assetBalance.asset_name || 'Unknown'}</div>
+                                <div className="font-medium text-gray-900">{asset.asset_id}</div>
                               </div>
                             </td>
                             <td className="px-3 py-2 text-sm text-gray-900">
-                              {parseFloat(assetBalance.quantity).toFixed(6)}
+                              {parseFloat(asset.quantity.toString()).toFixed(6)}
                             </td>
                             <td className="px-3 py-2 text-sm text-gray-900">
-                              ${assetBalance.current_price ? parseFloat(assetBalance.current_price.toString()).toFixed(2) : '0.00'}
+                              ${parseFloat(asset.current_price.toString()).toFixed(2)}
                             </td>
                             <td className="px-3 py-2 text-sm text-gray-900">
-                              ${assetBalance.total_value ? parseFloat(assetBalance.total_value.toString()).toFixed(2) : '0.00'}
+                              ${parseFloat(asset.market_value.toString()).toFixed(2)}
                             </td>
                             <td className="px-3 py-2 text-sm text-gray-900">
-                              {new Date(assetBalance.updated_at).toLocaleDateString()}
-                              <div className="text-xs text-gray-500">
-                                {new Date(assetBalance.updated_at).toLocaleTimeString()}
-                              </div>
+                              {parseFloat(asset.percentage.toString()).toFixed(2)}%
                             </td>
                           </tr>
                         ))}

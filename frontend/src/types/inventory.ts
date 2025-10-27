@@ -45,31 +45,11 @@ export interface AssetListRequest {
   limit?: number;
 }
 
+// Backend returns: { data: Asset[], total_count: int, active_count: int }
 export interface AssetListResponse {
-  assets: Asset[];
+  data: Asset[];
   total_count: number;
-  filtered_count: number;
   active_count: number;
-  filters_applied: {
-    active_only?: boolean;
-    limit?: number;
-  };
-  market_summary?: {
-    total_market_cap: number;
-    total_volume_24h: number;
-    top_performer_24h: string;
-    top_performer_24h_change: number;
-    worst_performer_24h: string;
-    worst_performer_24h_change: number;
-  };
-  display_options?: {
-    default_sort: string;
-    available_sorts: string[];
-    show_rank: boolean;
-    show_icon: boolean;
-    show_market_cap: boolean;
-    show_volume: boolean;
-  };
 }
 
 export interface AssetDetailResponse {

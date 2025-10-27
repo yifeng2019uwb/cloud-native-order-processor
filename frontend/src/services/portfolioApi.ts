@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
-import { API_URLS } from '@/constants';
+import { API_URLS, API_PATHS } from '@/constants';
 import type {
   PortfolioResponse,
   PortfolioApiError
@@ -74,8 +74,11 @@ class PortfolioApiService {
   }
 
   // Portfolio API methods
-  async getPortfolio(username: string): Promise<PortfolioResponse> {
-    const response = await this.api.get<PortfolioResponse>(`/${username}`);
+  async getPortfolio(_username: string): Promise<PortfolioResponse> {
+    // Backend returns { assets: [...] } directly
+    const response = await this.api.get<PortfolioResponse>(API_PATHS.PORTFOLIO);
+    console.log('Portfolio API response:', response);
+    console.log('Portfolio API response data:', response.data);
     return response.data;
   }
 

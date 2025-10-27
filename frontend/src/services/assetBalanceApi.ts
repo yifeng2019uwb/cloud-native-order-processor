@@ -1,19 +1,29 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import { API_URLS } from '@/constants';
 import type {
-  AssetBalanceListRequest,
   AssetTransactionListRequest,
-  AssetBalanceListResponse,
   AssetTransactionListResponse,
-  AssetBalanceDetailResponse,
+  AssetBalance,
   AssetBalanceApiError
 } from '@/types';
+import { API_PATHS, buildQueryString } from '@/constants';
 
 class AssetBalanceApiService {
   private api: AxiosInstance;
+  private balanceApi: AxiosInstance;
 
   constructor() {
+    // Balance API for asset balance (user service)
     this.api = axios.create({
+      baseURL: API_URLS.BALANCE,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 10000,
+    });
+
+    // Assets API for asset transactions (order service)
+    this.balanceApi = axios.create({
       baseURL: API_URLS.ASSETS,
       headers: {
         'Content-Type': 'application/json',
@@ -25,8 +35,15 @@ class AssetBalanceApiService {
   }
 
   private setupInterceptors() {
+    // Setup for balance API
+    this.setupInterceptorForApi(this.api);
+    // Setup for assets API
+    this.setupInterceptorForApi(this.balanceApi);
+  }
+
+  private setupInterceptorForApi(api: AxiosInstance) {
     // Request interceptor - Add JWT token to requests
-    this.api.interceptors.request.use(
+    api.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('auth_token');
         if (token) {
@@ -38,7 +55,7 @@ class AssetBalanceApiService {
     );
 
     // Response interceptor - Handle errors and token expiration
-    this.api.interceptors.response.use(
+    api.interceptors.response.use(
       (response: AxiosResponse) => response,
       (error: AxiosError) => {
         if (error.response?.status === 401) {
@@ -78,48 +95,21 @@ class AssetBalanceApiService {
   }
 
   // Asset Balance API methods
-  async listAssetBalances(params?: AssetBalanceListRequest): Promise<AssetBalanceListResponse> {
-    const queryParams = new URLSearchParams();
-
-    if (params?.limit) {
-      queryParams.append('limit', params.limit.toString());
-    }
-
-    if (params?.offset) {
-      queryParams.append('offset', params.offset.toString());
-    }
-
-    if (params?.minimum_balance) {
-      queryParams.append('minimum_balance', params.minimum_balance.toString());
-    }
-
-    const url = `/balances${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await this.api.get<AssetBalanceListResponse>(url);
-    return response.data;
-  }
-
-  async getAssetBalance(assetId: string): Promise<AssetBalanceDetailResponse> {
-    const response = await this.api.get<AssetBalanceDetailResponse>(`/${assetId}/balance`);
+  async getAssetBalance(assetId: string): Promise<AssetBalance> {
+    // Backend returns AssetBalance directly without wrapper
+    const response = await this.api.get<AssetBalance>(API_PATHS.BALANCE_ASSET(assetId));
     return response.data;
   }
 
   async getAssetTransactions(assetId: string, params?: AssetTransactionListRequest): Promise<AssetTransactionListResponse> {
-    const queryParams = new URLSearchParams();
-
-    if (params?.limit) {
-      queryParams.append('limit', params.limit.toString());
-    }
-
-    if (params?.offset) {
-      queryParams.append('offset', params.offset.toString());
-    }
-
-    if (params?.transaction_type) {
-      queryParams.append('transaction_type', params.transaction_type);
-    }
-
-    const url = `/${assetId}/transactions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await this.api.get<AssetTransactionListResponse>(url);
+    const queryString = buildQueryString({
+      limit: params?.limit?.toString(),
+      offset: params?.offset?.toString(),
+      transaction_type: params?.transaction_type
+    });
+    const url = `/${assetId}/transactions${queryString}`;
+    // Use assets API (order service) for transaction history
+    const response = await this.balanceApi.get<AssetTransactionListResponse>(url);
     return response.data;
   }
 

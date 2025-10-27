@@ -90,7 +90,9 @@ def list_assets(
                 symbol=item.symbol,
                 image=item.image,
                 market_cap_rank=item.market_cap_rank,
-                price_change_percentage_24h=item.price_change_percentage_24h
+                price_change_percentage_24h=item.price_change_percentage_24h,
+                market_cap=float(item.market_cap) if item.market_cap else None,
+                total_volume_24h=float(item.total_volume_24h) if item.total_volume_24h else None
             )
             asset_data_list.append(asset_data)
 

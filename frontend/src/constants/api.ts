@@ -36,5 +36,41 @@ export const API_URLS = {
   GATEWAY_HEALTH: buildApiUrl(API_CONFIG.GATEWAY_HEALTH),
 } as const;
 
+// API Path Constants - No hardcoding allowed
+export const API_PATHS = {
+  // Inventory service
+  INVENTORY_ASSETS: '/assets',
+  INVENTORY_ASSET_BY_ID: (assetId: string) => `/assets/${assetId}`,
+
+  // Portfolio service
+  PORTFOLIO: '',
+
+  // Balance service
+  BALANCE: '/balance',
+  BALANCE_ASSET: (assetId: string) => `/balance/asset/${assetId}`,
+
+  // Order service
+  ORDERS: '',
+  ORDER_BY_ID: (orderId: string) => `/orders/${orderId}`,
+
+  // Auth service
+  AUTH_LOGIN: '/auth/login',
+  AUTH_REGISTER: '/auth/register',
+  AUTH_PROFILE: '/auth/profile',
+  AUTH_LOGOUT: '/auth/logout',
+} as const;
+
+// Helper function to build query string
+export const buildQueryString = (params: Record<string, any>): string => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      queryParams.append(key, value.toString());
+    }
+  });
+  const queryString = queryParams.toString();
+  return queryString ? `?${queryString}` : '';
+};
+
 // For production, you can override BASE_URL by setting environment variable
 // VITE_REACT_APP_API_BASE_URL=https://api.yourdomain.com

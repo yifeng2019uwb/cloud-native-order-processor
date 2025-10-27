@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
-import { API_URLS } from '@/constants';
+import { API_URLS, API_PATHS, buildQueryString } from '@/constants';
 import type {
   AssetListRequest,
   AssetListResponse,
@@ -60,24 +60,18 @@ class InventoryApiService {
 
   // Inventory API methods
   async listAssets(params?: AssetListRequest): Promise<AssetListResponse> {
-    const queryParams = new URLSearchParams();
-
-    if (params?.active_only !== undefined) {
-      queryParams.append('active_only', params.active_only.toString());
-    }
-
-    if (params?.limit) {
-      queryParams.append('limit', params.limit.toString());
-    }
-
-    const url = `/assets${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const queryString = buildQueryString({
+      active_only: params?.active_only?.toString(),
+      limit: params?.limit?.toString()
+    });
+    const url = `${API_PATHS.INVENTORY_ASSETS}${queryString}`;
     const response = await this.api.get<AssetListResponse>(url);
     return response.data;
   }
 
   async getAssetById(assetId: string): Promise<AssetDetailResponse> {
-    const response = await this.api.get<AssetDetailResponse>(`/assets/${assetId}`);
-    return response.data;
+    const response = await this.api.get<{ data: AssetDetailResponse }>(API_PATHS.INVENTORY_ASSET_BY_ID(assetId));
+    return response.data.data;  // Backend returns { data: AssetDetailData }
   }
 
   async healthCheck(): Promise<{ status: string }> {
