@@ -1,11 +1,14 @@
 # Integration Test Requirements
-# Simple dependencies for enterprise-grade testing
+# External black-box testing - no service dependencies
 
 # HTTP requests
 requests>=2.25.0
 
 # YAML configuration
 PyYAML>=6.0
+
+# Pydantic for response parsing (optional - for better assertions)
+pydantic>=2.5.0
 
 # Optional: For better JSON handling
 # No additional dependencies needed for basic functionality

@@ -2,6 +2,7 @@
 User Transaction History API Integration Tests
 Tests GET /balance/transactions endpoint - validates transaction history retrieval
 """
+import uuid
 import requests
 import sys
 import os
@@ -11,7 +12,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, UserAPI
-from test_constants import UserFields, CommonFields
+from test_constants import UserFields, TestUserValues, CommonFields
 
 class UserTransactionHistoryTests:
     """Integration tests for transaction history API - focus on data retrieval and filtering"""
@@ -27,8 +28,9 @@ class UserTransactionHistoryTests:
 
     def test_empty_transaction_history(self):
         """Test new user has empty transaction history"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.get(
             self.user_api(UserAPI.BALANCE_TRANSACTIONS),
@@ -44,8 +46,9 @@ class UserTransactionHistoryTests:
 
     def test_transaction_history_after_deposit(self):
         """Test transaction history contains deposit record"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         # Make a deposit
         deposit_data = {UserFields.AMOUNT: 500}
@@ -72,8 +75,9 @@ class UserTransactionHistoryTests:
 
     def test_transaction_history_after_withdraw(self):
         """Test transaction history contains withdrawal record"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         # Deposit first
         deposit_data = {UserFields.AMOUNT: 500}
@@ -110,8 +114,9 @@ class UserTransactionHistoryTests:
 
     def test_transaction_history_pagination(self):
         """Test transaction history with pagination parameters"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.get(
             self.user_api(UserAPI.BALANCE_TRANSACTIONS) + "?limit=10&offset=0",

@@ -5,6 +5,7 @@ Tests POST /orders endpoint - validates order creation and validation
 import requests
 import sys
 import os
+import uuid
 
 # Add parent directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
@@ -12,6 +13,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, OrderAPI, UserAPI
 from test_constants import OrderFields, TestValues, UserFields
+
+# Use plain dictionaries for integration tests to maintain black-box testing
+# No need to import service models as we test HTTP/JSON responses
 
 class CreateOrderTests:
     """Integration tests for order creation - focus on validation"""
@@ -27,8 +31,9 @@ class CreateOrderTests:
 
     def test_create_order_success(self):
         """Test successful order creation"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         # Deposit funds first
         deposit_data = {UserFields.AMOUNT: 200000}
@@ -55,10 +60,21 @@ class CreateOrderTests:
 
         assert response.status_code == 201
 
+        # Parse response as dict
+        response_data = response.json()
+
+        # Assert using dict keys
+        assert "data" in response_data
+        assert response_data["data"] is not None
+        assert OrderFields.ORDER_ID in response_data["data"]
+        assert response_data["data"][OrderFields.ASSET_ID] == TestValues.BTC_ASSET_ID
+
     def test_create_order_missing_asset_id(self):
         """Test order creation with missing asset_id is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        import uuid
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         order_data = {
             OrderFields.ORDER_TYPE: "buy",
@@ -77,8 +93,10 @@ class CreateOrderTests:
 
     def test_create_order_missing_order_type(self):
         """Test order creation with missing order_type is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        import uuid
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
@@ -97,8 +115,10 @@ class CreateOrderTests:
 
     def test_create_order_negative_quantity(self):
         """Test order creation with negative quantity is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        import uuid
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
@@ -118,8 +138,10 @@ class CreateOrderTests:
 
     def test_create_order_zero_quantity(self):
         """Test order creation with zero quantity is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        import uuid
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
@@ -139,8 +161,10 @@ class CreateOrderTests:
 
     def test_create_order_negative_price(self):
         """Test order creation with negative price is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        import uuid
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
@@ -160,8 +184,10 @@ class CreateOrderTests:
 
     def test_create_order_invalid_order_type(self):
         """Test order creation with invalid order_type is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        import uuid
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,

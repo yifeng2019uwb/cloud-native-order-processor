@@ -7,15 +7,13 @@ Only includes the single asset balance API (GET /balance/asset/{asset_id}).
 
 from datetime import datetime, UTC
 from decimal import Decimal
-from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from fastapi.responses import JSONResponse
 from common.data.entities.user import User
 from common.shared.constants.api_constants import HTTPStatus
 from common.shared.constants.api_constants import ErrorMessages
 
 from api_models.portfolio.portfolio_models import (
-    GetAssetBalanceRequest,
     GetAssetBalanceResponse
 )
 from controllers.auth.dependencies import get_current_user
@@ -40,12 +38,12 @@ router = APIRouter(tags=[ApiTags.ASSET_BALANCE.value])
 
 @router.get(ApiPaths.ASSET_BALANCE.value, response_model=GetAssetBalanceResponse)
 def get_user_asset_balance(
-    request: GetAssetBalanceRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
-    user_dao: Annotated[object, Depends(get_user_dao_dependency)],
-    balance_dao: Annotated[object, Depends(get_balance_dao_dependency)],
-    asset_balance_dao: Annotated[object, Depends(get_asset_balance_dao_dependency)],
-    asset_dao: Annotated[object, Depends(get_asset_dao_dependency)]
+    current_user: User = Depends(get_current_user),
+    user_dao = Depends(get_user_dao_dependency),
+    balance_dao = Depends(get_balance_dao_dependency),
+    asset_balance_dao = Depends(get_asset_balance_dao_dependency),
+    asset_dao = Depends(get_asset_dao_dependency),
+    asset_id: str = Path(..., description="Asset identifier", min_length=3)
 ):
     """
     Get single asset balance for authenticated user
@@ -54,7 +52,7 @@ def get_user_asset_balance(
     FastAPI runs in thread pool automatically.
 
     Args:
-        request: GetAssetBalanceRequest containing asset_id
+        asset_id: Asset identifier from path
         current_user: Authenticated user data from JWT
         user_dao: User data access object
         balance_dao: Balance data access object
@@ -69,7 +67,6 @@ def get_user_asset_balance(
     """
     try:
         username = current_user.username
-        asset_id = request.asset_id
 
         # Validate user permissions
         validate_user_permissions(username, ValidationActions.GET_ASSET_BALANCE.value, user_dao)

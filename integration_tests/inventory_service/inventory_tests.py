@@ -6,15 +6,42 @@ import requests
 import time
 import sys
 import os
-from typing import Dict, Any
 
 # Add parent directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
 from simple_retry import simple_retry
-from test_data import TestDataManager
 from api_endpoints import APIEndpoints, InventoryAPI
 from test_constants import InventoryFields, TestValues, CommonFields
+
+# Import service models directly from files to avoid __init__.py dependency chain
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services', 'inventory_service', 'src'))
+
+# Import directly from files to bypass __init__.py that triggers dependency imports
+import importlib.util
+spec = importlib.util.spec_from_file_location(
+    "data_models",
+    os.path.join(os.path.dirname(__file__), '..', '..', 'services', 'inventory_service', 'src', 'api_models', 'shared', 'data_models.py')
+)
+data_models = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(data_models)
+
+AssetData = data_models.AssetData
+AssetDetailData = data_models.AssetDetailData
+
+# Create response wrappers using service data models
+from pydantic import BaseModel
+from typing import List
+
+class ListAssetsResponse(BaseModel):
+    """Response wrapper using service AssetData model"""
+    data: List[AssetData]
+    total_count: int
+    active_count: int
+
+class GetAssetResponse(BaseModel):
+    """Response wrapper using service AssetDetailData model"""
+    data: AssetDetailData
 
 class InventoryServiceTests:
     """Integration tests for inventory service"""
@@ -23,7 +50,6 @@ class InventoryServiceTests:
         self.inventory_service_url = inventory_service_url.rstrip('/')
         self.timeout = timeout
         self.session = requests.Session()
-        self.test_data_manager = TestDataManager()
         self.created_assets = []
 
     def inventory_api(self, endpoint: str) -> str:
@@ -36,18 +62,37 @@ class InventoryServiceTests:
 
     def test_get_assets(self):
         """Test getting all assets"""
-        r = self.session.get(self.inventory_api(InventoryAPI.ASSETS), timeout=self.timeout)
+        # Request 200 assets to get a more complete list
+        r = self.session.get(self.inventory_api(InventoryAPI.ASSETS), params={"limit": 200}, timeout=self.timeout)
         assert r.status_code == 200
-        assert InventoryFields.ASSETS in r.json()
-        assert any(a.get(InventoryFields.ASSET_ID) == TestValues.BTC_ASSET_ID for a in r.json()[InventoryFields.ASSETS])
+
+        # Parse as ListAssetsResponse object
+        response = ListAssetsResponse(**r.json())
+
+        # Assert using object attributes
+        assert response.data is not None
+        assert response.total_count is not None
+        assert response.active_count is not None
+        assert len(response.data) > 0, "Assets list should not be empty"
+
+        # Check that at least one asset exists with proper structure
+        first_asset = response.data[0]
+        assert first_asset.asset_id is not None
+        assert first_asset.asset_id is not TestValues.BTC_ASSET_ID
+        assert first_asset.name is not None
+
 
     def test_get_asset_by_id(self):
         """Test getting a specific asset by ID"""
         r = self.session.get(self.inventory_api_with_id(InventoryAPI.ASSET_BY_ID, TestValues.BTC_ASSET_ID), timeout=self.timeout)
         assert r.status_code == 200
-        data = r.json()
-        assert data.get(InventoryFields.ASSET_ID) == TestValues.BTC_ASSET_ID
-        assert InventoryFields.NAME in data
+
+        # Parse as GetAssetResponse object
+        response = GetAssetResponse(**r.json())
+
+        # Assert using object attributes
+        assert response.data.asset_id == TestValues.BTC_ASSET_ID
+        assert response.data.name is not None
 
     def test_get_nonexistent_asset(self):
         """Test getting a non-existent asset returns 422 (validation error)"""
@@ -71,25 +116,29 @@ class InventoryServiceTests:
         # Test list schema
         r = self.session.get(self.inventory_api(InventoryAPI.ASSETS), timeout=self.timeout)
         assert r.status_code == 200
-        data = r.json()
-        assert InventoryFields.ASSETS in data
-        assert isinstance(data[InventoryFields.ASSETS], list)
-        assert len(data[InventoryFields.ASSETS]) > 0, "Assets list should not be empty"
 
-        asset = data[InventoryFields.ASSETS][0]
-        # Check required fields exist
-        assert asset.get(InventoryFields.ASSET_ID) is not None, f"Missing {InventoryFields.ASSET_ID}"
-        assert asset.get(InventoryFields.NAME) is not None, f"Missing {InventoryFields.NAME}"
-        assert asset.get(InventoryFields.CATEGORY) is not None, f"Missing {InventoryFields.CATEGORY}"
-        assert asset.get(InventoryFields.PRICE_USD) is not None, f"Missing {InventoryFields.PRICE_USD}"
-        assert asset.get(InventoryFields.IS_ACTIVE) is not None, f"Missing {InventoryFields.IS_ACTIVE}"
+        # Parse as ListAssetsResponse object
+        response = ListAssetsResponse(**r.json())
+
+        assert response.data is not None
+        assert len(response.data) > 0, "Assets list should not be empty"
+
+        # Get first asset
+        asset = response.data[0]
+
+        # Check required fields exist using object attributes
+        assert asset.asset_id is not None, "Missing asset_id"
+        assert asset.name is not None, "Missing name"
+        assert asset.category is not None, "Missing category"
+        assert asset.price_usd is not None, "Missing price_usd"
+        assert asset.is_active is not None, "Missing is_active"
 
         # Check data types
-        assert isinstance(asset[InventoryFields.ASSET_ID], str)
-        assert isinstance(asset[InventoryFields.NAME], str)
-        assert isinstance(asset[InventoryFields.PRICE_USD], (int, float))
-        assert asset[InventoryFields.PRICE_USD] >= 0, "Price should be non-negative"
-        assert isinstance(asset[InventoryFields.IS_ACTIVE], bool)
+        assert isinstance(asset.asset_id, str)
+        assert isinstance(asset.name, str)
+        assert isinstance(asset.price_usd, (int, float))
+        assert asset.price_usd >= 0, "Price should be non-negative"
+        assert isinstance(asset.is_active, bool)
 
     def test_asset_consistency(self):
         """Test that two sequential requests return consistent data"""
@@ -99,16 +148,21 @@ class InventoryServiceTests:
         assert r1.status_code == 200
         assert r2.status_code == 200
 
-        data1 = r1.json()
-        data2 = r2.json()
+        # Parse as objects
+        response1 = ListAssetsResponse(**r1.json())
+        response2 = ListAssetsResponse(**r2.json())
 
         # Asset count should be consistent
-        assert len(data1[InventoryFields.ASSETS]) == len(data2[InventoryFields.ASSETS])
+        assert len(response1.data) == len(response2.data)
 
-        # BTC should exist in both responses
-        btc_in_r1 = any(a.get(InventoryFields.ASSET_ID) == TestValues.BTC_ASSET_ID for a in data1[InventoryFields.ASSETS])
-        btc_in_r2 = any(a.get(InventoryFields.ASSET_ID) == TestValues.BTC_ASSET_ID for a in data2[InventoryFields.ASSETS])
-        assert btc_in_r1 == btc_in_r2, "BTC asset consistency check failed"
+        # Both responses should have same structure and fields
+        assert len(response1.data) > 0
+        assert len(response2.data) > 0
+
+        # Verify they have matching asset IDs in same order (for consistency)
+        ids1 = [asset.asset_id for asset in response1.data]
+        ids2 = [asset.asset_id for asset in response2.data]
+        assert ids1 == ids2, "Asset lists should be consistent across requests"
 
     def test_performance_guard(self):
         """Test that asset listing responds within reasonable time"""

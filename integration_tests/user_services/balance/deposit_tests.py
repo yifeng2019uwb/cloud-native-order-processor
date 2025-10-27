@@ -2,6 +2,7 @@
 User Deposit API Integration Tests
 Tests POST /balance/deposit endpoint - validates deposit business logic
 """
+import uuid
 import requests
 import sys
 import os
@@ -11,7 +12,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, UserAPI
-from test_constants import UserFields
+from test_constants import UserFields, TestUserValues
 
 class UserDepositTests:
     """Integration tests for user deposit API - focus on validation and business logic"""
@@ -27,8 +28,9 @@ class UserDepositTests:
 
     def test_deposit_success(self):
         """Test successful deposit"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
         deposit_data = {UserFields.AMOUNT: 100.00}
 
         response = self.session.post(
@@ -42,8 +44,9 @@ class UserDepositTests:
 
     def test_deposit_negative_amount(self):
         """Test deposit with negative amount is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.post(
             self.user_api(UserAPI.BALANCE_DEPOSIT),
@@ -55,8 +58,9 @@ class UserDepositTests:
 
     def test_deposit_zero_amount(self):
         """Test deposit with zero amount is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.post(
             self.user_api(UserAPI.BALANCE_DEPOSIT),
@@ -68,8 +72,9 @@ class UserDepositTests:
 
     def test_deposit_missing_amount(self):
         """Test deposit with missing amount field is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.post(
             self.user_api(UserAPI.BALANCE_DEPOSIT),
@@ -81,8 +86,9 @@ class UserDepositTests:
 
     def test_deposit_exceeds_max_amount(self):
         """Test deposit exceeding max amount limit is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.post(
             self.user_api(UserAPI.BALANCE_DEPOSIT),

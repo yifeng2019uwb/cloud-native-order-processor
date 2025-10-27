@@ -31,7 +31,7 @@ from controllers.dependencies import (
     get_asset_dao_dependency, get_user_dao_dependency
 )
 from common.auth.gateway.header_validator import get_request_id_from_request
-from src.validation.business_validators import validate_order_history_business_rules
+from validation.business_validators import validate_order_history_business_rules
 
 # Initialize our standardized logger
 logger = BaseLogger(LoggerName.ORDER)

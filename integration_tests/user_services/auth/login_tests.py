@@ -12,7 +12,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, UserAPI
-from test_constants import UserFields
+from test_constants import UserFields, TestUserValues
 
 class UserLoginTests:
     """Integration tests for user login API with comprehensive validation"""
@@ -28,11 +28,12 @@ class UserLoginTests:
 
     def test_login_success(self):
         """Test successful user login"""
-        user, token = self.user_manager.create_test_user(self.session)
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
 
         login_data = {
-            UserFields.USERNAME: user[UserFields.USERNAME],
-            UserFields.PASSWORD: user[UserFields.PASSWORD]
+            UserFields.USERNAME: username,
+            UserFields.PASSWORD: TestUserValues.DEFAULT_PASSWORD
         }
 
         response = self.session.post(
@@ -50,11 +51,12 @@ class UserLoginTests:
 
     def test_login_case_insensitive_username(self):
         """Test login with different case username"""
-        user, token = self.user_manager.create_test_user(self.session)
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
 
         login_data = {
-            UserFields.USERNAME: user[UserFields.USERNAME].upper(),
-            UserFields.PASSWORD: user[UserFields.PASSWORD]
+            UserFields.USERNAME: username.upper(),
+            UserFields.PASSWORD: TestUserValues.DEFAULT_PASSWORD
         }
 
         response = self.session.post(
@@ -142,10 +144,11 @@ class UserLoginTests:
 
     def test_login_wrong_password(self):
         """Test login with wrong password"""
-        user, token = self.user_manager.create_test_user(self.session)
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
 
         login_data = {
-            UserFields.USERNAME: user[UserFields.USERNAME],
+            UserFields.USERNAME: username,
             UserFields.PASSWORD: 'WrongPassword123!'
         }
 

@@ -2,6 +2,7 @@
 User Withdraw API Integration Tests
 Tests POST /balance/withdraw endpoint - validates withdrawal business logic
 """
+import uuid
 import requests
 import sys
 import os
@@ -11,7 +12,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, UserAPI
-from test_constants import UserFields
+from test_constants import UserFields, TestUserValues
 
 class UserWithdrawTests:
     """Integration tests for user withdraw API - focus on validation and business logic"""
@@ -27,8 +28,9 @@ class UserWithdrawTests:
 
     def test_withdraw_success(self):
         """Test successful withdrawal"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         # Deposit first to have funds
         deposit_data = {UserFields.AMOUNT: 1000}
@@ -52,8 +54,9 @@ class UserWithdrawTests:
 
     def test_withdraw_negative_amount(self):
         """Test withdrawal with negative amount is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.post(
             self.user_api(UserAPI.BALANCE_WITHDRAW),
@@ -65,8 +68,9 @@ class UserWithdrawTests:
 
     def test_withdraw_zero_amount(self):
         """Test withdrawal with zero amount is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.post(
             self.user_api(UserAPI.BALANCE_WITHDRAW),
@@ -78,8 +82,9 @@ class UserWithdrawTests:
 
     def test_withdraw_insufficient_funds(self):
         """Test withdrawal with insufficient funds is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         # Try to withdraw without any deposits
         withdraw_data = {UserFields.AMOUNT: 100}
@@ -93,8 +98,9 @@ class UserWithdrawTests:
 
     def test_withdraw_more_than_balance(self):
         """Test withdrawal exceeding balance is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         # Deposit 100
         deposit_data = {UserFields.AMOUNT: 100}
@@ -118,8 +124,9 @@ class UserWithdrawTests:
 
     def test_withdraw_missing_amount(self):
         """Test withdrawal with missing amount field is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.post(
             self.user_api(UserAPI.BALANCE_WITHDRAW),

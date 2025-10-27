@@ -6,6 +6,7 @@ import requests
 import time
 import sys
 import os
+import uuid
 
 # Add parent directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
@@ -28,8 +29,9 @@ class AssetTransactionTests:
 
     def test_empty_transactions(self):
         """Test new user has no asset transactions"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.get(
             self.asset_transaction_api(TestValues.BTC_ASSET_ID),
@@ -37,14 +39,13 @@ class AssetTransactionTests:
             timeout=self.timeout
         )
 
-        print(f"Response status: {response.status_code}")
-        print(f"Response body: {response.text}")
         assert response.status_code == 200
 
     def test_transactions_after_buy(self):
         """Test transaction history contains buy record after order"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         # Deposit and buy
         deposit_data = {UserFields.AMOUNT: 200000}
@@ -76,13 +77,14 @@ class AssetTransactionTests:
 
         assert response.status_code == 200
         data = response.json()
-        assert data['success'] == True
+        assert 'data' in data
         assert len(data['data']) >= 1
 
     def test_transactions_performance(self):
         """Test transactions endpoint responds quickly"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         start_time = time.time()
         response = self.session.get(

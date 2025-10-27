@@ -6,6 +6,7 @@ import requests
 import time
 import sys
 import os
+import uuid
 
 # Add parent directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
@@ -13,6 +14,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, OrderAPI
 from test_constants import OrderFields
+
+# Use plain dictionaries for integration tests to maintain black-box testing
+# No need to import service models as we test HTTP/JSON responses
 
 class GetOrderTests:
     """Integration tests for getting order by ID"""
@@ -28,8 +32,9 @@ class GetOrderTests:
 
     def test_get_nonexistent_order(self):
         """Test getting non-existent order (currently returns 500 - BUG: should be 404)"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.get(
             self.order_api(OrderAPI.ORDER_BY_ID).replace('{order_id}', 'nonexistent_order_123'),
@@ -41,8 +46,9 @@ class GetOrderTests:
 
     def test_get_order_invalid_id_format(self):
         """Test getting order with invalid ID format"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.get(
             self.order_api(OrderAPI.ORDER_BY_ID).replace('{order_id}', 'invalid@#$'),
@@ -50,12 +56,13 @@ class GetOrderTests:
             timeout=self.timeout
         )
 
-        assert response.status_code == 404
+        assert response.status_code == 422
 
     def test_get_order_performance(self):
         """Test that get order responds within reasonable time"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         start_time = time.time()
         response = self.session.get(

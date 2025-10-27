@@ -57,6 +57,13 @@ def list_assets(
         # Get assets from database
         all_assets = asset_dao.get_all_assets(active_only=filter_params.active_only)
 
+        # Sort by market cap rank (lower rank = higher position, None values go to end)
+        def sort_key(asset):
+            rank = asset.market_cap_rank
+            return (rank is None, rank or float('inf'))
+
+        all_assets.sort(key=sort_key)
+
         # Apply limit if specified
         if filter_params.limit:
             assets = all_assets[:filter_params.limit]

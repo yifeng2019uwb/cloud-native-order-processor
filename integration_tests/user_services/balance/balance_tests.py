@@ -2,6 +2,7 @@
 User Balance API Integration Tests
 Tests GET /balance endpoint - validates balance calculation after deposits and withdrawals
 """
+import uuid
 import requests
 import sys
 import os
@@ -11,7 +12,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, UserAPI
-from test_constants import UserFields, CommonFields
+from test_constants import UserFields, TestUserValues, CommonFields
 
 class UserBalanceTests:
     """Integration tests for user balance API - focus on balance calculation correctness"""
@@ -27,9 +28,11 @@ class UserBalanceTests:
 
     def test_initial_balance_is_zero(self):
         """Test new user has zero balance"""
-        user, token = self.user_manager.create_test_user(self.session)
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
-        headers = {'Authorization': f'Bearer {token}'}
+
         response = self.session.get(
             self.user_api(UserAPI.BALANCE),
             headers=headers,
@@ -43,8 +46,9 @@ class UserBalanceTests:
 
     def test_balance_after_deposit(self):
         """Test balance correctly reflects deposit"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         # Deposit 1000
         deposit_data = {UserFields.AMOUNT: 1000}
@@ -69,8 +73,9 @@ class UserBalanceTests:
 
     def test_balance_after_multiple_deposits(self):
         """Test balance correctly accumulates multiple deposits"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         # Deposit 500, then 300
         for amount in [500, 300]:
@@ -96,8 +101,9 @@ class UserBalanceTests:
 
     def test_balance_after_deposit_and_withdrawal(self):
         """Test balance correctly reflects both deposits and withdrawals"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         # Deposit 1000
         deposit_data = {UserFields.AMOUNT: 1000}
@@ -132,8 +138,9 @@ class UserBalanceTests:
 
     def test_balance_response_schema(self):
         """Test balance response has correct schema"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.get(
             self.user_api(UserAPI.BALANCE),

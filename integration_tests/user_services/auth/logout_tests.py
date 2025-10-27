@@ -5,13 +5,14 @@ Tests POST /auth/logout endpoint - validates logout functionality
 import requests
 import sys
 import os
+import uuid
 
 # Add parent directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, UserAPI
-from test_constants import UserFields
+from test_constants import UserFields, TestUserValues
 
 class UserLogoutTests:
     """Integration tests for user logout API"""
@@ -27,8 +28,9 @@ class UserLogoutTests:
 
     def test_logout_success(self):
         """Test successful user logout"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         logout_data = {
             UserFields.ACCESS_TOKEN: token
@@ -48,8 +50,9 @@ class UserLogoutTests:
 
     def test_logout_missing_body(self):
         """Test logout with missing request body is rejected"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         response = self.session.post(
             self.user_api(UserAPI.LOGOUT),

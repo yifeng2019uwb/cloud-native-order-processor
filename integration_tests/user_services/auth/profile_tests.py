@@ -13,7 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, UserAPI
-from test_constants import UserFields
+from test_constants import UserFields, TestUserValues
 
 class UserProfileTests:
     """Integration tests for user profile API - focus on profile validation"""
@@ -29,8 +29,10 @@ class UserProfileTests:
 
     def test_get_profile_success(self):
         """Test getting user profile"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
+
 
         response = self.session.get(
             self.user_api(UserAPI.PROFILE),
@@ -41,7 +43,7 @@ class UserProfileTests:
         assert response.status_code == 200
         data = response.json()
         assert UserFields.USERNAME in data
-        assert data[UserFields.USERNAME] == user[UserFields.USERNAME]
+        assert data[UserFields.USERNAME] == username
         assert UserFields.EMAIL in data
         assert UserFields.FIRST_NAME in data
         assert UserFields.LAST_NAME in data
@@ -50,8 +52,9 @@ class UserProfileTests:
 
     def test_profile_update_success(self):
         """Test successful profile update with all fields"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         new_email = f'updated_{uuid.uuid4().hex[:8]}@example.com'
         update_data = {
@@ -86,8 +89,10 @@ class UserProfileTests:
 
     def test_profile_update_partial(self):
         """Test profile update with only first name"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
+
 
         update_data = {
             UserFields.FIRST_NAME: 'Partial'
@@ -115,8 +120,9 @@ class UserProfileTests:
 
     def test_profile_update_empty_first_name(self):
         """Test profile update with empty first name"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         update_data = {
             UserFields.FIRST_NAME: ''
@@ -133,8 +139,9 @@ class UserProfileTests:
 
     def test_profile_update_whitespace_first_name(self):
         """Test profile update with whitespace-only first name"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         update_data = {
             UserFields.FIRST_NAME: '   '
@@ -151,8 +158,9 @@ class UserProfileTests:
 
     def test_profile_update_first_name_too_long(self):
         """Test profile update with first name too long"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         update_data = {
             UserFields.FIRST_NAME: 'A' * 51
@@ -169,8 +177,9 @@ class UserProfileTests:
 
     def test_profile_update_first_name_invalid_chars(self):
         """Test profile update with first name containing invalid characters"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         update_data = {
             UserFields.FIRST_NAME: 'John@123'
@@ -187,8 +196,9 @@ class UserProfileTests:
 
     def test_profile_update_last_name_too_long(self):
         """Test profile update with last name too long"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         update_data = {
             UserFields.LAST_NAME: 'B' * 51
@@ -205,8 +215,9 @@ class UserProfileTests:
 
     def test_profile_update_email_invalid_format(self):
         """Test profile update with invalid email format"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         update_data = {
             UserFields.EMAIL: 'invalid-email'
@@ -223,8 +234,9 @@ class UserProfileTests:
 
     def test_profile_update_phone_too_short(self):
         """Test profile update with phone number too short"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         update_data = {
             UserFields.PHONE: '123456789'
@@ -241,8 +253,9 @@ class UserProfileTests:
 
     def test_profile_update_phone_too_long(self):
         """Test profile update with phone number too long"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         update_data = {
             UserFields.PHONE: '1234567890123456'
@@ -259,8 +272,9 @@ class UserProfileTests:
 
     def test_profile_update_dob_future_date(self):
         """Test profile update with future date of birth"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         future_date = (datetime.now() + timedelta(days=365)).strftime('%Y-%m-%d')
 
@@ -279,8 +293,9 @@ class UserProfileTests:
 
     def test_profile_update_dob_invalid_format(self):
         """Test profile update with invalid date of birth format"""
-        user, token = self.user_manager.create_test_user(self.session)
-        headers = {'Authorization': f'Bearer {token}'}
+        username = f'testuser_{uuid.uuid4().hex[:8]}'
+        token = self.user_manager.create_test_user(self.session, username)
+        headers = self.user_manager.build_auth_headers(token)
 
         update_data = {
             UserFields.DATE_OF_BIRTH: '1990/01/01'

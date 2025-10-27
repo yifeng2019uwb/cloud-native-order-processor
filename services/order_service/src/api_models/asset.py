@@ -14,7 +14,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 # Import centralized field validation functions
-from src.validation.field_validators import (
+from validation.field_validators import (
     validate_asset_id, validate_quantity, validate_price
 )
 

@@ -111,3 +111,54 @@ class TestValues:
     TEST_ORDER_ID = "test_order_123"
     TEST_USERNAME = "testuser"
     TEST_PASSWORD = "testpass"
+
+class ResponseFields:
+    """Response wrapper fields"""
+    DATA = "data"
+    HAS_MORE = "has_more"
+    TOTAL_COUNT = "total_count"
+    ACTIVE_COUNT = "active_count"
+    SUCCESS = "success"
+    MESSAGE = "message"
+    ERROR = "error"
+    DETAIL = "detail"
+    CODE = "code"
+
+class AuthFields:
+    """Authentication related fields"""
+    USERNAME = "username"
+    PASSWORD = "password"
+    EMAIL = "email"
+    FIRST_NAME = "first_name"
+    LAST_NAME = "last_name"
+    PHONE = "phone"
+    ROLE = "role"
+    ACCESS_TOKEN = "access_token"
+    REFRESH_TOKEN = "refresh_token"
+    TOKEN_TYPE = "token_type"
+    EXPIRES_IN = "expires_in"
+
+class TestUserValues:
+    """Test user constant values"""
+    DEFAULT_PASSWORD = "TestPassword123!"
+    DEFAULT_FIRST_NAME = "Integration"
+    DEFAULT_LAST_NAME = "Test"
+    DEFAULT_EMAIL_DOMAIN = "@example.com"
+    DEFAULT_USERNAME_PREFIX = "testuser_"
+
+class BalanceFields:
+    """Balance related fields"""
+    BALANCE = "balance"
+    CURRENT_BALANCE = "current_balance"
+    AVAILABLE_BALANCE = "available_balance"
+    AMOUNT = "amount"
+    CURRENCY = "currency"
+    DEPOSIT = "deposit"
+    WITHDRAW = "withdraw"
+
+class PortfolioFields:
+    """Portfolio related fields"""
+    TOTAL_VALUE = "total_value"
+    ASSET_BALANCES = "asset_balances"
+    HOLDINGS = "holdings"
+    CASH_BALANCE = "cash_balance"

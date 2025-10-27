@@ -17,6 +17,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
 from api_endpoints import APIEndpoints, UserAPI, OrderAPI, InventoryAPI
 
+TEXT_HTTP_GET = 'GET'
+TEXT_HTTP_POST = 'POST'
+
 class GatewayAuthTests:
     """Test that protected endpoints require authentication (return 401 without auth)"""
 
@@ -27,18 +30,18 @@ class GatewayAuthTests:
     def test_user_service_no_token(self):
         """Test user service endpoints reject requests without token"""
         endpoints = [
-            (APIEndpoints.get_user_endpoint(UserAPI.PROFILE), 'GET'),
-            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE), 'GET'),
-            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_TRANSACTIONS), 'GET'),
-            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_DEPOSIT), 'POST'),
-            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_WITHDRAW), 'POST'),
-            (APIEndpoints.get_user_endpoint(UserAPI.LOGOUT), 'POST'),
-            (APIEndpoints.get_user_endpoint(UserAPI.PORTFOLIO), 'GET'),
-            (APIEndpoints.get_user_endpoint(UserAPI.GET_ASSET_BALANCE_BY_ID).replace('{asset_id}', 'BTC'), 'GET'),
+            (APIEndpoints.get_user_endpoint(UserAPI.PROFILE), TEXT_HTTP_GET),
+            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE), TEXT_HTTP_GET),
+            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_TRANSACTIONS), TEXT_HTTP_GET),
+            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_DEPOSIT), TEXT_HTTP_POST),
+            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_WITHDRAW), TEXT_HTTP_POST),
+            (APIEndpoints.get_user_endpoint(UserAPI.LOGOUT), TEXT_HTTP_POST),
+            (APIEndpoints.get_user_endpoint(UserAPI.PORTFOLIO), TEXT_HTTP_GET),
+            (APIEndpoints.get_user_endpoint(UserAPI.GET_ASSET_BALANCE_BY_ID).replace('{asset_id}', 'BTC'), TEXT_HTTP_GET),
         ]
 
         for endpoint, method in endpoints:
-            if method == 'GET':
+            if method == TEXT_HTTP_GET:
                 response = self.session.get(endpoint, timeout=self.timeout)
             else:
                 response = self.session.post(endpoint, json={}, timeout=self.timeout)
@@ -48,18 +51,18 @@ class GatewayAuthTests:
         """Test user service endpoints reject requests with invalid token"""
         headers = {'Authorization': 'Bearer invalid_token_12345'}
         endpoints = [
-            (APIEndpoints.get_user_endpoint(UserAPI.PROFILE), 'GET'),
-            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE), 'GET'),
-            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_TRANSACTIONS), 'GET'),
-            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_DEPOSIT), 'POST'),
-            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_WITHDRAW), 'POST'),
-            (APIEndpoints.get_user_endpoint(UserAPI.LOGOUT), 'POST'),
-            (APIEndpoints.get_user_endpoint(UserAPI.PORTFOLIO), 'GET'),
-            (APIEndpoints.get_user_endpoint(UserAPI.GET_ASSET_BALANCE_BY_ID).replace('{asset_id}', 'BTC'), 'GET'),
+            (APIEndpoints.get_user_endpoint(UserAPI.PROFILE), TEXT_HTTP_GET),
+            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE), TEXT_HTTP_GET),
+            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_TRANSACTIONS), TEXT_HTTP_GET),
+            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_DEPOSIT), TEXT_HTTP_POST),
+            (APIEndpoints.get_user_endpoint(UserAPI.BALANCE_WITHDRAW), TEXT_HTTP_POST),
+            (APIEndpoints.get_user_endpoint(UserAPI.LOGOUT), TEXT_HTTP_POST),
+            (APIEndpoints.get_user_endpoint(UserAPI.PORTFOLIO), TEXT_HTTP_GET),
+            (APIEndpoints.get_user_endpoint(UserAPI.GET_ASSET_BALANCE_BY_ID).replace('{asset_id}', 'BTC'), TEXT_HTTP_GET),
         ]
 
         for endpoint, method in endpoints:
-            if method == 'GET':
+            if method == TEXT_HTTP_GET:
                 response = self.session.get(endpoint, headers=headers, timeout=self.timeout)
             else:
                 response = self.session.post(endpoint, json={}, headers=headers, timeout=self.timeout)
@@ -68,14 +71,14 @@ class GatewayAuthTests:
     def test_order_service_no_token(self):
         """Test order service endpoints reject requests without token"""
         endpoints = [
-            (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), 'GET'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), 'POST'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.ORDER_BY_ID).replace('{id}', '123'), 'GET'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.GET_ASSET_TRANSACTIONS_BY_ID).replace('{asset_id}', 'BTC'), 'GET'),
+            (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), TEXT_HTTP_GET),
+            (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), TEXT_HTTP_POST),
+            (APIEndpoints.get_order_endpoint(OrderAPI.ORDER_BY_ID).replace('{id}', '123'), TEXT_HTTP_GET),
+            (APIEndpoints.get_order_endpoint(OrderAPI.GET_ASSET_TRANSACTIONS_BY_ID).replace('{asset_id}', 'BTC'), TEXT_HTTP_GET),
         ]
 
         for endpoint, method in endpoints:
-            if method == 'GET':
+            if method == TEXT_HTTP_GET:
                 response = self.session.get(endpoint, timeout=self.timeout)
             else:
                 response = self.session.post(endpoint, json={}, timeout=self.timeout)
@@ -85,14 +88,14 @@ class GatewayAuthTests:
         """Test order service endpoints reject requests with invalid token"""
         headers = {'Authorization': 'Bearer invalid_token_12345'}
         endpoints = [
-            (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), 'GET'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), 'POST'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.ORDER_BY_ID).replace('{id}', '123'), 'GET'),
-            (APIEndpoints.get_order_endpoint(OrderAPI.GET_ASSET_TRANSACTIONS_BY_ID).replace('{asset_id}', 'BTC'), 'GET'),
+            (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), TEXT_HTTP_GET),
+            (APIEndpoints.get_order_endpoint(OrderAPI.ORDERS), TEXT_HTTP_POST),
+            (APIEndpoints.get_order_endpoint(OrderAPI.ORDER_BY_ID).replace('{id}', '123'), TEXT_HTTP_GET),
+            (APIEndpoints.get_order_endpoint(OrderAPI.GET_ASSET_TRANSACTIONS_BY_ID).replace('{asset_id}', 'BTC'), TEXT_HTTP_GET),
         ]
 
         for endpoint, method in endpoints:
-            if method == 'GET':
+            if method == TEXT_HTTP_GET:
                 response = self.session.get(endpoint, headers=headers, timeout=self.timeout)
             else:
                 response = self.session.post(endpoint, json={}, headers=headers, timeout=self.timeout)
@@ -116,8 +119,8 @@ class GatewayAuthTests:
     def test_public_endpoints_accessible(self):
         """Test public endpoints are accessible without auth"""
         endpoints = [
-            (APIEndpoints.get_user_endpoint(UserAPI.LOGIN), 'POST'),
-            (APIEndpoints.get_user_endpoint(UserAPI.REGISTER), 'POST'),
+            (APIEndpoints.get_user_endpoint(UserAPI.LOGIN), TEXT_HTTP_POST),
+            (APIEndpoints.get_user_endpoint(UserAPI.REGISTER), TEXT_HTTP_POST),
         ]
 
         for endpoint, method in endpoints:

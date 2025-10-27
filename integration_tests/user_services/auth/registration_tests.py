@@ -12,9 +12,8 @@ import json
 # Add parent directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
-from test_data import TestDataManager
 from api_endpoints import APIEndpoints, UserAPI
-from test_constants import UserFields, TestValues, CommonFields
+from test_constants import UserFields
 
 class UserRegistrationTests:
     """Integration tests for user registration API with comprehensive validation"""
@@ -22,7 +21,6 @@ class UserRegistrationTests:
     def __init__(self, timeout: int = 10):
         self.timeout = timeout
         self.session = requests.Session()
-        self.test_data_manager = TestDataManager()
 
     def user_api(self, api: UserAPI) -> str:
         """Helper method to get complete user service API URLs"""
@@ -98,7 +96,7 @@ class UserRegistrationTests:
 
         # Try to register again with same email
         duplicate_user = test_user.copy()
-        duplicate_user[UserFields.USERNAME] = f'duplicate_{uuid.uuid4().hex[:8]}'
+        duplicate_username = f'duplicate_{uuid.uuid4().hex[:8]}'
 
         response = self.session.post(
             self.user_api(UserAPI.REGISTER),
