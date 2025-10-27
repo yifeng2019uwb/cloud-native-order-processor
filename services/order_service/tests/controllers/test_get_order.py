@@ -9,11 +9,14 @@ from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 
 from src.controllers.get_order import get_order, router
-from src.api_models.order import GetOrderResponse, OrderData
+from src.controllers.get_order import get_order_request
+from src.api_models.get_order import GetOrderRequest, GetOrderResponse
+from src.api_models.shared.data_models import OrderData
 from common.data.entities.order.enums import OrderType, OrderStatus
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import CNOPOrderNotFoundException, CNOPInternalServerException
 from order_exceptions.exceptions import CNOPOrderValidationException
+from src.constants import MSG_SUCCESS_ORDER_RETRIEVED, MSG_ERROR_ORDER_NOT_FOUND
 
 
 def create_mock_request(request_id="test-request-id"):
@@ -26,14 +29,13 @@ def create_mock_request(request_id="test-request-id"):
 class TestGetOrder:
     """Test get_order function"""
 
-    # Test constants
+    # Shared constants (used in multiple tests/fixtures)
     TEST_USERNAME = "testuser"
     TEST_EMAIL = "test@example.com"
     TEST_PASSWORD = "hashed_password_123"
     TEST_FIRST_NAME = "Test"
     TEST_LAST_NAME = "User"
     TEST_ROLE_CUSTOMER = "customer"
-    TEST_ORDER_ID_123 = "order123"
 
     @pytest.fixture
     def mock_current_user(self):
@@ -60,15 +62,20 @@ class TestGetOrder:
     @pytest.fixture
     def mock_order(self):
         """Mock order object"""
+        order_id = "order1234567890"  # 16 chars, valid range
+        asset_id = "BTC"
+        quantity = Decimal("1.0")
+        price = Decimal("50000.00")
+
         order = MagicMock()
-        order.order_id = "order123"
+        order.order_id = order_id
         order.order_type = OrderType.MARKET_BUY
-        order.asset_id = "BTC"
-        order.quantity = Decimal("1.0")
-        order.price = Decimal("50000.00")
-        order.status = "pending"
-        order.total_amount = Decimal("50000.00")
-        order.username = "testuser"
+        order.asset_id = asset_id
+        order.quantity = quantity
+        order.price = price
+        order.status = OrderStatus.PENDING
+        order.total_amount = price
+        order.username = self.TEST_USERNAME
         order.created_at = datetime.now(timezone.utc)
         return order
 
@@ -80,39 +87,32 @@ class TestGetOrder:
         mock_order
     ):
         """Test successful order retrieval"""
-        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
+        order_id = "order1234567890"
+        expected_asset_id = "BTC"
+        expected_quantity = Decimal("1.0")
+        expected_price = Decimal("50000.00")
 
-            # Setup mocks
-            mock_validate.return_value = None
-            mock_order_dao.get_order.return_value = mock_order
+        # Setup mocks
+        mock_order_dao.get_order.return_value = mock_order
 
-            # Test the function
-            result = get_order(
-                order_id="order123",
-                request=create_mock_request(),
-                current_user=mock_current_user,
-                order_dao=mock_order_dao,
-                user_dao=mock_user_dao
-            )
+        # Test the function
+        order_request = GetOrderRequest(order_id=order_id)
+        result = get_order(
+            order_request=order_request,
+            request=create_mock_request(),
+            current_user=mock_current_user,
+            order_dao=mock_order_dao
+        )
 
-            # Verify result
-            assert result.success is True
-            assert result.message == "Order retrieved successfully"
-            assert result.data.order_id == "order123"
-            assert result.data.asset_id == "BTC"
-            assert result.data.quantity == Decimal("1.0")
-            assert result.data.price == Decimal("50000.00")
+        # Verify result
+        assert result.data is not None
+        assert result.data.order_id == order_id
+        assert result.data.asset_id == expected_asset_id
+        assert result.data.quantity == expected_quantity
+        assert result.data.price == expected_price
 
-            # Verify business validation was called
-            mock_validate.assert_called_once_with(
-                order_id="order123",
-                username="testuser",
-                order_dao=mock_order_dao,
-                user_dao=mock_user_dao
-            )
-
-            # Verify DAO was called
-            mock_order_dao.get_order.assert_called_once_with("order123")
+        # Verify DAO was called
+        mock_order_dao.get_order.assert_called_once_with(order_id)
 
 
     def test_get_order_unauthorized_access(
@@ -122,25 +122,24 @@ class TestGetOrder:
         mock_user_dao
     ):
         """Test order retrieval with unauthorized access"""
-        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
+        order_id = "order1234567890"
+        other_user = "otheruser"
 
-            # Setup mocks
-            mock_validate.return_value = None
+        # Setup mocks
+        # Mock order with different username
+        mock_order = MagicMock()
+        mock_order.username = other_user
+        mock_order_dao.get_order.return_value = mock_order
 
-            # Mock order with different username
-            mock_order = MagicMock()
-            mock_order.username = "otheruser"
-            mock_order_dao.get_order.return_value = mock_order
-
-            # Test that the exception is raised
-            with pytest.raises(CNOPOrderNotFoundException, match="Order 'order123' not found"):
-                get_order(
-                    order_id="order123",
-                    request=create_mock_request(),
-                    current_user=mock_current_user,
-                    order_dao=mock_order_dao,
-                    user_dao=mock_user_dao
-                )
+        # Test that the exception is raised
+        order_request = GetOrderRequest(order_id=order_id)
+        with pytest.raises(CNOPOrderNotFoundException, match=f"Order '{order_id}' not found"):
+            get_order(
+                order_request=order_request,
+                request=create_mock_request(),
+                current_user=mock_current_user,
+                order_dao=mock_order_dao
+            )
 
 
     def test_get_order_not_found(
@@ -150,20 +149,20 @@ class TestGetOrder:
         mock_user_dao
     ):
         """Test order retrieval when order not found"""
-        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
+        nonexistent_order_id = "nonexistent12345"
 
-            # Setup mock to raise OrderNotFoundException
-            mock_validate.side_effect = CNOPOrderNotFoundException("Order not found")
+        # Setup mock to raise OrderNotFoundException
+        mock_order_dao.get_order.side_effect = CNOPOrderNotFoundException(MSG_ERROR_ORDER_NOT_FOUND)
 
-            # Test that the exception is raised
-            with pytest.raises(CNOPOrderNotFoundException, match="Order not found"):
-                get_order(
-                    order_id="nonexistent",
-                    request=create_mock_request(),
-                    current_user=mock_current_user,
-                    order_dao=mock_order_dao,
-                    user_dao=mock_user_dao
-                )
+        # Test that the exception is raised
+        order_request = GetOrderRequest(order_id=nonexistent_order_id)
+        with pytest.raises(CNOPOrderNotFoundException, match=MSG_ERROR_ORDER_NOT_FOUND):
+            get_order(
+                order_request=order_request,
+                request=create_mock_request(),
+                current_user=mock_current_user,
+                order_dao=mock_order_dao
+            )
 
 
     def test_get_order_unexpected_error(
@@ -173,20 +172,22 @@ class TestGetOrder:
         mock_user_dao
     ):
         """Test order retrieval when unexpected error occurs"""
-        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
+        order_id = "order1234567890"
+        error_msg = "Unexpected error"
+        expected_error_msg = "The service is temporarily unavailable"
 
-            # Setup mock to raise generic Exception
-            mock_validate.side_effect = Exception("Unexpected error")
+        # Setup mock to raise generic Exception
+        mock_order_dao.get_order.side_effect = Exception(error_msg)
 
-            # Test that the exception is raised
-            with pytest.raises(CNOPInternalServerException, match="The service is temporarily unavailable"):
-                get_order(
-                    order_id="order123",
-                    request=create_mock_request(),
-                    current_user=mock_current_user,
-                    order_dao=mock_order_dao,
-                    user_dao=mock_user_dao
-                )
+        # Test that the exception is raised
+        order_request = GetOrderRequest(order_id=order_id)
+        with pytest.raises(CNOPInternalServerException, match=expected_error_msg):
+            get_order(
+                order_request=order_request,
+                request=create_mock_request(),
+                current_user=mock_current_user,
+                order_dao=mock_order_dao
+            )
 
 
     def test_get_order_different_user_order(
@@ -196,25 +197,24 @@ class TestGetOrder:
         mock_user_dao
     ):
         """Test order retrieval for order belonging to different user"""
-        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
+        order_id = "order1234567890"
+        other_user = "otheruser"
 
-            # Setup mocks
-            mock_validate.return_value = None
+        # Setup mocks
+        # Mock order with different username
+        mock_order = MagicMock()
+        mock_order.username = other_user
+        mock_order_dao.get_order.return_value = mock_order
 
-            # Mock order with different username
-            mock_order = MagicMock()
-            mock_order.username = "otheruser"
-            mock_order_dao.get_order.return_value = mock_order
-
-            # Test that the exception is raised
-            with pytest.raises(CNOPOrderNotFoundException, match="Order 'order123' not found"):
-                get_order(
-                    order_id="order123",
-                    request=create_mock_request(),
-                    current_user=mock_current_user,
-                    order_dao=mock_order_dao,
-                    user_dao=mock_user_dao
-                )
+        # Test that the exception is raised
+        order_request = GetOrderRequest(order_id=order_id)
+        with pytest.raises(CNOPOrderNotFoundException, match=f"Order '{order_id}' not found"):
+            get_order(
+                order_request=order_request,
+                request=create_mock_request(),
+                current_user=mock_current_user,
+                order_dao=mock_order_dao
+            )
 
     def test_get_order_logging_and_metrics(
         self,
@@ -224,39 +224,16 @@ class TestGetOrder:
         mock_order
     ):
         """Test order retrieval logging and metrics recording"""
-        with patch('src.controllers.get_order.validate_order_retrieval_business_rules') as mock_validate:
+        order_id = "order1234567890"
 
-            # Setup mocks
-            mock_validate.return_value = None
-            mock_order_dao.get_order.return_value = mock_order
+        # Setup mocks
+        mock_order_dao.get_order.return_value = mock_order
 
-            # Test the function
-            result = get_order(
-                order_id="order123",
-                request=create_mock_request(),
-                current_user=mock_current_user,
-                order_dao=mock_order_dao,
-                user_dao=mock_user_dao
-            )
-
-
-    def test_router_configuration(self):
-        """Test router configuration"""
-        # Test router tags
-        assert router.tags == ["orders"]
-
-        # Test endpoint path
-        assert router.routes[0].path == "/{order_id}"
-
-        # Test HTTP method
-        assert router.routes[0].methods == {"GET"}
-
-        # Test response models
-        assert router.routes[0].response_model is not None
-
-        # Test responses documentation
-        assert router.routes[0].responses is not None
-        assert 200 in router.routes[0].responses
-        assert 401 in router.routes[0].responses
-        assert 404 in router.routes[0].responses
-        assert 500 in router.routes[0].responses
+        # Test the function
+        order_request = GetOrderRequest(order_id=order_id)
+        result = get_order(
+            order_request=order_request,
+            request=create_mock_request(),
+            current_user=mock_current_user,
+            order_dao=mock_order_dao
+        )

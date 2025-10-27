@@ -1,18 +1,18 @@
-# services/inventory-service/src/api_models/__init__.py
 """
 API models package for inventory service
 """
-
-# Import inventory models
-from .inventory.asset_response import (
-    AssetResponse,
-    AssetDetailResponse,
-    AssetListResponse,
-)
+from .list_assets import ListAssetsRequest, ListAssetsResponse
+from .get_asset import GetAssetRequest, GetAssetResponse
+from .shared.data_models import AssetData, AssetDetailData
 
 __all__ = [
-    # Asset response models
-    "AssetResponse",
-    "AssetDetailResponse",
-    "AssetListResponse",
+    # List assets
+    "ListAssetsRequest",
+    "ListAssetsResponse",
+    # Get asset
+    "GetAssetRequest",
+    "GetAssetResponse",
+    # Shared data models
+    "AssetData",
+    "AssetDetailData",
 ]

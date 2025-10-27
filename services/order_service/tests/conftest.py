@@ -112,10 +112,16 @@ def mock_environment_variables():
             os.environ.pop(key, None)
 
 
+# Import dependency constants at module level
+import sys
+import os
+sys.path.insert(0, os.path.dirname(__file__))
+from dependency_constants import PATCH_GET_DYNAMODB_MANAGER
+
 @pytest.fixture(autouse=True)
 def mock_database_connection():
     """Mock database connection to prevent actual database calls during tests."""
-    with patch('common.data.database.dynamodb_connection.get_dynamodb_manager') as mock_get_manager:
+    with patch(PATCH_GET_DYNAMODB_MANAGER) as mock_get_manager:
         # Mock the database manager
         mock_connection = AsyncMock()
         mock_users_table = MagicMock()

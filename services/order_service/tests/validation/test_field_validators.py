@@ -18,7 +18,7 @@ from order_exceptions.exceptions import CNOPOrderValidationException
 from common.data.entities.order.enums import OrderType, OrderStatus
 
 # Import the actual validation functions
-from validation.field_validators import (
+from src.validation.field_validators import (
         sanitize_string,
         is_suspicious,
         validate_order_id,

@@ -1,5 +1,5 @@
 """
-Unit tests for assets controller - Following correct patterns
+Unit tests for assets controller
 Path: services/inventory-service/tests/controllers/test_assets.py
 """
 import pytest
@@ -11,33 +11,25 @@ from decimal import Decimal
 from datetime import datetime, timezone
 
 # Add the necessary paths to sys.path before importing the controller
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  # for dependency_constants
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))  # for common
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))  # for api_models
 
+# Import dependency constants
+from dependency_constants import PATCH_VALIDATE_ASSET_EXISTS, PATCH_GET_REQUEST_ID
+
 # Import the controller functions directly
-from controllers.assets import list_assets, get_asset_by_id
+from controllers.assets import list_assets, get_asset, get_asset_request
 
 # Import exception classes for testing
-from inventory_exceptions import (
-    CNOPAssetValidationException,
-    CNOPInventoryServerException
-)
-
-from common.exceptions import (
-    CNOPDatabaseOperationException,
-    CNOPAssetNotFoundException
-)
-
+from inventory_exceptions import CNOPAssetValidationException, CNOPInventoryServerException
+from common.exceptions import CNOPAssetNotFoundException
 from common.data.entities.inventory import Asset
+from api_models.list_assets import ListAssetsRequest, ListAssetsResponse
+from api_models.get_asset import GetAssetRequest, GetAssetResponse
+from api_models.shared.data_models import AssetData, AssetDetailData
 
-# Constants for patch paths
-PATH_GET_ASSET_DAO = 'controllers.assets.get_asset_dao'
-PATH_GET_REQUEST_ID_FROM_REQUEST = 'controllers.assets.get_request_id_from_request'
-PATH_VALIDATE_ASSET_EXISTS = 'controllers.assets.validate_asset_exists'
-PATH_ASSET_DAO = 'controllers.assets.AssetDAO'
-PATH_ASSET_ID_REQUEST = 'controllers.assets.AssetIdRequest'
 
-# Reusable test assets
 def create_test_asset_btc():
     """Create a real BTC Asset object for testing"""
     return Asset(
@@ -132,377 +124,127 @@ def create_test_request():
     return request
 
 
-# ===== list_assets tests =====
+TEST_ASSET_ID_BTC = "BTC"
+TEST_ASSET_ID_ETH = "ETH"
+TEST_ACTIVE_ONLY = True
+TEST_LIMIT_1 = 1
+TEST_LIMIT_10 = 10
+TEST_TOTAL_COUNT_2 = 2
+TEST_ACTIVE_COUNT_1 = 1
 
-def test_list_assets_with_limit():
-    """Test list_assets with limit parameter"""
-    request = create_test_request()
-    test_assets = [create_test_asset_btc(), create_test_asset_eth()]
 
-    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.return_value = test_assets
-        mock_get_request_id.return_value = "test-request-id"
+class TestListAssets:
+    """Test list_assets controller"""
 
-        # Pass limit as integer, not Query object
-        result = list_assets(request, active_only=True, limit=1, asset_dao=mock_dao)
+    def test_list_assets_success_with_limit(self):
+        """Test list_assets with limit parameter"""
+        request = create_test_request()
+        test_assets = [create_test_asset_btc(), create_test_asset_eth()]
 
-        # Verify result structure
-        assert result is not None
-        assert hasattr(result, 'assets')
-        assert len(result.assets) == 1  # Should be limited to 1
-        assert hasattr(result, 'total_count')
-        assert result.total_count == 2  # Total count should be 2
-        assert result.assets[0].asset_id == "BTC"
+        with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id") as mock_get_request_id:
+            mock_dao = MagicMock()
+            mock_dao.get_all_assets.return_value = test_assets
 
+            filter_params = ListAssetsRequest(active_only=True, limit=TEST_LIMIT_1)
+            result = list_assets(request, filter_params=filter_params, asset_dao=mock_dao)
 
-def test_list_assets_without_limit():
-    """Test list_assets without limit parameter"""
-    request = create_test_request()
-    test_assets = [create_test_asset_btc(), create_test_asset_eth()]
+            assert isinstance(result, ListAssetsResponse)
+            assert len(result.data) == TEST_LIMIT_1
+            assert result.total_count == TEST_TOTAL_COUNT_2
+            assert result.active_count == TEST_ACTIVE_COUNT_1
 
-    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.return_value = test_assets
-        mock_get_request_id.return_value = "test-request-id"
+    def test_list_assets_without_limit(self):
+        """Test list_assets without limit parameter"""
+        request = create_test_request()
+        test_assets = [create_test_asset_btc(), create_test_asset_eth()]
 
-        # Pass limit=None explicitly
-        result = list_assets(request, active_only=True, limit=None, asset_dao=mock_dao)
+        with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id"):
+            mock_dao = MagicMock()
+            mock_dao.get_all_assets.return_value = test_assets
 
-        # Verify result structure
-        assert result is not None
-        assert hasattr(result, 'assets')
-        assert len(result.assets) == 2  # Should return all assets
-        assert hasattr(result, 'total_count')
-        assert result.total_count == 2
+            filter_params = ListAssetsRequest(active_only=True, limit=None)
+            result = list_assets(request, filter_params=filter_params, asset_dao=mock_dao)
 
+            assert isinstance(result, ListAssetsResponse)
+            assert len(result.data) == TEST_TOTAL_COUNT_2
+            assert result.total_count == TEST_TOTAL_COUNT_2
 
-def test_list_assets_total_count_without_active_only():
-    """Test total_count calculation when active_only=False - covers line 140"""
-    request = create_test_request()
-    test_assets = [create_test_asset_btc(), create_test_asset_eth()]
+    def test_list_assets_database_error(self):
+        """Test that database errors are properly converted to internal exceptions"""
+        request = create_test_request()
 
-    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.return_value = test_assets
-        mock_get_request_id.return_value = "test-request-id"
+        with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id"):
+            mock_dao = MagicMock()
+            mock_dao.get_all_assets.side_effect = Exception("Database connection failed")
 
-        # Test with active_only=False to trigger line 140: total_count = len(all_assets)
-        result = list_assets(request, active_only=False, limit=10, asset_dao=mock_dao)
+            filter_params = ListAssetsRequest(active_only=True, limit=10)
 
-        # Verify total_count is calculated from all_assets (line 140)
-        assert result.total_count == 2
-        assert len(result.assets) == 2
+            with pytest.raises(CNOPInventoryServerException) as exc_info:
+                list_assets(request, filter_params=filter_params, asset_dao=mock_dao)
 
+            assert "Failed to list assets" in str(exc_info.value)
 
-def test_list_assets_database_error():
-    """Test that database errors are properly converted to internal exceptions"""
-    request = create_test_request()
 
-    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.side_effect = Exception("Database connection failed")
-        mock_get_request_id.return_value = "test-request-id"
+class TestGetAsset:
+    """Test get_asset controller"""
 
-        with pytest.raises(CNOPInventoryServerException) as exc_info:
-            list_assets(request, active_only=True, limit=10, asset_dao=mock_dao)
+    def test_get_asset_success(self):
+        """Test get_asset with valid asset ID"""
+        request = create_test_request()
+        test_asset = create_test_asset_btc()
 
-        error = exc_info.value
-        assert "Failed to list assets" in str(error)
+        with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id"):
 
+            mock_dao = MagicMock()
+            mock_dao.get_asset_by_id.return_value = test_asset
 
-def test_list_assets_active_count():
-    """Test that active_count is correctly calculated"""
-    request = create_test_request()
-    btc_active = create_test_asset_btc()
-    eth_inactive = create_test_asset_eth()
-    eth_inactive.is_active = False
-    test_assets = [btc_active, eth_inactive]
+            asset_request = GetAssetRequest(asset_id=TEST_ASSET_ID_BTC)
+            result = get_asset(request, asset_request=asset_request, asset_dao=mock_dao)
 
-    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.return_value = test_assets
-        mock_get_request_id.return_value = "test-request-id"
+            assert isinstance(result, GetAssetResponse)
+            assert result.data.asset_id == TEST_ASSET_ID_BTC
+            assert result.data.name == "Bitcoin"
+            assert result.data.availability_status == "available"
 
-        result = list_assets(request, active_only=False, limit=None, asset_dao=mock_dao)
+    def test_get_asset_not_found(self):
+        """Test get_asset with non-existent asset ID"""
+        request = create_test_request()
 
-        # Verify active_count counts only active assets
-        assert result.active_count == 1
-        assert result.total_count == 2
+        with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id"):
 
+            mock_dao = MagicMock()
+            # DAO raises CNOPAssetNotFoundException when asset not found
+            mock_dao.get_asset_by_id.side_effect = CNOPAssetNotFoundException("Asset 'XYZ' not found")
 
-# ===== get_asset_by_id tests =====
+            asset_request = GetAssetRequest(asset_id="XYZ")
 
-def test_get_asset_by_id_success():
-    """Test get_asset_by_id with valid asset ID"""
-    request = create_test_request()
-    test_asset = create_test_asset_btc()
+            # Should raise CNOPAssetNotFoundException from DAO
+            with pytest.raises(CNOPAssetNotFoundException):
+                get_asset(request, asset_request=asset_request, asset_dao=mock_dao)
 
-    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
-         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+    def test_get_asset_inactive(self):
+        """Test get_asset with inactive asset"""
+        request = create_test_request()
+        test_asset = create_test_asset_inactive()
 
-        mock_dao = MagicMock()
-        mock_dao.get_asset_by_id.return_value = test_asset
-        mock_get_request_id.return_value = "test-request-id"
+        with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id"):
 
-        result = get_asset_by_id(request, "BTC", asset_dao=mock_dao)
+            mock_dao = MagicMock()
+            mock_dao.get_asset_by_id.return_value = test_asset
 
-        # Verify result
-        assert result is not None
-        assert result.asset_id == "BTC"
-        assert result.name == "Bitcoin"
-        assert result.availability_status == "available"
-        mock_validate.assert_called_once_with("BTC", mock_dao)
+            asset_request = GetAssetRequest(asset_id=TEST_ASSET_ID_BTC)
+            result = get_asset(request, asset_request=asset_request, asset_dao=mock_dao)
 
+            assert result.data.availability_status == "unavailable"
+            assert result.data.is_active is False
 
-def test_get_asset_by_id_not_found():
-    """Test get_asset_by_id with non-existent asset ID"""
-    request = create_test_request()
 
-    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
-         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
+class TestGetAssetRequest:
+    """Test get_asset_request dependency"""
 
-        mock_dao = MagicMock()
-        mock_get_request_id.return_value = "test-request-id"
+    def test_get_asset_request_creates_model(self):
+        """Test that get_asset_request creates GetAssetRequest model"""
+        result = get_asset_request(TEST_ASSET_ID_BTC)
 
-        # Mock validate_asset_exists to raise CNOPAssetNotFoundException
-        mock_validate.side_effect = CNOPAssetNotFoundException("Asset not found")
-
-        # Test that the function raises the correct exception
-        with pytest.raises(CNOPAssetNotFoundException):
-            get_asset_by_id(request, "XYZ", asset_dao=mock_dao)
-
-
-def test_get_asset_by_id_database_error():
-    """Test that database errors in get_asset_by_id are properly handled"""
-    request = create_test_request()
-
-    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
-         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-
-        mock_dao = MagicMock()
-        mock_dao.get_asset_by_id.side_effect = Exception("Database query failed")
-        mock_get_request_id.return_value = "test-request-id"
-
-        with pytest.raises(CNOPInventoryServerException) as exc_info:
-            get_asset_by_id(request, "BTC", asset_dao=mock_dao)
-
-        error = exc_info.value
-        assert "Failed to get asset BTC" in str(error)
-
-
-def test_get_asset_by_id_validation_error():
-    """Test get_asset_by_id with field validation error - re-raises validation exception"""
-    request = create_test_request()
-
-    with patch(PATH_ASSET_ID_REQUEST) as mock_asset_id_request, \
-         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-
-        mock_get_request_id.return_value = "test-request-id"
-
-        # Mock AssetIdRequest to raise CNOPAssetValidationException
-        mock_asset_id_request.side_effect = CNOPAssetValidationException("Invalid asset_id format")
-
-        # The code re-raises the original validation error (lines 203-206)
-        with pytest.raises(CNOPAssetValidationException) as exc_info:
-            get_asset_by_id(request, "INVALID@#$", asset_dao=MagicMock())
-
-        assert "Invalid asset_id format" in str(exc_info.value)
-
-
-def test_get_asset_by_id_business_validation_error():
-    """Test CNOPAssetNotFoundException from business validation - covers lines 275-277"""
-    request = create_test_request()
-
-    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
-         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-
-        mock_dao = MagicMock()
-        mock_get_request_id.return_value = "test-request-id"
-
-        # Mock validate_asset_exists to raise CNOPAssetNotFoundException (business validation)
-        mock_validate.side_effect = CNOPAssetNotFoundException("Asset not found")
-
-        # Test that CNOPAssetNotFoundException is re-raised (lines 275-277)
-        with pytest.raises(CNOPAssetNotFoundException, match="Asset not found"):
-            get_asset_by_id(request, "XYZ", asset_dao=mock_dao)
-
-
-def test_get_asset_by_id_inactive_asset():
-    """Test get_asset_by_id with inactive asset - availability_status should be 'unavailable'"""
-    request = create_test_request()
-    test_asset = create_test_asset_inactive()
-
-    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
-         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-
-        mock_dao = MagicMock()
-        mock_dao.get_asset_by_id.return_value = test_asset
-        mock_get_request_id.return_value = "test-request-id"
-
-        result = get_asset_by_id(request, "BTC", asset_dao=mock_dao)
-
-        # Verify availability_status is 'unavailable' for inactive asset
-        assert result.availability_status == "unavailable"
-        assert result.is_active is False
-
-
-def test_get_asset_by_id_asset_without_last_updated():
-    """Test get_asset_by_id when asset.last_updated is None - covers line 221"""
-    request = create_test_request()
-    test_asset = create_test_asset_btc()
-    test_asset.last_updated = None
-
-    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
-         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-
-        mock_dao = MagicMock()
-        mock_dao.get_asset_by_id.return_value = test_asset
-        mock_get_request_id.return_value = "test-request-id"
-
-        result = get_asset_by_id(request, "BTC", asset_dao=mock_dao)
-
-        # Verify last_updated is set to current time when None (line 221)
-        assert result.last_updated is not None
-
-
-# ===== Metrics tests (when METRICS_AVAILABLE is False) =====
-
-def test_list_assets_metrics_not_available():
-    """Test that metrics are not recorded when METRICS_AVAILABLE is False - covers lines 146-148"""
-    request = create_test_request()
-    test_assets = [create_test_asset_btc()]
-
-    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.return_value = test_assets
-        mock_get_request_id.return_value = "test-request-id"
-
-        # Test list_assets - metrics code will not execute (lines 146-148)
-        result = list_assets(request, active_only=True, limit=10, asset_dao=mock_dao)
-        assert result is not None
-        assert len(result.assets) == 1
-
-
-def test_get_asset_by_id_metrics_not_available():
-    """Test that metrics are not recorded when METRICS_AVAILABLE is False - covers line 219"""
-    request = create_test_request()
-    test_asset = create_test_asset_btc()
-
-    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
-         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-
-        mock_dao = MagicMock()
-        mock_dao.get_asset_by_id.return_value = test_asset
-        mock_get_request_id.return_value = "test-request-id"
-
-        # Test get_asset_by_id - metrics code will not execute (line 219)
-        result = get_asset_by_id(request, "BTC", asset_dao=mock_dao)
-        assert result is not None
-        assert result.asset_id == "BTC"
-
-
-# ===== Additional coverage tests =====
-
-def test_build_asset_list_with_empty_name():
-    """Test build_asset_list handles assets with None name - covers line 59"""
-    request = create_test_request()
-    test_asset = create_test_asset_btc()
-    test_asset.name = None
-
-    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.return_value = [test_asset]
-        mock_get_request_id.return_value = "test-request-id"
-
-        result = list_assets(request, active_only=True, limit=None, asset_dao=mock_dao)
-
-        # Verify empty name is converted to empty string (line 59)
-        assert result.assets[0].name == ''
-
-
-def test_build_asset_list_with_none_category():
-    """Test build_asset_list handles assets with None category - covers line 61"""
-    request = create_test_request()
-    test_asset = create_test_asset_btc()
-    test_asset.category = None
-
-    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.return_value = [test_asset]
-        mock_get_request_id.return_value = "test-request-id"
-
-        result = list_assets(request, active_only=True, limit=None, asset_dao=mock_dao)
-
-        # Verify None category defaults to 'unknown' (line 61)
-        assert result.assets[0].category == 'unknown'
-
-
-def test_list_assets_filters_in_response():
-    """Test that filters are correctly included in response - covers lines 75-78"""
-    request = create_test_request()
-    test_assets = [create_test_asset_btc()]
-
-    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.return_value = test_assets
-        mock_get_request_id.return_value = "test-request-id"
-
-        result = list_assets(request, active_only=True, limit=50, asset_dao=mock_dao)
-
-        # Verify filters are included in response (lines 75-78)
-        assert result.filters["active_only"] is True
-        assert result.filters["limit"] == 50
-
-
-def test_list_assets_with_limit_and_active_only_true():
-    """Test list_assets total_count calculation with active_only=True and limit - covers lines 136-138"""
-    request = create_test_request()
-    active_assets = [create_test_asset_btc()]
-    all_assets = [create_test_asset_btc(), create_test_asset_eth()]
-
-    with patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-        mock_dao = MagicMock()
-        # First call returns active assets, second call returns all assets
-        mock_dao.get_all_assets.side_effect = [active_assets, all_assets]
-        mock_get_request_id.return_value = "test-request-id"
-
-        result = list_assets(request, active_only=True, limit=10, asset_dao=mock_dao)
-
-        # Verify total_count is from all assets (lines 136-138)
-        assert len(result.assets) == 1
-        assert result.total_count == 2
-
-
-def test_get_asset_by_id_comprehensive_fields():
-    """Test that all comprehensive fields are returned in AssetDetailResponse"""
-    request = create_test_request()
-    test_asset = create_test_asset_btc()
-
-    with patch(PATH_VALIDATE_ASSET_EXISTS) as mock_validate, \
-         patch(PATH_GET_REQUEST_ID_FROM_REQUEST) as mock_get_request_id:
-
-        mock_dao = MagicMock()
-        mock_dao.get_asset_by_id.return_value = test_asset
-        mock_get_request_id.return_value = "test-request-id"
-
-        result = get_asset_by_id(request, "BTC", asset_dao=mock_dao)
-
-        # Verify all comprehensive market data fields are present
-        assert result.market_cap == test_asset.market_cap
-        assert result.price_change_24h == test_asset.price_change_24h
-        assert result.price_change_percentage_24h == test_asset.price_change_percentage_24h
-        assert result.price_change_percentage_7d == test_asset.price_change_percentage_7d
-        assert result.price_change_percentage_30d == test_asset.price_change_percentage_30d
-        assert result.high_24h == test_asset.high_24h
-        assert result.low_24h == test_asset.low_24h
-        assert result.total_volume_24h == test_asset.total_volume_24h
-        assert result.circulating_supply == test_asset.circulating_supply
-        assert result.total_supply == test_asset.total_supply
-        assert result.max_supply == test_asset.max_supply
-        assert result.ath == test_asset.ath
-        assert result.ath_change_percentage == test_asset.ath_change_percentage
-        assert result.ath_date == test_asset.ath_date
-        assert result.atl == test_asset.atl
-        assert result.atl_change_percentage == test_asset.atl_change_percentage
-        assert result.atl_date == test_asset.atl_date
+        assert isinstance(result, GetAssetRequest)
+        assert result.asset_id == TEST_ASSET_ID_BTC

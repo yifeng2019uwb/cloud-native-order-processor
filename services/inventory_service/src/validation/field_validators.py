@@ -14,6 +14,9 @@ from inventory_exceptions import CNOPAssetValidationException
 MSG_ERROR_ASSET_ID_EMPTY = "Asset ID cannot be empty"
 MSG_ERROR_ASSET_ID_MALICIOUS = "Asset ID contains potentially malicious content"
 MSG_ERROR_ASSET_ID_INVALID_FORMAT = "Asset ID must be 1-10 alphanumeric characters"
+MSG_ERROR_LIMIT_INVALID = "Limit must be a valid integer"
+MSG_ERROR_LIMIT_TOO_SMALL = "Limit must be at least 1"
+MSG_ERROR_LIMIT_TOO_LARGE = "Limit cannot exceed 250"
 
 # Import shared validation functions from common module
 from common.core.validation.shared_validators import (
@@ -47,3 +50,22 @@ def validate_asset_id(v: str) -> str:
 
     # 5. Convert to uppercase for consistency
     return v.upper()
+
+
+def validate_limit(v: int) -> int:
+    """
+    Inventory service: pagination limit validation
+    """
+    if not isinstance(v, int):
+        try:
+            v = int(v)
+        except (ValueError, TypeError):
+            raise CNOPAssetValidationException(MSG_ERROR_LIMIT_INVALID)
+
+    if v < 1:
+        raise CNOPAssetValidationException(MSG_ERROR_LIMIT_TOO_SMALL)
+
+    if v > 250:
+        raise CNOPAssetValidationException(MSG_ERROR_LIMIT_TOO_LARGE)
+
+    return v

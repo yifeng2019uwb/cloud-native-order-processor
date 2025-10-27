@@ -35,3 +35,6 @@ PROMETHEUS_INFO = "prometheus_client.Info"
 PROMETHEUS_COUNTER = "prometheus_client.Counter"
 PROMETHEUS_GAUGE = "prometheus_client.Gauge"
 PROMETHEUS_HISTOGRAM = "prometheus_client.Histogram"
+
+
+METRICS_COLLECTOR = "src.middleware.metrics_collector"

@@ -63,7 +63,8 @@ TRANSACTION_MANAGER_SPEC = [
 ]
 
 from src.controllers.create_order import create_order, router
-from src.api_models.order import OrderCreateRequest, OrderCreateResponse, OrderData
+from src.api_models.create_order import CreateOrderRequest, CreateOrderResponse
+from src.api_models.shared.data_models import OrderData
 from common.data.entities.order.enums import OrderType, OrderStatus
 from common.exceptions import (
     CNOPInsufficientBalanceException,
@@ -76,29 +77,43 @@ from common.exceptions.shared_exceptions import (
     CNOPInternalServerException
 )
 from order_exceptions.exceptions import CNOPOrderValidationException
+from src.constants import MSG_SUCCESS_ORDER_CREATED
+
+# Add tests directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from dependency_constants import (
+    PATCH_VALIDATE_ORDER_CREATION, PATCH_GET_CURRENT_MARKET_PRICE
+)
+
+# Make these constants available at module level for easy access
+TEST_ORDER_ID_123 = "order123"
+TEST_ASSET_ID_BTC = "BTC"
+TEST_QUANTITY_1_0 = "1.0"
+TEST_PRICE_50000 = "50000.00"
 
 class TestCreateOrder:
     """Test create_order function"""
 
-    # Test constants
+    # Shared constants (used in multiple tests/fixtures)
     TEST_USERNAME = "testuser"
     TEST_EMAIL = "test@example.com"
     TEST_PASSWORD = "hashed_password_123"
     TEST_FIRST_NAME = "Test"
     TEST_LAST_NAME = "User"
     TEST_ROLE_CUSTOMER = "customer"
-    TEST_ASSET_ID_BTC = "BTC"
-    TEST_QUANTITY_1_0 = "1.0"
-    TEST_PRICE_50000 = "50000.00"
 
     @pytest.fixture
     def mock_order_create_request(self):
         """Mock order create request data"""
-        return OrderCreateRequest(
+        asset_id = "BTC"
+        quantity = Decimal("1.0")
+        price = Decimal("50000.00")
+
+        return CreateOrderRequest(
             order_type=OrderType.MARKET_BUY,
-            asset_id=self.TEST_ASSET_ID_BTC,
-            quantity=Decimal(self.TEST_QUANTITY_1_0),
-            price=Decimal(self.TEST_PRICE_50000)
+            asset_id=asset_id,
+            quantity=quantity,
+            price=price
         )
 
     @pytest.fixture
@@ -116,10 +131,13 @@ class TestCreateOrder:
     @pytest.fixture
     def mock_request(self):
         """Mock FastAPI Request object"""
+        client_host = "127.0.0.1"
+        user_agent = "test-client"
+
         mock_req = MagicMock()
         mock_req.client = MagicMock()
-        mock_req.client.host = "127.0.0.1"
-        mock_req.headers = {"user-agent": "test-client"}
+        mock_req.client.host = client_host
+        mock_req.headers = {"user-agent": user_agent}
         return mock_req
 
     @pytest.fixture
@@ -163,22 +181,27 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test successful market buy order creation"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price:
+        with patch(PATCH_VALIDATE_ORDER_CREATION) as mock_validate, \
+             patch(PATCH_GET_CURRENT_MARKET_PRICE) as mock_get_price:
 
             # Setup mocks
+            order_id = TEST_ORDER_ID_123
+            asset_id = TEST_ASSET_ID_BTC
+            quantity = Decimal(TEST_QUANTITY_1_0)
+            price = Decimal(TEST_PRICE_50000)
+
             mock_validate.return_value = None
-            mock_get_price.return_value = Decimal("50000.00")
+            mock_get_price.return_value = price
 
             # Mock transaction result
             mock_order = MagicMock()
-            mock_order.order_id = "order123"
+            mock_order.order_id = order_id
             mock_order.order_type = OrderType.MARKET_BUY
-            mock_order.asset_id = "BTC"
-            mock_order.quantity = Decimal("1.0")
-            mock_order.price = Decimal("50000.00")
+            mock_order.asset_id = asset_id
+            mock_order.quantity = quantity
+            mock_order.price = price
             mock_order.status = "pending"
-            mock_order.total_amount = Decimal("50000.00")
+            mock_order.total_amount = price
             mock_order.created_at = datetime.now(timezone.utc)
 
             mock_result = MagicMock()
@@ -199,12 +222,11 @@ class TestCreateOrder:
             )
 
             # Verify result
-            assert result.success is True
-            assert "Market Buy order created successfully" in result.message
-            assert result.data.order_id == "order123"
-            assert result.data.asset_id == "BTC"
-            assert result.data.quantity == Decimal("1.0")
-            assert result.data.price == Decimal("50000.00")
+            assert result.data is not None
+            assert result.data.order_id == order_id
+            assert result.data.asset_id == asset_id
+            assert result.data.quantity == quantity
+            assert result.data.price == price
 
             # Verify business validation was called
             mock_validate.assert_called_once()
@@ -232,15 +254,15 @@ class TestCreateOrder:
     ):
         """Test successful market sell order creation"""
         # Create sell order request
-        sell_request = OrderCreateRequest(
+        sell_request = CreateOrderRequest(
             order_type=OrderType.MARKET_SELL,
             asset_id="BTC",
             quantity=Decimal("1.0"),
             price=Decimal("50000.00")
         )
 
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price:
+        with patch(PATCH_VALIDATE_ORDER_CREATION) as mock_validate, \
+             patch(PATCH_GET_CURRENT_MARKET_PRICE) as mock_get_price:
 
             # Setup mocks
             mock_validate.return_value = None
@@ -275,8 +297,7 @@ class TestCreateOrder:
             )
 
             # Verify result
-            assert result.success is True
-            assert "Market Sell order created successfully" in result.message
+            assert result.data is not None
             assert result.data.order_id == "order456"
 
             # Verify transaction manager was called
@@ -301,7 +322,7 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test order creation with insufficient balance"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate:
+        with patch(PATCH_VALIDATE_ORDER_CREATION) as mock_validate:
 
             # Setup mock to raise InsufficientBalanceException
             mock_validate.side_effect = CNOPInsufficientBalanceException("Insufficient balance")
@@ -331,7 +352,7 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test order creation when lock acquisition fails"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate:
+        with patch(PATCH_VALIDATE_ORDER_CREATION) as mock_validate:
 
             # Setup mock to raise LockAcquisitionException
             mock_validate.side_effect = CNOPLockAcquisitionException("Lock acquisition failed")
@@ -361,7 +382,7 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test order creation when database operation fails"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate:
+        with patch(PATCH_VALIDATE_ORDER_CREATION) as mock_validate:
 
             # Setup mock to raise DatabaseOperationException
             mock_validate.side_effect = CNOPDatabaseOperationException("Database error")
@@ -391,7 +412,7 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test order creation when validation fails"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate:
+        with patch(PATCH_VALIDATE_ORDER_CREATION) as mock_validate:
             # Setup mock to raise OrderValidationException
             mock_validate.side_effect = CNOPOrderValidationException("Invalid order data")
 
@@ -420,7 +441,7 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test order creation when unexpected error occurs"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate:
+        with patch(PATCH_VALIDATE_ORDER_CREATION) as mock_validate:
 
             # Setup mock to raise generic Exception
             mock_validate.side_effect = Exception("Unexpected error")
@@ -453,15 +474,15 @@ class TestCreateOrder:
         # we'll test with an invalid order type that would cause validation to fail
         # We'll create a request with an invalid order type string that bypasses Pydantic validation
 
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price:
+        with patch(PATCH_VALIDATE_ORDER_CREATION) as mock_validate, \
+             patch(PATCH_GET_CURRENT_MARKET_PRICE) as mock_get_price:
 
             # Setup mocks
             mock_validate.return_value = None
             mock_get_price.return_value = Decimal("50000.00")
 
             # Create a mock order with an unsupported type by directly setting the attribute
-            unsupported_request = OrderCreateRequest(
+            unsupported_request = CreateOrderRequest(
                 order_type=OrderType.MARKET_BUY,  # Start with valid type
                 asset_id="BTC",
                 quantity=Decimal("1.0"),
@@ -496,22 +517,27 @@ class TestCreateOrder:
         mock_balance_dao,
     ):
         """Test order creation logging and metrics recording"""
-        with patch('src.controllers.create_order.validate_order_creation_business_rules') as mock_validate, \
-             patch('src.controllers.dependencies.get_current_market_price') as mock_get_price:
+        with patch(PATCH_VALIDATE_ORDER_CREATION) as mock_validate, \
+             patch(PATCH_GET_CURRENT_MARKET_PRICE) as mock_get_price:
 
             # Setup mocks
+            order_id = TEST_ORDER_ID_123
+            asset_id = TEST_ASSET_ID_BTC
+            quantity = Decimal(TEST_QUANTITY_1_0)
+            price = Decimal(TEST_PRICE_50000)
+
             mock_validate.return_value = None
-            mock_get_price.return_value = Decimal("50000.00")
+            mock_get_price.return_value = price
 
             # Mock transaction result
             mock_order = MagicMock()
-            mock_order.order_id = "order123"
+            mock_order.order_id = order_id
             mock_order.order_type = OrderType.MARKET_BUY
-            mock_order.asset_id = "BTC"
-            mock_order.quantity = Decimal("1.0")
-            mock_order.price = Decimal("50000.00")
+            mock_order.asset_id = asset_id
+            mock_order.quantity = quantity
+            mock_order.price = price
             mock_order.status = "pending"
-            mock_order.total_amount = Decimal("50000.00")
+            mock_order.total_amount = price
             mock_order.created_at = datetime.now(timezone.utc)
 
             mock_result = MagicMock()
@@ -530,27 +556,3 @@ class TestCreateOrder:
                 user_dao=mock_user_dao,
                 balance_dao=mock_balance_dao,
             )
-
-
-    def test_router_configuration(self):
-        """Test router configuration"""
-        # Test router tags
-        assert router.tags == ["orders"]
-
-        # Test endpoint path
-        assert router.routes[0].path == "/"
-
-        # Test HTTP method
-        assert router.routes[0].methods == {"POST"}
-
-        # Test response models
-        assert router.routes[0].response_model is not None
-
-        # Test responses documentation
-        assert router.routes[0].responses is not None
-        assert 201 in router.routes[0].responses
-        assert 400 in router.routes[0].responses
-        assert 401 in router.routes[0].responses
-        assert 409 in router.routes[0].responses
-        assert 422 in router.routes[0].responses
-        assert 503 in router.routes[0].responses

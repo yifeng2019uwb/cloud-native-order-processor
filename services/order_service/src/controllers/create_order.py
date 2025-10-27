@@ -7,10 +7,9 @@ Handles order creation endpoint with atomic operations using TransactionManager
 """
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Union
 from fastapi import APIRouter, Depends, status, Request
-from api_models.order import OrderCreateRequest, OrderCreateResponse, OrderData
-from api_models.shared.common import ErrorResponse
+from api_models.create_order import CreateOrderRequest, CreateOrderResponse
+from api_models.shared.data_models import OrderData
 from common.data.entities.order.enums import OrderType, OrderStatus
 from common.data.entities.user import User
 from common.core.utils.transaction_manager import TransactionManager
@@ -39,7 +38,7 @@ from controllers.dependencies import (
     get_balance_dao_dependency
 )
 from common.auth.gateway.header_validator import get_request_id_from_request
-from validation.business_validators import validate_order_creation_business_rules
+from src.validation.business_validators import validate_order_creation_business_rules
 
 # Initialize our standardized logger
 logger = BaseLogger(LoggerName.ORDER)
@@ -48,44 +47,18 @@ router = APIRouter(tags=[ApiTags.ORDERS.value])
 
 @router.post(
     API_ORDERS_ROOT,
-    response_model=Union[OrderCreateResponse, ErrorResponse],
-    status_code=status.HTTP_201_CREATED,
-    responses={
-        HTTPStatus.CREATED: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_ORDER_CREATED,
-            ApiResponseKeys.MODEL.value: OrderCreateResponse
-        },
-        HTTPStatus.BAD_REQUEST: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_INSUFFICIENT_BALANCE,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.UNAUTHORIZED: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.CONFLICT: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_LOCK_ACQUISITION_FAILED,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.UNPROCESSABLE_ENTITY: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.SERVICE_UNAVAILABLE: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        }
-    }
+    response_model=CreateOrderResponse,
+    status_code=status.HTTP_201_CREATED
 )
 async def create_order(
-    order_data: OrderCreateRequest,
+    order_data: CreateOrderRequest,
     request: Request,
     current_user: User = Depends(get_current_user),
     transaction_manager: TransactionManager = Depends(get_transaction_manager),
     asset_dao: AssetDAO = Depends(get_asset_dao_dependency),
     user_dao: UserDAO = Depends(get_user_dao_dependency),
     balance_dao: BalanceDAO = Depends(get_balance_dao_dependency),
-) -> OrderCreateResponse:
+) -> CreateOrderResponse:
     """
     Create a new trading order
 
@@ -186,19 +159,8 @@ async def create_order(
             created_at=created_order.created_at
         )
 
-        # Determine success message based on order type
-        if order_data.order_type == OrderType.MARKET_BUY:
-            success_message = MSG_SUCCESS_MARKET_BUY_ORDER_CREATED
-        elif order_data.order_type == OrderType.MARKET_SELL:
-            success_message = MSG_SUCCESS_MARKET_SELL_ORDER_CREATED
-        else:
-            success_message = MSG_SUCCESS_ORDER_CREATED
-
-        return OrderCreateResponse(
-            success=True,
-            message=success_message,
-            data=order_data_response,
-            timestamp=datetime.now(timezone.utc)
+        return CreateOrderResponse(
+            data=order_data_response
         )
 
     except CNOPInsufficientBalanceException as e:

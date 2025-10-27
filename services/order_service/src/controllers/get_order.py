@@ -6,12 +6,10 @@ Handles order retrieval endpoint with business logic directly in controller
 - GET /orders/{order_id} - Get order by ID
 """
 from datetime import datetime, timezone
-from typing import Union
-from fastapi import APIRouter, Depends, status, Request
-from api_models.order import GetOrderResponse, OrderData
-from api_models.shared.common import ErrorResponse
+from fastapi import APIRouter, Depends, Request, Path
+from api_models.get_order import GetOrderRequest, GetOrderResponse
+from api_models.shared.data_models import OrderData
 from common.data.dao.order.order_dao import OrderDAO
-from common.data.dao.user.user_dao import UserDAO
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import (
     CNOPOrderNotFoundException,
@@ -29,41 +27,27 @@ from controllers.dependencies import (
     get_user_dao_dependency
 )
 from common.auth.gateway.header_validator import get_request_id_from_request
-from validation.business_validators import validate_order_retrieval_business_rules
+from src.validation.business_validators import validate_order_retrieval_business_rules
 
 # Initialize our standardized logger
 logger = BaseLogger(LoggerName.ORDER)
 router = APIRouter(tags=[ApiTags.ORDERS.value])
 
 
+def get_order_request(order_id: str = Path(..., description="Order ID")) -> GetOrderRequest:
+    """Dependency to create and validate GetOrderRequest from path parameter"""
+    return GetOrderRequest(order_id=order_id)
+
+
 @router.get(
     API_ORDER_BY_ID,
-    response_model=Union[GetOrderResponse, ErrorResponse],
-    responses={
-        HTTPStatus.OK: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_ORDER_RETRIEVED,
-            ApiResponseKeys.MODEL.value: GetOrderResponse
-        },
-        HTTPStatus.UNAUTHORIZED: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.NOT_FOUND: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_ORDER_NOT_FOUND,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.INTERNAL_SERVER_ERROR: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_INTERNAL_SERVER,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        }
-    }
+    response_model=GetOrderResponse
 )
 def get_order(
-    order_id: str,
     request: Request,
+    order_request: GetOrderRequest = Depends(get_order_request),
     current_user: User = Depends(get_current_user),
-    order_dao: OrderDAO = Depends(get_order_dao_dependency),
-    user_dao: UserDAO = Depends(get_user_dao_dependency)
+    order_dao: OrderDAO = Depends(get_order_dao_dependency)
 ) -> GetOrderResponse:
     """
     Get order by ID with user authorization
@@ -72,15 +56,9 @@ def get_order(
     request_id = get_request_id_from_request(request)
 
     try:
-        # Business validation (Layer 2)
-        validate_order_retrieval_business_rules(
-            order_id=order_id,
-            username=current_user.username,
-            order_dao=order_dao,
-            user_dao=user_dao
-        )
 
         # Get order from database
+        order_id = order_request.order_id
         order = order_dao.get_order(order_id)
 
         # Check if order belongs to user
@@ -112,12 +90,7 @@ def get_order(
             created_at=order.created_at
         )
 
-        return GetOrderResponse(
-            success=True,
-            message=MSG_SUCCESS_ORDER_RETRIEVED,
-            data=order_data_response,
-            timestamp=datetime.now(timezone.utc)
-        )
+        return GetOrderResponse(data=order_data_response)
 
     except CNOPOrderNotFoundException:
         raise

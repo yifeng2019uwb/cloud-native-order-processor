@@ -1,4 +1,9 @@
 """
-Shared API Models Package
-Path: services/order_service/src/api_models/shared/__init__.py
+Shared models package for order service
 """
+from .data_models import OrderData, OrderSummary
+
+__all__ = [
+    "OrderData",
+    "OrderSummary"
+]

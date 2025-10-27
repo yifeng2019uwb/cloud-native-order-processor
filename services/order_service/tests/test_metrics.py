@@ -2,13 +2,25 @@
 Unit tests for Order Service Metrics functionality
 """
 import pytest
+import sys
+import os
 from unittest.mock import patch, MagicMock
 from common.shared.constants.api_constants import HTTPStatus
 
-@patch('prometheus_client.Info')
-@patch('prometheus_client.Counter')
-@patch('prometheus_client.Gauge')
-@patch('prometheus_client.Histogram')
+# Add tests directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '.'))
+from dependency_constants import (
+    PATCH_PROMETHEUS_INFO, PATCH_PROMETHEUS_COUNTER,
+    PATCH_PROMETHEUS_GAUGE, PATCH_PROMETHEUS_HISTOGRAM
+)
+
+# Import PATCH_METRICS_GET_METRICS for use in test functions
+from dependency_constants import PATCH_METRICS_GET_METRICS
+
+@patch(PATCH_PROMETHEUS_INFO)
+@patch(PATCH_PROMETHEUS_COUNTER)
+@patch(PATCH_PROMETHEUS_GAUGE)
+@patch(PATCH_PROMETHEUS_HISTOGRAM)
 def test_metrics_import(mock_histogram, mock_gauge, mock_counter, mock_info):
     """Test that metrics module can be imported without error"""
     # Mock the Info object
@@ -18,10 +30,10 @@ def test_metrics_import(mock_histogram, mock_gauge, mock_counter, mock_info):
     import src.metrics
     # If we get here, the import succeeded
 
-@patch('prometheus_client.Info')
-@patch('prometheus_client.Counter')
-@patch('prometheus_client.Gauge')
-@patch('prometheus_client.Histogram')
+@patch(PATCH_PROMETHEUS_INFO)
+@patch(PATCH_PROMETHEUS_COUNTER)
+@patch(PATCH_PROMETHEUS_GAUGE)
+@patch(PATCH_PROMETHEUS_HISTOGRAM)
 def test_metrics_functions_exist(mock_histogram, mock_gauge, mock_counter, mock_info):
     """Test that metrics functions exist and are callable"""
     # Mock the Info object
@@ -47,10 +59,10 @@ def test_metrics_functions_exist(mock_histogram, mock_gauge, mock_counter, mock_
     assert callable(metrics.metrics_collector.record_portfolio_operation)
     assert callable(metrics.metrics_collector.record_asset_operation)
 
-@patch('prometheus_client.Info')
-@patch('prometheus_client.Counter')
-@patch('prometheus_client.Gauge')
-@patch('prometheus_client.Histogram')
+@patch(PATCH_PROMETHEUS_INFO)
+@patch(PATCH_PROMETHEUS_COUNTER)
+@patch(PATCH_PROMETHEUS_GAUGE)
+@patch(PATCH_PROMETHEUS_HISTOGRAM)
 def test_metrics_collector_methods(mock_histogram, mock_gauge, mock_counter, mock_info):
     """Test that metrics collector methods work correctly"""
     # Mock the Info object
@@ -112,7 +124,7 @@ def test_get_metrics_response_error_handling():
     """Test get_metrics_response error handling"""
     import src.metrics as metrics
 
-    with patch('src.metrics.metrics_collector.get_metrics', side_effect=Exception("Test error")):
+    with patch(PATCH_METRICS_GET_METRICS, side_effect=Exception("Test error")):
         response = metrics.get_metrics_response()
         assert response.status_code == 500
         assert response.body == b"# Error\n"

@@ -25,20 +25,33 @@ def create_mock_request(request_id="test-request-id"):
     return mock_request
 
 
+# Import dependency constants
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from dependency_constants import (
+    PATCH_GET_CURRENT_USER, PATCH_GET_ASSET_TRANSACTION_DAO,
+    PATCH_ASSET_TRANSACTION_GET_ASSET_DAO, PATCH_ASSET_TRANSACTION_GET_USER_DAO,
+    PATCH_VALIDATE_ORDER_HISTORY,
+    PATCH_ASSET_TRANSACTION_DAO_CLASS, PATCH_ASSET_DAO_CLASS, PATCH_USER_DAO_CLASS,
+    PATCH_CNOP_DATABASE_OP_EXCEPTION, PATCH_CNOP_ENTITY_NOT_FOUND,
+    PATCH_CNOP_INTERNAL_SERVER, PATCH_CNOP_ASSET_NOT_FOUND, PATCH_CNOP_ORDER_VALIDATION
+)
+
 # Mock dependencies before importing
-with patch('src.controllers.asset_transaction.get_current_user', create=True), \
-     patch('src.controllers.asset_transaction.get_asset_transaction_dao_dependency', create=True), \
-     patch('src.controllers.asset_transaction.get_asset_dao_dependency', create=True), \
-     patch('src.controllers.asset_transaction.get_user_dao_dependency', create=True), \
-     patch('src.controllers.asset_transaction.validate_order_history_business_rules', create=True), \
-     patch('src.controllers.asset_transaction.AssetTransactionDAO', create=True), \
-     patch('src.controllers.asset_transaction.AssetDAO', create=True), \
-     patch('src.controllers.asset_transaction.UserDAO', create=True), \
-     patch('src.controllers.asset_transaction.CNOPDatabaseOperationException', create=True), \
-     patch('src.controllers.asset_transaction.CNOPEntityNotFoundException', create=True), \
-     patch('src.controllers.asset_transaction.CNOPInternalServerException', create=True), \
-     patch('src.controllers.asset_transaction.CNOPAssetNotFoundException', create=True), \
-     patch('src.controllers.asset_transaction.CNOPOrderValidationException', create=True):
+with patch(PATCH_GET_CURRENT_USER, create=True), \
+     patch(PATCH_GET_ASSET_TRANSACTION_DAO, create=True), \
+     patch(PATCH_ASSET_TRANSACTION_GET_ASSET_DAO, create=True), \
+     patch(PATCH_ASSET_TRANSACTION_GET_USER_DAO, create=True), \
+     patch(PATCH_VALIDATE_ORDER_HISTORY, create=True), \
+     patch(PATCH_ASSET_TRANSACTION_DAO_CLASS, create=True), \
+     patch(PATCH_ASSET_DAO_CLASS, create=True), \
+     patch(PATCH_USER_DAO_CLASS, create=True), \
+     patch(PATCH_CNOP_DATABASE_OP_EXCEPTION, create=True), \
+     patch(PATCH_CNOP_ENTITY_NOT_FOUND, create=True), \
+     patch(PATCH_CNOP_INTERNAL_SERVER, create=True), \
+     patch(PATCH_CNOP_ASSET_NOT_FOUND, create=True), \
+     patch(PATCH_CNOP_ORDER_VALIDATION, create=True):
 
     from src.controllers.asset_transaction import get_asset_transactions
 
@@ -122,7 +135,8 @@ class TestAssetTransactionController:
     @pytest.fixture
     def mock_validate_order_history_business_rules(self):
         """Mock business rules validation"""
-        with patch('src.controllers.asset_transaction.validate_order_history_business_rules') as mock:
+        from dependency_constants import PATCH_VALIDATE_ORDER_HISTORY
+        with patch(PATCH_VALIDATE_ORDER_HISTORY) as mock:
             yield mock
 
 
@@ -155,8 +169,7 @@ class TestAssetTransactionController:
         )
 
         # Verify response
-        assert result.success is True
-        assert result.message == "Asset transactions retrieved successfully"
+        assert result.data is not None
         assert len(result.data) == 2
         assert result.has_more is False  # 2 < 50, so has_more should be False
 
@@ -230,7 +243,7 @@ class TestAssetTransactionController:
             "testuser", "BTC", limit=10
         )
 
-        assert result.success is True
+        assert result.data is not None
         assert len(result.data) == 2
 
 
@@ -253,8 +266,7 @@ class TestAssetTransactionController:
         )
 
         # Should return empty list instead of error
-        assert result.success is True
-        assert result.message == "No asset transactions found"
+        assert result.data is not None
         assert len(result.data) == 0
         assert result.has_more is False
 
@@ -316,7 +328,7 @@ class TestAssetTransactionController:
             user_dao=mock_user_dao
         )
 
-        assert result.success is True
+        assert result.data is not None
         assert len(result.data) == 0
         assert result.has_more is False
 
@@ -347,7 +359,7 @@ class TestAssetTransactionController:
             user_dao=mock_user_dao
         )
 
-        assert result.success is True
+        assert result.data is not None
         assert len(result.data) == 1
 
         eth_transaction = result.data[0]
@@ -383,7 +395,7 @@ class TestAssetTransactionController:
             user_dao=mock_user_dao
         )
 
-        assert result.success is True
+        assert result.data is not None
         assert len(result.data) == 1
 
         precise_transaction = result.data[0]
@@ -425,7 +437,7 @@ class TestAssetTransactionController:
             user_dao=mock_user_dao
         )
 
-        assert result.success is True
+        assert result.data is not None
         assert len(result.data) == 2
 
                 # Check pending transaction

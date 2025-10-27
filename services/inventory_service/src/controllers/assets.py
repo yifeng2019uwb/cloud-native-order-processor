@@ -4,224 +4,153 @@ Path: services/inventory-service/src/controllers/assets.py
 """
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, Request, status
-from api_models.inventory.asset_response import (
-    AssetResponse,
-    AssetDetailResponse,
-    AssetListResponse,
-)
-from api_models.inventory.asset_requests import AssetIdRequest
+from fastapi import APIRouter, Depends, Query, Request, Path
+from api_models.list_assets import ListAssetsRequest, ListAssetsResponse
+from api_models.get_asset import GetAssetRequest, GetAssetResponse
+from api_models.shared.data_models import AssetData, AssetDetailData
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.database.dependencies import get_asset_dao
 from controllers.dependencies import get_request_id_from_request
 from common.exceptions.shared_exceptions import CNOPAssetNotFoundException
 from common.shared.logging import BaseLogger, LoggerName, LogAction
 from common.shared.constants.api_constants import HTTPStatus
-from common.shared.constants.api_constants import APIResponseDescriptions
-from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys, API_INVENTORY_ROOT, API_ASSETS, API_ASSET_BY_ID
-from inventory_exceptions import (
-    CNOPAssetValidationException,
-    CNOPInventoryServerException
-)
-from validation.business_validators import validate_asset_exists
+from api_info_enum import ApiTags, API_INVENTORY_ROOT, API_ASSETS, API_ASSET_BY_ID
+from inventory_exceptions import CNOPAssetValidationException, CNOPInventoryServerException
+
 try:
     from metrics import record_asset_retrieval, record_asset_detail_view, update_asset_counts
     METRICS_AVAILABLE = True
 except ImportError:
     METRICS_AVAILABLE = False
 
-# Initialize our standardized logger
 logger = BaseLogger(LoggerName.INVENTORY)
 router = APIRouter(prefix=API_INVENTORY_ROOT, tags=[ApiTags.INVENTORY.value])
 
-# Local constants for success messages
-MSG_SUCCESS_ASSETS_RETRIEVED = "Assets retrieved successfully"
-MSG_SUCCESS_ASSET_RETRIEVED = "Asset retrieved successfully"
-
-# Local constants for status values
 STATUS_AVAILABLE = "available"
 STATUS_UNAVAILABLE = "unavailable"
 
-def build_asset_list(assets: list, request_params, total_count: int) -> AssetListResponse:
-    """Simple method to convert DAO dict results to AssetListResponse"""
-    asset_responses = []
-    for item in assets:
-        asset_response = AssetResponse(
-            asset_id=item.asset_id,
-            name=item.name or '',
-            description=item.description,
-            category=item.category or 'unknown',
-            price_usd=float(item.price_usd),
-            is_active=item.is_active,
-            symbol=item.symbol,
-            image=item.image,
-            market_cap_rank=item.market_cap_rank,
-            price_change_percentage_24h=item.price_change_percentage_24h
-        )
-        asset_responses.append(asset_response)
 
-    # Count active assets
-    active_count = sum(1 for asset in asset_responses if asset.is_active)
-
-    return AssetListResponse(
-        assets=asset_responses,
-        total_count=total_count,
-        active_count=active_count,
-        filters={
-            "active_only": request_params.active_only,
-            "limit": request_params.limit
-        }
-    )
+def get_asset_request(asset_id: str = Path(..., description="Asset ID")) -> GetAssetRequest:
+    """Dependency to create and validate GetAssetRequest from path parameter"""
+    return GetAssetRequest(asset_id=asset_id)
 
 
 @router.get(
     API_ASSETS,
-    response_model=AssetListResponse,
-    responses={
-        HTTPStatus.OK: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_ASSETS_RETRIEVED,
-            ApiResponseKeys.MODEL.value: AssetListResponse
-        },
-        HTTPStatus.UNPROCESSABLE_ENTITY: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION
-        },
-        HTTPStatus.INTERNAL_SERVER_ERROR: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_INTERNAL_SERVER
-        }
-    }
+    response_model=ListAssetsResponse
 )
 def list_assets(
     request: Request,
-    active_only: Optional[bool] = Query(
-        True,
-        description="Show only active assets"
-    ),
-    limit: Optional[int] = Query(
-        None,
-        ge=1,
-        le=250,
-        description="Maximum number of assets to return (1-250)"
-    ),
+    filter_params: ListAssetsRequest = Depends(),
     asset_dao: AssetDAO = Depends(get_asset_dao)
-) -> AssetListResponse:
-    """
-    List all available assets with optional filtering
+) -> ListAssetsResponse:
+    """List all available assets with optional filtering"""
+    request_id = get_request_id_from_request(request)
 
-    - **active_only**: Filter to show only active assets (default: true)
-    - **limit**: Maximum number of results to return (1-250)
-    """
+    logger.info(
+        action=LogAction.REQUEST_START,
+        message=f"Assets list requested - active_only: {filter_params.active_only}, limit: {filter_params.limit}",
+        request_id=request_id
+    )
+
     try:
-        # Extract request_id from headers using existing method
-        request_id = get_request_id_from_request(request)
-        logger.info(action=LogAction.REQUEST_START, message=f"Assets list requested - active_only: {active_only}, limit: {limit}", request_id=request_id)
-
-        # Create simple request object for validation
-        class RequestParams:
-            def __init__(self, active_only, limit):
-                self.active_only = active_only
-                self.limit = limit
-
-        request_params = RequestParams(active_only=active_only, limit=limit)
-
         # Get assets from database
-        all_assets = asset_dao.get_all_assets(active_only=active_only)
+        all_assets = asset_dao.get_all_assets(active_only=filter_params.active_only)
 
         # Apply limit if specified
-        if limit:
-            assets = all_assets[:limit]
+        if filter_params.limit:
+            assets = all_assets[:filter_params.limit]
         else:
             assets = all_assets
 
-        # Get total count for metadata
-        if active_only:
+        # Get total count
+        if filter_params.active_only:
             total_assets = asset_dao.get_all_assets(active_only=False)
             total_count = len(total_assets)
         else:
             total_count = len(all_assets)
 
-        logger.info(action=LogAction.REQUEST_END, message=f"Retrieved {len(assets)} assets (total: {total_count})")
+        # Convert to response models
+        asset_data_list = []
+        for item in assets:
+            asset_data = AssetData(
+                asset_id=item.asset_id,
+                name=item.name or '',
+                description=item.description,
+                category=item.category or 'unknown',
+                price_usd=float(item.price_usd),
+                is_active=item.is_active,
+                symbol=item.symbol,
+                image=item.image,
+                market_cap_rank=item.market_cap_rank,
+                price_change_percentage_24h=item.price_change_percentage_24h
+            )
+            asset_data_list.append(asset_data)
 
-        # Record metrics if available
+        active_count = sum(1 for asset in asset_data_list if asset.is_active)
+
+        logger.info(
+            action=LogAction.REQUEST_END,
+            message=f"Retrieved {len(assets)} assets (total: {total_count})",
+            request_id=request_id
+        )
+
         if METRICS_AVAILABLE:
-            record_asset_retrieval(category="all", active_only=active_only)
+            record_asset_retrieval(category="all", active_only=filter_params.active_only)
             update_asset_counts(total=total_count, active=len(all_assets))
 
-        # Build response using simple helper function
-        return build_asset_list(
-            assets=assets,
-            request_params=request_params,
-            total_count=total_count
+        return ListAssetsResponse(
+            data=asset_data_list,
+            total_count=total_count,
+            active_count=active_count
         )
 
     except Exception as e:
-        logger.error(action=LogAction.ERROR, message=f"Failed to list assets: {str(e)}")
-        # Convert to internal server exception for proper handling
+        logger.error(
+            action=LogAction.ERROR,
+            message=f"Failed to list assets: {str(e)}",
+            request_id=request_id
+        )
         raise CNOPInventoryServerException(f"Failed to list assets: {str(e)}")
 
 
 @router.get(
     API_ASSET_BY_ID,
-    response_model=AssetDetailResponse,
-    responses={
-        HTTPStatus.OK: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_ASSET_RETRIEVED,
-            ApiResponseKeys.MODEL.value: AssetDetailResponse
-        },
-        HTTPStatus.NOT_FOUND: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_NOT_FOUND
-        },
-        HTTPStatus.UNPROCESSABLE_ENTITY: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION
-        },
-        HTTPStatus.INTERNAL_SERVER_ERROR: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_INTERNAL_SERVER
-        }
-    }
+    response_model=GetAssetResponse
 )
-def get_asset_by_id(
+def get_asset(
     request: Request,
-    asset_id: str,
+    asset_request: GetAssetRequest = Depends(get_asset_request),
     asset_dao: AssetDAO = Depends(get_asset_dao)
-) -> AssetDetailResponse:
-    """
-    Get detailed information about a specific asset
+) -> GetAssetResponse:
+    """Get detailed information about a specific asset"""
+    request_id = get_request_id_from_request(request)
 
-    Layer 1: Field validation handled by AssetIdRequest model
-    Layer 2: Business validation (existence checks, etc.)
+    logger.info(
+        action=LogAction.REQUEST_START,
+        message=f"Asset details requested for: {asset_request.asset_id}",
+        request_id=request_id
+    )
 
-    - **asset_id**: The asset symbol/identifier (e.g., "BTC", "ETH")
-    """
     try:
-        # Extract request_id from headers using existing method
-        request_id = get_request_id_from_request(request)
-        logger.info(action=LogAction.REQUEST_START, message=f"Asset details requested for: {asset_id}", request_id=request_id)
+        asset_id = asset_request.asset_id
 
-        # Layer 1: Field validation using AssetIdRequest model
-        try:
-            validated_request = AssetIdRequest(asset_id=asset_id)
-            validated_asset_id = validated_request.asset_id
-        except Exception as validation_error:
-            logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Field validation failed for asset_id '{asset_id}': {str(validation_error)}")
-            # Re-raise the original validation error without wrapping
-            raise
+        # Get asset from database (will raise CNOPAssetNotFoundException if not found)
+        asset = asset_dao.get_asset_by_id(asset_id)
 
-        # Layer 2: Business validation - check if asset exists
-        validate_asset_exists(validated_asset_id, asset_dao)
+        logger.info(
+            action=LogAction.REQUEST_END,
+            message=f"Asset found: {asset.name} ({asset.asset_id})",
+            request_id=request_id
+        )
 
-        # Get asset from database (already validated to exist)
-        asset = asset_dao.get_asset_by_id(validated_asset_id)
-
-        logger.info(action=LogAction.REQUEST_END, message=f"Asset found: {asset.name} ({asset.asset_id})")
-
-        # Record metrics if available
         if METRICS_AVAILABLE:
-            record_asset_detail_view(asset_id=validated_asset_id)
+            record_asset_detail_view(asset_id=asset_id)
 
-        # Convert to detailed response model with all comprehensive fields
         availability_status = STATUS_AVAILABLE if asset.is_active else STATUS_UNAVAILABLE
         last_updated = asset.last_updated or datetime.now(timezone.utc).isoformat()
 
-        return AssetDetailResponse(
+        asset_detail_data = AssetDetailData(
             asset_id=asset.asset_id,
             name=asset.name or '',
             description=asset.description,
@@ -229,52 +158,39 @@ def get_asset_by_id(
             price_usd=float(asset.price_usd),
             is_active=asset.is_active,
             availability_status=availability_status,
-
-            # Enhanced fields for detailed view
             symbol=asset.symbol,
             image=asset.image,
             market_cap_rank=asset.market_cap_rank,
-
-            # Comprehensive market data
             market_cap=asset.market_cap,
             price_change_24h=asset.price_change_24h,
             price_change_percentage_24h=asset.price_change_percentage_24h,
             price_change_percentage_7d=asset.price_change_percentage_7d,
             price_change_percentage_30d=asset.price_change_percentage_30d,
-
-            # Price range analysis
             high_24h=asset.high_24h,
             low_24h=asset.low_24h,
-
-            # Volume and trading metrics
             total_volume_24h=asset.total_volume_24h,
-
-            # Supply analysis
             circulating_supply=asset.circulating_supply,
             total_supply=asset.total_supply,
             max_supply=asset.max_supply,
-
-            # Historical context
             ath=asset.ath,
             ath_change_percentage=asset.ath_change_percentage,
             ath_date=asset.ath_date,
             atl=asset.atl,
             atl_change_percentage=asset.atl_change_percentage,
             atl_date=asset.atl_date,
-
-            # Additional metadata
             last_updated=last_updated
         )
 
-    except CNOPAssetValidationException as e:
-        # Handle validation errors (from API model) - re-raise as-is to maintain clean error messages
-        logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Validation error for asset_id '{asset_id}': {str(e)}")
+        return GetAssetResponse(data=asset_detail_data)
+
+    except CNOPAssetValidationException:
         raise
-    except CNOPAssetNotFoundException as e:
-        # Handle business validation errors (asset not found) - re-raise as-is
-        logger.warning(action=LogAction.ERROR, message=f"Asset not found: {asset_id}")
+    except CNOPAssetNotFoundException:
         raise
     except Exception as e:
-        logger.error(action=LogAction.ERROR, message=f"Failed to get asset {asset_id}: {str(e)}")
-        # Convert to internal server exception for proper handling
+        logger.error(
+            action=LogAction.ERROR,
+            message=f"Failed to get asset {asset_id}: {str(e)}",
+            request_id=request_id
+        )
         raise CNOPInventoryServerException(f"Failed to get asset {asset_id}: {str(e)}")

@@ -2,9 +2,15 @@
 Tests for main.py - Order Service FastAPI Application
 """
 import pytest
+import sys
+import os
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import patch
+
+# Add tests directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '.'))
+from dependency_constants import PATCH_MAIN_GET_METRICS_RESPONSE
 
 from main import app, root
 
@@ -58,10 +64,11 @@ class TestRootEndpoint:
         assert "timestamp" in response
         assert "endpoints" in response
 
+
 class TestMetricsEndpoint:
     """Test cases for the internal metrics endpoint."""
 
-    @patch('src.main.get_metrics_response')
+    @patch(PATCH_MAIN_GET_METRICS_RESPONSE)
     def test_internal_metrics_endpoint(self, mock_get_metrics_response):
         """Test that internal metrics endpoint calls get_metrics_response."""
         from fastapi import Response

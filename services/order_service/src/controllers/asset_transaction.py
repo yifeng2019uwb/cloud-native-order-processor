@@ -6,13 +6,11 @@ Handles asset transaction history endpoints
 - GET /assets/{asset_id}/transactions - Get asset transaction history
 """
 from datetime import datetime, timezone
-from typing import Union
 from fastapi import APIRouter, Depends, status, Request
 from api_models.asset import (
     GetAssetTransactionsResponse,
     AssetTransactionData
 )
-from api_models.shared.common import ErrorResponse
 from common.data.dao.asset.asset_transaction_dao import AssetTransactionDAO
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.dao.user.user_dao import UserDAO
@@ -33,7 +31,7 @@ from controllers.dependencies import (
     get_asset_dao_dependency, get_user_dao_dependency
 )
 from common.auth.gateway.header_validator import get_request_id_from_request
-from validation.business_validators import validate_order_history_business_rules
+from src.validation.business_validators import validate_order_history_business_rules
 
 # Initialize our standardized logger
 logger = BaseLogger(LoggerName.ORDER)
@@ -42,29 +40,7 @@ router = APIRouter(tags=[ApiTags.ASSET_TRANSACTIONS.value])
 
 @router.get(
     API_ASSET_TRANSACTIONS,
-    response_model=Union[GetAssetTransactionsResponse, ErrorResponse],
-    responses={
-        HTTPStatus.OK: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_SUCCESS_ASSET_TRANSACTIONS_RETRIEVED,
-            ApiResponseKeys.MODEL.value: GetAssetTransactionsResponse
-        },
-        HTTPStatus.UNAUTHORIZED: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_AUTHENTICATION_FAILED,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.NOT_FOUND: {
-            ApiResponseKeys.DESCRIPTION.value: MSG_ERROR_ASSET_NOT_FOUND,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.UNPROCESSABLE_ENTITY: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_VALIDATION,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        },
-        HTTPStatus.SERVICE_UNAVAILABLE: {
-            ApiResponseKeys.DESCRIPTION.value: APIResponseDescriptions.ERROR_SERVICE_UNAVAILABLE,
-            ApiResponseKeys.MODEL.value: ErrorResponse
-        }
-    }
+    response_model=GetAssetTransactionsResponse
 )
 def get_asset_transactions(
     asset_id: str,
@@ -130,11 +106,8 @@ def get_asset_transactions(
         )
 
         return GetAssetTransactionsResponse(
-            success=True,
-            message=MSG_SUCCESS_ASSET_TRANSACTIONS_RETRIEVED,
             data=transaction_data_list,
-            has_more=has_more,
-            timestamp=datetime.now(timezone.utc)
+            has_more=has_more
         )
 
     except CNOPEntityNotFoundException:
@@ -146,11 +119,8 @@ def get_asset_transactions(
         )
         # Return empty list instead of error for no transactions
         return GetAssetTransactionsResponse(
-            success=True,
-            message="No asset transactions found",
             data=[],
-            has_more=False,
-            timestamp=datetime.now(timezone.utc)
+            has_more=False
         )
     except CNOPDatabaseOperationException as e:
         logger.error(

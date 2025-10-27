@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
 
 from common.data.entities.order.enums import OrderType, OrderStatus
+from ..dependency_constants import MODULE_PATH_GET_CURRENT_MARKET_PRICE
 from src.validation.business_validators import (
     _validate_username_exists_and_active,
     _validate_asset_exists_and_tradeable,
@@ -151,7 +152,7 @@ class TestBusinessValidators:
 
         # Test market order case (order_price is None)
         # Mock the dependency function at the import location
-        with patch('controllers.dependencies.get_current_market_price') as mock_get_price:
+        with patch(MODULE_PATH_GET_CURRENT_MARKET_PRICE) as mock_get_price:
             mock_get_price.return_value = Decimal("500.00")
 
             # Test market order with sufficient balance
@@ -170,7 +171,7 @@ class TestBusinessValidators:
             mock_get_price.assert_called_once_with("BTC", mock_asset_dao)
 
         # Test market order case where market price lookup fails
-        with patch('controllers.dependencies.get_current_market_price') as mock_get_price:
+        with patch(MODULE_PATH_GET_CURRENT_MARKET_PRICE) as mock_get_price:
             mock_get_price.side_effect = Exception("Market price service unavailable")
 
             # Test market order with market price failure

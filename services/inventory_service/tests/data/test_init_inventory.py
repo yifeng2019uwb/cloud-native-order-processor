@@ -21,7 +21,11 @@ from constants import DEFAULT_ASSET_CATEGORY, DEFAULT_ASSET_AMOUNT
 
 # Patch paths - only for external dependencies
 PATH_GET_DYNAMODB_MANAGER = 'data.init_inventory.get_dynamodb_manager'
-PATH_FETCH_COINS = 'services.fetch_coins.fetch_coins'  # Patch at the source, not the import
+PATH_FETCH_COINS = 'services.fetch_coins.fetch_coins'
+PATH_INITIALIZE_INVENTORY_DATA = 'data.init_inventory.initialize_inventory_data'
+PATH_COIN_TO_ASSET = 'data.init_inventory.coin_to_asset'
+PATH_ASSET_DAO_CLASS = 'data.init_inventory.AssetDAO'
+# Patch at the source, not the import
 
 
 def create_test_coin(symbol="BTC", name="Bitcoin", price=45000.0):
@@ -182,7 +186,7 @@ class TestUpsertCoinsToInventory:
             mock_dao.create_asset.return_value = None
 
             # Patch AssetDAO constructor to return our mock
-            with patch('data.init_inventory.AssetDAO', return_value=mock_dao):
+            with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
                 result = await upsert_coins_to_inventory(mock_coins)
 
                 assert result == 1
@@ -211,7 +215,7 @@ class TestUpsertCoinsToInventory:
             mock_dao.get_asset_by_id.side_effect = CNOPAssetNotFoundException("Not found")
             mock_dao.create_asset.return_value = None
 
-            with patch('data.init_inventory.AssetDAO', return_value=mock_dao):
+            with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
                 result = await upsert_coins_to_inventory(mock_coins)
 
                 assert result == 1
@@ -235,7 +239,7 @@ class TestUpsertCoinsToInventory:
             mock_dao.get_asset_by_id.return_value = existing_asset
             mock_dao.update_asset.return_value = None
 
-            with patch('data.init_inventory.AssetDAO', return_value=mock_dao):
+            with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
                 result = await upsert_coins_to_inventory(mock_coins)
 
                 assert result == 1
@@ -268,7 +272,7 @@ class TestUpsertCoinsToInventory:
             mock_dao.get_asset_by_id.return_value = MagicMock()
             mock_dao.update_asset.return_value = None
 
-            with patch('data.init_inventory.AssetDAO', return_value=mock_dao):
+            with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
                 result = await upsert_coins_to_inventory(mock_coins)
 
                 assert result == 3
@@ -298,7 +302,7 @@ class TestUpsertCoinsToInventory:
             ]
             mock_dao.update_asset.return_value = None
 
-            with patch('data.init_inventory.AssetDAO', return_value=mock_dao):
+            with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
                 result = await upsert_coins_to_inventory(mock_coins)
 
                 # Only second coin should be processed successfully
@@ -319,7 +323,7 @@ class TestUpsertCoinsToInventory:
             mock_get_manager.return_value = mock_manager
 
             # Mock coin_to_asset to raise an exception
-            with patch('data.init_inventory.coin_to_asset', side_effect=Exception("Conversion error")):
+            with patch(PATH_COIN_TO_ASSET, side_effect=Exception("Conversion error")):
                 result = await upsert_coins_to_inventory(mock_coins)
 
                 # Should handle error gracefully and return 0
@@ -349,7 +353,7 @@ class TestUpsertCoinsToInventory:
             mock_dao.create_asset.return_value = None
             mock_dao.update_asset.return_value = None
 
-            with patch('data.init_inventory.AssetDAO', return_value=mock_dao):
+            with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
                 result = await upsert_coins_to_inventory(mock_coins)
 
                 assert result == 2
@@ -382,7 +386,7 @@ class TestInitializeInventoryData:
                 mock_dao.get_asset_by_id.return_value = MagicMock()
                 mock_dao.update_asset.return_value = None
 
-                with patch('data.init_inventory.AssetDAO', return_value=mock_dao):
+                with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
                     await initialize_inventory_data()
 
                     mock_fetch.assert_called_once()
@@ -419,7 +423,7 @@ class TestInitializeInventoryData:
                 # Simulate database error
                 mock_dao.get_asset_by_id.side_effect = Exception("Database error")
 
-                with patch('data.init_inventory.AssetDAO', return_value=mock_dao):
+                with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
                     # Should not raise exception
                     await initialize_inventory_data()
 
@@ -430,7 +434,7 @@ class TestStartupInventoryInitialization:
     @pytest.mark.asyncio
     async def test_startup_calls_initialize(self):
         """Test that startup function calls initialize_inventory_data"""
-        with patch('data.init_inventory.initialize_inventory_data') as mock_init:
+        with patch(PATH_INITIALIZE_INVENTORY_DATA) as mock_init:
             await startup_inventory_initialization()
 
             mock_init.assert_called_once_with()
@@ -464,7 +468,7 @@ class TestIntegrationScenarios:
                 mock_dao.create_asset.return_value = None
                 mock_dao.update_asset.return_value = None
 
-                with patch('data.init_inventory.AssetDAO', return_value=mock_dao):
+                with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
                     await initialize_inventory_data()
 
                     # Verify both operations occurred

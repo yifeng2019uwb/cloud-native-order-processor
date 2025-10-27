@@ -3,8 +3,14 @@ Unit tests for Order Service Middleware functionality
 """
 import pytest
 import asyncio
+import sys
+import os
 from unittest.mock import MagicMock, patch
 from fastapi import Request, Response
+
+# Add tests directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '.'))
+from dependency_constants import PATCH_METRICS_COLLECTOR
 
 class TestMetricsMiddleware:
     """Test cases for metrics middleware functionality"""
@@ -24,7 +30,7 @@ class TestMetricsMiddleware:
         async def mock_call_next(request):
             return mock_response
 
-        with patch('src.middleware.metrics_collector') as mock_collector:
+        with patch(PATCH_METRICS_COLLECTOR) as mock_collector:
             result = await metrics_middleware(mock_request, mock_call_next)
 
             assert result == mock_response
@@ -46,7 +52,7 @@ class TestMetricsMiddleware:
         async def mock_call_next(request):
             return mock_response
 
-        with patch('src.middleware.metrics_collector') as mock_collector:
+        with patch(PATCH_METRICS_COLLECTOR) as mock_collector:
             result = await metrics_middleware(mock_request, mock_call_next)
 
             assert result == mock_response
@@ -65,7 +71,7 @@ class TestMetricsMiddleware:
         async def mock_call_next(request):
             raise ValueError("Test exception")
 
-        with patch('src.middleware.metrics_collector') as mock_collector:
+        with patch(PATCH_METRICS_COLLECTOR) as mock_collector:
             with pytest.raises(ValueError):
                 await metrics_middleware(mock_request, mock_call_next)
 
@@ -93,7 +99,7 @@ class TestMetricsMiddleware:
             async def mock_call_next(request):
                 return mock_response
 
-            with patch('src.middleware.metrics_collector') as mock_collector:
+            with patch(PATCH_METRICS_COLLECTOR) as mock_collector:
                 await metrics_middleware(mock_request, mock_call_next)
                 mock_collector.record_order_operation.assert_called_with(expected_op, "success", pytest.approx(0.0, abs=0.1))
 
@@ -113,7 +119,7 @@ class TestMetricsMiddleware:
         async def mock_call_next(request):
             return mock_response
 
-        with patch('src.middleware.metrics_collector') as mock_collector:
+        with patch(PATCH_METRICS_COLLECTOR) as mock_collector:
             await metrics_middleware(mock_request, mock_call_next)
             # Note: Due to the order of conditions, this actually matches "list" not "get"
             mock_collector.record_order_operation.assert_called_with("list", "success", pytest.approx(0.0, abs=0.1))
@@ -133,7 +139,7 @@ class TestMetricsMiddleware:
         async def mock_call_next(request):
             return mock_response
 
-        with patch('src.middleware.metrics_collector') as mock_collector:
+        with patch(PATCH_METRICS_COLLECTOR) as mock_collector:
             await metrics_middleware(mock_request, mock_call_next)
             mock_collector.record_portfolio_operation.assert_called_with("get_portfolio", "success", pytest.approx(0.0, abs=0.1))
 
@@ -158,7 +164,7 @@ class TestMetricsMiddleware:
             async def mock_call_next(request):
                 return mock_response
 
-            with patch('src.middleware.metrics_collector') as mock_collector:
+            with patch(PATCH_METRICS_COLLECTOR) as mock_collector:
                 await metrics_middleware(mock_request, mock_call_next)
                 mock_collector.record_asset_operation.assert_called_with(expected_op, "success", pytest.approx(0.0, abs=0.1))
 
@@ -177,7 +183,7 @@ class TestMetricsMiddleware:
         async def mock_call_next(request):
             return mock_response
 
-        with patch('src.middleware.metrics_collector') as mock_collector:
+        with patch(PATCH_METRICS_COLLECTOR) as mock_collector:
             await metrics_middleware(mock_request, mock_call_next)
 
             mock_collector.record_order_request.assert_called_once()
@@ -201,7 +207,7 @@ class TestMetricsMiddleware:
             await asyncio.sleep(0.05)  # 50ms delay
             return mock_response
 
-        with patch('src.middleware.metrics_collector') as mock_collector:
+        with patch(PATCH_METRICS_COLLECTOR) as mock_collector:
             await metrics_middleware(mock_request, mock_call_next)
 
             call_args = mock_collector.record_order_request.call_args[0]

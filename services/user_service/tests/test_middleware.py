@@ -6,6 +6,8 @@ import asyncio
 from unittest.mock import MagicMock, patch
 from fastapi import Request, Response
 
+from .utils.dependency_constants import METRICS_COLLECTOR
+
 class TestMetricsMiddleware:
     """Test cases for metrics middleware functionality"""
 
@@ -65,7 +67,7 @@ class TestMetricsMiddleware:
         async def mock_call_next(request):
             raise ValueError("Test exception")
 
-        with patch('src.middleware.metrics_collector') as mock_collector:
+        with patch(METRICS_COLLECTOR) as mock_collector:
             with pytest.raises(ValueError):
                 await metrics_middleware(mock_request, mock_call_next)
 
@@ -122,7 +124,7 @@ class TestMetricsMiddleware:
             async def mock_call_next(request):
                 return mock_response
 
-            with patch('src.middleware.metrics_collector') as mock_collector:
+            with patch(METRICS_COLLECTOR) as mock_collector:
                 await metrics_middleware(mock_request, mock_call_next)
                 mock_collector.record_balance_operation.assert_called_with(expected_op, "success", pytest.approx(0.0, abs=0.1))
 
@@ -164,7 +166,7 @@ class TestMetricsMiddleware:
             await asyncio.sleep(0.05)  # 50ms delay
             return mock_response
 
-        with patch('src.middleware.metrics_collector') as mock_collector:
+        with patch(METRICS_COLLECTOR) as mock_collector:
             await metrics_middleware(mock_request, mock_call_next)
 
             call_args = mock_collector.record_user_request.call_args[0]
