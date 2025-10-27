@@ -137,13 +137,13 @@ class TestListAssets:
     """Test list_assets controller"""
 
     def test_list_assets_success_with_limit(self):
-    """Test list_assets with limit parameter"""
-    request = create_test_request()
-    test_assets = [create_test_asset_btc(), create_test_asset_eth()]
+        """Test list_assets with limit parameter"""
+        request = create_test_request()
+        test_assets = [create_test_asset_btc(), create_test_asset_eth()]
 
         with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id") as mock_get_request_id:
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.return_value = test_assets
+            mock_dao = MagicMock()
+            mock_dao.get_all_assets.return_value = test_assets
 
             filter_params = ListAssetsRequest(active_only=True, limit=TEST_LIMIT_1)
             result = list_assets(request, filter_params=filter_params, asset_dao=mock_dao)
@@ -154,13 +154,13 @@ class TestListAssets:
             assert result.active_count == TEST_ACTIVE_COUNT_1
 
     def test_list_assets_without_limit(self):
-    """Test list_assets without limit parameter"""
-    request = create_test_request()
-    test_assets = [create_test_asset_btc(), create_test_asset_eth()]
+        """Test list_assets without limit parameter"""
+        request = create_test_request()
+        test_assets = [create_test_asset_btc(), create_test_asset_eth()]
 
         with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id"):
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.return_value = test_assets
+            mock_dao = MagicMock()
+            mock_dao.get_all_assets.return_value = test_assets
 
             filter_params = ListAssetsRequest(active_only=True, limit=None)
             result = list_assets(request, filter_params=filter_params, asset_dao=mock_dao)
@@ -170,16 +170,16 @@ class TestListAssets:
             assert result.total_count == TEST_TOTAL_COUNT_2
 
     def test_list_assets_database_error(self):
-    """Test that database errors are properly converted to internal exceptions"""
-    request = create_test_request()
+        """Test that database errors are properly converted to internal exceptions"""
+        request = create_test_request()
 
         with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id"):
-        mock_dao = MagicMock()
-        mock_dao.get_all_assets.side_effect = Exception("Database connection failed")
+            mock_dao = MagicMock()
+            mock_dao.get_all_assets.side_effect = Exception("Database connection failed")
 
             filter_params = ListAssetsRequest(active_only=True, limit=10)
 
-        with pytest.raises(CNOPInventoryServerException) as exc_info:
+            with pytest.raises(CNOPInventoryServerException) as exc_info:
                 list_assets(request, filter_params=filter_params, asset_dao=mock_dao)
 
             assert "Failed to list assets" in str(exc_info.value)
@@ -190,13 +190,12 @@ class TestGetAsset:
 
     def test_get_asset_success(self):
         """Test get_asset with valid asset ID"""
-    request = create_test_request()
-    test_asset = create_test_asset_btc()
+        request = create_test_request()
+        test_asset = create_test_asset_btc()
 
         with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id"):
-
-        mock_dao = MagicMock()
-        mock_dao.get_asset_by_id.return_value = test_asset
+            mock_dao = MagicMock()
+            mock_dao.get_asset_by_id.return_value = test_asset
 
             asset_request = GetAssetRequest(asset_id=TEST_ASSET_ID_BTC)
             result = get_asset(request, asset_request=asset_request, asset_dao=mock_dao)
@@ -208,29 +207,27 @@ class TestGetAsset:
 
     def test_get_asset_not_found(self):
         """Test get_asset with non-existent asset ID"""
-    request = create_test_request()
+        request = create_test_request()
 
         with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id"):
-
-        mock_dao = MagicMock()
+            mock_dao = MagicMock()
             # DAO raises CNOPAssetNotFoundException when asset not found
             mock_dao.get_asset_by_id.side_effect = CNOPAssetNotFoundException("Asset 'XYZ' not found")
 
             asset_request = GetAssetRequest(asset_id="XYZ")
 
             # Should raise CNOPAssetNotFoundException from DAO
-        with pytest.raises(CNOPAssetNotFoundException):
+            with pytest.raises(CNOPAssetNotFoundException):
                 get_asset(request, asset_request=asset_request, asset_dao=mock_dao)
 
     def test_get_asset_inactive(self):
         """Test get_asset with inactive asset"""
-    request = create_test_request()
-    test_asset = create_test_asset_inactive()
+        request = create_test_request()
+        test_asset = create_test_asset_inactive()
 
         with patch(PATCH_GET_REQUEST_ID, return_value="test-request-id"):
-
-        mock_dao = MagicMock()
-        mock_dao.get_asset_by_id.return_value = test_asset
+            mock_dao = MagicMock()
+            mock_dao.get_asset_by_id.return_value = test_asset
 
             asset_request = GetAssetRequest(asset_id=TEST_ASSET_ID_BTC)
             result = get_asset(request, asset_request=asset_request, asset_dao=mock_dao)
