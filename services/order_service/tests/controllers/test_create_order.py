@@ -62,9 +62,9 @@ TRANSACTION_MANAGER_SPEC = [
     'modify_order'
 ]
 
-from src.controllers.create_order import create_order, router
-from src.api_models.create_order import CreateOrderRequest, CreateOrderResponse
-from src.api_models.shared.data_models import OrderData
+from controllers.create_order import create_order, router
+from api_models.create_order import CreateOrderRequest, CreateOrderResponse
+from api_models.shared.data_models import OrderData
 from common.data.entities.order.enums import OrderType, OrderStatus
 from common.exceptions import (
     CNOPInsufficientBalanceException,
@@ -77,7 +77,7 @@ from common.exceptions.shared_exceptions import (
     CNOPInternalServerException
 )
 from order_exceptions.exceptions import CNOPOrderValidationException
-from src.constants import MSG_SUCCESS_ORDER_CREATED
+from constants import MSG_SUCCESS_ORDER_CREATED
 
 # Add tests directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -166,7 +166,12 @@ class TestCreateOrder:
     @pytest.fixture
     def mock_balance_dao(self):
         """Mock balance DAO"""
-        return MagicMock(spec=BALANCE_DAO_SPEC)
+        mock_dao = MagicMock(spec=BALANCE_DAO_SPEC)
+        # Mock the get_balance method to return a balance object with Decimal current_balance
+        mock_balance = MagicMock()
+        mock_balance.current_balance = Decimal("100000.00")  # Sufficient balance
+        mock_dao.get_balance.return_value = mock_balance
+        return mock_dao
 
 
     @pytest.mark.asyncio

@@ -57,32 +57,31 @@ HTTP_METHOD_DELETE = "DELETE"
 # FULL PATHS FOR PATCHES (module_path.function_name)
 # =============================================================================
 
-PATCH_VALIDATE_ORDER_CREATION = f'{MODULE_PATH_CREATE_ORDER}.{FUNCTION_VALIDATE_ORDER_CREATION}'
-PATCH_GET_CURRENT_MARKET_PRICE = f'{MODULE_PATH_DEPENDENCIES}.{FUNCTION_GET_CURRENT_MARKET_PRICE}'
-PATCH_VALIDATION_GET_CURRENT_MARKET_PRICE = 'src.validation.business_validators.get_current_market_price'
-PATCH_GET_CURRENT_USER = f'{MODULE_PATH_DEPENDENCIES}.{FUNCTION_GET_CURRENT_USER}'
-PATCH_GET_ASSET_TRANSACTION_DAO = f'{MODULE_PATH_ASSET_TRANSACTION}.get_asset_transaction_dao_dependency'
-PATCH_VALIDATE_ORDER_HISTORY = f'{MODULE_PATH_ASSET_TRANSACTION}.{FUNCTION_VALIDATE_ORDER_HISTORY_BUSINESS_RULES}'
-PATCH_GET_DYNAMODB_MANAGER = f'common.data.database.dynamodb_connection.{FUNCTION_GET_DYNAMODB_MANAGER}'
-PATCH_METRICS_COLLECTOR = f'{MODULE_PATH_MIDDLEWARE}.metrics_collector'
-PATCH_METRICS_GET_METRICS = f'{MODULE_PATH_METRICS}.metrics_collector.get_metrics'
+PATCH_VALIDATE_ORDER_CREATION = 'controllers.create_order.validate_order_creation_business_rules'
+PATCH_GET_CURRENT_MARKET_PRICE = 'controllers.dependencies.get_current_market_price'
+PATCH_GET_CURRENT_USER = 'src.controllers.dependencies.get_current_user'
+PATCH_GET_ASSET_TRANSACTION_DAO = 'src.controllers.dependencies.get_asset_transaction_dao_dependency'
+PATCH_VALIDATE_ORDER_HISTORY = 'src.controllers.asset_transaction.validate_order_history_business_rules'
+PATCH_GET_DYNAMODB_MANAGER = 'common.data.database.dynamodb_connection.get_dynamodb_manager'
+PATCH_METRICS_COLLECTOR = 'src.middleware.metrics_collector'
+PATCH_METRICS_GET_METRICS = 'src.metrics.metrics_collector.get_metrics'
 
 # Main app patches
 PATCH_MAIN_GET_METRICS_RESPONSE = 'src.main.get_metrics_response'
 
 # Asset transaction specific patches
-PATCH_ASSET_TRANSACTION_GET_ASSET_DAO = f'{MODULE_PATH_ASSET_TRANSACTION}.get_asset_dao_dependency'
-PATCH_ASSET_TRANSACTION_GET_USER_DAO = f'{MODULE_PATH_ASSET_TRANSACTION}.get_user_dao_dependency'
-PATCH_ASSET_TRANSACTION_DAO_CLASS = f'{MODULE_PATH_ASSET_TRANSACTION}.AssetTransactionDAO'
-PATCH_ASSET_DAO_CLASS = f'{MODULE_PATH_ASSET_TRANSACTION}.AssetDAO'
-PATCH_USER_DAO_CLASS = f'{MODULE_PATH_ASSET_TRANSACTION}.UserDAO'
+PATCH_ASSET_TRANSACTION_GET_ASSET_DAO = 'src.controllers.dependencies.get_asset_dao_dependency'
+PATCH_ASSET_TRANSACTION_GET_USER_DAO = 'src.controllers.dependencies.get_user_dao_dependency'
+PATCH_ASSET_TRANSACTION_DAO_CLASS = 'src.controllers.asset_transaction.AssetTransactionDAO'
+PATCH_ASSET_DAO_CLASS = 'src.controllers.asset_transaction.AssetDAO'
+PATCH_USER_DAO_CLASS = 'src.controllers.asset_transaction.UserDAO'
 
 # Exception paths
-PATCH_CNOP_DATABASE_OP_EXCEPTION = f'{MODULE_PATH_ASSET_TRANSACTION}.CNOPDatabaseOperationException'
-PATCH_CNOP_ENTITY_NOT_FOUND = f'{MODULE_PATH_ASSET_TRANSACTION}.CNOPEntityNotFoundException'
-PATCH_CNOP_INTERNAL_SERVER = f'{MODULE_PATH_ASSET_TRANSACTION}.CNOPInternalServerException'
-PATCH_CNOP_ASSET_NOT_FOUND = f'{MODULE_PATH_ASSET_TRANSACTION}.CNOPAssetNotFoundException'
-PATCH_CNOP_ORDER_VALIDATION = f'{MODULE_PATH_ASSET_TRANSACTION}.CNOPOrderValidationException'
+PATCH_CNOP_DATABASE_OP_EXCEPTION = 'src.controllers.asset_transaction.CNOPDatabaseOperationException'
+PATCH_CNOP_ENTITY_NOT_FOUND = 'src.controllers.asset_transaction.CNOPEntityNotFoundException'
+PATCH_CNOP_INTERNAL_SERVER = 'src.controllers.asset_transaction.CNOPInternalServerException'
+PATCH_CNOP_ASSET_NOT_FOUND = 'src.controllers.asset_transaction.CNOPAssetNotFoundException'
+PATCH_CNOP_ORDER_VALIDATION = 'src.controllers.asset_transaction.CNOPOrderValidationException'
 
 # External library dependencies (prometheus_client)
 PATCH_PROMETHEUS_INFO = 'prometheus_client.Info'

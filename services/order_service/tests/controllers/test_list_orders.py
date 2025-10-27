@@ -2,11 +2,17 @@
 Tests for list_orders controller
 """
 import pytest
+import sys
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 from decimal import Decimal
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
+
+# Add paths to sys.path BEFORE any imports that depend on them
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'common', 'src'))
 
 from src.controllers.list_orders import list_orders, router
 from src.api_models.list_orders import ListOrdersRequest, ListOrdersResponse

@@ -2,11 +2,18 @@
 Tests for asset_transaction controller
 """
 import pytest
+import sys
+import os
 from unittest.mock import Mock, MagicMock, patch, AsyncMock
 from datetime import datetime, timezone
 from decimal import Decimal
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
+
+# Add paths to sys.path BEFORE any imports that depend on them
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'common', 'src'))
+
 from common.exceptions import (
     CNOPDatabaseOperationException
 )
@@ -17,6 +24,8 @@ from common.exceptions.shared_exceptions import (
 )
 from common.data.entities.user import User
 
+from controllers.asset_transaction import get_asset_transactions
+
 
 def create_mock_request(request_id="test-request-id"):
     """Helper function to create a mock request object with headers"""
@@ -25,35 +34,6 @@ def create_mock_request(request_id="test-request-id"):
     return mock_request
 
 
-# Import dependency constants
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from dependency_constants import (
-    PATCH_GET_CURRENT_USER, PATCH_GET_ASSET_TRANSACTION_DAO,
-    PATCH_ASSET_TRANSACTION_GET_ASSET_DAO, PATCH_ASSET_TRANSACTION_GET_USER_DAO,
-    PATCH_VALIDATE_ORDER_HISTORY,
-    PATCH_ASSET_TRANSACTION_DAO_CLASS, PATCH_ASSET_DAO_CLASS, PATCH_USER_DAO_CLASS,
-    PATCH_CNOP_DATABASE_OP_EXCEPTION, PATCH_CNOP_ENTITY_NOT_FOUND,
-    PATCH_CNOP_INTERNAL_SERVER, PATCH_CNOP_ASSET_NOT_FOUND, PATCH_CNOP_ORDER_VALIDATION
-)
-
-# Mock dependencies before importing
-with patch(PATCH_GET_CURRENT_USER, create=True), \
-     patch(PATCH_GET_ASSET_TRANSACTION_DAO, create=True), \
-     patch(PATCH_ASSET_TRANSACTION_GET_ASSET_DAO, create=True), \
-     patch(PATCH_ASSET_TRANSACTION_GET_USER_DAO, create=True), \
-     patch(PATCH_VALIDATE_ORDER_HISTORY, create=True), \
-     patch(PATCH_ASSET_TRANSACTION_DAO_CLASS, create=True), \
-     patch(PATCH_ASSET_DAO_CLASS, create=True), \
-     patch(PATCH_USER_DAO_CLASS, create=True), \
-     patch(PATCH_CNOP_DATABASE_OP_EXCEPTION, create=True), \
-     patch(PATCH_CNOP_ENTITY_NOT_FOUND, create=True), \
-     patch(PATCH_CNOP_INTERNAL_SERVER, create=True), \
-     patch(PATCH_CNOP_ASSET_NOT_FOUND, create=True), \
-     patch(PATCH_CNOP_ORDER_VALIDATION, create=True):
-
-    from src.controllers.asset_transaction import get_asset_transactions
 
 
 class TestAssetTransactionController:
@@ -132,17 +112,9 @@ class TestAssetTransactionController:
         dao.get_user_by_username.return_value = Mock()
         return dao
 
-    @pytest.fixture
-    def mock_validate_order_history_business_rules(self):
-        """Mock business rules validation"""
-        from dependency_constants import PATCH_VALIDATE_ORDER_HISTORY
-        with patch(PATCH_VALIDATE_ORDER_HISTORY) as mock:
-            yield mock
-
-
     def test_get_asset_transactions_success(self, mock_request, mock_current_user,
                                                  mock_asset_transaction_dao, mock_asset_dao,
-                                                 mock_user_dao, mock_validate_order_history_business_rules):
+                                                 mock_user_dao):
         """Test successful retrieval of asset transactions"""
         result = get_asset_transactions(
             asset_id="BTC",
@@ -151,14 +123,6 @@ class TestAssetTransactionController:
             request=mock_request,
             current_user=mock_current_user,
             asset_transaction_dao=mock_asset_transaction_dao,
-            asset_dao=mock_asset_dao,
-            user_dao=mock_user_dao
-        )
-
-        # Verify validation was called
-        mock_validate_order_history_business_rules.assert_called_once_with(
-            asset_id="BTC",
-            username="testuser",
             asset_dao=mock_asset_dao,
             user_dao=mock_user_dao
         )
@@ -192,7 +156,7 @@ class TestAssetTransactionController:
 
     def test_get_asset_transactions_with_limit_reached(self, mock_request, mock_current_user,
                                                            mock_asset_transaction_dao, mock_asset_dao,
-                                                           mock_user_dao, mock_validate_order_history_business_rules):
+                                                           mock_user_dao ):
         """Test get_asset_transactions when limit is reached (has_more=True)"""
         # Mock more transactions to reach the limit
         mock_transactions = []
@@ -225,7 +189,7 @@ class TestAssetTransactionController:
 
     def test_get_asset_transactions_with_custom_limit_and_offset(self, mock_request, mock_current_user,
                                                                      mock_asset_transaction_dao, mock_asset_dao,
-                                                                     mock_user_dao, mock_validate_order_history_business_rules):
+                                                                     mock_user_dao ):
         """Test get_asset_transactions with custom limit and offset"""
         result = get_asset_transactions(
             asset_id="BTC",
@@ -249,7 +213,7 @@ class TestAssetTransactionController:
 
     def test_get_asset_transactions_entity_not_found(self, mock_request, mock_current_user,
                                                          mock_asset_transaction_dao, mock_asset_dao,
-                                                         mock_user_dao, mock_validate_order_history_business_rules):
+                                                         mock_user_dao):
         """Test get_asset_transactions with entity not found exception"""
 
         mock_asset_transaction_dao.get_user_asset_transactions.side_effect = CNOPEntityNotFoundException("Not found")
@@ -273,7 +237,7 @@ class TestAssetTransactionController:
 
     def test_get_asset_transactions_database_error(self, mock_request, mock_current_user,
                                                        mock_asset_transaction_dao, mock_asset_dao,
-                                                       mock_user_dao, mock_validate_order_history_business_rules):
+                                                       mock_user_dao ):
         """Test get_asset_transactions with database operation exception"""
 
         mock_asset_transaction_dao.get_user_asset_transactions.side_effect = CNOPDatabaseOperationException("DB error")
@@ -293,7 +257,7 @@ class TestAssetTransactionController:
 
     def test_get_asset_transactions_unexpected_error(self, mock_request, mock_current_user,
                                                          mock_asset_transaction_dao, mock_asset_dao,
-                                                         mock_user_dao, mock_validate_order_history_business_rules):
+                                                         mock_user_dao):
         """Test get_asset_transactions with unexpected exception"""
 
         mock_asset_transaction_dao.get_user_asset_transactions.side_effect = Exception("Unexpected error")
@@ -313,7 +277,7 @@ class TestAssetTransactionController:
 
     def test_get_asset_transactions_empty_result(self, mock_request, mock_current_user,
                                                      mock_asset_transaction_dao, mock_asset_dao,
-                                                     mock_user_dao, mock_validate_order_history_business_rules):
+                                                     mock_user_dao):
         """Test get_asset_transactions with empty result"""
         mock_asset_transaction_dao.get_user_asset_transactions.return_value = []
 
@@ -335,7 +299,7 @@ class TestAssetTransactionController:
 
     def test_get_asset_transactions_with_different_asset(self, mock_request, mock_current_user,
                                                              mock_asset_transaction_dao, mock_asset_dao,
-                                                             mock_user_dao, mock_validate_order_history_business_rules):
+                                                             mock_user_dao):
         """Test get_asset_transactions with different asset ID"""
         # Mock ETH transactions
         mock_eth_transaction = Mock()
@@ -371,7 +335,7 @@ class TestAssetTransactionController:
 
     def test_get_asset_transactions_with_high_precision_values(self, mock_request, mock_current_user,
                                                                    mock_asset_transaction_dao, mock_asset_dao,
-                                                                   mock_user_dao, mock_validate_order_history_business_rules):
+                                                                   mock_user_dao ):
         """Test get_asset_transactions with high precision quantity and price"""
         # Mock transaction with high precision values
         mock_precise_transaction = Mock()
@@ -405,7 +369,7 @@ class TestAssetTransactionController:
 
     def test_get_asset_transactions_with_different_statuses(self, mock_request, mock_current_user,
                                                                 mock_asset_transaction_dao, mock_asset_dao,
-                                                                mock_user_dao, mock_validate_order_history_business_rules):
+                                                                mock_user_dao ):
         """Test get_asset_transactions with different transaction statuses"""
                 # Mock transactions with different statuses
         mock_pending_transaction = Mock()

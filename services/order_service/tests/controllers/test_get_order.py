@@ -2,11 +2,17 @@
 Tests for get_order controller
 """
 import pytest
+import sys
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 from decimal import Decimal
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
+
+# Add paths to sys.path BEFORE any imports that depend on them
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'common', 'src'))
 
 from src.controllers.get_order import get_order, router
 from src.controllers.get_order import get_order_request

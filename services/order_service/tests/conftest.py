@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "common",
 order_service_src = os.path.join(
     os.path.dirname(__file__), "..", "src"
 )
+# Important: Add src BEFORE services_root to ensure proper import resolution
 sys.path.insert(0, order_service_src)
 
 # Add services root to path
