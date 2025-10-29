@@ -28,11 +28,8 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
       setError(null);
       const response = await assetTransactionApiService.getAssetTransactions(assetId);
 
-      console.log('Asset transaction response:', response); // Debug log
-
       // Backend returns { data: [...], has_more: boolean } directly
       if (response && response.data) {
-        console.log('Transaction data:', response.data); // Debug log
         setTransactions(response.data);
         setHasMore(response.has_more || false);
       } else {
@@ -40,7 +37,6 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
       }
     } catch (err) {
       setError('Asset transaction history is temporarily unavailable. Backend API needs to be fixed.');
-      console.error('Error loading asset transactions:', err);
     } finally {
       setLoading(false);
     }
@@ -150,9 +146,6 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
                   const quantity = parseFloat(transaction.quantity);
                   const price = parseFloat(transaction.price);
                   const totalValue = quantity * price;
-
-                  console.log('Rendering transaction:', transaction); // Debug log
-                  console.log('Transaction type:', transaction.transaction_type); // Debug log
 
                   return (
                     <tr key={index} className="hover:bg-gray-50">

@@ -67,7 +67,6 @@ const Login: React.FC = () => {
       };
 
                   const response = await apiService.login(loginData);
-      console.log('🔍 Login response:', response);
 
       // Check if response has the expected structure
       const authData = response.data || response;
@@ -75,8 +74,6 @@ const Login: React.FC = () => {
       const user = (authData as any).user || (response as any).user;
 
       if (!token) {
-        console.log('❌ Missing token in response');
-        console.log('❌ Full response:', JSON.stringify(response, null, 2));
         throw new Error('Invalid login response - missing access token');
       }
 
@@ -85,7 +82,6 @@ const Login: React.FC = () => {
         authUtils.saveAuthData(token, user);
       } else {
         // Save token and try to get user profile separately
-        console.log('🔍 No user in login response, will fetch profile...');
         authUtils.saveAuthData(token, {
           username: loginData.username,
           email: '', // Will be populated after profile fetch
@@ -98,7 +94,6 @@ const Login: React.FC = () => {
       }
 
       // Force a full page reload to reinitialize auth state
-      console.log('✅ Auth data saved, forcing page reload to update auth state...');
       window.location.href = '/dashboard';
     } catch (error: any) {
       setIsLoading(false);

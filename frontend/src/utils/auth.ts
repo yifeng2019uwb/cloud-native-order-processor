@@ -18,7 +18,7 @@ export const tokenStorage = {
     try {
       localStorage.setItem(AUTH_TOKEN_KEY, token);
     } catch (error) {
-      console.error('Failed to store auth token:', error);
+      // Silent fail for localStorage errors
     }
   },
 
@@ -26,7 +26,7 @@ export const tokenStorage = {
     try {
       localStorage.removeItem(AUTH_TOKEN_KEY);
     } catch (error) {
-      console.error('Failed to remove auth token:', error);
+      // Silent fail for localStorage errors
     }
   }
 };
@@ -46,7 +46,7 @@ export const userStorage = {
     try {
       localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
     } catch (error) {
-      console.error('Failed to store user data:', error);
+      // Silent fail for localStorage errors
     }
   },
 
@@ -54,7 +54,7 @@ export const userStorage = {
     try {
       localStorage.removeItem(USER_DATA_KEY);
     } catch (error) {
-      console.error('Failed to remove user data:', error);
+      // Silent fail for localStorage errors
     }
   }
 };

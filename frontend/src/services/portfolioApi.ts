@@ -77,8 +77,6 @@ class PortfolioApiService {
   async getPortfolio(_username: string): Promise<PortfolioResponse> {
     // Backend returns { assets: [...] } directly
     const response = await this.api.get<PortfolioResponse>(API_PATHS.PORTFOLIO);
-    console.log('Portfolio API response:', response);
-    console.log('Portfolio API response data:', response.data);
     return response.data;
   }
 

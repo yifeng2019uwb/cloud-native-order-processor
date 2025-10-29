@@ -45,10 +45,7 @@ interface PublicRouteProps {
 const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
-  console.log('📍 PublicRoute render:', { isAuthenticated, isLoading });
-
   if (isLoading) {
-    console.log('⏳ PublicRoute: Loading...');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -60,11 +57,9 @@ const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   }
 
   if (isAuthenticated) {
-    console.log('🚀 PublicRoute: Redirecting to dashboard');
     return <Navigate to="/dashboard" replace />;
   }
 
-  console.log('👋 PublicRoute: Showing public content');
   return <>{children}</>;
 };
 

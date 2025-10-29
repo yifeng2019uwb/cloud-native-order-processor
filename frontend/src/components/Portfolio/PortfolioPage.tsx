@@ -40,18 +40,10 @@ const PortfolioPage: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      console.log('Loading portfolio data for user:', user.username);
-
       const [portfolioRes, ordersRes] = await Promise.all([
-        portfolioApiService.getPortfolio(user.username).catch((err) => {
-          console.error('Portfolio API error:', err);
-          return null;
-        }),
+        portfolioApiService.getPortfolio(user.username).catch(() => null),
         orderApiService.listOrders().catch(() => ({ success: false, message: '', data: [], has_more: false, timestamp: '' }))
       ]);
-
-      console.log('Portfolio response:', portfolioRes);
-      console.log('Orders response:', ordersRes);
 
       if (portfolioRes) {
         setPortfolio(portfolioRes);
@@ -64,7 +56,6 @@ const PortfolioPage: React.FC = () => {
       }
     } catch (err) {
       setError('Failed to load portfolio data');
-      console.error('Portfolio load error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -74,9 +65,6 @@ const PortfolioPage: React.FC = () => {
   const totalValue = portfolio?.assets?.reduce((sum: number, asset: any) => {
     return sum + (parseFloat(asset.market_value?.toString() || '0'));
   }, 0) || 0;
-
-  console.log('Portfolio state:', portfolio);
-  console.log('Portfolio assets:', portfolioAssets);
 
   return (
     <div className="min-h-screen bg-gray-50">

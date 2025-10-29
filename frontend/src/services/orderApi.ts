@@ -21,11 +21,6 @@ class OrderApiService {
       timeout: 10000,
     });
 
-    // Debug logging to see what base URL is set
-    console.log('🔍 Orders API Constructor Debug:');
-    console.log('  - API_URLS.ORDERS:', API_URLS.ORDERS);
-    console.log('  - this.api.defaults.baseURL:', this.api.defaults.baseURL);
-
     this.setupInterceptors();
   }
 

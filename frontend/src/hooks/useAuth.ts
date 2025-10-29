@@ -118,7 +118,6 @@ const useAuthState = () => {
         error: null
       });
 
-      console.log('✅ Login successful with real profile data!');
     } catch (error: unknown) {
       setState(prev => ({
         ...prev,
@@ -133,19 +132,10 @@ const useAuthState = () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
         try {
-      console.log('🚀 Starting registration with data:', userData);
       const response: AuthResponse = await apiService.register(userData);
-
-      console.log('🔍 Registration response type:', typeof response);
-      console.log('🔍 Registration response keys:', Object.keys(response || {}));
-      console.log('🔍 Registration response:', JSON.stringify(response, null, 2));
-      console.log('🔍 Response.success value:', response?.success);
-      console.log('🔍 Response.success type:', typeof response?.success);
 
       if (response && response.success === true) {
         // Registration successful! Backend doesn't provide token/user data for registration
-        console.log('✅ Registration successful:', response.message);
-
         // Just update loading state - user needs to login separately after registration
         setState(prev => ({
           ...prev,
@@ -154,15 +144,11 @@ const useAuthState = () => {
         }));
 
         // Registration complete - no auto-login
-        console.log('✅ Registration flow completed successfully');
         return;
       } else {
-        console.log('❌ Registration failed - response.success is not true');
-        console.log('❌ Response object:', response);
         throw new Error(`Registration failed: ${response?.message || 'Unknown error'}`);
       }
     } catch (error: unknown) {
-      console.log('Registration error:', error);
 
       // Handle different types of errors
       if (error && typeof error === 'object' && 'validation_errors' in error) {
