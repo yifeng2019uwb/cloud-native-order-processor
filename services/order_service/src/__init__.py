@@ -1,7 +1,3 @@
 """
-Order Service Package
-Path: services/order_service/src/__init__.py
+Order Service package marker. Keep empty to avoid import side effects.
 """
-
-__version__ = "1.0.0"
-__author__ = "Cloud Native Order Processor Team"

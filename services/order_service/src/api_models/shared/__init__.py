@@ -1,9 +1,3 @@
 """
-Shared models package for order service
+Shared models package marker. Keep empty to avoid import side effects.
 """
-from .data_models import OrderData, OrderSummary
-
-__all__ = [
-    "OrderData",
-    "OrderSummary"
-]
