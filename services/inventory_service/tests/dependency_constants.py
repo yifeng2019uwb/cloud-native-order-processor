@@ -12,6 +12,9 @@ Centralized constants for module paths, function names, and configuration used i
 # Controller patches
 PATCH_VALIDATE_ASSET_EXISTS = 'validation.business_validators.validate_asset_exists'
 PATCH_GET_REQUEST_ID = 'controllers.assets.get_request_id_from_request'
+PATCH_METRICS_RECORD_LIST = 'controllers.assets.record_asset_retrieval'
+PATCH_METRICS_UPDATE_COUNTS = 'controllers.assets.update_asset_counts'
+PATCH_METRICS_RECORD_DETAIL = 'controllers.assets.record_asset_detail_view'
 
 # =============================================================================
 # ROUTER CONFIGURATION

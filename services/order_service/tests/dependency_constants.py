@@ -59,6 +59,11 @@ HTTP_METHOD_DELETE = "DELETE"
 
 PATCH_VALIDATE_ORDER_CREATION = 'controllers.create_order.validate_order_creation_business_rules'
 PATCH_GET_CURRENT_MARKET_PRICE = 'controllers.dependencies.get_current_market_price'
+PATCH_DEP_GET_ORDER_DAO = 'controllers.dependencies.get_order_dao'
+PATCH_DEP_GET_BALANCE_DAO = 'controllers.dependencies.get_balance_dao'
+PATCH_DEP_GET_ASSET_DAO = 'controllers.dependencies.get_asset_dao'
+PATCH_DEP_GET_USER_DAO = 'controllers.dependencies.get_user_dao'
+PATCH_DEP_DYNAMODB_MANAGER = 'controllers.dependencies.get_dynamodb_manager'
 PATCH_GET_CURRENT_USER = 'src.controllers.dependencies.get_current_user'
 PATCH_GET_ASSET_TRANSACTION_DAO = 'src.controllers.dependencies.get_asset_transaction_dao_dependency'
 PATCH_VALIDATE_ORDER_HISTORY = 'src.controllers.asset_transaction.validate_order_history_business_rules'
