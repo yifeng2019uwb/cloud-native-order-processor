@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import AssetTransactionHistory from './AssetTransactionHistory';
 import { orderApiService } from '@/services/orderApi';
 import { portfolioApiService } from '@/services/portfolioApi';
+import { UI_STRINGS, UI_PATTERNS, formatString } from '@/constants/ui';
 import type { Order } from '@/types';
 
 const PortfolioPage: React.FC = () => {
@@ -73,24 +74,24 @@ const PortfolioPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Portfolio</h1>
-              <p className="text-sm text-gray-600">View your asset holdings and performance</p>
+              <h1 className="text-2xl font-bold text-gray-900">{UI_STRINGS.PORTFOLIO_TITLE}</h1>
+              <p className="text-sm text-gray-600">{UI_STRINGS.PORTFOLIO_SUBTITLE}</p>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">
-                Welcome, {user?.username}!
+                {formatString(UI_STRINGS.WELCOME_USER, { username: user?.username || '' })}
               </span>
               <Link
                 to="/dashboard"
                 className="text-indigo-600 hover:text-indigo-500 text-sm font-medium"
               >
-                Dashboard
+                {UI_STRINGS.DASHBOARD}
               </Link>
               <button
                 onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                className={UI_PATTERNS.DANGER_BUTTON}
               >
-                Logout
+                {UI_STRINGS.LOGOUT}
               </button>
             </div>
           </div>

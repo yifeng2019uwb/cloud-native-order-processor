@@ -5,6 +5,7 @@ import { orderApiService } from '@/services/orderApi';
 import { balanceApiService } from '@/services/balanceApi';
 import { inventoryApiService } from '@/services/inventoryApi';
 import { portfolioApiService } from '@/services/portfolioApi';
+import { UI_STRINGS, UI_PATTERNS, formatString } from '@/constants/ui';
 import type { Asset, Order, CreateOrderRequest, Balance } from '@/types';
 
 const TradingPage: React.FC = () => {
@@ -110,7 +111,7 @@ const TradingPage: React.FC = () => {
         setOrders([]);
       }
     } catch (err) {
-      setError('Failed to load trading data');
+      setError(UI_STRINGS.TRADING_ERROR || 'Failed to load trading data');
       console.error('Trading data load error:', err);
     } finally {
       setIsLoading(false);
@@ -131,7 +132,7 @@ const TradingPage: React.FC = () => {
         quantity,
         price,
         total,
-        orderType: 'Buy',
+        orderType: UI_STRINGS.BUY,
         balanceAfter: remainingBalance,
         balanceCheck: remainingBalance >= 0
       };
@@ -144,7 +145,7 @@ const TradingPage: React.FC = () => {
         quantity,
         price,
         total,
-        orderType: 'Sell',
+        orderType: UI_STRINGS.SELL,
         quantityAfter: remainingQuantity,
         quantityCheck: remainingQuantity >= 0
       };
@@ -160,12 +161,12 @@ const TradingPage: React.FC = () => {
 
     // Check validation
     if (orderForm.orderType === 'market_buy' && !preview.balanceCheck) {
-      setError('Insufficient balance for this order');
+      setError(UI_STRINGS.INSUFFICIENT_BALANCE);
       return;
     }
 
     if (orderForm.orderType === 'market_sell' && !preview.quantityCheck) {
-      setError('Insufficient asset balance for this order');
+      setError(UI_STRINGS.INSUFFICIENT_BALANCE);
       return;
     }
 
@@ -197,9 +198,9 @@ const TradingPage: React.FC = () => {
       // Reload data
       await loadData();
 
-      alert(`Order created successfully!`);
+      alert(UI_STRINGS.ORDER_SUCCESS);
     } catch (err: any) {
-      setError(err.message || 'Failed to create order');
+      setError(err.message || UI_STRINGS.ORDER_FAILED);
       console.error('Order creation error:', err);
     } finally {
       setIsLoading(false);
@@ -215,24 +216,24 @@ const TradingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Trading</h1>
-              <p className="text-sm text-gray-600">Create and manage orders</p>
+              <h1 className="text-2xl font-bold text-gray-900">{UI_STRINGS.TRADING_TITLE}</h1>
+              <p className="text-sm text-gray-600">{UI_STRINGS.TRADING_SUBTITLE}</p>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">
-                Welcome, {user?.username}!
+{formatString(UI_STRINGS.WELCOME_USER, { username: user?.username || '' })}
               </span>
               <Link
                 to="/dashboard"
                 className="text-indigo-600 hover:text-indigo-500 text-sm font-medium"
               >
-                Dashboard
+{UI_STRINGS.DASHBOARD}
               </Link>
               <button
                 onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                className={UI_PATTERNS.DANGER_BUTTON}
               >
-                Logout
+                {UI_STRINGS.LOGOUT}
               </button>
             </div>
           </div>
@@ -244,13 +245,13 @@ const TradingPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">💰 Account Balance</h3>
+              <h3 className="text-lg font-medium text-gray-900">💰 {UI_STRINGS.TOTAL_BALANCE}</h3>
               <p className="text-2xl font-bold text-green-600">
                 ${balance?.balance?.toFixed(2) || '0.00'}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-600">Asset Holdings</p>
+              <p className="text-sm text-gray-600">{UI_STRINGS.ASSET_HOLDINGS}</p>
               <p className="text-lg font-medium">
                 {portfolio?.assets?.length || 0} assets owned
               </p>
@@ -268,7 +269,7 @@ const TradingPage: React.FC = () => {
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">
-                  📝 Create Order
+                  📝 {UI_STRINGS.CREATE_ORDER || 'Create Order'}
               </h2>
 
                 {error && (
@@ -281,7 +282,7 @@ const TradingPage: React.FC = () => {
                   {/* Asset Selection */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Asset
+                      {UI_STRINGS.ASSET}
                     </label>
 
                                         {/* Asset Search */}
@@ -405,7 +406,7 @@ const TradingPage: React.FC = () => {
                   {/* Order Type */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Order Type
+                      {UI_STRINGS.ORDER_TYPE}
                     </label>
                     <div className="flex space-x-4">
                       <label className="flex items-center">

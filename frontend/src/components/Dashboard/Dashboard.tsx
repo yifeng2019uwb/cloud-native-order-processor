@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { balanceApiService } from '@/services/balanceApi';
 import { portfolioApiService } from '@/services/portfolioApi';
+import { UI_STRINGS, UI_PATTERNS, formatString } from '@/constants/ui';
 import type { Balance } from '@/types';
 
 const Dashboard: React.FC = () => {
@@ -75,18 +76,18 @@ const Dashboard: React.FC = () => {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Order Processor Dashboard
+                {UI_STRINGS.ORDER_PROCESSOR_DASHBOARD}
               </h1>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">
-                Welcome, {user.username}!
+                {formatString(UI_STRINGS.WELCOME_USER, { username: user.username })}
               </span>
               <button
                 onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                className={UI_PATTERNS.DANGER_BUTTON}
               >
-                Logout
+                {UI_STRINGS.LOGOUT}
               </button>
             </div>
           </div>
@@ -98,7 +99,7 @@ const Dashboard: React.FC = () => {
         <div className="px-4 py-6 sm:px-0">
           {/* Account Summary */}
           <div className="mb-8">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Account Overview</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{UI_STRINGS.ACCOUNT_SUMMARY}</h2>
 
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -123,7 +124,7 @@ const Dashboard: React.FC = () => {
                       <div className="ml-5 w-0 flex-1">
                         <dl>
                           <dt className="text-sm font-medium text-gray-500 truncate">
-                            Account Balance
+                            {UI_STRINGS.TOTAL_BALANCE}
                           </dt>
                           <dd className="text-2xl font-bold text-gray-900">
                             ${balance?.balance?.toFixed(2) || '0.00'}
@@ -149,7 +150,7 @@ const Dashboard: React.FC = () => {
                       <div className="ml-5 w-0 flex-1">
                         <dl>
                           <dt className="text-sm font-medium text-gray-500 truncate">
-                            Total Asset Value
+                            {UI_STRINGS.TOTAL_ASSET_VALUE}
                           </dt>
                           <dd className="text-2xl font-bold text-gray-900">
                             ${calculateTotalAssetValue().toFixed(2)}

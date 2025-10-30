@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { assetTransactionApiService } from '@/services/assetTransactionApi';
+import { UI_STRINGS, UI_PATTERNS } from '@/constants/ui';
 import type { AssetTransactionHistory } from '@/types';
 
 interface AssetTransactionHistoryProps {
@@ -33,10 +34,10 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
         setTransactions(response.data);
         setHasMore(response.has_more || false);
       } else {
-        setError('Failed to load transaction history');
+        setError(UI_STRINGS.TRANSACTION_ERROR);
       }
     } catch (err) {
-      setError('Asset transaction history is temporarily unavailable. Backend API needs to be fixed.');
+        setError(UI_STRINGS.TRANSACTION_ERROR);
     } finally {
       setLoading(false);
     }
@@ -46,8 +47,8 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
     return (
       <div className="flex justify-center items-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading transaction history...</p>
+          <div className={UI_PATTERNS.LOADING_SPINNER}></div>
+          <p className="mt-4 text-gray-600">{UI_STRINGS.TRANSACTION_LOADING}</p>
         </div>
       </div>
     );
@@ -110,7 +111,7 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No transactions found</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">{UI_STRINGS.NO_TRANSACTIONS}</h3>
           <p className="mt-1 text-sm text-gray-500">
             You haven't made any transactions for this asset yet.
           </p>
@@ -122,22 +123,22 @@ const AssetTransactionHistoryComponent: React.FC<AssetTransactionHistoryProps> =
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    {UI_STRINGS.DATE}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
+                    {UI_STRINGS.TYPE}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantity
+                    {UI_STRINGS.QUANTITY}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
+                    {UI_STRINGS.PRICE}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total Value
+                    {UI_STRINGS.TOTAL_VALUE}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    {UI_STRINGS.STATUS}
                   </th>
                 </tr>
               </thead>

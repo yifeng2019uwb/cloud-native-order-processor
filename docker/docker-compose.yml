@@ -31,6 +31,12 @@ services:
     container_name: order-processor-frontend
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
     depends_on:
       - user_service
       - inventory_service

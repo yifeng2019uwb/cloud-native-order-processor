@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { apiService } from '@/services/api';
 import { authUtils } from '@/utils/auth';
+import { UI_STRINGS } from '@/constants/ui';
 import type { LoginRequest } from '@/types';
 import { BACKEND_VALIDATION_RULES } from '@/types';
 
@@ -26,7 +27,7 @@ const Login: React.FC = () => {
 
     // Username validation (matching backend)
     if (!formData.username) {
-      errors.username = 'Username is required';
+      errors.username = UI_STRINGS.USERNAME_REQUIRED;
     } else if (formData.username.length < BACKEND_VALIDATION_RULES.username.minLength ||
                formData.username.length > BACKEND_VALIDATION_RULES.username.maxLength) {
       errors.username = `Username must be ${BACKEND_VALIDATION_RULES.username.minLength}-${BACKEND_VALIDATION_RULES.username.maxLength} characters`;
@@ -36,7 +37,7 @@ const Login: React.FC = () => {
 
     // Password validation (matching backend)
     if (!formData.password) {
-      errors.password = 'Password is required';
+      errors.password = UI_STRINGS.PASSWORD_REQUIRED;
     } else if (formData.password.length < BACKEND_VALIDATION_RULES.password.minLength ||
                formData.password.length > BACKEND_VALIDATION_RULES.password.maxLength) {
       errors.password = `Password must be ${BACKEND_VALIDATION_RULES.password.minLength}-${BACKEND_VALIDATION_RULES.password.maxLength} characters`;
@@ -97,7 +98,7 @@ const Login: React.FC = () => {
       window.location.href = '/dashboard';
     } catch (error: any) {
       setIsLoading(false);
-      setError(error?.message || 'Login failed. Please check your credentials.');
+      setError(error?.message || UI_STRINGS.LOGIN_FAILED);
     }
   };
 
