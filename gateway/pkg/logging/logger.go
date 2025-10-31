@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
 // LogEntry represents a structured log entry
 type LogEntry struct {
-	Timestamp string                 `json:"timestamp"`
-	Level     LogLevel               `json:"level"`
-	Service   string                 `json:"service"`
-	RequestID string                 `json:"request_id,omitempty"`
-	Action    LogActions             `json:"action"`
-	Message   string                 `json:"message"`
-	User      string                 `json:"user,omitempty"`
-	Extra     map[string]interface{} `json:"extra,omitempty"`
+	Timestamp string     `json:"timestamp"`
+	Level     LogLevel   `json:"level"`
+	Service   string     `json:"service"`
+	RequestID string     `json:"request_id,omitempty"`
+	Action    LogActions `json:"action"`
+	Message   string     `json:"message"`
+	User      string     `json:"user,omitempty"`
 }
 
 // BaseLogger represents the main logging interface
@@ -58,6 +58,27 @@ func (l *BaseLogger) Debug(action LogActions, message string, user string, extra
 	l.log(DEBUG, action, message, user, extra)
 }
 
+// formatExtra formats extra map into message string
+func formatExtra(extra map[string]interface{}) string {
+	if len(extra) == 0 {
+		return ""
+	}
+
+	var parts []string
+	for key, value := range extra {
+		parts = append(parts, fmt.Sprintf("%s=%v", key, value))
+	}
+	return strings.Join(parts, ", ")
+}
+
+// formatMessageWithExtra formats message with extra info
+func formatMessageWithExtra(message string, extra map[string]interface{}) string {
+	if extraInfo := formatExtra(extra); extraInfo != "" {
+		return fmt.Sprintf("%s [%s]", message, extraInfo)
+	}
+	return message
+}
+
 // log is the internal logging method
 func (l *BaseLogger) log(level LogLevel, action LogActions, message string, user string, extra map[string]interface{}) {
 	entry := LogEntry{
@@ -66,9 +87,8 @@ func (l *BaseLogger) log(level LogLevel, action LogActions, message string, user
 		Service:   l.service,
 		RequestID: l.requestID,
 		Action:    action,
-		Message:   message,
+		Message:   formatMessageWithExtra(message, extra),
 		User:      user,
-		Extra:     extra,
 	}
 
 	// Marshal to JSON

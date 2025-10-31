@@ -32,9 +32,8 @@ func (f *JSONFormatter) CreateRequestLog(level LogLevel, action LogActions, mess
 		Service:   "gateway",
 		RequestID: requestID,
 		Action:    action,
-		Message:   message,
+		Message:   formatMessageWithExtra(message, extra),
 		User:      user,
-		Extra:     extra,
 	}
 }
 
@@ -47,7 +46,6 @@ func (f *JSONFormatter) CreateSystemLog(level LogLevel, action LogActions, messa
 		Level:     level,
 		Service:   "gateway",
 		Action:    action,
-		Message:   message,
-		Extra:     extra,
+		Message:   formatMessageWithExtra(message, extra),
 	}
 }

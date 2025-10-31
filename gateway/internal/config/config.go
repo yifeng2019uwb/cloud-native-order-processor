@@ -13,7 +13,6 @@ type Config struct {
 	Server   ServerConfig
 	Redis    RedisConfig
 	Services ServicesConfig
-	JWT      JWTConfig
 }
 
 // ServerConfig holds server-related configuration
@@ -37,12 +36,6 @@ type ServicesConfig struct {
 	InventoryService string
 	OrderService     string
 	AuthService      string
-}
-
-// JWTConfig holds JWT configuration
-type JWTConfig struct {
-	SecretKey string
-	Algorithm string
 }
 
 // Load loads configuration from environment variables
@@ -75,10 +68,6 @@ func Load() (*Config, error) {
 			InventoryService: getEnv(constants.EnvInventoryServiceURL, constants.DefaultInventoryServiceURL),
 			OrderService:     getEnv(constants.EnvOrderServiceURL, constants.DefaultOrderServiceURL),
 			AuthService:      getEnv(constants.EnvAuthServiceURL, constants.DefaultAuthServiceURL),
-		},
-		JWT: JWTConfig{
-			SecretKey: getEnv(constants.EnvJWTSecretKey, constants.DefaultJWTSecretKey),
-			Algorithm: getEnv(constants.EnvJWTAlgorithm, constants.DefaultJWTAlgorithm),
 		},
 	}, nil
 }

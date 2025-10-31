@@ -37,15 +37,23 @@ func setupTestServer() (*Server, *config.Config) {
 	return server, cfg
 }
 
+// Test constants
+const (
+	testPort           = "8080"
+	testHost           = "localhost"
+	testUserServiceURL = "http://user-service:8000"
+	testInventoryURL   = "http://inventory-service:8001"
+)
+
 func TestNewServer(t *testing.T) {
 	cfg := &config.Config{
 		Server: config.ServerConfig{
-			Port: "8080",
-			Host: "localhost",
+			Port: testPort,
+			Host: testHost,
 		},
 		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
+			UserService:      testUserServiceURL,
+			InventoryService: testInventoryURL,
 		},
 	}
 
@@ -55,6 +63,31 @@ func TestNewServer(t *testing.T) {
 	// Create a new registry for each test to avoid duplicate metrics registration
 	reg := prometheus.NewRegistry()
 	server := NewServerWithRegistry(cfg, redisService, proxyService, reg)
+
+	assert.NotNil(t, server)
+	assert.Equal(t, cfg, server.config)
+	assert.Equal(t, redisService, server.redisService)
+	assert.Equal(t, proxyService, server.proxyService)
+	assert.NotNil(t, server.router)
+}
+
+func TestNewServerSimple(t *testing.T) {
+	cfg := &config.Config{
+		Server: config.ServerConfig{
+			Port: testPort,
+			Host: testHost,
+		},
+		Services: config.ServicesConfig{
+			UserService:      testUserServiceURL,
+			InventoryService: testInventoryURL,
+		},
+	}
+
+	redisService := &services.RedisService{}
+	proxyService := services.NewProxyService(cfg)
+
+	// Test NewServer (not NewServerWithRegistry)
+	server := NewServer(cfg, redisService, proxyService)
 
 	assert.NotNil(t, server)
 	assert.Equal(t, cfg, server.config)
@@ -548,6 +581,59 @@ func TestHandleProxyRequestErrorScenarios(t *testing.T) {
 		// Should return 404 (not found) for unknown service
 		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
+
+	t.Run("Invalid JSON Body", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", constants.APIV1Path+constants.AuthLoginPath, strings.NewReader("invalid json {"))
+
+		gin.SetMode(gin.TestMode)
+		ctx := gin.CreateTestContextOnly(w, server.router)
+		ctx.Request = req
+
+		server.handleProxyRequest(ctx)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var response models.ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Contains(t, response.Message, "Invalid JSON body")
+	})
+
+	t.Run("Role-Based Access Control with Empty AllowedRoles", func(t *testing.T) {
+		// Note: Current routes have empty AllowedRoles, so any authenticated role is allowed
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", constants.APIV1Orders, nil)
+
+		gin.SetMode(gin.TestMode)
+		ctx := gin.CreateTestContextOnly(w, server.router)
+		ctx.Request = req
+		ctx.Set(constants.ContextKeyUserRole, "guest") // Any role is allowed when AllowedRoles is empty
+
+		server.handleProxyRequest(ctx)
+
+		// Should pass auth check (empty AllowedRoles = allow all authenticated), but fail on backend (503)
+		assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	})
+
+	t.Run("No Authentication with Required Auth Route", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", constants.APIV1AuthProfile, nil)
+
+		gin.SetMode(gin.TestMode)
+		ctx := gin.CreateTestContextOnly(w, server.router)
+		ctx.Request = req
+		// No user role set
+
+		server.handleProxyRequest(ctx)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+		var response models.ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, string(models.ErrAuthInvalidToken), response.Error)
+	})
 }
 
 func TestHandleError(t *testing.T) {
@@ -651,6 +737,31 @@ func TestGetBasePathEdgeCases(t *testing.T) {
 	t.Run("Path with Query Parameters", func(t *testing.T) {
 		result := server.getBasePath("/api/v1/assets/BTC/transactions?limit=10")
 		assert.Equal(t, "/api/v1/assets/BTC/transactions?limit=10", result)
+	})
+
+	t.Run("Balance by Asset ID", func(t *testing.T) {
+		result := server.getBasePath("/api/v1/assets/BTC/balance")
+		assert.Equal(t, "/api/v1/assets/:asset_id/balance", result)
+	})
+
+	t.Run("Asset Transactions by ID", func(t *testing.T) {
+		result := server.getBasePath("/api/v1/assets/ETH/transactions")
+		assert.Equal(t, "/api/v1/assets/:asset_id/transactions", result)
+	})
+
+	t.Run("Order by ID", func(t *testing.T) {
+		result := server.getBasePath("/api/v1/orders/12345")
+		assert.Equal(t, "/api/v1/orders/:id", result)
+	})
+
+	t.Run("Inventory Asset by ID", func(t *testing.T) {
+		result := server.getBasePath("/api/v1/inventory/assets/67890")
+		assert.Equal(t, "/api/v1/inventory/assets/:id", result)
+	})
+
+	t.Run("Portfolio by Username", func(t *testing.T) {
+		result := server.getBasePath("/api/v1/portfolio/user123")
+		assert.Equal(t, "/api/v1/portfolio/:username", result)
 	})
 }
 

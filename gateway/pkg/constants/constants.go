@@ -65,8 +65,6 @@ const (
 	EnvInventoryServiceURL = "INVENTORY_SERVICE_URL"
 	EnvOrderServiceURL     = "ORDER_SERVICE_URL"
 	EnvAuthServiceURL      = "AUTH_SERVICE_URL"
-	EnvJWTSecretKey        = "JWT_SECRET_KEY"
-	EnvJWTAlgorithm        = "JWT_ALGORITHM"
 )
 
 // Default service URLs
@@ -372,12 +370,6 @@ const (
 	ContextKeyUserID   = "user_id"
 	ContextKeyUserRole = "user_role"
 	ContextKeySession  = "session"
-)
-
-// Phase 1: JWT configuration
-const (
-	DefaultJWTSecretKey = "dev-secret-key-change-in-production" // TODO: Use environment variable
-	DefaultJWTAlgorithm = "HS256"
 )
 
 // Circuit breaker configuration

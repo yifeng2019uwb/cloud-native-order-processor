@@ -54,6 +54,12 @@ func TestLoad(t *testing.T) {
 		if cfg.Services.InventoryService != constants.DefaultInventoryServiceURL {
 			t.Errorf("Expected inventory service URL %s, got %s", constants.DefaultInventoryServiceURL, cfg.Services.InventoryService)
 		}
+		if cfg.Services.OrderService != constants.DefaultOrderServiceURL {
+			t.Errorf("Expected order service URL %s, got %s", constants.DefaultOrderServiceURL, cfg.Services.OrderService)
+		}
+		if cfg.Services.AuthService != constants.DefaultAuthServiceURL {
+			t.Errorf("Expected auth service URL %s, got %s", constants.DefaultAuthServiceURL, cfg.Services.AuthService)
+		}
 	})
 
 	t.Run("Custom Configuration", func(t *testing.T) {
@@ -68,6 +74,8 @@ func TestLoad(t *testing.T) {
 			constants.EnvRedisSSL:            "true",
 			constants.EnvUserServiceURL:      "http://custom-user:9000",
 			constants.EnvInventoryServiceURL: "http://custom-inventory:9001",
+			constants.EnvOrderServiceURL:     "http://custom-order:9002",
+			constants.EnvAuthServiceURL:      "http://custom-auth:9003",
 		}
 
 		// Set environment variables
@@ -108,6 +116,12 @@ func TestLoad(t *testing.T) {
 		}
 		if cfg.Services.InventoryService != "http://custom-inventory:9001" {
 			t.Errorf("Expected inventory service URL http://custom-inventory:9001, got %s", cfg.Services.InventoryService)
+		}
+		if cfg.Services.OrderService != "http://custom-order:9002" {
+			t.Errorf("Expected order service URL http://custom-order:9002, got %s", cfg.Services.OrderService)
+		}
+		if cfg.Services.AuthService != "http://custom-auth:9003" {
+			t.Errorf("Expected auth service URL http://custom-auth:9003, got %s", cfg.Services.AuthService)
 		}
 	})
 }
@@ -224,6 +238,8 @@ func TestConfigStructs(t *testing.T) {
 		config := ServicesConfig{
 			UserService:      "http://user-service:8000",
 			InventoryService: "http://inventory-service:8001",
+			OrderService:     "http://order-service:8002",
+			AuthService:      "http://auth-service:8003",
 		}
 
 		if config.UserService != "http://user-service:8000" {
@@ -231,6 +247,12 @@ func TestConfigStructs(t *testing.T) {
 		}
 		if config.InventoryService != "http://inventory-service:8001" {
 			t.Errorf("Expected inventory service http://inventory-service:8001, got %s", config.InventoryService)
+		}
+		if config.OrderService != "http://order-service:8002" {
+			t.Errorf("Expected order service http://order-service:8002, got %s", config.OrderService)
+		}
+		if config.AuthService != "http://auth-service:8003" {
+			t.Errorf("Expected auth service http://auth-service:8003, got %s", config.AuthService)
 		}
 	})
 }

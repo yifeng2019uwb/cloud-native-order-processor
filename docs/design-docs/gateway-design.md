@@ -51,10 +51,10 @@ The system needs a centralized entry point that can:
 
 ### **Core Components**
 1. **HTTP Server**: Gin-based server with middleware stack
-2. **Authentication**: JWT validation and role-based access control
+2. **Authentication**: JWT validation via Auth Service (centralized)
 3. **Routing**: Intelligent request routing to backend services
-4. **Proxy Service**: Request forwarding and response transformation
-5. **Security**: CORS, input validation, rate limiting (planned)
+4. **Proxy Service**: Request forwarding with circuit breaker protection
+5. **Security**: ✅ CORS, ✅ Rate limiting, ✅ Security headers injection
 
 ### **Request Flow**
 ```
@@ -63,11 +63,12 @@ The system needs a centralized entry point that can:
 2. Gateway (Port 8080)
    ↓
 3. Middleware Stack:
-   ├── CORS
-   ├── Logger
-   ├── Authentication (JWT validation)
-   ├── Role Authorization (Role-based access)
-   └── Recovery
+   ├── CORS ✅
+   ├── Logger ✅
+   ├── Recovery ✅
+   ├── Authentication (JWT validation via Auth Service) ✅
+   ├── Rate Limiting (Redis-based) ✅
+   └── Role Authorization (Role-based access) ✅
    ↓
 4. Route Handler
    ↓
@@ -84,8 +85,11 @@ The system needs a centralized entry point that can:
 
 ### **Authentication Strategy**
 - **JWT Tokens**: Stateless token-based authentication
-- **Token Validation**: Signature verification and expiration checking
-- **Role Extraction**: User roles embedded in JWT claims
+- **Token Validation**: ✅ **Centralized via Auth Service** (Phase 2 implementation)
+  - Gateway delegates JWT validation to Auth Service
+  - No JWT secret distribution (only Auth Service has secrets)
+  - Token expiration and signature verification handled by Auth Service
+- **Role Extraction**: User roles embedded in JWT claims, extracted by Auth Service
 
 ### **Authorization Model**
 - **Role-Based Access Control (RBAC)**:
@@ -103,6 +107,37 @@ APIV1AuthRegister: {AllowedRoles: []string{"public"}}
 APIV1AuthMe:       {AllowedRoles: []string{}} // Empty = any role
 APIV1AuthLogout:   {AllowedRoles: []string{}} // Empty = any role
 ```
+
+### **Security Middleware Stack**
+Gateway implements a middleware stack that processes requests in order:
+1. **CORS Middleware** - Handles cross-origin requests (single entry point)
+2. **Logger Middleware** - Request logging and correlation
+3. **Recovery Middleware** - Panic recovery and error handling
+4. **Auth Middleware** - JWT validation via Auth Service (centralized)
+5. **Rate Limiting Middleware** - Redis-based request throttling (1000 req/min per IP)
+
+### **Security Headers Injection**
+Gateway injects security headers into requests forwarded to backend services:
+- `X-Source: gateway` - Identifies request source
+- `X-Auth-Service: auth-service` - Indicates Auth Service validation
+- `X-User-ID` - User identifier from JWT
+- `X-User-Role` - User role from JWT
+- `X-Authenticated: true/false` - Authentication status
+- `X-Request-ID` - Request correlation ID for tracing
+
+**Purpose**: Backend services can validate request source and receive user context without handling JWT tokens.
+
+### **Secret Management**
+**Architecture Design**:
+- Gateway does not store or manage JWT secrets
+- Gateway delegates all JWT validation to Auth Service via HTTP call
+- Gateway only requires `AuthService` URL for validation, not secrets
+- Auth Service manages its own JWT secret independently
+
+**Design Rationale**:
+- Eliminates JWT secret distribution (only Auth Service needs the secret)
+- Reduces attack surface and simplifies secret management
+- Centralizes token validation logic
 
 ## 🚀 **Routing Strategy**
 
@@ -141,19 +176,20 @@ APIV1AuthLogout:   {AllowedRoles: []string{}} // Empty = any role
 - **Backend Integration**: Service communication testing
 - **Error Scenarios**: Failure handling and recovery
 
+
 ## 🔮 **Future Enhancements**
 
-### **Phase 2: Performance & Resilience**
-- **Rate Limiting**: Redis-based request throttling
-- **Response Caching**: Intelligent response caching
-- **Circuit Breaker**: Backend service failure handling
-- **Retry Logic**: Automatic retry for failed requests
+### **Phase 2: Performance & Resilience** ✅ **Mostly Complete**
+- ✅ **Rate Limiting**: Redis-based request throttling
+- ✅ **Circuit Breaker**: Backend service failure handling
+- ⚪ **Response Caching**: Intelligent response caching (future)
+- ⚪ **Retry Logic**: Automatic retry for failed requests (future)
 
-### **Phase 3: Observability**
-- **Metrics Collection**: Prometheus integration
-- **Distributed Tracing**: Request tracing across services
-- **Advanced Logging**: Structured logging and correlation
-- **Health Monitoring**: Comprehensive health checks
+### **Phase 3: Observability** ✅ **Complete**
+- ✅ **Metrics Collection**: Prometheus integration
+- ✅ **Structured Logging**: JSON logging with correlation IDs
+- ✅ **Health Monitoring**: Health check endpoints
+- ⚪ **Distributed Tracing**: Request tracing across services (future)
 
 ### **Phase 4: Advanced Features**
 - **API Versioning**: Multi-version API support
@@ -169,6 +205,8 @@ APIV1AuthLogout:   {AllowedRoles: []string{}} // Empty = any role
 | 8/17 | Auth | JWT over Sessions | Stateless, scalable | High | ✅ Done |
 | 8/17 | Routing | Custom proxy over library | Full control over logic | Medium | ✅ Done |
 | 8/17 | Security | RBAC over ABAC | Simpler, sufficient for current needs | Low | ✅ Done |
+| - | Auth | Auth Service Integration | Centralized JWT validation | High | ✅ Done |
+| - | Security | Gateway CORS only | Single entry point architecture | Medium | ✅ Done |
 
 ## 🔗 **Related Documentation**
 

@@ -30,166 +30,272 @@
 ---
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
-
-
-#### **INFRA-009: Comprehensive Service Architecture Optimization and Modernization** ✅ **COMPLETED**
-- **Component**: Infrastructure & Code Quality
-- **Type**: Major Refactoring
+g
+#### **INFRA-021: Simplify Kubernetes Configuration - Remove Dev/Prod Split**
+- **Component**: Infrastructure & Deployment
+- **Type**: Refactoring
 - **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Problem**: Kubernetes has separate dev/prod overlays, but only one unified Kubernetes configuration is needed
+- **Goal**: Remove dev/prod distinction in Kubernetes, keep single unified Kubernetes config
+- **Current State**:
+  - **Docker (dev)**: Uses Redis (via docker-compose) and DynamoDB (AWS) - all basic infrastructure needed
+  - **Kubernetes**: Needs full AWS infrastructure (VPC, EKS, DynamoDB, Redis) - currently has dev/prod split
+  - **Terraform**: May not need changes (user confirmed)
+- **Acceptance Criteria**:
+  - **Kubernetes**:
+    - Remove `kubernetes/prod/` directory completely
+    - Consolidate `kubernetes/dev/` into single unified Kubernetes config (remove "dev" naming)
+    - Single Kubernetes configuration that works for all Kubernetes deployments
+    - No environment distinction (dev/prod) in Kubernetes manifests
+    - All Kubernetes deployments use the same config
+  - **Docker**:
+    - Keep as is (already has Redis via docker-compose, uses DynamoDB)
+    - No changes needed
+  - **Terraform**:
+    - May not need changes (check if current setup is sufficient)
+  - Remove prod-specific configurations from scripts
+  - Update documentation to reflect single Kubernetes config approach
+- **Key Changes**:
+  - `kubernetes/prod/`: Remove directory completely
+  - `kubernetes/dev/`: Rename/consolidate to single config (e.g., `kubernetes/config/` or keep at `kubernetes/base/`)
+  - `kubernetes/deploy.sh`: Remove prod branch, single Kubernetes deployment path
+  - `scripts/config-loader.sh`: Remove prod environment configs for Kubernetes
+  - Remove environment labels/annotations that distinguish dev/prod in Kubernetes manifests
+- **Rationale**:
+  - Docker is for local dev and already has all needed infrastructure (Redis in compose, DynamoDB)
+  - Kubernetes deployment uses full AWS infrastructure but doesn't need separate dev/prod configs
+  - Single Kubernetes config is simpler and sufficient for the project
+- **Files to Update**:
+  - `kubernetes/prod/` (remove directory)
+  - `kubernetes/dev/` (consolidate to single unified config)
+  - `kubernetes/base/` (may need updates if using base directly)
+  - `kubernetes/deploy.sh` (remove prod branch)
+  - `scripts/config-loader.sh` (remove prod Kubernetes configs)
+  - `config/shared-config.yaml` (remove prod references)
+  - Update relevant documentation
+
+
+#### **SEC-008: Security Architecture Evaluation** ✅ **COMPLETED**
+- **Component**: Security & Architecture
+- **Type**: Audit & Design Review
+- **Priority**: 🔥 **HIGHEST PRIORITY**
 - **Status**: ✅ **COMPLETED**
-- **Summary**: All backend services have been comprehensively optimized. All hardcoded values eliminated and replaced with Pydantic models and constants (INFRA-009.1-009.6 completed). Common package restructured (INFRA-009.5). Async/sync patterns documented (INFRA-009.0). All services now use proper dependencies, no local imports, advanced patterns implemented. Integration tests refactored to use consistent patterns (INTEG-001).
-- **Details**: See DAILY_WORK_LOG.md for complete implementation details
+- **Summary**: Comprehensive security audit completed. Found XSS protection already implemented via input sanitization. Identified 2 essential fixes (CORS, secret fallbacks) and 2 optional verifications. Security rating: 8/10 - excellent for personal project.
+- **Key Findings**:
+  - ✅ **XSS protection implemented** - HTML tag sanitization + suspicious pattern detection
+  - ✅ Strong authentication, password security, input validation
+  - ⚠️ CORS too permissive in Inventory Service (essential fix)
+  - ⚠️ Development secret fallbacks should be removed (essential fix)
+  - ⚪ Frontend token storage needs quick review (optional)
+  - ❌ HTTP security headers not needed (XSS already handled)
+- **Deliverables**:
+  - Security audit document: `docs/design-docs/security-audit.md`
+- **Next Steps**: Implement SEC-009 (Essential Security Fixes)
 
+#### **SEC-009: Remove Gateway JWT Secret & Verify No Secrets Exposed**
+- **Component**: Security & Code Cleanup
+- **Type**: Code Cleanup & Verification
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Problem**: Gateway has unused JWT secret (dead code) that should be removed for code cleanliness
+- **Goal**: Remove Gateway JWT secret (dead code) and verify no secrets/configs are exposed in public repo
+- **Analysis**: See `docs/design-docs/SEC-009-analysis.md` for detailed analysis
+- **Key Findings**:
+  - ✅ **Service fallback secrets are ACCEPTABLE** - docker-compose.yml not in public repo (gitignored)
+  - ⚪ **Gateway JWT secret is unused** (dead code) - should be removed for code cleanliness
+  - ✅ **No security risk** - Gateway doesn't use JWT secret (delegates to Auth Service)
+- **Tasks Required**:
+  1. **Remove Gateway JWT Secret** (Code Cleanup):
+     - Remove `JWTConfig` from `gateway/internal/config/config.go`
+     - Remove `DefaultJWTSecretKey` constant from `gateway/pkg/constants/constants.go`
+     - Update Gateway config tests if they reference JWT config
+  2. **Verify No Secrets in Public Repo** (Security Verification):
+     - Verify `docker/docker-compose.yml` is gitignored ✅ (already confirmed)
+     - Verify K8s secrets are gitignored ✅ (already confirmed)
+     - Verify `.env` files are gitignored ✅ (already confirmed)
+     - Scan public repo for any hardcoded secrets
+     - Ensure `gateway/pkg/constants/constants.go` has no secrets after cleanup
+- **Acceptance Criteria**:
+  - Gateway JWT secret removed (JWTConfig, DefaultJWTSecretKey)
+  - Gateway config tests updated (if needed)
+  - Verified no secrets/configs exposed in public repo
+  - All sensitive files confirmed in `.gitignore`
+- **Files to Update**:
+  - `gateway/internal/config/config.go` (remove JWTConfig)
+  - `gateway/pkg/constants/constants.go` (remove DefaultJWTSecretKey)
+  - `gateway/internal/config/config_test.go` (update tests if needed)
+- **Files NOT to Update** (Per Analysis):
+  - `docker/docker-compose.yml` - Keep fallback secrets (not in public repo, acceptable for local dev)
+  - Service code - Service fallback secrets are acceptable
+- **Security Impact**:
+  - **Before**: Gateway has unused JWT secret in public repo (dead code)
+  - **After**: Gateway JWT secret removed, no secrets exposed in public repo
+- **Note**: Service fallback secrets in docker-compose.yml are acceptable since file is not in public repo. For production, repo should not be public and should use proper secrets (K8s secrets, environment variables).
+- **Related**: See detailed analysis in `docs/design-docs/SEC-009-analysis.md`
 
-
-
-#### **INFRA-009.7: Frontend Optimization** ✅ **COMPLETED**
-- **Priority**: 🔥 **HIGH PRIORITY**
-- **Status**: ✅ **COMPLETED**
-- **Scope**: Modernize frontend and align with backend changes
-- **Summary**:
-  - Replaced hardcoded API endpoints with constants (`API_PATHS`, `buildQueryString`)
-  - Fixed portfolio integration (removed trailing slashes, corrected response structure)
-  - Updated Dashboard, Trading, Portfolio to use portfolio API and correct fields
-  - Corrected transaction history table mapping and ordering; added proper formatting
-  - Introduced `ORDER_SALE` terminology to match backend
-  - Removed debug `console.log` statements across the app
-  - Centralized UI strings in `frontend/src/constants/ui.ts`; refactored components to use constants
-  - Added frontend healthcheck in `docker/docker-compose.yml`; redeploy succeeded
-
----
-#### **TEST-003: Optimize Unit Test Coverage and Quality**
-- **Component**: Testing & Quality Assurance
-- **Type**: Enhancement
+#### **ARCH-002: Evaluate and Optimize CORS Middleware Configuration**
+- **Component**: Architecture & Middleware
+- **Type**: Code Optimization
 - **Priority**: 🔵 **LOW PRIORITY**
 - **Status**: 📋 **To Do**
-- **Description**: Optimize unit test coverage, eliminate redundancy, and improve test quality across all services
+- **Problem**: CORS middleware exists in both Gateway (correct) and all backend services (redundant). Gateway is the single entry point, so services don't need CORS.
+- **Goal**: Evaluate CORS configuration and remove redundant middleware from services
+- **Current State**:
+  - Gateway: Has CORS middleware ✅ (correct - single entry point)
+  - Auth Service: Has CORS middleware (redundant - internal only)
+  - User Service: Has CORS middleware (redundant - internal only)
+  - Inventory Service: Has CORS middleware (redundant - internal only)
+  - Order Service: Has CORS middleware (redundant - internal only)
+- **Architecture Principle**:
+  - Gateway is the single entry point for all external requests
+  - Services are internal-only (not exposed externally)
+  - Gateway handles CORS, so services don't need it
+- **Evaluation Tasks**:
+  - Review Gateway CORS configuration for correctness
+  - Verify all services go through Gateway (no direct external access)
+  - Document why CORS in services is redundant
+- **Optimization Options**:
+  - Option 1: Remove CORS from all services (simplest - recommended)
+  - Option 2: Keep CORS in services but document it's redundant (defense-in-depth, but unnecessary)
+- **Recommendation**: Remove CORS from services - Gateway already handles it
 - **Acceptance Criteria**:
-  - **Increase Coverage Rate**: Achieve minimum 85% code coverage across all services
-  - **Eliminate Redundant Tests**: Remove duplicate tests that test the same functionality
-  - **Remove Empty/Invalid Tests**: Delete tests that don't actually test anything meaningful
-  - **Add Missing Test Cases**: Add tests for if/else branches, try/catch blocks, and edge cases
-  - **Improve Test Quality**: Ensure all tests have proper assertions and meaningful test scenarios
-  - **Standardize Test Patterns**: Use consistent testing patterns across all services
-  - **Add Integration Test Coverage**: Ensure critical business flows are covered by integration tests
-- **Dependencies**: None
+  - Evaluation document created
+  - Decision made (remove vs keep)
+  - If removing: CORS middleware removed from all services
+  - Gateway CORS configuration verified as correct
+  - Documentation updated
+- **Files to Evaluate**:
+  - `gateway/internal/middleware/middleware.go` (CORS implementation)
+  - `services/auth_service/src/main.py` (CORS middleware)
+  - `services/user_service/src/main.py` (CORS middleware)
+  - `services/inventory_service/src/main.py` (CORS middleware)
+  - `services/order_service/src/main.py` (CORS middleware)
+  - Architecture documentation
+
+#### **MON-001: Comprehensive Monitoring Dashboards**
+- **Component**: Observability
+- **Type**: Feature Addition
+- **Priority**: 🔥 **HIGH PRIORITY** (After SEC-008)
+- **Status**: 📋 **To Do**
+- **Problem**: Monitoring system exists (Prometheus metrics and Loki logs) but no admin interface to view metrics and logs
+- **Goal**: Create simple Grafana dashboards for admin to view metrics and logs from all services
+- **Scope**: Create lightweight Grafana dashboards using existing Prometheus metrics and Loki logs. No performance tuning or traffic simulation; dashboards only.
+- **Acceptance Criteria**:
+  - **Metrics Dashboards (Prometheus)**:
+    - Gateway dashboard: request rate, 5xx count, latency panels wired to existing metrics
+    - Services dashboard (auth, user, inventory, order): request count, error count per endpoint
+    - Health overview: up/healthy panels for all services
+  - **Logs Dashboard (Loki)**:
+    - Admin log viewer dashboard with log panels
+    - Ability to filter logs by service, level, time range
+    - Ability to search logs by keyword
+    - View logs from all services (gateway, auth, user, inventory, order)
+  - All dashboards simple and practical (no over-engineering)
+  - Dashboards committed as JSON (version-controlled); wired via docker-compose or kube manifests
+- **Dependencies**:
+  - Existing Prometheus metrics endpoints (/metrics) already exposed
+  - Existing Loki/Promtail log aggregation setup
+- **Implementation Notes**:
+  - Use Grafana for both metrics and logs
+  - Metrics: Prometheus queries for panels
+  - Logs: LogQL queries for log viewer
+  - Simple panel layout with filters
+  - No complex analytics or ML features
 - **Files to Update**:
-  - All service test files in `services/*/tests/`
-  - Common package test files in `services/common/tests/`
-  - Integration test files in `integration_tests/`
-  - Test configuration files (pytest.ini, coverage configuration)
-- **Technical Approach**:
-  - **Coverage Analysis**: Run coverage reports to identify untested code paths
-  - **Test Audit**: Review all existing tests to identify redundancy and empty tests
-  - **Code Path Analysis**: Identify missing test coverage for conditional logic (if/else, try/catch)
-  - **Test Consolidation**: Merge redundant tests and remove duplicates
-  - **Edge Case Testing**: Add tests for boundary conditions and error scenarios
-  - **Mock Optimization**: Improve mocking patterns for better test isolation
-- **Current Issues Identified**:
-  - Low coverage rate across services
-  - Multiple tests testing the same function with identical scenarios
-  - Tests that don't contain any assertions or meaningful validation
-  - Missing test coverage for conditional logic and exception handling
-  - Inconsistent test patterns across different services
-- **Expected Benefits**:
-  - Higher confidence in code quality and reliability
-  - Faster test execution by eliminating redundant tests
-  - Better test maintainability with consistent patterns
-  - Improved code coverage for better bug detection
-  - More meaningful test failures that point to actual issues
+  - `monitoring/grafana/dashboards/metrics-gateway.json` (new)
+  - `monitoring/grafana/dashboards/metrics-services.json` (new)
+  - `monitoring/grafana/dashboards/metrics-health.json` (new)
+  - `monitoring/grafana/dashboards/admin-logs.json` (new)
+  - `docker/docker-compose.yml` (Grafana service + provisioners, if not present)
+  - `kubernetes/*` (optional: ConfigMaps for dashboards)
+  - `monitoring/docker-compose.logs.yml` (if needed for dashboard provisioning)
 
+#### **CODE-001: Clean Up TODOs and Known Bugs**
+- **Component**: Code Quality
+- **Type**: Maintenance
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Problem**: Several TODO comments and known bugs in codebase need to be addressed or documented
+- **Goal**: Clean up TODOs and fix/document known bugs
+- **Known Issues Found**:
+  - TODO in `integration_tests/inventory_service/inventory_tests.py` (line 188): Asset deletion cleanup
+  - BUG in `integration_tests/order_service/orders/get_order_tests.py`: Non-existent order returns 500 instead of 404
+  - Debug function in `frontend/src/services/inventoryApi.ts`: `debugInfo()` method
+- **Acceptance Criteria**:
+  - Review all TODO comments in codebase
+  - Document or remove TODOs that are no longer relevant
+  - Fix known bugs or add proper issue tracking
+  - Remove debug functions or convert to proper logging
+  - Update backlog with any new bugs found
+- **Implementation Notes**:
+  - Use grep to find all TODOs/FIXMEs/BUGs in codebase
+  - Prioritize based on impact
+  - Fix bugs that are simple
+  - Document complex issues in backlog
+- **Files to Review**:
+  - All Python service files
+  - Frontend TypeScript files
+  - Integration test files
+  - Gateway Go files
 
+#### **DOCS-002: Update Project Status Documentation Dates**
+- **Component**: Documentation
+- **Type**: Maintenance
+- **Priority**: 🔵 **LOW PRIORITY**
+- **Status**: 📋 **To Do**
+- **Problem**: Project status documentation has outdated dates that need updating
+- **Goal**: Update dates in project documentation to reflect current status
+- **Files to Update**:
+  - `docs/project-status.md`: Update dates (currently shows "August 20, 2025")
+  - `QUICK_START.md`: Update last updated date (currently shows "8/17/2025")
+  - Review other documentation for outdated timestamps
+- **Acceptance Criteria**:
+  - All dates updated to current date
+  - Status information accurate
+  - Remove or archive outdated status information
+- **Implementation Notes**:
+  - Simple documentation update task
+  - Can be done quickly
+  - Low priority but improves documentation accuracy
+
+#### **REVIEW-001: Evaluate All Tasks for Over-Engineering**
+- **Component**: Project Management & Architecture
+- **Type**: Review & Audit
+- **Priority**: 🔶 **MEDIUM PRIORITY**
+- **Status**: 📋 **To Do**
+- **Problem**: Need to review all existing and planned tasks to ensure no over-engineering for a personal project with no traffic
+- **Goal**: Identify and simplify any tasks that add unnecessary complexity
+- **Review Criteria**:
+  - Tasks should solve real problems, not hypothetical ones
+  - Avoid enterprise-scale solutions for personal project needs
+  - Keep implementations simple and maintainable
+  - Remove features that won't be tested or used
+  - Focus on learning value vs. unnecessary complexity
+- **Review Process**:
+  - Review all active and planned tasks in backlog
+  - Evaluate each task against criteria above
+  - Identify tasks that can be simplified or removed
+  - Update task descriptions to avoid over-engineering
+  - Document rationale for any removed or simplified tasks
+- **Acceptance Criteria**:
+  - All active tasks reviewed and evaluated
+  - List of tasks to simplify or remove documented
+  - Task descriptions updated to emphasize simplicity
+  - Backlog streamlined to focus on practical, necessary work
+- **Deliverables**:
+  - Review summary document (brief notes)
+  - Updated backlog with simplified tasks
+  - Any removed tasks documented with rationale
 
 ### **🌐 Frontend & User Experience**
 
 
 ### **📊 Performance & Scaling**
-#### **INFRA-009: Refactor Object Creation and Field Naming to Eliminate Hardcoded Values**
-- **Component**: Infrastructure & Data Models
-- **Type**: Task
-- **Priority**: 🔥 **HIGH PRIORITY**
-- **Status**: 📋 **To Do**
-- **Description**: Refactor all object creation, dictionary building, and data structure construction to use constants instead of hardcoded field names and values. Replace generic `Dict` types with well-defined Pydantic models for type safety and validation.
-- **Acceptance Criteria**:
-  - Create common field name constants for all data structures (e.g., `FIELD_USERNAME`, `FIELD_USD_BALANCE`, `FIELD_TOTAL_ASSET_VALUE`)
-  - Define standard object creation patterns and utilities
-  - Replace all hardcoded field names in object/dictionary construction
-  - **Replace generic `Dict` types with well-defined Pydantic models** (e.g., `GetPortfolioResponse.data: Dict` → `GetPortfolioResponse.data: PortfolioData`)
-  - Create builder patterns or factory methods for complex objects
-  - Ensure consistent field naming across all services
-  - Update all API response construction to use constants and proper models
-  - **Add proper Pydantic models for all response data structures**
-- **Dependencies**: INFRA-005.2 (HTTP status codes and error messages standardization)
-- **Files to Update**:
-  - `services/common/src/shared/constants/field_names.py` (new)
-  - `services/common/src/shared/utils/object_builders.py` (new)
-  - `services/user_service/src/api_models/portfolio/portfolio_models.py` (add proper data models)
-  - All service controllers with hardcoded object construction
-  - All API response model construction
-  - All data transformation and mapping logic
-- **Examples of Issues to Fix**:
-  - `GetPortfolioResponse.data: dict` → `GetPortfolioResponse.data: PortfolioData`
-  - `SuccessResponse.data: Optional[Dict[str, Any]]` → Use specific typed models
-  - `ErrorResponse.details: Optional[Dict[str, Any]]` → Use specific error detail models
-  - `ValidateTokenResponse.metadata: Dict[str, Any]` → Use specific metadata model
-  - Hardcoded field names: `"username"`, `"usd_balance"`, `"total_asset_value"`, `"total_portfolio_value"`
-  - Generic dictionary construction instead of typed models
-  - Missing validation for response data structures
-- **Design Improvements**:
-  - Create `PortfolioData` model with proper field definitions
-  - Create `AssetData` model for individual asset information
-  - Create `TokenMetadata` model for JWT token metadata
-  - Create `ErrorDetails` model for structured error information
-  - Ensure all response models use proper Pydantic validation
-  - Eliminate `Dict` types in favor of specific model types
-  - Replace all hardcoded field names with constants
-- **Services Affected**:
-  - **User Service**: `GetPortfolioResponse.data: dict` (portfolio_models.py:229)
-  - **Common**: `SuccessResponse.data: Optional[Dict[str, Any]]` (common.py:37)
-  - **Common**: `ErrorResponse.details: Optional[Dict[str, Any]]` (common.py:160)
-  - **Auth Service**: `ValidateTokenResponse.metadata: Dict[str, Any]` (validate.py:23)
-  - **Transaction Manager**: `data: Optional[Dict]` (transaction_manager.py:27)
-- **Dependencies**: INFRA-005.3 (API endpoint consolidation)
-- **Files to Update**:
-  - All service controllers and business logic files
-  - Database DAO files with hardcoded field names
-  - API response messages and error strings
-  - Configuration files and environment variables
-  - Test files with hardcoded test data
-- **Examples of Hardcoded Values Found**:
-  - API paths: `"/api/v1"`, `"/balance"`, `"/portfolio"`
-  - Database field names: `"Pk"`, `"Sk"`, `"username"`
-  - Error messages: `"User not found"`, `"Validation error"`
-  - HTTP status codes: `200`, `201`, `404`, `500`
-  - Service URLs and endpoints
-  - Default values and configuration parameters
 
 
 
 ### **🧪 Testing & Quality Assurance**
-
-#### **TEST-003: Optimize Unit Test Coverage and Quality**
-- **Component**: Testing & Quality Assurance
-- **Type**: Enhancement
-- **Priority**: 🔵 **LOW PRIORITY**
-- **Status**: 📋 **To Do**
-- **Description**: Optimize unit test coverage, eliminate redundancy, and improve test quality across all services
-- **Acceptance Criteria**:
-  - **Increase Coverage Rate**: Achieve minimum 85% code coverage across all services
-  - **Eliminate Redundant Tests**: Remove duplicate tests that test the same functionality
-  - **Remove Empty/Invalid Tests**: Delete tests that don't actually test anything meaningful
-  - **Add Missing Test Cases**: Add tests for if/else branches, try/catch blocks, and edge cases
-  - **Improve Test Quality**: Ensure all tests follow best practices and are maintainable
-- **Dependencies**: None (can start immediately)
-- **Files to Update**:
-  - All test files across all services
-  - `services/*/tests/` - Comprehensive test optimization
-- **Technical Approach**:
-  - **Coverage Analysis**: Use pytest-cov to identify uncovered code paths
-  - **Test Audit**: Review all existing tests for redundancy and quality
-  - **Gap Analysis**: Identify missing test scenarios and edge cases
-  - **Test Refactoring**: Improve test structure and maintainability
-  - **Documentation**: Add clear test documentation and examples
 
 ### **📦 Inventory & Asset Management**
 
