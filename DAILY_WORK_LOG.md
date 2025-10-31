@@ -9,6 +9,54 @@
 
 ## 📊 Progress Summary
 
+### **2025-10-30: CODE-002 - Remove Extra Field from Gateway Logging & Improve Test Coverage** ✅ **COMPLETED**
+
+**Task**: Remove Extra field from Gateway logging struct and consolidate all extra information into message field. Also improve Gateway unit test coverage.
+
+**Key Achievements**:
+- ✅ **Logging Refactoring**: Removed `Extra` field from `LogEntry` struct, all extra info now in message
+- ✅ **Code Simplification**: Single message field format: `message [key1=value1, key2=value2]`
+- ✅ **Test Coverage**: Improved Gateway unit test coverage from ~55% to 71.4% overall
+- ✅ **Code Cleanup**: Removed unused Gateway JWT secret configuration (dead code)
+
+**Technical Implementation**:
+- **LogEntry Struct**: Removed `Extra map[string]interface{}` field, simplified to just `Message string`
+- **Formatting Helpers**: Created `formatExtra()` and `formatMessageWithExtra()` functions to format extra info into message
+- **Format Pattern**: Extra info formatted as `message [key=value, key2=value2]` when present
+- **JSONFormatter**: Updated `CreateRequestLog()` and `CreateSystemLog()` to use same formatting
+- **Test Coverage Improvements**:
+  - Added tests for `pkg/metrics` (GatewayMetrics, RateLimitMetrics) - 95.2% coverage
+  - Added tests for `pkg/logging` (Logger, Middleware) - 94.4% coverage
+  - Improved `internal/api` coverage to 79.5%
+  - Improved `internal/services` coverage to 66.7%
+  - Improved `internal/middleware` coverage to 62.6%
+
+**Files Modified**:
+- `gateway/pkg/logging/logger.go` - Removed Extra field, added formatExtra() and formatMessageWithExtra()
+- `gateway/pkg/logging/json_formatter.go` - Updated to format extra into message
+- `gateway/pkg/logging/logger_test.go` - Updated tests for new message format
+- `gateway/internal/config/config.go` - Removed unused JWT secret configuration
+- `gateway/pkg/constants/constants.go` - Removed JWT secret constants
+- `gateway/internal/api/server_test.go` - Improved coverage with more test cases
+- `gateway/pkg/metrics/metrics_test.go` - New file, comprehensive metrics tests
+- `gateway/pkg/metrics/rate_limit_metrics_test.go` - New file, rate limit metrics tests
+- `gateway/pkg/logging/middleware_test.go` - New file, logging middleware tests
+- `gateway/internal/services/circuit_breaker_test.go` - New file, circuit breaker tests
+
+**Files Created**:
+- `docs/design-docs/security-audit.md` - Security architecture evaluation
+- `docs/design-docs/SEC-009-analysis.md` - Analysis of JWT secret usage
+
+**Testing Results**:
+- ✅ All Gateway tests passing (71.4% overall coverage)
+- ✅ Logging format working correctly with extra info in message
+- ✅ No breaking changes to logging API (same method signatures)
+- ✅ All integration tests should continue to work
+
+**Impact**: Cleaner logging structure, improved maintainability, and better test coverage for Gateway service
+
+---
+
 ### **2025-01-08: GATEWAY-001 - Circuit Breaker Pattern and JWT Configuration** ✅ **COMPLETED**
 
 **Task**: Implement circuit breaker pattern for service health monitoring and fix JWT validation issues
