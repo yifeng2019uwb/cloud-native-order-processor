@@ -77,29 +77,3 @@ class PasswordManager:
 
         # Verify password using bcrypt
         return bcrypt.checkpw(password.encode(ENCODE_UTF_8), hashed.encode(ENCODE_UTF_8))
-
-    # TODO: Remove if not used after testing - validate_password_strength method
-    # def validate_password_strength(self, password: str) -> bool:
-    #     """
-    #     Validate basic password strength requirements.
-
-    #     Args:
-    #         password: Password to validate
-
-    #     Returns:
-    #         True if password meets basic requirements
-
-    #     Raises:
-    #         CNOPEntityValidationException: If password doesn't meet basic requirements
-    #     """
-    #     if not password or not isinstance(password, str):
-    #         raise CNOPEntityValidationException("Password must be a non-empty string")
-
-    #     # Basic password validation - length bounds
-    #     if len(password) < 8:
-    #         raise CNOPEntityValidationException("Password must be at least 8 characters long")
-
-    #     if len(password) > 128:
-    #         raise CNOPEntityValidationException("Password must be no more than 128 characters long")
-
-    #     return True

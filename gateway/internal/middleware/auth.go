@@ -135,12 +135,3 @@ func handleAuthError(c *gin.Context, errorCode models.ErrorCode, message string)
 	c.JSON(http.StatusUnauthorized, errorResponse)
 	c.Abort()
 }
-
-// Note: Token hashing and blacklist functionality moved to Auth Service
-// Phase 2: Redis blacklist check (TODO - implement in Auth Service)
-// Phase 3: Advanced features (Future - implement in Auth Service)
-// - OAuth2 integration
-// - API key authentication
-// - Multi-factor authentication
-// - Advanced role hierarchies
-// - Permission-based access control

@@ -185,7 +185,6 @@ class InventoryServiceTests:
 
     def cleanup_test_assets(self):
         """Clean up test assets (placeholder for future implementation)"""
-        # TODO: Implement actual cleanup when inventory service supports asset deletion
         self.created_assets = []
 
     def run_all_inventory_tests(self):

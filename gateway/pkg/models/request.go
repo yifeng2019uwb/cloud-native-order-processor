@@ -57,7 +57,7 @@ type ProxyRequest struct {
 	// Request context
 	Context *RequestContext `json:"context"`
 
-	// Phase 2: Circuit breaker information (TODO)
+	// Phase 2: Circuit breaker information
 	// CircuitBreaker *CircuitBreakerInfo `json:"circuit_breaker,omitempty"`
 }
 
@@ -119,18 +119,3 @@ type RouteConfig struct {
 	RequiresAuth bool     `json:"requires_auth"`
 	AllowedRoles []string `json:"allowed_roles"`
 }
-
-// Phase 2: Circuit breaker information (TODO)
-// type CircuitBreakerInfo struct {
-//     ServiceName string    `json:"service_name"`
-//     IsOpen      bool      `json:"is_open"`
-//     Failures    int       `json:"failures"`
-//     LastFailure time.Time `json:"last_failure"`
-// }
-
-// Phase 3: Advanced features (Future - simple comments)
-// - Service discovery integration
-// - Load balancing
-// - Advanced monitoring and metrics
-// - Retry logic with exponential backoff
-// - Advanced caching strategies

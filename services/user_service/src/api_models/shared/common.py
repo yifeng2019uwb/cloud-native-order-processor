@@ -8,7 +8,7 @@ from datetime import datetime, date
 
 class UserBaseInfo(BaseModel):
 
-    """Base user information model (safe for client responses) - TODO: Implement data masking for sensitive fields"""
+    """Base user information model (safe for client responses)"""
 
     username: str = Field(
         ...,

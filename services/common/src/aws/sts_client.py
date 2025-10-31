@@ -25,28 +25,6 @@ class STSClient:
         self.session = boto3.Session(region_name=self.region)
         self.sts_client = self.session.client('sts')
 
-    # TODO: Remove if not used after testing - get_caller_identity method
-    # def get_caller_identity(self) -> Dict[str, Any]:
-    #     """Get current AWS caller identity"""
-    #     try:
-    #         if not self.region:
-    #             raise CNOPInternalServerException("AWS_REGION environment variable is required")
-
-    #         response = self.sts_client.get_caller_identity()
-    #         return response
-    #     except NoCredentialsError:
-    #         logger.error(
-    #             action=LogAction.ERROR,
-    #             message="No AWS credentials found"
-    #         )
-    #         raise CNOPInternalServerException("AWS credentials not configured")
-    #     except ClientError as e:
-    #         logger.error(
-    #             action=LogAction.ERROR,
-    #             message=f"AWS STS error: {e}"
-    #         )
-    #         raise CNOPInternalServerException(f"AWS STS error: {e}")
-
     def assume_role(self, role_arn: str, role_session_name: str,
                    duration_seconds: int = 3600) -> Dict[str, Any]:
         """Assume an IAM role"""
@@ -72,36 +50,8 @@ class STSClient:
                 message=f"AWS STS assume role error: {e}"
             )
             raise CNOPInternalServerException(f"AWS STS assume role error: {e}")
-
-    # TODO: Remove if not used after testing - get_session_token method
-    # def get_session_token(self, duration_seconds: int = 3600) -> Dict[str, Any]:
-    #     """Get temporary session token"""
-    #     try:
-    #         if not self.region:
-    #             raise CNOPInternalServerException("AWS_REGION environment variable is required")
-
-    #         response = self.sts_client.get_session_token(
-    #             DurationSeconds=duration_seconds
-    #         )
-    #         return response
-    #     except NoCredentialsError:
-    #         logger.error(
-    #             action=LogAction.ERROR,
-    #             message="No AWS credentials found"
-    #         )
-    #         raise CNOPInternalServerException("AWS credentials not configured")
-    #     except ClientError as e:
-    #         logger.error(
-    #             action=LogAction.ERROR,
-    #             message=f"AWS STS get session token error: {e}"
-    #         )
-    #         raise CNOPInternalServerException(f"AWS STS get session token error: {e}")
+        raise CNOPInternalServerException(f"AWS STS get session token error: {e}")
 
     def get_client(self, service_name: str):
         """Get AWS client for specified service"""
         return self.session.client(service_name)
-
-    # TODO: Remove if not used after testing - get_resource method
-    # def get_resource(self, service_name: str):
-    #     """Get AWS resource for specified service"""
-    #     return self.session.resource(service_name)

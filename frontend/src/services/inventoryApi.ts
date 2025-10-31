@@ -78,11 +78,6 @@ class InventoryApiService {
     const response = await this.api.get<{ status: string }>('/assets/health');
     return response.data;
   }
-
-  async debugInfo(): Promise<any> {
-    const response = await this.api.get('/assets/debug');
-    return response.data;
-  }
 }
 
 // Export singleton instance

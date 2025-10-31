@@ -43,7 +43,7 @@ echo ""
 echo "🧪 Test 2: Basic Load Test"
 echo "-------------------------"
 echo "ℹ️  Basic load test not yet implemented"
-echo "📋 TODO: Implement authentication service load test"
+echo "📋 Authentication service load test not yet implemented"
 
 echo ""
 

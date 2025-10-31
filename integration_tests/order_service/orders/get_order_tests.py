@@ -31,7 +31,7 @@ class GetOrderTests:
         return APIEndpoints.get_order_endpoint(endpoint)
 
     def test_get_nonexistent_order(self):
-        """Test getting non-existent order (currently returns 500 - BUG: should be 404)"""
+        """Test getting non-existent order (should return 404)"""
         username = f'testuser_{uuid.uuid4().hex[:8]}'
         token = self.user_manager.create_test_user(self.session, username)
         headers = self.user_manager.build_auth_headers(token)

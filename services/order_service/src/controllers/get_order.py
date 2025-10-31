@@ -56,7 +56,6 @@ def get_order(
     request_id = get_request_id_from_request(request)
 
     try:
-
         # Get order from database
         order_id = order_request.order_id
         order = order_dao.get_order(order_id)
