@@ -39,3 +39,60 @@ Thumbs.db
 **/build/
 **/dist/
 **/*.egg-info
+**/*.egg
+**/*.whl
+**/*.so
+
+# Virtual environments
+venv/
+.venv/
+**/venv/
+**/.venv/
+**/node_modules/
+**/.vite/
+
+# Infrastructure & deployment (not needed in service images)
+terraform/
+terraform.tfstate*
+*.tfvars
+*.tfplan
+.terraform/
+kubernetes/
+scripts/
+Makefile
+
+# Integration tests
+integration_tests/
+**/test_env/
+
+# Monitoring configs (not needed in service images)
+monitoring/
+
+# Frontend (not needed for Python services)
+frontend/
+gateway/
+
+# Logs
+logs/
+**/*.log
+
+# Coverage reports
+**/coverage.*
+**/.coverage
+**/coverage.xml
+**/htmlcov/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# Configuration environments (use only shared-config.yaml)
+config/environments/
+
+# Backlog and work logs
+BACKLOG.md
+DAILY_WORK_LOG.md
+INFRA-*.md
+
+# Documentation (already covered but explicit)
+QUICK_START.md
+docs/

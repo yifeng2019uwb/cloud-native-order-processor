@@ -2,30 +2,18 @@
 # Path: services/inventory-service/requirements.txt
 
 # FastAPI and ASGI server
-fastapi==0.104.1
+# fastapi is provided by common/requirements.txt (>=0.110.0)
 uvicorn==0.35.0
 
 # Pydantic for data validation
-pydantic==2.5.0
+# pydantic is provided by common/requirements.txt (>=2.8.0)
 
 # AWS SDK for DynamoDB
-boto3==1.29.7
+# boto3 is provided by common/requirements.txt (>=1.34.0)
 
-# Redis client (needed for common package)
-redis==5.0.1
-
-# JWT and authentication (needed for common package imports)
-python-jose[cryptography]==3.5.0
+# Redis, python-jose, python-dotenv, pyyaml, email-validator are provided by common/requirements.txt
+# JWT authentication
 PyJWT==2.8.0
-
-# Environment variables
-python-dotenv==1.0.0
-
-# YAML configuration support
-pyyaml==6.0.1
-
-# Email validation (inherited from common)
-email-validator==2.1.0
 
 # AWS Lambda handler (for future serverless deployment)
 mangum==0.17.0
@@ -34,7 +22,6 @@ mangum==0.17.0
 prometheus-client==0.19.0
 
 # Test dependencies
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
+# pytest, pytest-asyncio, pytest-cov are provided by common/requirements.txt
+# (pytest>=8.0.0, pytest-asyncio>=0.23.0, pytest-cov>=4.1.0)
 httpx>=0.25.0

@@ -1,10 +1,10 @@
-# Inventory Service Dockerfile - Following CNOP Standard Template
-FROM python:3.11-slim
+# Inventory Service Dockerfile - Multi-Stage Build
+# Stage 1: Builder (with build dependencies)
+FROM python:3.11-slim AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     gcc \
@@ -15,9 +15,28 @@ RUN apt-get update && apt-get install -y \
 COPY services/common/requirements.txt ./common/
 COPY services/inventory_service/requirements.txt ./inventory_service/
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r ./common/requirements.txt
-RUN pip install --no-cache-dir -r ./inventory_service/requirements.txt
+# Install Python dependencies (cache enabled for faster rebuilds)
+# Using --user flag to install to /root/.local
+RUN pip install --user \
+    -r ./common/requirements.txt \
+    -r ./inventory_service/requirements.txt
+
+# Stage 2: Runtime (minimal, no build tools)
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install only runtime dependencies (curl for health checks)
+RUN apt-get update && apt-get install -y \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed packages from builder
+COPY --from=builder /root/.local /root/.local
+
+# Ensure local packages are in PATH
+ENV PATH=/root/.local/bin:$PATH
 
 # Copy the common source directory
 COPY services/common/src ./common
@@ -35,7 +54,7 @@ WORKDIR /app/inventory_service/src
 EXPOSE 8001
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8001/health || exit 1
 
 # Run the application

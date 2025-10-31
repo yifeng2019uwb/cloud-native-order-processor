@@ -19,10 +19,10 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 512M
+          memory: 256M
         reservations:
           cpus: '0.25'
-          memory: 256M
+          memory: 128M
 
   frontend:
     build:
@@ -33,28 +33,25 @@ services:
       - "3000:3000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 6
       start_period: 10s
     depends_on:
-      - user_service
-      - inventory_service
-      - order_service
       - gateway
     networks:
       - order-processor-network
     environment:
       - NODE_ENV=production
-    # Resource limits - Frontend gets 1 CPU, 1GB RAM
+    # Resource limits - Frontend gets 1 CPU, 256MB RAM
     deploy:
       resources:
         limits:
           cpus: '1.0'
-          memory: 1G
+          memory: 256M
         reservations:
-          cpus: '0.5'
-          memory: 512M
+          cpus: '0.25'
+          memory: 128M
 
   user_service:
     build:
@@ -93,20 +90,20 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
       retries: 3
     networks:
       - order-processor-network
-    # Resource limits - User service gets 1.5 CPUs, 1GB RAM
+    # Resource limits - User service gets 1 CPU, 512MB RAM
     deploy:
       resources:
         limits:
-          cpus: '1.5'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
+          cpus: '1.0'
           memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
   inventory_service:
     build:
@@ -142,20 +139,20 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
       retries: 3
     networks:
       - order-processor-network
-    # Resource limits - Inventory service gets 1.5 CPUs, 1GB RAM
+    # Resource limits - Inventory service gets 1 CPU, 512MB RAM
     deploy:
       resources:
         limits:
-          cpus: '1.5'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
+          cpus: '1.0'
           memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
   order_service:
     build:
@@ -193,20 +190,20 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
       retries: 3
     networks:
       - order-processor-network
-    # Resource limits - Order service gets 1.5 CPUs, 1GB RAM
+    # Resource limits - Order service gets 1 CPU, 512MB RAM
     deploy:
       resources:
         limits:
-          cpus: '1.5'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
+          cpus: '1.0'
           memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
   auth_service:
     build:
@@ -240,7 +237,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
       retries: 3
     networks:
@@ -249,11 +246,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.5'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
+          cpus: '1.0'
           memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
   gateway:
     build:
@@ -284,12 +281,6 @@ services:
     volumes:
       - ~/.aws:/root/.aws:ro
     depends_on:
-      user_service:
-        condition: service_healthy
-      inventory_service:
-        condition: service_healthy
-      order_service:
-        condition: service_healthy
       auth_service:
         condition: service_healthy
       redis:
@@ -297,20 +288,20 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
       retries: 3
     networks:
       - order-processor-network
-    # Resource limits - Gateway gets 1 CPU, 512MB RAM
+    # Resource limits - Gateway gets 1 CPU, 256MB RAM
     deploy:
       resources:
         limits:
           cpus: '1.0'
-          memory: 512M
+          memory: 256M
         reservations:
           cpus: '0.25'
-          memory: 256M
+          memory: 128M
 
 networks:
   order-processor-network:
