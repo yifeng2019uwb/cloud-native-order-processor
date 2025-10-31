@@ -22,21 +22,12 @@ var logger = logging.NewBaseLogger(logging.GATEWAY)
 // Phase 2: Auth Service integration for centralized JWT validation
 func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		logger.Info(logging.REQUEST_START, "AuthMiddleware processing request", "", map[string]interface{}{
-			constants.JSONFieldPath:   c.Request.URL.Path,
-			constants.JSONFieldMethod: c.Request.Method,
-		})
-
 		// Extract token from Authorization header
 		authHeader := c.GetHeader(constants.AuthorizationHeader)
-		logger.Info(logging.REQUEST_START, "Auth header extracted", "", map[string]interface{}{
-			constants.JSONFieldAuthHeader: authHeader,
-		})
 
 		if authHeader == "" {
 			// No auth header - don't set any role, let the route handler decide
 			// Protected routes will check for empty role and return 401
-			logger.Info(logging.REQUEST_END, "No auth header provided", "", nil)
 			c.Next()
 			return
 		}
@@ -59,11 +50,6 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		}
 
 		// Add user information to context
-		logger.Info(logging.REQUEST_END, "User context set successfully", userContext.Username, map[string]interface{}{
-			constants.JSONFieldUsername: userContext.Username,
-			constants.JSONFieldRole:     userContext.Role,
-		})
-
 		c.Set(constants.ContextKeyUserID, userContext.Username)
 		c.Set(constants.ContextKeyUserRole, userContext.Role)
 		c.Set(constants.ContextKeyUserContext, userContext)

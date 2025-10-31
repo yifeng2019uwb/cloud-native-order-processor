@@ -93,46 +93,6 @@ g
   - Security audit document: `docs/design-docs/security-audit.md`
 - **Next Steps**: Implement SEC-009 (Essential Security Fixes)
 
-#### **SEC-009: Remove Gateway JWT Secret & Verify No Secrets Exposed**
-- **Component**: Security & Code Cleanup
-- **Type**: Code Cleanup & Verification
-- **Priority**: 🔶 **MEDIUM PRIORITY**
-- **Status**: 📋 **To Do**
-- **Problem**: Gateway has unused JWT secret (dead code) that should be removed for code cleanliness
-- **Goal**: Remove Gateway JWT secret (dead code) and verify no secrets/configs are exposed in public repo
-- **Analysis**: See `docs/design-docs/SEC-009-analysis.md` for detailed analysis
-- **Key Findings**:
-  - ✅ **Service fallback secrets are ACCEPTABLE** - docker-compose.yml not in public repo (gitignored)
-  - ⚪ **Gateway JWT secret is unused** (dead code) - should be removed for code cleanliness
-  - ✅ **No security risk** - Gateway doesn't use JWT secret (delegates to Auth Service)
-- **Tasks Required**:
-  1. **Remove Gateway JWT Secret** (Code Cleanup):
-     - Remove `JWTConfig` from `gateway/internal/config/config.go`
-     - Remove `DefaultJWTSecretKey` constant from `gateway/pkg/constants/constants.go`
-     - Update Gateway config tests if they reference JWT config
-  2. **Verify No Secrets in Public Repo** (Security Verification):
-     - Verify `docker/docker-compose.yml` is gitignored ✅ (already confirmed)
-     - Verify K8s secrets are gitignored ✅ (already confirmed)
-     - Verify `.env` files are gitignored ✅ (already confirmed)
-     - Scan public repo for any hardcoded secrets
-     - Ensure `gateway/pkg/constants/constants.go` has no secrets after cleanup
-- **Acceptance Criteria**:
-  - Gateway JWT secret removed (JWTConfig, DefaultJWTSecretKey)
-  - Gateway config tests updated (if needed)
-  - Verified no secrets/configs exposed in public repo
-  - All sensitive files confirmed in `.gitignore`
-- **Files to Update**:
-  - `gateway/internal/config/config.go` (remove JWTConfig)
-  - `gateway/pkg/constants/constants.go` (remove DefaultJWTSecretKey)
-  - `gateway/internal/config/config_test.go` (update tests if needed)
-- **Files NOT to Update** (Per Analysis):
-  - `docker/docker-compose.yml` - Keep fallback secrets (not in public repo, acceptable for local dev)
-  - Service code - Service fallback secrets are acceptable
-- **Security Impact**:
-  - **Before**: Gateway has unused JWT secret in public repo (dead code)
-  - **After**: Gateway JWT secret removed, no secrets exposed in public repo
-- **Note**: Service fallback secrets in docker-compose.yml are acceptable since file is not in public repo. For production, repo should not be public and should use proper secrets (K8s secrets, environment variables).
-- **Related**: See detailed analysis in `docs/design-docs/SEC-009-analysis.md`
 
 #### **ARCH-002: Evaluate and Optimize CORS Middleware Configuration**
 - **Component**: Architecture & Middleware
@@ -211,6 +171,42 @@ g
   - `kubernetes/*` (optional: ConfigMaps for dashboards)
   - `monitoring/docker-compose.logs.yml` (if needed for dashboard provisioning)
 
+
+#### **ARCH-003: Fix Route Configuration Disconnect** 🔵 **LOW PRIORITY**
+- **Component**: Gateway Architecture
+- **Type**: Refactoring
+- **Priority**: 🔵 **LOW PRIORITY**
+- **Status**: 📋 **To Do**
+- **Problem**: Routes are registered statically in `setupRoutes()`, but auth/role checking happens later in `handleProxyRequest()`, creating a disconnect between route registration and route configuration
+- **Goal**: Use route configs during route registration to ensure single source of truth and compile-time validation
+- **Rationale**: Current implementation works fine with runtime checks, but using RouteConfigs during registration would improve maintainability
+- **Acceptance Criteria**:
+  - Routes registered dynamically from `RouteConfigs`
+  - Missing config = no route registered (compile-time validation)
+  - Single source of truth for routes and their auth requirements
+- **Files to Update**:
+  - `gateway/internal/api/server.go` - Refactor `setupRoutes()` to use RouteConfigs
+  - `gateway/pkg/constants/constants.go` - May need to adjust RouteConfigs structure for Gin routing
+- **Note**: Low priority - current runtime validation is sufficient for personal project
+
+#### **ARCH-004: Consider Proxy Service Refactoring** 🔵 **LOW PRIORITY**
+- **Component**: Gateway Architecture
+- **Type**: Code Organization
+- **Priority**: 🔵 **LOW PRIORITY**
+- **Status**: 📋 **To Do**
+- **Problem**: ProxyService has multiple responsibilities (URL building, HTTP request creation, circuit breakers, route config lookups)
+- **Goal**: Evaluate splitting ProxyService into separate concerns if code grows beyond manageable size
+- **Rationale**: Current ~400 line file is manageable, but if it grows significantly, splitting would improve maintainability
+- **Consider When**:
+  - File exceeds ~800 lines
+  - Need to test individual components in isolation
+  - Multiple contributors working on Gateway
+- **Potential Structure**:
+  - URLBuilder - path transformations
+  - RequestBuilder - HTTP request creation
+  - CircuitBreakerManager - circuit breaker logic
+  - ProxyService - orchestration only
+- **Note**: Low priority - current structure works fine. Only refactor if it becomes a pain point.
 
 #### **CODE-001: Clean Up TODOs and Known Bugs**
 - **Component**: Code Quality

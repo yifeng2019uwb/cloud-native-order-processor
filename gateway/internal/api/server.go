@@ -153,25 +153,15 @@ func (s *Server) healthCheck(c *gin.Context) {
 // handleProxyRequest handles all proxy requests with routing and error handling
 // Phase 1: Basic proxy logic with simple error handling
 func (s *Server) handleProxyRequest(c *gin.Context) {
-	s.logger.Info(logging.REQUEST_START, "handleProxyRequest processing request", "", map[string]interface{}{
-		constants.JSONFieldPath:   c.Request.URL.Path,
-		constants.JSONFieldMethod: c.Request.Method,
-	})
-
 	// Get route configuration
 	path := c.Request.URL.Path
-	s.logger.Info(logging.REQUEST_START, constants.LogLookingUpRouteConfig, "", map[string]interface{}{
-		constants.JSONFieldPath: path,
-	})
 	routeConfig, exists := s.proxyService.GetRouteConfig(path)
 
 	if !exists {
 		// Handle dynamic routes (like /assets/:id)
-		s.logger.Info(logging.REQUEST_START, constants.LogRouteNotFoundTryingBasePath, "", nil)
 		basePath := s.getBasePath(path)
 		routeConfig, exists = s.proxyService.GetRouteConfig(basePath)
 		if !exists {
-			s.logger.Info(logging.REQUEST_END, constants.LogRouteNotFoundReturning404, "", nil)
 			s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, constants.ErrorRouteNotFound)
 			return
 		}
@@ -179,47 +169,28 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 
 	// Check if routeConfig is nil before accessing its properties
 	if routeConfig == nil {
-		s.logger.Error(logging.AUTH_FAILURE, "Route config is nil", "", nil)
+		s.logger.Error(logging.AUTH_FAILURE, "Route config is nil", "", map[string]interface{}{
+			constants.JSONFieldPath: path,
+		})
 		s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, constants.ErrorRouteConfigNil)
 		return
 	}
 
-	s.logger.Info(logging.REQUEST_END, "Route config found", "", map[string]interface{}{
-		constants.JSONFieldPath:         routeConfig.Path,
-		constants.JSONFieldRequiresAuth: routeConfig.RequiresAuth,
-		constants.JSONFieldAllowedRoles: routeConfig.AllowedRoles,
-	})
-
-	s.logger.Info(logging.REQUEST_START, "Checking authentication requirements", "", map[string]interface{}{
-		constants.JSONFieldRequiresAuth: routeConfig.RequiresAuth,
-	})
-
 	// Check authentication requirements
 	if routeConfig.RequiresAuth {
 		userRole := c.GetString(constants.ContextKeyUserRole)
-		s.logger.Info(logging.REQUEST_START, "Authentication required", "", map[string]interface{}{
-			constants.JSONFieldUserRole: userRole,
-		})
 		if userRole == "" {
-			s.logger.Error(logging.AUTH_FAILURE, "No userRole, returning 401", "", nil)
+			s.logger.Error(logging.AUTH_FAILURE, "Authentication required but no user role", "", map[string]interface{}{
+				constants.JSONFieldPath: path,
+			})
 			s.handleError(c, http.StatusUnauthorized, models.ErrAuthInvalidToken, constants.ErrorAuthRequired)
 			return
 		}
-	} else {
-		s.logger.Info(logging.REQUEST_END, "No authentication required", "", nil)
 	}
-
-	s.logger.Info(logging.REQUEST_START, "Checking role permissions", "", map[string]interface{}{
-		constants.JSONFieldAllowedRoles: routeConfig.AllowedRoles,
-	})
 
 	// Check role permissions
 	if len(routeConfig.AllowedRoles) > 0 {
 		userRole := c.GetString(constants.ContextKeyUserRole)
-		s.logger.Info(logging.REQUEST_START, "Checking user role against allowed roles", "", map[string]interface{}{
-			constants.JSONFieldUserRole:     userRole,
-			constants.JSONFieldAllowedRoles: routeConfig.AllowedRoles,
-		})
 		hasPermission := false
 		for _, role := range routeConfig.AllowedRoles {
 			if role == userRole {
@@ -229,17 +200,13 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		}
 		if !hasPermission {
 			s.logger.Error(logging.AUTH_FAILURE, "Permission denied", "", map[string]interface{}{
+				constants.JSONFieldPath:         path,
 				constants.JSONFieldUserRole:     userRole,
 				constants.JSONFieldAllowedRoles: routeConfig.AllowedRoles,
 			})
 			s.handleError(c, http.StatusForbidden, models.ErrPermInsufficient, constants.ErrorInsufficientPerms)
 			return
 		}
-		s.logger.Info(logging.REQUEST_END, "Permission granted", "", map[string]interface{}{
-			constants.JSONFieldUserRole: userRole,
-		})
-	} else {
-		s.logger.Info(logging.REQUEST_END, "No role restrictions, allowing access", "", nil)
 	}
 	// If AllowedRoles is empty, allow access (any role including public)
 
@@ -351,88 +318,49 @@ func (s *Server) getUserContext(c *gin.Context) *models.UserContext {
 
 // getBasePath extracts the base path for dynamic routes
 func (s *Server) getBasePath(path string) string {
-	// Using path separator constant from api_constants.go
-
-	// Path prefixes for pattern matching - using constants from api_constants.go
-
-	s.logger.Info(logging.REQUEST_START, "getBasePath processing", "", map[string]interface{}{
-		constants.JSONFieldInputPath: path,
-	})
-
 	// Check for known dynamic route patterns
 	switch {
 	case strings.HasPrefix(path, constants.AssetBalancesPattern):
 		// /api/v1/assets/balances -> /api/v1/assets/balances (exact match)
-		result := constants.AssetBalancesPattern
-		s.logger.Info(logging.REQUEST_END, "Asset balances pattern matched", "", map[string]interface{}{
-			constants.JSONFieldResult: result,
-		})
-		return result
+		return constants.AssetBalancesPattern
 
 	case strings.HasPrefix(path, constants.APIV1AssetsPrefix) && strings.HasSuffix(path, constants.TransactionsSuffix):
 		// /api/v1/assets/AAVE/transactions -> /api/v1/assets/:asset_id/transactions
-		result := constants.AssetTransactionsPattern
-		s.logger.Info(logging.REQUEST_END, "Asset transactions pattern matched", "", map[string]interface{}{
-			constants.JSONFieldResult: result,
-		})
-		return result
+		return constants.AssetTransactionsPattern
 
 	case strings.HasPrefix(path, constants.APIV1AssetsPrefix) && strings.HasSuffix(path, constants.BalanceSuffix):
 		// /api/v1/assets/AAVE/balance -> /api/v1/assets/:asset_id/balance
-		result := constants.AssetBalancePattern
-		s.logger.Info(logging.REQUEST_END, "Asset balance pattern matched", "", map[string]interface{}{
-			constants.JSONFieldResult: result,
-		})
-		return result
+		return constants.AssetBalancePattern
 
 	case strings.HasPrefix(path, constants.APIV1OrdersPrefix):
 		// /api/v1/orders/123 -> /api/v1/orders/:id
 		parts := strings.Split(path, constants.PathSeparator)
 		if len(parts) == 5 { // /api/v1/orders/{id}
-			result := constants.OrderByIDPattern
-			s.logger.Info(logging.REQUEST_END, "Order by ID pattern matched", "", map[string]interface{}{
-				constants.JSONFieldResult: result,
-			})
-			return result
+			return constants.OrderByIDPattern
 		}
 
 	case strings.HasPrefix(path, constants.APIV1PortfolioPrefix):
 		// /api/v1/portfolio/username -> /api/v1/portfolio/:username
 		parts := strings.Split(path, constants.PathSeparator)
 		if len(parts) == 5 { // /api/v1/portfolio/{username}
-			result := constants.PortfolioByUserPattern
-			s.logger.Info(logging.REQUEST_END, "Portfolio by user pattern matched", "", map[string]interface{}{
-				constants.JSONFieldResult: result,
-			})
-			return result
+			return constants.PortfolioByUserPattern
 		}
 
 	case strings.HasPrefix(path, constants.APIV1InventoryPrefix):
 		// /api/v1/inventory/assets/123 -> /api/v1/inventory/assets/:id
 		parts := strings.Split(path, constants.PathSeparator)
 		if len(parts) == 6 { // /api/v1/inventory/assets/{id}
-			result := constants.InventoryAssetByIDPattern
-			s.logger.Info(logging.REQUEST_END, "Inventory asset by ID pattern matched", "", map[string]interface{}{
-				constants.JSONFieldResult: result,
-			})
-			return result
+			return constants.InventoryAssetByIDPattern
 		}
 
 	case strings.HasPrefix(path, constants.APIV1BalancePrefix):
 		// /api/v1/balance/asset/BTC -> /api/v1/balance/asset/:asset_id
 		parts := strings.Split(path, constants.PathSeparator)
 		if len(parts) == 6 { // /api/v1/balance/asset/{asset_id}
-			result := constants.BalanceAssetByIDPattern
-			s.logger.Info(logging.REQUEST_END, "Asset balance by ID pattern matched", "", map[string]interface{}{
-				constants.JSONFieldResult: result,
-			})
-			return result
+			return constants.BalanceAssetByIDPattern
 		}
 	}
 
-	s.logger.Info(logging.REQUEST_END, "No pattern matched, returning original path", "", map[string]interface{}{
-		constants.JSONFieldPath: path,
-	})
 	return path
 }
 
