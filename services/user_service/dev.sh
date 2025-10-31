@@ -115,6 +115,8 @@ setup_venv() {
 
     # Activate virtual environment
     source ".venv-${SERVICE_NAME}/bin/activate"
+    # Set VENV_PYTHON variable for use in other functions
+    VENV_PYTHON=".venv-${SERVICE_NAME}/bin/python"
 
     log_success "Virtual environment ready"
 }
@@ -131,6 +133,8 @@ install_dependencies() {
     else
         python3 -c "import sys; sys.path.insert(0, '../dev-tools'); from dev_tools import install_dependencies; install_dependencies('.', False)"
     fi
+
+    "$VENV_PYTHON" -m pip install -q -r ../common/requirements.txt
 
     log_success "Dependencies installed"
 }
