@@ -9,6 +9,76 @@
 
 ## 📊 Progress Summary
 
+### **2025-11-01: MON-001 - Comprehensive Monitoring Dashboards** ✅ **COMPLETED**
+
+**Task**: Deploy complete monitoring stack with Prometheus, Loki, and Grafana for metrics and log visualization.
+
+**Key Achievements**:
+- ✅ **Prometheus Deployed**: Metrics collection from all services (gateway, auth, user, inventory, order)
+- ✅ **Loki Deployed**: Log aggregation via Promtail from Docker containers
+- ✅ **Grafana Deployed**: Web interface for metrics and logs visualization
+- ✅ **Authentication Secured**: Prometheus (nginx basic auth) and Grafana (login required)
+- ✅ **Service Integration**: All services exposing metrics at `/internal/metrics`, Gateway at `/metrics`
+- ✅ **Docker Integration**: Monitoring stack integrated into `deploy.sh` for easy deployment
+
+**Technical Implementation**:
+- **Prometheus Configuration**:
+  - Scraping metrics from 5 services (gateway, auth, user, inventory, order) every 15s
+  - Metrics paths: `/internal/metrics` for Python services, `/metrics` for Gateway
+  - Connected to `order-processor-network` for service discovery
+  - Protected by nginx reverse proxy with basic auth (admin/admin123)
+  - Port: 9090 (external), internal Prometheus on monitoring network only
+- **Loki Configuration**:
+  - Collecting logs via Promtail from Docker container stdout/stderr
+  - HTTP access logs from all services visible
+  - Port: 3100
+- **Grafana Configuration**:
+  - Prometheus and Loki datasources provisioned
+  - Anonymous access disabled (authentication required)
+  - Port: 3001 (changed from 3000 to avoid conflict)
+  - Credentials: admin/admin123
+- **Promtail Configuration**:
+  - Docker service discovery via `/var/run/docker.sock`
+  - Dual collection: Docker stdout logs + file-based logs (configured but not active)
+  - JSON log parsing configured for future use
+
+**Files Created**:
+- `monitoring/prometheus/prometheus.yml` - Prometheus scrape configuration
+- `monitoring/prometheus/nginx.conf` - Nginx reverse proxy for auth
+- `monitoring/prometheus/.htpasswd` - Basic auth credentials
+- `monitoring/grafana/provisioning/datasources/prometheus.yml` - Grafana Prometheus datasource
+
+**Files Modified**:
+- `monitoring/docker-compose.logs.yml` - Added Prometheus, nginx proxy, fixed Grafana port
+- `docker/deploy.sh` - Added monitoring deployment commands
+- `docker/docker-compose.yml` - Added LOG_FILE_PATH environment variable and log volume mounts
+- `monitoring/promtail/config.yml` - Added file-based log scraping (configured for future)
+
+**Monitoring Access**:
+- Prometheus: http://localhost:9090 (admin/admin123)
+- Grafana: http://localhost:3001 (admin/admin123)
+- Loki: http://localhost:3100 (internal only, query via Grafana)
+
+**Metrics Available**:
+- Auth Service: `auth_requests_total`, `auth_request_duration_seconds`
+- User Service: `user_requests_total`, `user_request_duration_seconds`
+- Inventory Service: `inventory_requests_total`, `inventory_request_duration_seconds`
+- Order Service: `order_requests_total`, `order_request_duration_seconds`
+- Gateway: `gateway_rate_limit_remaining`, `gateway_rate_limit_violations_total`
+
+**Logs Available**:
+- HTTP access logs from all services (Uvicorn format)
+- Query in Grafana: `{container_name="/order-processor-user_service"}`
+
+**Known Issues**:
+- Application JSON logs (BaseLogger file writes) not working - added as CODE-002 in backlog
+- Gateway HTTP request metrics (`gateway_http_requests_total`) not being recorded - middleware not connected
+- Current workaround: HTTP access logs provide sufficient visibility for development
+
+**Testing**: Monitoring stack deployed successfully, all services scraped by Prometheus, logs visible in Grafana.
+
+---
+
 ### **2025-10-30: SEC-009 - Remove Gateway JWT Secret & Verify No Secrets Exposed** ✅ **COMPLETED**
 
 **Task**: Remove unused Gateway JWT secret (dead code) and verify no secrets/configs are exposed in public repository

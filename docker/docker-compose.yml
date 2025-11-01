@@ -74,6 +74,7 @@ services:
       - SERVICE_PORT=8000
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
+      - LOG_FILE_PATH=/var/log
       # Redis configuration
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -84,6 +85,8 @@ services:
       - ~/.aws:/root/.aws:ro
       # Auto-reload for development
       - ../services:/app/services:ro
+      # Mount log directory for Promtail collection
+      - ./logs/user_service:/var/log/services/user_service
     depends_on:
       redis:
         condition: service_healthy
@@ -123,6 +126,7 @@ services:
       - SERVICE_PORT=8001
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
+      - LOG_FILE_PATH=/var/log
       # Redis configuration
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -133,6 +137,8 @@ services:
       - ~/.aws:/root/.aws:ro
       # Auto-reload for development
       - ../services:/app/services:ro
+      # Mount log directory for Promtail collection
+      - ./logs/inventory_service:/var/log/services/inventory_service
     depends_on:
       redis:
         condition: service_healthy
@@ -174,6 +180,7 @@ services:
       - SERVICE_PORT=8002
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
+      - LOG_FILE_PATH=/var/log
       # Redis configuration
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -184,6 +191,8 @@ services:
       - ~/.aws:/root/.aws:ro
       # Auto-reload for development
       - ../services:/app/services:ro
+      # Mount log directory for Promtail collection
+      - ./logs/order_service:/var/log/services/order_service
     depends_on:
       redis:
         condition: service_healthy
@@ -221,6 +230,7 @@ services:
       - SERVICE_PORT=8003
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
+      - LOG_FILE_PATH=/var/log
       # Required environment variables for common package initialization
       - USERS_TABLE=${USERS_TABLE:-order-processor-dev-users}
       - ORDERS_TABLE=${ORDERS_TABLE:-order-processor-dev-orders}
@@ -231,6 +241,8 @@ services:
       - ~/.aws:/root/.aws:ro
       # Auto-reload for development
       - ../services:/app/services:ro
+      # Mount log directory for Promtail collection
+      - ./logs/auth_service:/var/log/services/auth_service
     depends_on:
       redis:
         condition: service_healthy

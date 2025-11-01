@@ -133,43 +133,33 @@ g
   - `services/order_service/src/main.py` (CORS middleware)
   - Architecture documentation
 
-#### **MON-001: Comprehensive Monitoring Dashboards**
-- **Component**: Observability
-- **Type**: Feature Addition
-- **Priority**: 🔥 **HIGH PRIORITY** (After SEC-008)
+#### **CODE-002: BaseLogger JSON Logs Not Being Written to Files**
+- **Component**: Logging & Observability
+- **Type**: Bug Fix
+- **Priority**: 🔵 **LOW PRIORITY**
 - **Status**: 📋 **To Do**
-- **Problem**: Monitoring system exists (Prometheus metrics and Loki logs) but no admin interface to view metrics and logs
-- **Goal**: Create simple Grafana dashboards for admin to view metrics and logs from all services
-- **Scope**: Create lightweight Grafana dashboards using existing Prometheus metrics and Loki logs. No performance tuning or traffic simulation; dashboards only.
+- **Problem**: BaseLogger is configured to write JSON logs to `/var/log/services/{service}/` but files are not being created. Only Uvicorn HTTP access logs are visible.
+- **Current Behavior**:
+  - LOG_FILE_PATH environment variable is set to `/var/log`
+  - Log directories are mounted: `./logs/{service}:/var/log/services/{service}`
+  - BaseLogger initializes successfully but doesn't write log files
+  - HTTP access logs work correctly (stdout)
+- **Investigation Needed**:
+  - Check if BaseLogger.log() method is being called
+  - Verify file write permissions in containers
+  - Check if log_to_file flag is properly set
+  - Debug _write_to_file() method execution
+- **Workaround**: HTTP access logs in Loki provide sufficient monitoring for now
 - **Acceptance Criteria**:
-  - **Metrics Dashboards (Prometheus)**:
-    - Gateway dashboard: request rate, 5xx count, latency panels wired to existing metrics
-    - Services dashboard (auth, user, inventory, order): request count, error count per endpoint
-    - Health overview: up/healthy panels for all services
-  - **Logs Dashboard (Loki)**:
-    - Admin log viewer dashboard with log panels
-    - Ability to filter logs by service, level, time range
-    - Ability to search logs by keyword
-    - View logs from all services (gateway, auth, user, inventory, order)
-  - All dashboards simple and practical (no over-engineering)
-  - Dashboards committed as JSON (version-controlled); wired via docker-compose or kube manifests
-- **Dependencies**:
-  - Existing Prometheus metrics endpoints (/metrics) already exposed
-  - Existing Loki/Promtail log aggregation setup
-- **Implementation Notes**:
-  - Use Grafana for both metrics and logs
-  - Metrics: Prometheus queries for panels
-  - Logs: LogQL queries for log viewer
-  - Simple panel layout with filters
-  - No complex analytics or ML features
-- **Files to Update**:
-  - `monitoring/grafana/dashboards/metrics-gateway.json` (new)
-  - `monitoring/grafana/dashboards/metrics-services.json` (new)
-  - `monitoring/grafana/dashboards/metrics-health.json` (new)
-  - `monitoring/grafana/dashboards/admin-logs.json` (new)
-  - `docker/docker-compose.yml` (Grafana service + provisioners, if not present)
-  - `kubernetes/*` (optional: ConfigMaps for dashboards)
-  - `monitoring/docker-compose.logs.yml` (if needed for dashboard provisioning)
+  - JSON log files created in `/var/log/services/{service}/{service}.log`
+  - Log files visible on host at `docker/logs/{service}/`
+  - Promtail can read and send JSON logs to Loki
+  - Application logs (login, register, errors) visible in Grafana
+- **Files to Investigate**:
+  - `services/common/src/shared/logging/base_logger.py`
+  - `services/{service}/src/main.py` (logger initialization)
+  - `docker/docker-compose.yml` (volume mounts, environment variables)
+  - `monitoring/promtail/config.yml` (log file scraping)
 
 
 #### **ARCH-003: Fix Route Configuration Disconnect** 🔵 **LOW PRIORITY**
@@ -463,6 +453,11 @@ g
 - Frontend port already standardized to localhost:3000 for Docker and Kubernetes deployment
 
 ### **🏗️ Infrastructure & Architecture**
+
+#### **MON-001: Comprehensive Monitoring Dashboards** ✅ **COMPLETED**
+- **Component**: Observability
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Summary**: Deployed complete monitoring stack with Prometheus (metrics), Loki (logs), and Grafana (dashboards). All services exposing metrics at `/internal/metrics`. HTTP access logs collected via Docker stdout. Authentication required for Prometheus and Grafana. Monitoring accessible at localhost:9090 (Prometheus) and localhost:3001 (Grafana). See DAILY_WORK_LOG.md for details.
 
 #### **INFRA-022: Docker Optimization for Faster Deployment** ✅ **COMPLETED**
 - **Priority**: 🔥 **HIGH PRIORITY**

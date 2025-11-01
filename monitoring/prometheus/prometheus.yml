@@ -1,0 +1,54 @@
+# Prometheus Configuration
+# Scrapes metrics from all CNOP services
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'cnop-monitor'
+
+scrape_configs:
+  # Gateway metrics (uses /metrics endpoint)
+  - job_name: 'gateway'
+    static_configs:
+      - targets: ['order-processor-gateway:8080']
+        labels:
+          service: 'gateway'
+          job: 'gateway'
+    metrics_path: '/metrics'
+
+  # Auth Service metrics (uses /internal/metrics endpoint)
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['order-processor-auth_service:8003']
+        labels:
+          service: 'auth_service'
+          job: 'auth-service'
+    metrics_path: '/internal/metrics'
+
+  # User Service metrics (uses /internal/metrics endpoint)
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['order-processor-user_service:8000']
+        labels:
+          service: 'user_service'
+          job: 'user-service'
+    metrics_path: '/internal/metrics'
+
+  # Inventory Service metrics (uses /internal/metrics endpoint)
+  - job_name: 'inventory-service'
+    static_configs:
+      - targets: ['order-processor-inventory_service:8001']
+        labels:
+          service: 'inventory_service'
+          job: 'inventory-service'
+    metrics_path: '/internal/metrics'
+
+  # Order Service metrics (uses /internal/metrics endpoint)
+  - job_name: 'order-service'
+    static_configs:
+      - targets: ['order-processor-order_service:8002']
+        labels:
+          service: 'order_service'
+          job: 'order-service'
+    metrics_path: '/internal/metrics'

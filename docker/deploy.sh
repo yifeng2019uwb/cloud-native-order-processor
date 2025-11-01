@@ -13,6 +13,7 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+MONITORING_DIR="$ROOT_DIR/monitoring"
 USE_CACHE=true
 
 # Logging
@@ -26,13 +27,15 @@ show_usage() {
     cat << EOF
 Usage: $0 [service_name] [action] [--no-cache]
 
-Services: all, auth, user, inventory, order, gateway, frontend
+Services: all, auth, user, inventory, order, gateway, frontend, monitoring
 Actions: deploy, rebuild, restart, stop, start, logs, status, clean
 
 Examples:
     $0 auth deploy              # Deploy with cache
     $0 frontend rebuild         # Rebuild without cache
     $0 all status               # Show status
+    $0 monitoring start         # Start monitoring stack
+    $0 monitoring deploy         # Deploy monitoring stack
 EOF
 }
 
@@ -258,6 +261,88 @@ clean_docker() {
     docker system df
 }
 
+# Monitoring stack functions
+deploy_monitoring() {
+    log_info "Deploying monitoring stack..."
+
+    if [ ! -f "$MONITORING_DIR/docker-compose.logs.yml" ]; then
+        log_error "Monitoring compose file not found: $MONITORING_DIR/docker-compose.logs.yml"
+        return 1
+    fi
+
+    cd "$MONITORING_DIR"
+
+    # Ensure order-processor-network exists (created by main docker-compose)
+    if ! docker network ls | grep -q "order-processor-network"; then
+        log_warning "order-processor-network not found. Starting main services first..."
+        cd "$SCRIPT_DIR"
+        docker-compose up -d redis 2>/dev/null || log_warning "Failed to create network, but continuing..."
+        cd "$MONITORING_DIR"
+    fi
+
+    docker-compose -f docker-compose.logs.yml up -d
+    log_success "Monitoring stack deployed!"
+    log_info "Access Grafana at: http://localhost:3001 (admin/admin123)"
+    log_info "Access Prometheus at: http://localhost:9090"
+    log_info "Access Loki at: http://localhost:3100"
+}
+
+start_monitoring() {
+    log_info "Starting monitoring stack..."
+    cd "$MONITORING_DIR"
+    docker-compose -f docker-compose.logs.yml up -d
+    log_success "Monitoring stack started!"
+}
+
+stop_monitoring() {
+    log_info "Stopping monitoring stack..."
+    cd "$MONITORING_DIR"
+    docker-compose -f docker-compose.logs.yml stop
+    log_success "Monitoring stack stopped!"
+}
+
+restart_monitoring() {
+    log_info "Restarting monitoring stack..."
+    cd "$MONITORING_DIR"
+    docker-compose -f docker-compose.logs.yml restart
+    log_success "Monitoring stack restarted!"
+}
+
+status_monitoring() {
+    log_info "Monitoring Stack Status:"
+    echo ""
+    cd "$MONITORING_DIR"
+    docker-compose -f docker-compose.logs.yml ps
+    echo ""
+
+    log_info "Health Status:"
+    for service in loki promtail prometheus grafana; do
+        local container_id=$(docker-compose -f docker-compose.logs.yml ps -q "$service" 2>/dev/null)
+        if [ -n "$container_id" ]; then
+            local running=$(docker inspect --format='{{.State.Running}}' "$container_id" 2>/dev/null)
+            if [ "$running" = "true" ]; then
+                log_success "$service: Running"
+            else
+                log_error "$service: Stopped"
+            fi
+        else
+            log_warning "$service: Not found"
+        fi
+    done
+}
+
+logs_monitoring() {
+    local service="${1:-}"
+    cd "$MONITORING_DIR"
+    if [ -z "$service" ]; then
+        log_info "Logs for monitoring stack..."
+        docker-compose -f docker-compose.logs.yml logs -f
+    else
+        log_info "Logs for $service..."
+        docker-compose -f docker-compose.logs.yml logs -f --tail=100 "$service"
+    fi
+}
+
 # Main
 main() {
     check_docker_compose
@@ -304,6 +389,17 @@ main() {
                 logs) show_logs "$svc_name" ;;
                 status) docker-compose ps "$svc_name" ;;
                 *) log_error "Invalid action"; exit 1 ;;
+            esac
+            ;;
+        monitoring)
+            case "$action" in
+                deploy) deploy_monitoring ;;
+                start) start_monitoring ;;
+                stop) stop_monitoring ;;
+                restart) restart_monitoring ;;
+                status) status_monitoring ;;
+                logs) logs_monitoring "${3:-}" ;;
+                *) log_error "Invalid action for monitoring. Use: deploy, start, stop, restart, status, logs"; exit 1 ;;
             esac
             ;;
         *)
