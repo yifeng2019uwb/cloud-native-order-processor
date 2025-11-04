@@ -1,11 +1,13 @@
 """
 Inventory Service - FastAPI Application Entry Point
 """
+import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
-import asyncio
 
 from common.shared.logging import BaseLogger, LoggerName, LogAction
 from common.exceptions import CNOPAssetNotFoundException, CNOPInternalServerException
@@ -16,6 +18,7 @@ from inventory_exceptions import (
 )
 from controllers.assets import router as assets_router
 from controllers.health import router as health_router
+from data.init_inventory import startup_inventory_initialization
 from metrics import get_metrics_response
 from api_info_enum import ServiceMetadata, ApiPaths, ApiTags, ApiResponseKeys, API_INVENTORY_PREFIX
 from constants import (
@@ -29,19 +32,37 @@ from middleware import metrics_middleware
 # Initialize logger
 logger = BaseLogger(LoggerName.INVENTORY)
 
+# Lifespan event handler (replaces deprecated @app.on_event)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events"""
+    # Startup
+    try:
+        logger.info(action=LogAction.SERVICE_START, message="Starting inventory data sync service...")
+        asyncio.create_task(startup_inventory_initialization())
+        logger.info(action=LogAction.SERVICE_START, message="Inventory data sync service started")
+    except Exception as e:
+        logger.error(action=LogAction.ERROR, message=f"Failed to start inventory data sync: {e}")
+
+    yield
+
+    # Shutdown (if needed in future)
+    logger.info(action=LogAction.SERVICE_STOP, message="Inventory service shutting down")
+
 # Create FastAPI app
 app = FastAPI(
     title=ServiceMetadata.TITLE.value,
     description=ServiceMetadata.DESCRIPTION.value,
     version=ServiceMetadata.VERSION.value,
     docs_url=ApiPaths.DOCS.value,
-    redoc_url=ApiPaths.REDOC.value
+    redoc_url=ApiPaths.REDOC.value,
+    lifespan=lifespan
 )
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,21 +74,6 @@ app.middleware("http")(metrics_middleware)
 # Include routers
 app.include_router(assets_router, prefix=API_INVENTORY_PREFIX, tags=[ApiTags.INVENTORY.value])
 app.include_router(health_router, tags=[ApiTags.HEALTH.value])
-
-# Startup event - Initialize inventory data
-@app.on_event("startup")
-async def startup_event():
-    """Initialize inventory data on service startup"""
-    try:
-        from data.init_inventory import startup_inventory_initialization
-        logger.info(action=LogAction.SERVICE_START, message="Starting inventory initialization...")
-
-        # Run initialization in background to not block startup
-        asyncio.create_task(startup_inventory_initialization())
-
-        logger.info(action=LogAction.SERVICE_START, message="Inventory initialization started in background")
-    except Exception as e:
-        logger.error(action=LogAction.ERROR, message=f"Failed to start inventory initialization: {e}")
 
 # Custom exception handlers
 @app.exception_handler(CNOPAssetValidationException)

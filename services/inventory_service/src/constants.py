@@ -33,3 +33,7 @@ COINGECKO_TIMEOUT = 30.0  # seconds
 # Default Asset Values
 DEFAULT_ASSET_AMOUNT = 1000.0
 DEFAULT_ASSET_CATEGORY = "altcoin"
+
+# Price Update Configuration (for FEATURE-001.1)
+PRICE_UPDATE_INTERVAL_SECONDS = 300  # 5 minutes - how often to fetch prices from CoinGecko
+PRICE_REDIS_TTL_SECONDS = 600  # 10 minutes - Redis key expiration time (2x update interval for safety)

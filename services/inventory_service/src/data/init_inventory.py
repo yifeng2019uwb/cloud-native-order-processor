@@ -1,6 +1,10 @@
 """
 Initialize sample inventory data on service startup
 Path: services/inventory-service/src/data/init_inventory.py
+
+This module handles:
+1. One-time inventory initialization on service startup
+2. Continuous price updates every 5 minutes (FEATURE-001.1)
 """
 import asyncio
 from decimal import Decimal
@@ -9,11 +13,17 @@ from pydantic import BaseModel, Field, AfterValidator
 
 from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.database.dynamodb_connection import get_dynamodb_manager
+from common.data.database.redis_connection import get_redis_client
 from common.data.entities.inventory import Asset
 from common.exceptions import CNOPEntityNotFoundException, CNOPAssetNotFoundException
 from common.shared.logging import BaseLogger, LoggerName, LogAction
-from constants import DEFAULT_ASSET_AMOUNT, DEFAULT_ASSET_CATEGORY
-from services.fetch_coins import CoinData
+from constants import (
+    DEFAULT_ASSET_AMOUNT,
+    DEFAULT_ASSET_CATEGORY,
+    PRICE_UPDATE_INTERVAL_SECONDS,
+    PRICE_REDIS_TTL_SECONDS
+)
+from services.fetch_coins import CoinData, fetch_coins
 
 logger = BaseLogger(LoggerName.INVENTORY)
 
@@ -122,39 +132,167 @@ async def upsert_coins_to_inventory(coins: List[CoinData]) -> int:
     return updated_count
 
 
-async def initialize_inventory_data(force_recreate: bool = False) -> None:
-    """Initialize inventory data on service startup by fetching from data providers"""
+async def startup_inventory_initialization() -> None:
+    """
+    Start continuous inventory data synchronization service
+
+    This function runs continuously to keep inventory data synced with CoinGecko.
+    Uses upsert pattern: updates existing coins, creates new ones.
+    Simulates real-time inventory system with 5-minute sync interval.
+
+    Design: Simple continuous loop - no separate "init" needed since upsert handles both
+    """
     logger.info(
         action=LogAction.SERVICE_START,
-        message="Starting inventory data initialization..."
+        message=f"Starting continuous inventory data sync (interval: {PRICE_UPDATE_INTERVAL_SECONDS}s)"
     )
-    try:
-        from services.fetch_coins import fetch_coins
 
+    cycle_count = 0
+
+    while True:
+        try:
+            cycle_count += 1
+            logger.info(
+                action=LogAction.SERVICE_START,
+                message=f"Inventory sync cycle #{cycle_count} starting..."
+            )
+
+            # Run update cycle (fetches from CoinGecko, upserts to DynamoDB, updates Redis)
+            success = await price_update_cycle()
+
+            if success:
+                logger.info(
+                    action=LogAction.SERVICE_START,
+                    message=f"Inventory sync cycle #{cycle_count} completed successfully"
+                )
+            else:
+                logger.warning(
+                    action=LogAction.ERROR,
+                    message=f"Inventory sync cycle #{cycle_count} failed (will retry in {PRICE_UPDATE_INTERVAL_SECONDS}s)"
+                )
+
+        except Exception as e:
+            logger.error(
+                action=LogAction.ERROR,
+                message=f"Unexpected error in inventory sync loop (cycle #{cycle_count}): {e}"
+            )
+
+        # Sleep for configured interval (default: 300 seconds = 5 minutes)
+        logger.info(
+            action=LogAction.SERVICE_START,
+            message=f"Next sync in {PRICE_UPDATE_INTERVAL_SECONDS}s..."
+        )
+        await asyncio.sleep(PRICE_UPDATE_INTERVAL_SECONDS)
+
+
+# =============================================================================
+# FEATURE-001.1: Continuous Price Updates (Every 5 Minutes)
+# =============================================================================
+
+async def update_redis_prices(coins: List[CoinData]) -> int:
+    """
+    Update Redis with current prices for all coins
+
+    Redis Key Format: price:{asset_id} = "45000.00"
+    TTL: 10 minutes (ensures data freshness)
+
+    Args:
+        coins: List of CoinData objects with current prices
+
+    Returns:
+        Number of prices successfully updated in Redis
+    """
+    redis_client = get_redis_client()
+    updated_count = 0
+
+    for coin in coins:
+        try:
+            # Only update if price is available
+            if coin.current_price is None:
+                logger.warning(
+                    action=LogAction.CACHE_OPERATION,
+                    message=f"Skipping Redis update for {coin.symbol} - no price available"
+                )
+                continue
+
+            # Redis key format: price:BTC, price:ETH, etc.
+            redis_key = f"price:{coin.symbol}"
+            price_str = str(coin.current_price)
+
+            # Set with TTL (10 minutes = 600 seconds)
+            redis_client.setex(
+                name=redis_key,
+                time=PRICE_REDIS_TTL_SECONDS,
+                value=price_str
+            )
+
+            logger.info(
+                action=LogAction.CACHE_OPERATION,
+                message=f"Updated Redis: {redis_key} = {price_str} (TTL: {PRICE_REDIS_TTL_SECONDS}s)"
+            )
+            updated_count += 1
+
+        except Exception as e:
+            logger.error(
+                action=LogAction.ERROR,
+                message=f"Failed to update Redis price for {coin.symbol}: {e}"
+            )
+            continue
+
+    return updated_count
+
+
+async def price_update_cycle():
+    """
+    Single price update cycle
+
+    Fetches prices from CoinGecko, updates DynamoDB and Redis
+    Returns True if successful, False if failed
+    """
+    try:
+        logger.info(
+            action=LogAction.SERVICE_START,
+            message="Starting price update cycle..."
+        )
+
+        # 1. Fetch latest prices from CoinGecko
         coins = await fetch_coins()
+
         if not coins:
             logger.error(
                 action=LogAction.ERROR,
-                message="No coins received from fetch service"
+                message="No coins received from CoinGecko - skipping update cycle"
             )
-            return
+            return False
 
-        count = await upsert_coins_to_inventory(coins)
+        logger.info(
+            action=LogAction.REQUEST_END,
+            message=f"Fetched {len(coins)} coins from CoinGecko"
+        )
+
+        # 2. Update DynamoDB inventory table
+        db_update_count = await upsert_coins_to_inventory(coins)
+        logger.info(
+            action=LogAction.DB_OPERATION,
+            message=f"Updated {db_update_count} assets in DynamoDB"
+        )
+
+        # 3. Update Redis price cache (NEW for limit orders)
+        redis_update_count = await update_redis_prices(coins)
+        logger.info(
+            action=LogAction.CACHE_OPERATION,
+            message=f"Updated {redis_update_count} prices in Redis"
+        )
+
         logger.info(
             action=LogAction.SERVICE_START,
-            message=f"Successfully upserted {count} assets from data providers"
+            message=f"Price update cycle complete: DynamoDB={db_update_count}, Redis={redis_update_count}"
         )
+        return True
 
     except Exception as e:
         logger.error(
             action=LogAction.ERROR,
-            message=f"Failed to initialize inventory data: {e}"
+            message=f"Price update cycle failed: {e}"
         )
-
-
-async def startup_inventory_initialization() -> None:
-    """
-    Non-blocking startup initialization
-    This function is designed to not block service startup
-    """
-    await initialize_inventory_data()
+        return False
