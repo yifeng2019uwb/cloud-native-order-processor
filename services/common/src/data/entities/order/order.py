@@ -33,6 +33,14 @@ class Order(BaseModel):
     created_at: datetime = Field(default_factory=get_current_utc, description="Order creation timestamp")
     updated_at: datetime = Field(default_factory=get_current_utc, description="Last update timestamp")
 
+    # FEATURE-001.2: Limit order fields
+    limit_price: Decimal | None = Field(None, description="Limit price for limit orders")
+    side: str | None = Field(None, description="Order side: BUY or SELL")
+    triggered_at: datetime | None = Field(None, description="When limit order condition was met")
+    execution_price: Decimal | None = Field(None, description="Actual execution price")
+    expires_at: datetime | None = Field(None, description="Order expiration datetime")
+    held_amount: Decimal | None = Field(None, description="Amount of balance/assets held for this order")
+
     model_config = ConfigDict(
         json_encoders={
             datetime: lambda v: v.isoformat(),

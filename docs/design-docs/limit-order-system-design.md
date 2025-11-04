@@ -291,27 +291,21 @@ GSI-1 (UserOrdersIndex):
 - `held_balance`: Decimal (funds reserved for pending limit orders)
 - Existing: `available_balance` (funds available for trading)
 
-**New GSI-2 (PendingLimitBuyOrders):**
+**New GSI-2 (PendingLimitOrders):**
 ```
-GSI-2-PK: asset_id + "#LIMIT_BUY" (e.g., "BTC#LIMIT_BUY")
+GSI-2-PK: asset_id + "#LIMIT_" + side (e.g., "BTC#LIMIT_BUY" or "BTC#LIMIT_SELL")
 GSI-2-SK: limit_price (numeric, for sorting)
 Projection: ALL
-Purpose: Efficiently query BUY limit orders by price range
+Purpose: Efficiently query both BUY and SELL limit orders by price range
 ```
 
-**New GSI-3 (PendingLimitSellOrders):**
-```
-GSI-3-PK: asset_id + "#LIMIT_SELL" (e.g., "BTC#LIMIT_SELL")
-GSI-3-SK: limit_price (numeric, for sorting)
-Projection: ALL
-Purpose: Efficiently query SELL limit orders by price range
-```
-
-**Why two GSIs:**
-- Better partitioning (BUY and SELL separated)
-- No filter expressions needed (more efficient)
-- Cleaner query logic
-- Better DynamoDB performance
+**Why one GSI with combined PK pattern:**
+- ✅ Simpler architecture (50% cost savings - one GSI vs two)
+- ✅ Natural partitioning (different PK values = different partitions)
+- ✅ No filter expressions needed (same efficiency as two GSIs)
+- ✅ Flexible for future order types (STOP_LOSS, etc.)
+- ✅ Cleaner Terraform and less maintenance
+- ✅ Same query performance as separate GSIs
 
 ---
 
@@ -455,26 +449,26 @@ Ignore:
 
 1. Calculate new ±5% range around current price
 
-2. Query DynamoDB GSI-2 for BUY orders in range:
+2. Query DynamoDB GSI-2 (PendingLimitOrders) for BUY orders in range:
    ```
    # For BUY orders (trigger when price >= limit)
    query(
-     pk = "BTC#LIMIT_BUY",
-     sk <= current_price
+     GSI2_PK = "BTC#LIMIT_BUY",
+     GSI2_SK <= current_price
    )
    Returns: All BUY orders where limit_price <= current_price
-   Range optimization: sk BETWEEN (current_price * 0.95) AND current_price
+   Range optimization: GSI2_SK BETWEEN (current_price * 0.95) AND current_price
    ```
 
-3. Query DynamoDB GSI-3 for SELL orders in range:
+3. Query DynamoDB GSI-2 (PendingLimitOrders) for SELL orders in range:
    ```
    # For SELL orders (trigger when price <= limit)
    query(
-     pk = "BTC#LIMIT_SELL",
-     sk >= current_price
+     GSI2_PK = "BTC#LIMIT_SELL",
+     GSI2_SK >= current_price
    )
    Returns: All SELL orders where limit_price >= current_price
-   Range optimization: sk BETWEEN current_price AND (current_price * 1.05)
+   Range optimization: GSI2_SK BETWEEN current_price AND (current_price * 1.05)
    ```
 
 4. Clear old cache, load new orders
@@ -877,19 +871,21 @@ Total time from order creation to execution: 10 minutes (depends on market)
 
 ## 🎯 Design Decisions & Rationale
 
-### Decision 1: Two Separate GSIs (BUY/SELL)
+### Decision 1: Single GSI with Combined PK Pattern
 
-**Alternative:** Single GSI with status + side filtering
+**Alternative Considered:** Two separate GSIs (one for BUY, one for SELL)
 
-**Why two GSIs:**
-- ✅ Better DynamoDB partitioning (split load across partitions)
-- ✅ No filter expressions needed (lower read cost)
-- ✅ Cleaner query logic
-- ✅ Better performance at scale
+**Why one GSI with combined PK:**
+- ✅ **Simpler architecture:** 50% cost savings (one GSI vs two)
+- ✅ **Same partitioning:** Different PK values ("BTC#LIMIT_BUY" vs "BTC#LIMIT_SELL") naturally partition data
+- ✅ **No filter expressions needed:** Same efficiency as two separate GSIs
+- ✅ **More flexible:** Easy to add new order types (STOP_LOSS, etc.) without creating new GSIs
+- ✅ **Less maintenance:** One GSI to monitor and manage
+- ✅ **Cleaner Terraform:** Half the infrastructure code
 
-**Trade-off:** Two GSIs vs one (minimal cost difference in pay-per-request mode)
+**Trade-off:** Need to construct PK string (minimal overhead)
 
-**Verdict:** Two GSIs provide better performance and clearer semantics
+**Verdict:** Single GSI with combined PK provides same performance at 50% cost
 
 ---
 
@@ -1104,7 +1100,7 @@ Total time from order creation to execution: 10 minutes (depends on market)
 **Goal:** Support limit orders in database
 
 **Components:**
-- Add new GSIs to Terraform (PendingLimitBuyOrders, PendingLimitSellOrders)
+- Add new GSI to Terraform (PendingLimitOrders with combined PK pattern)
 - Add new fields to Order entity
 - Update order creation logic
 - Deploy Terraform changes

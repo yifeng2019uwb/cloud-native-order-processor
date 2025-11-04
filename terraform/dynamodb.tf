@@ -65,10 +65,33 @@ resource "aws_dynamodb_table" "orders" {
     type = "S"
   }
 
+  # FEATURE-001.2: Limit order GSI attributes
+  attribute {
+    name = "GSI2-PK"
+    type = "S"
+  }
+
+  attribute {
+    name = "GSI2-SK"
+    type = "N"
+  }
+
+  # GSI-1: User Orders Index (existing)
   global_secondary_index {
     name            = "UserOrdersIndex"
     hash_key        = "GSI-PK"
     range_key       = "GSI-SK"
+    projection_type = "ALL"
+  }
+
+  # GSI-2: Pending Limit Orders Index (FEATURE-001.2)
+  # Handles both BUY and SELL orders with combined PK pattern
+  # PK Format: "BTC#LIMIT_BUY" or "BTC#LIMIT_SELL"
+  # SK: limit_price (numeric)
+  global_secondary_index {
+    name            = "PendingLimitOrders"
+    hash_key        = "GSI2-PK"
+    range_key       = "GSI2-SK"
     projection_type = "ALL"
   }
 
@@ -131,6 +154,7 @@ resource "aws_iam_policy" "dynamodb_access" {
           aws_dynamodb_table.orders.arn,
           "${aws_dynamodb_table.orders.arn}/index/UserOrdersIndex",
           "${aws_dynamodb_table.orders.arn}/index/StatusIndex",
+          "${aws_dynamodb_table.orders.arn}/index/PendingLimitOrders",
           aws_dynamodb_table.inventory.arn,
           "${aws_dynamodb_table.inventory.arn}/index/CategoryIndex"
         ]

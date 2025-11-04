@@ -30,7 +30,124 @@
 ---
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
-g
+
+#### **FEATURE-001: Limit Order System with Auto Price Updates and Email Notifications**
+- **Component**: Order Service, Inventory Service, Email Service
+- **Type**: Feature Addition
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Problem**: Platform only supports market orders. Users need limit orders that execute automatically when price conditions are met.
+- **Goal**: Implement complete limit order system with automatic price updates, efficient order matching, and email notifications
+- **Design Document**: `docs/design-docs/limit-order-system-design.md`
+- **Key Features**:
+  1. Auto-update market prices every 5 minutes from CoinGecko
+  2. Limit buy/sell orders with automatic execution
+  3. Email notifications for all order events
+- **Architecture Approach**:
+  - Loosely coupled services through Redis shared state
+  - Smart ±5% range caching (80% memory savings, 99% fewer DB queries)
+  - Decoupled: Inventory updates prices, Order service monitors independently
+  - No service-to-service calls, only shared data contract
+- **Time Estimate**: 14-18 hours total across 3 phases
+- **Cost**: ~$0.50/month (essentially free)
+- **Sub-Tasks**:
+  - FEATURE-001.1: Auto Price Updates (4-5 hours)
+  - FEATURE-001.2: Database Schema Updates (2-3 hours)
+  - FEATURE-001.3: Limit Order Matching Engine (8-10 hours)
+- **Dependencies**:
+  - Existing Redis infrastructure ✅
+  - Existing DynamoDB tables ✅
+  - Existing balance/transaction logic ✅
+  - CoinGecko API access ✅
+- **Acceptance Criteria**:
+  - Prices auto-update from CoinGecko every 5 minutes
+  - Users can create limit buy/sell orders
+  - Orders stored in DynamoDB with PENDING status
+  - Balance held when limit order created
+  - Order service monitors Redis prices every 5 seconds
+  - Orders execute automatically when price conditions met
+  - Held balance released and converted to assets on execution
+  - Email notifications sent for all order events
+  - Smart caching: Only ±5% range loaded into Redis
+  - Integration tests pass for all scenarios
+- **Files to Update**:
+  - `terraform/dynamodb.tf` - Add new GSIs for limit orders
+  - `services/common/src/data/entities/order/order.py` - Add new fields
+  - `services/common/src/data/entities/balance/balance.py` - Add held_balance field
+  - `services/inventory_service/src/` - Add background price updater
+  - `services/order_service/src/` - Add limit order matching engine
+  - `services/common/src/email/` - Add email service utility
+
+#### **FEATURE-001.1: Auto Price Updates and Redis Integration**
+- **Component**: Inventory Service
+- **Type**: Feature Addition
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Parent Task**: FEATURE-001
+- **Goal**: Automatically fetch and update cryptocurrency prices from CoinGecko API
+- **Time Estimate**: 4-5 hours
+- **Acceptance Criteria**:
+  - Background task fetches prices from CoinGecko every 5 minutes
+  - Batch API call for all tracked assets (1 call for 12 assets)
+  - Prices stored in Redis: `price:{asset_id}` = decimal string
+  - Prices stored in DynamoDB inventory table
+  - TTL set on Redis keys (10 minutes)
+  - Monitoring logs price updates
+  - Integration with existing inventory service
+- **Files to Update**:
+  - `services/inventory_service/src/background_tasks/price_updater.py` (new)
+  - `services/inventory_service/src/main.py` - Start background task
+  - `services/common/src/external/coingecko_client.py` - Batch fetch method
+
+#### **FEATURE-001.2: Database Schema Updates for Limit Orders**
+- **Component**: Database & Entities
+- **Type**: Schema Update
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Parent Task**: FEATURE-001
+- **Goal**: Update DynamoDB schema and entities to support limit orders with held balance
+- **Time Estimate**: 2-3 hours
+- **Acceptance Criteria**:
+  - New DynamoDB GSI-2: `PendingLimitBuyOrders` (Pk: asset_id#LIMIT_BUY, Sk: limit_price)
+  - New DynamoDB GSI-3: `PendingLimitSellOrders` (Pk: asset_id#LIMIT_SELL, Sk: limit_price)
+  - Order entity updated with: limit_price, side, triggered_at, execution_price, expires_at, held_amount
+  - Balance entity updated with: held_balance field
+  - Terraform updated and applied
+  - GSIs created and indexed
+  - Backward compatible with existing market orders
+- **Files to Update**:
+  - `terraform/dynamodb.tf` - Add GSI-2 and GSI-3 to orders table
+  - `services/common/src/data/entities/order/order.py` - Add new fields
+  - `services/common/src/data/entities/balance/balance.py` - Add held_balance
+  - `services/common/src/data/dao/order/order_dao.py` - Add GSI query methods
+
+#### **FEATURE-001.3: Limit Order Matching Engine and Email Notifications**
+- **Component**: Order Service, Email Service
+- **Type**: Feature Addition
+- **Priority**: 🔥 **HIGH PRIORITY**
+- **Status**: 📋 **To Do**
+- **Parent Task**: FEATURE-001
+- **Goal**: Implement limit order matching engine with smart caching and email notifications
+- **Time Estimate**: 8-10 hours
+- **Acceptance Criteria**:
+  - Background task monitors Redis prices every 5 seconds
+  - Smart cache manager loads ±5% orders from DynamoDB GSIs
+  - Order matcher finds triggered orders in Redis sorted sets
+  - Distributed locks prevent duplicate execution
+  - Held balance management (reserve on create, release on execute/cancel)
+  - Email service integration with AWS SES
+  - Email templates for all order events
+  - Safety scanner runs every 30 minutes (backup mechanism)
+  - Integration tests for all scenarios
+- **Files to Update**:
+  - `services/order_service/src/background_tasks/price_monitor.py` (new)
+  - `services/order_service/src/background_tasks/limit_order_matcher.py` (new)
+  - `services/order_service/src/services/cache_manager.py` (new)
+  - `services/order_service/src/controllers/create_order.py` - Add held balance logic
+  - `services/common/src/email/email_service.py` (new)
+  - `services/common/src/email/templates/` (new directory with templates)
+  - `services/order_service/src/main.py` - Start background tasks
+
 #### **INFRA-021: Simplify Kubernetes Configuration - Remove Dev/Prod Split**
 - **Component**: Infrastructure & Deployment
 - **Type**: Refactoring
