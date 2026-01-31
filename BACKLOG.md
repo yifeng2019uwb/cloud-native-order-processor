@@ -31,122 +31,70 @@
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
-#### **FEATURE-001: Limit Order System with Auto Price Updates and Email Notifications**
-- **Component**: Order Service, Inventory Service, Email Service
-- **Type**: Feature Addition
-- **Priority**: 🔥 **HIGH PRIORITY**
+#### **DEMO-001: Project Demo — Full Workflow & All Existing APIs**
+- **Component**: Demo / Documentation
+- **Type**: Demo Preparation & Delivery
+- **Priority**: 🔥 **HIGH**
 - **Status**: 📋 **To Do**
-- **Problem**: Platform only supports market orders. Users need limit orders that execute automatically when price conditions are met.
-- **Goal**: Implement complete limit order system with automatic price updates, efficient order matching, and email notifications
-- **Design Document**: `docs/design-docs/limit-order-system-design.md`
-- **Key Features**:
-  1. Auto-update market prices every 5 minutes from CoinGecko
-  2. Limit buy/sell orders with automatic execution
-  3. Email notifications for all order events
-- **Architecture Approach**:
-  - Loosely coupled services through Redis shared state
-  - Smart ±5% range caching (80% memory savings, 99% fewer DB queries)
-  - Decoupled: Inventory updates prices, Order service monitors independently
-  - No service-to-service calls, only shared data contract
-- **Time Estimate**: 14-18 hours total across 3 phases
-- **Cost**: ~$0.50/month (essentially free)
-- **Sub-Tasks**:
-  - FEATURE-001.1: Auto Price Updates (4-5 hours)
-  - FEATURE-001.2: Database Schema Updates (2-3 hours)
-  - FEATURE-001.3: Limit Order Matching Engine (8-10 hours)
-- **Dependencies**:
-  - Existing Redis infrastructure ✅
-  - Existing DynamoDB tables ✅
-  - Existing balance/transaction logic ✅
-  - CoinGecko API access ✅
+- **Goal**: Demo this project end-to-end: show how the project works using **all existing APIs** and the **whole workflow** (auth → user → portfolio → orders → inventory/prices, gateway, frontend).
+- **Scope**:
+  - **All existing APIs**: Auth (login/register/token), User (profile, portfolio), Order (place/list), Inventory (assets, prices), Gateway as single entry, plus any other live endpoints.
+  - **Whole workflow**: End-to-end flow showing how a user signs in, views portfolio, sees prices, places an order, and how services interact (e.g. gateway → backend services, frontend ↔ API).
+  - **Optional part**: FEATURE-002 (AI Analysis / Insights) can be included as one segment of the demo once implemented.
 - **Acceptance Criteria**:
-  - Prices auto-update from CoinGecko every 5 minutes
-  - Users can create limit buy/sell orders
-  - Orders stored in DynamoDB with PENDING status
-  - Balance held when limit order created
-  - Order service monitors Redis prices every 5 seconds
-  - Orders execute automatically when price conditions met
-  - Held balance released and converted to assets on execution
-  - Email notifications sent for all order events
-  - Smart caching: Only ±5% range loaded into Redis
-  - Integration tests pass for all scenarios
-- **Files to Update**:
-  - `terraform/dynamodb.tf` - Add new GSIs for limit orders
-  - `services/common/src/data/entities/order/order.py` - Add new fields
-  - `services/common/src/data/entities/balance/balance.py` - Add held_balance field
-  - `services/inventory_service/src/` - Add background price updater
-  - `services/order_service/src/` - Add limit order matching engine
-  - `services/common/src/email/` - Add email service utility
+  - [ ] Demo script or runbook that walks through the full workflow with running services
+  - [ ] All major existing APIs exercised and explained (auth, user, portfolio, orders, inventory/prices)
+  - [ ] Clear narrative for how the project works (architecture, request flow, data flow)
+  - [ ] Demo can be delivered live (or recorded) using your running service(s)
+  - [ ] Optional: One-pager (e.g. Postman collection or curl/UI steps) for reproducibility
+- **Deliverables** (examples):
+  - Demo script / talking points (step-by-step flow)
+  - List of APIs and order of calls for the workflow
+  - Optional: Short doc or checklist (“How this project works” for the demo)
+- **Dependencies**: Running services (local or deployed); optionally FEATURE-002 completed for AI analysis segment
+- **Demo assistance**: An AI assistant can help create the script, API order, and narrative once you share how you run the project (e.g. `dev.sh`, endpoints, frontend URL). No code change required—this task is about **preparing and delivering** the demo with existing APIs and workflow.
 
-#### **FEATURE-001.1: Auto Price Updates and Redis Integration**
-- **Component**: Inventory Service
-- **Type**: Feature Addition
-- **Priority**: 🔥 **HIGH PRIORITY**
-- **Status**: 📋 **To Do**
-- **Parent Task**: FEATURE-001
-- **Goal**: Automatically fetch and update cryptocurrency prices from CoinGecko API
-- **Time Estimate**: 4-5 hours
-- **Acceptance Criteria**:
-  - Background task fetches prices from CoinGecko every 5 minutes
-  - Batch API call for all tracked assets (1 call for 12 assets)
-  - Prices stored in Redis: `price:{asset_id}` = decimal string
-  - Prices stored in DynamoDB inventory table
-  - TTL set on Redis keys (10 minutes)
-  - Monitoring logs price updates
-  - Integration with existing inventory service
-- **Files to Update**:
-  - `services/inventory_service/src/background_tasks/price_updater.py` (new)
-  - `services/inventory_service/src/main.py` - Start background task
-  - `services/common/src/external/coingecko_client.py` - Batch fetch method
+---
 
-#### **FEATURE-001.2: Database Schema Updates for Limit Orders**
-- **Component**: Database & Entities
-- **Type**: Schema Update
-- **Priority**: 🔥 **HIGH PRIORITY**
+#### **FEATURE-002: AI Analysis / Insights (Option 1)** — _Part of demo_
+- **Component**: User Service (or new insights endpoint)
+- **Type**: New Feature
+- **Priority**: 🔥 **HIGH** (one part of your demo)
 - **Status**: 📋 **To Do**
-- **Parent Task**: FEATURE-001
-- **Goal**: Update DynamoDB schema and entities to support limit orders with held balance
-- **Time Estimate**: 2-3 hours
+- **Goal**: Add an endpoint that aggregates portfolio, orders, and price data, calls an external LLM API (OpenAI or Claude), and returns a short text analysis for display in the UI.
+- **Design doc**: **Optional** for this scope. A short design note (1–2 pages) is enough if you want to lock scope before coding or hand off to someone else. Use a full design doc if you need review, multiple implementers, or future extension. Suggested contents if you add one: scope (Option 1 only), endpoint contract (path, method, request/response), data flow (which services are called, payload to LLM), prompt strategy (system + user prompt, length limits), config (env vars, API key), error handling and timeouts.
+- **Approach** (Option 1 – lightweight):
+  - **Backend**: New API route (e.g. in user_service or gateway-proxied) that:
+    1. Fetches user portfolio, recent orders, and current/market prices from existing services
+    2. Builds a small JSON/text payload for the LLM
+    3. Calls external LLM API (OpenAI/Anthropic) with a fixed system + user prompt
+    4. Returns the model’s short analysis (e.g. 2–4 sentences) as JSON
+  - **Frontend**: One new section or modal that calls this endpoint and displays the analysis text.
+  - **Config**: API key via env var (e.g. `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`); no new infra.
 - **Acceptance Criteria**:
-  - New DynamoDB GSI-2: `PendingLimitBuyOrders` (Pk: asset_id#LIMIT_BUY, Sk: limit_price)
-  - New DynamoDB GSI-3: `PendingLimitSellOrders` (Pk: asset_id#LIMIT_SELL, Sk: limit_price)
-  - Order entity updated with: limit_price, side, triggered_at, execution_price, expires_at, held_amount
-  - Balance entity updated with: held_balance field
-  - Terraform updated and applied
-  - GSIs created and indexed
-  - Backward compatible with existing market orders
-- **Files to Update**:
-  - `terraform/dynamodb.tf` - Add GSI-2 and GSI-3 to orders table
-  - `services/common/src/data/entities/order/order.py` - Add new fields
-  - `services/common/src/data/entities/balance/balance.py` - Add held_balance
-  - `services/common/src/data/dao/order/order_dao.py` - Add GSI query methods
+  - [ ] New endpoint implemented and documented (e.g. `GET /api/users/{userId}/insights` or similar)
+  - [ ] Endpoint aggregates portfolio, orders, and price data from existing services
+  - [ ] LLM call is made with a bounded prompt; response is parsed and returned as structured JSON
+  - [ ] API key is read from environment; no keys in code
+  - [ ] Frontend can request and display the analysis (e.g. on dashboard or profile)
+  - [ ] Errors (missing key, LLM failure, timeout) are handled and return clear HTTP/JSON responses
+  - [ ] **Optional**: Design doc or design note for Insights feature (scope, API contract, data flow, prompt strategy, config, errors)
+- **Estimated time for this part**:
+  - **Backend (endpoint + LLM integration)**: ~2–4 hours
+  - **Frontend (call API + display)**: ~1–2 hours
+  - **Testing + run-through for this feature**: ~1–2 hours  
+  - **Total for this part**: **~4–8 hours** (your full demo can include other flows as well).
+- **Dependencies**: Existing user, order, inventory/price services; external LLM API key and SDK (e.g. `openai`, `anthropic`).
+- **Files to add/update** (examples):
+  - New route/handler in user_service (or dedicated insights module): e.g. `services/user_service/src/.../insights.py` and router registration
+  - Gateway: proxy route for the new endpoint if needed
+  - Frontend: new API client method, component for “Insights” or “AI Summary”, and wiring to dashboard/profile
+  - Config/env: document new env var(s) for LLM API key
+- **Demo assistance**: Yes — an AI assistant can help with this part and with the full demo once it’s in place: e.g. scripted flow for the AI insights step, plus talking points and narrative for the rest of your demo. Share your running endpoints (and optionally a Postman/curl one-pager), and the assistant can suggest exact requests, UI clicks, and narrative.
 
-#### **FEATURE-001.3: Limit Order Matching Engine and Email Notifications**
-- **Component**: Order Service, Email Service
-- **Type**: Feature Addition
-- **Priority**: 🔥 **HIGH PRIORITY**
-- **Status**: 📋 **To Do**
-- **Parent Task**: FEATURE-001
-- **Goal**: Implement limit order matching engine with smart caching and email notifications
-- **Time Estimate**: 8-10 hours
-- **Acceptance Criteria**:
-  - Background task monitors Redis prices every 5 seconds
-  - Smart cache manager loads ±5% orders from DynamoDB GSIs
-  - Order matcher finds triggered orders in Redis sorted sets
-  - Distributed locks prevent duplicate execution
-  - Held balance management (reserve on create, release on execute/cancel)
-  - Email service integration with AWS SES
-  - Email templates for all order events
-  - Safety scanner runs every 30 minutes (backup mechanism)
-  - Integration tests for all scenarios
-- **Files to Update**:
-  - `services/order_service/src/background_tasks/price_monitor.py` (new)
-  - `services/order_service/src/background_tasks/limit_order_matcher.py` (new)
-  - `services/order_service/src/services/cache_manager.py` (new)
-  - `services/order_service/src/controllers/create_order.py` - Add held balance logic
-  - `services/common/src/email/email_service.py` (new)
-  - `services/common/src/email/templates/` (new directory with templates)
-  - `services/order_service/src/main.py` - Start background tasks
+---
+
+_Optional maintenance items below._
 
 #### **INFRA-021: Simplify Kubernetes Configuration - Remove Dev/Prod Split**
 - **Component**: Infrastructure & Deployment
@@ -191,24 +139,6 @@
   - `scripts/config-loader.sh` (remove prod Kubernetes configs)
   - `config/shared-config.yaml` (remove prod references)
   - Update relevant documentation
-
-
-#### **SEC-008: Security Architecture Evaluation** ✅ **COMPLETED**
-- **Component**: Security & Architecture
-- **Type**: Audit & Design Review
-- **Priority**: 🔥 **HIGHEST PRIORITY**
-- **Status**: ✅ **COMPLETED**
-- **Summary**: Comprehensive security audit completed. Found XSS protection already implemented via input sanitization. Identified 2 essential fixes (CORS, secret fallbacks) and 2 optional verifications. Security rating: 8/10 - excellent for personal project.
-- **Key Findings**:
-  - ✅ **XSS protection implemented** - HTML tag sanitization + suspicious pattern detection
-  - ✅ Strong authentication, password security, input validation
-  - ⚠️ CORS too permissive in Inventory Service (essential fix)
-  - ⚠️ Development secret fallbacks should be removed (essential fix)
-  - ⚪ Frontend token storage needs quick review (optional)
-  - ❌ HTTP security headers not needed (XSS already handled)
-- **Deliverables**:
-  - Security audit document: `docs/design-docs/security-audit.md`
-- **Next Steps**: Implement SEC-009 (Essential Security Fixes)
 
 
 #### **ARCH-002: Evaluate and Optimize CORS Middleware Configuration**
@@ -405,6 +335,14 @@
 
 ---
 
+## ⏸️ **DEFERRED / OUT OF SCOPE**
+
+#### **FEATURE-001: Limit Order System** — Deferred
+- **Status**: ⏸️ **SKIPPED** (not in current scope)
+- **Summary**: Limit orders, auto price execution, and email notifications. Design doc: `docs/design-docs/limit-order-system-design.md`. Inventory already has continuous price sync and Redis PriceData; Terraform has PendingLimitOrders GSI. Remaining work (Balance held_balance, OrderDAO GSI methods, matching engine, email) deferred. Can be resumed later if needed.
+
+---
+
 ## ✅ **COMPLETED TASKS**
 
 #### **ARCH-001: Implement Service-Level Request Context Handling** ✅ **NOT NEEDED**
@@ -555,6 +493,9 @@
 
 ### **🔐 Security & Compliance**
 
+#### **SEC-008: Security Architecture Evaluation** ✅ **COMPLETED**
+- Security audit completed. XSS protection implemented. Security rating: 8/10. See `docs/design-docs/security-audit.md`.
+
 #### **SEC-005-P3: Complete Backend Service Cleanup (Phase 3 Finalization)** ✅ **COMPLETED**
 - Complete backend service cleanup and JWT import issues resolution
 
@@ -663,17 +604,16 @@
 - **Phase 11**: AWS EKS Production Deployment & Infrastructure Success - ✅ **COMPLETED** (9/27/2025)
 
 ### **🔄 Current Focus**
-- **INVENTORY-001**: Enhance Inventory Service to Return Additional Asset Attributes (🔶 MEDIUM PRIORITY)
+- **DEMO-001: Project Demo** — Full workflow & all existing APIs. **FEATURE-002: AI Analysis** — One part of the demo. Project otherwise complete at ~95%.
 
 ### **📋 Next Milestones**
-- **Q4 2025**: ✅ **COMPLETED** - Backend Service Cleanup - JWT validation removed from backend services (Phase 3)
-- **Q4 2025**: ✅ **COMPLETED** - Frontend authentication flow retesting with new Auth Service
-- **Q4 2025**: ✅ **COMPLETED** - Frontend port standardization and bug fixes
-- **Q4 2025**: ✅ **COMPLETED** - Comprehensive monitoring and observability (MON-001)
-- **Q1 2026**: Production deployment with monitoring and security
-- **Q1 2026**: Advanced features and RBAC implementation
+- **Q4 2025**: ✅ **COMPLETED** — Backend cleanup, frontend auth, monitoring
+- **Q1 2026**: ✅ **COMPLETED** — Core platform, Docker, K8s, EKS deployment
+- **DEMO-001**: Project demo with all existing APIs and whole workflow (script, narrative, run-through)
+- **Demo (one part)**: FEATURE-002 (AI Analysis endpoint + frontend) — ~4–8 hours for this part
+- **Optional**: INFRA-021 (K8s simplify), ARCH-002 (CORS), CODE-001 (TODOs) — low priority
 
-**🎯 IMMEDIATE NEXT STEP**: INFRA-009.7 - Frontend Optimization (🔥 **HIGH PRIORITY**)
+**🎯 IMMEDIATE NEXT STEP**: DEMO-001 — Prepare and deliver project demo (all existing APIs, full workflow). Optionally implement FEATURE-002 (AI Analysis) as one segment of the demo.
 
 ---
 
@@ -695,8 +635,8 @@
 
 ---
 
-*Last Updated: 1/8/2025*
-*Next Review: After completing INFRA-009.7 (Frontend Optimization)*
+*Last Updated: 1/31/2026*
+*Next Review: As needed. Backlog cleaned; limit order (FEATURE-001) deferred.*
 *📋 Note: ✅ **AWS EKS DEPLOYMENT SUCCESS** - Production-ready cloud-native architecture deployed with 95% functionality, comprehensive integration testing, and zero ongoing costs*
 *📋 Note: ✅ **Frontend Tasks COMPLETED** - All major frontend issues resolved, port standardized to 3000, authentication working*
 *📋 Note: ✅ **Docker Standardization COMPLETED** - All services (Auth, User, Inventory, Order, Frontend) using production-ready patterns*
@@ -717,14 +657,4 @@
 
 ## **🔄 CURRENT TASKS**
 
-#### **AUTH-008: Simplify Authentication Architecture** 🔥 **HIGH PRIORITY**
-- **Problem**: Current architecture mixes JWT validation (auth service) with gateway headers (order/user services), creating complexity and inconsistency
-- **Goal**: Standardize on JWT validation across all services, remove unnecessary HeaderValidator and gateway header complexity
-- **Steps**:
-  1. **Refactor order service** to use JWT validation instead of gateway headers
-  2. **Refactor user service** to use JWT validation instead of gateway headers
-  3. **Remove HeaderValidator** from common module (unnecessary complexity)
-  4. **Update all service dependencies** to use simple JWT token validation
-  5. **Remove gateway header validation** from all services
-  6. **Test all services** to ensure JWT validation works correctly
-- **Benefits**: Simpler architecture, standard practice, easier maintenance, no over-engineering
+_None._ Project complete. Optional items are in Active & Planned Tasks (INFRA-021, ARCH-002, CODE-001, etc.).
