@@ -8,24 +8,28 @@ from decimal import Decimal
 
 from common.exceptions import CNOPEntityNotFoundException, CNOPAssetNotFoundException
 from common.data.entities.inventory import Asset
+from common.data.entities.price_data import PriceData
 
 from data.init_inventory import (
     get_category,
     coin_to_asset,
+    coin_to_price_data,
     upsert_coins_to_inventory,
-    initialize_inventory_data,
-    startup_inventory_initialization
+    startup_inventory_initialization,
+    price_update_cycle,
+    update_redis_prices
 )
 from services.fetch_coins import CoinData
-from constants import DEFAULT_ASSET_CATEGORY, DEFAULT_ASSET_AMOUNT
+from constants import DEFAULT_ASSET_CATEGORY, DEFAULT_ASSET_AMOUNT, PRICE_REDIS_TTL_SECONDS
 
-# Patch paths - only for external dependencies
+# Patch paths - constants for all external dependencies
 PATH_GET_DYNAMODB_MANAGER = 'data.init_inventory.get_dynamodb_manager'
-PATH_FETCH_COINS = 'services.fetch_coins.fetch_coins'
-PATH_INITIALIZE_INVENTORY_DATA = 'data.init_inventory.initialize_inventory_data'
+PATH_GET_REDIS_CLIENT = 'data.init_inventory.get_redis_client'
+PATH_FETCH_COINS = 'data.init_inventory.fetch_coins'
+PATH_PRICE_UPDATE_CYCLE = 'data.init_inventory.price_update_cycle'
 PATH_COIN_TO_ASSET = 'data.init_inventory.coin_to_asset'
 PATH_ASSET_DAO_CLASS = 'data.init_inventory.AssetDAO'
-# Patch at the source, not the import
+PATH_ASYNCIO_SLEEP = 'asyncio.sleep'
 
 
 def create_test_coin(symbol="BTC", name="Bitcoin", price=45000.0):
@@ -73,6 +77,36 @@ class TestGetCategory:
         assert get_category({"id": "unknown"}) == DEFAULT_ASSET_CATEGORY
         assert get_category({"name": "Some Coin"}) == DEFAULT_ASSET_CATEGORY
         assert get_category({}) == DEFAULT_ASSET_CATEGORY
+
+
+class TestCoinToPriceData:
+    """Test the coin_to_price_data conversion function"""
+
+    def test_coin_to_price_data_basic_conversion(self):
+        """Test basic coin to price data conversion"""
+        test_symbol = "BTC"
+        test_price = Decimal("45000.0")
+        coin = create_test_coin(test_symbol, "Bitcoin", float(test_price))
+
+        price_data = coin_to_price_data(coin)
+
+        assert isinstance(price_data, PriceData)
+        assert price_data.asset_id == test_symbol
+        assert price_data.price == test_price
+        assert price_data.redis_key == f"price:{test_symbol}"
+        assert price_data.updated_at is not None
+
+    def test_coin_to_price_data_json_serialization(self):
+        """Test that PriceData can be serialized and deserialized"""
+        coin = create_test_coin("ETH", "Ethereum", 3000.0)
+
+        price_data = coin_to_price_data(coin)
+        json_str = price_data.to_json()
+
+        # Deserialize and verify
+        restored = PriceData.from_json(json_str)
+        assert restored.asset_id == price_data.asset_id
+        assert restored.price == price_data.price
 
 
 class TestCoinToAsset:
@@ -361,119 +395,252 @@ class TestUpsertCoinsToInventory:
                 assert mock_dao.update_asset.call_count == 1
 
 
-class TestInitializeInventoryData:
-    """Test the initialize_inventory_data function"""
+class TestUpdateRedisPrices:
+    """Test the update_redis_prices function"""
 
     @pytest.mark.asyncio
-    async def test_initialize_inventory_data_success(self):
-        """Test successful initialization"""
+    async def test_update_redis_prices_success(self):
+        """Test successful Redis price updates using PriceData objects"""
+        btc_coin = create_test_coin("BTC", "Bitcoin", 45000.0)
+        eth_coin = create_test_coin("ETH", "Ethereum", 3000.0)
+        mock_coins = [btc_coin, eth_coin]
+        expected_count = len(mock_coins)
+
+        with patch(PATH_GET_REDIS_CLIENT) as mock_redis:
+            mock_redis_client = MagicMock()
+            mock_redis.return_value = mock_redis_client
+
+            result = await update_redis_prices(mock_coins)
+
+            assert result == expected_count
+            assert mock_redis_client.setex.call_count == expected_count
+
+            # Verify Redis was called with PriceData objects (stored as JSON)
+            calls = mock_redis_client.setex.call_args_list
+
+            # First call - BTC
+            btc_call = calls[0]
+            assert btc_call.kwargs['name'] == f'price:{btc_coin.symbol}'
+            assert btc_call.kwargs['time'] == PRICE_REDIS_TTL_SECONDS
+            # Verify JSON contains PriceData structure
+            btc_price_data = PriceData.from_json(btc_call.kwargs['value'])
+            assert btc_price_data.asset_id == btc_coin.symbol
+            assert btc_price_data.price == btc_coin.current_price
+
+            # Second call - ETH
+            eth_call = calls[1]
+            assert eth_call.kwargs['name'] == f'price:{eth_coin.symbol}'
+            eth_price_data = PriceData.from_json(eth_call.kwargs['value'])
+            assert eth_price_data.asset_id == eth_coin.symbol
+            assert eth_price_data.price == eth_coin.current_price
+
+    @pytest.mark.asyncio
+    async def test_update_redis_prices_with_none_price(self):
+        """Test handling coins with None price"""
+        mock_coin = CoinData(
+            symbol="UNKNOWN",
+            name="Unknown Coin",
+            current_price=None,
+            price_usd=None
+        )
+        expected_result = 0
+
+        with patch(PATH_GET_REDIS_CLIENT) as mock_redis:
+            mock_redis_client = MagicMock()
+            mock_redis.return_value = mock_redis_client
+
+            result = await update_redis_prices([mock_coin])
+
+            assert result == expected_result
+            mock_redis_client.setex.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_update_redis_prices_partial_failure(self):
+        """Test handling when some Redis updates fail"""
         mock_coins = [
             create_test_coin("BTC", "Bitcoin", 45000.0),
             create_test_coin("ETH", "Ethereum", 3000.0)
         ]
+        total_coins = len(mock_coins)
+        expected_success = 1
 
-        # Mock only external dependencies
+        with patch(PATH_GET_REDIS_CLIENT) as mock_redis:
+            mock_redis_client = MagicMock()
+            mock_redis.return_value = mock_redis_client
+
+            # First succeeds, second fails
+            mock_redis_client.setex.side_effect = [None, Exception("Redis error")]
+
+            result = await update_redis_prices(mock_coins)
+
+            assert result == expected_success
+            assert mock_redis_client.setex.call_count == total_coins
+
+
+class TestPriceUpdateCycle:
+    """Test the price_update_cycle function"""
+
+    @pytest.mark.asyncio
+    async def test_price_update_cycle_success(self):
+        """Test successful price update cycle"""
+        mock_coins = [
+            create_test_coin("BTC", "Bitcoin", 45000.0),
+            create_test_coin("ETH", "Ethereum", 3000.0)
+        ]
+        total_coins = len(mock_coins)
+
         with patch(PATH_FETCH_COINS, return_value=mock_coins) as mock_fetch:
             with patch(PATH_GET_DYNAMODB_MANAGER) as mock_get_manager:
-                mock_connection = MagicMock()
-                mock_dao = MagicMock()
+                with patch(PATH_GET_REDIS_CLIENT) as mock_redis:
+                    mock_connection = MagicMock()
+                    mock_dao = MagicMock()
+                    mock_redis_client = MagicMock()
 
-                mock_manager = MagicMock()
-                mock_manager.get_connection.return_value = mock_connection
-                mock_get_manager.return_value = mock_manager
+                    mock_manager = MagicMock()
+                    mock_manager.get_connection.return_value = mock_connection
+                    mock_get_manager.return_value = mock_manager
+                    mock_redis.return_value = mock_redis_client
 
-                # All coins exist and will be updated
-                mock_dao.get_asset_by_id.return_value = MagicMock()
-                mock_dao.update_asset.return_value = None
+                    # All coins exist and will be updated
+                    mock_dao.get_asset_by_id.return_value = MagicMock()
+                    mock_dao.update_asset.return_value = None
 
-                with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
-                    await initialize_inventory_data()
+                    with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
+                        result = await price_update_cycle()
 
-                    mock_fetch.assert_called_once()
-                    assert mock_dao.update_asset.call_count == 2
+                        assert result is True
+                        mock_fetch.assert_called_once()
+                        assert mock_dao.update_asset.call_count == total_coins
+                        assert mock_redis_client.setex.call_count == total_coins
 
     @pytest.mark.asyncio
-    async def test_initialize_inventory_data_fetch_error(self):
+    async def test_price_update_cycle_fetch_error(self):
         """Test handling of fetch errors"""
         with patch(PATH_FETCH_COINS, side_effect=Exception("API Error")):
-            # Should not raise exception, just log error
-            await initialize_inventory_data()
+            result = await price_update_cycle()
+            assert result is False
 
     @pytest.mark.asyncio
-    async def test_initialize_inventory_data_empty_coins(self):
+    async def test_price_update_cycle_empty_coins(self):
         """Test handling when no coins are fetched"""
         with patch(PATH_FETCH_COINS, return_value=[]):
-            # Should return early without attempting to upsert
-            await initialize_inventory_data()
+            result = await price_update_cycle()
+            assert result is False
 
     @pytest.mark.asyncio
-    async def test_initialize_inventory_data_upsert_error(self):
-        """Test handling of errors during upsert"""
+    async def test_price_update_cycle_redis_update_failure(self):
+        """Test handling when Redis updates fail but DB succeeds"""
         mock_coins = [create_test_coin("BTC", "Bitcoin", 45000.0)]
 
         with patch(PATH_FETCH_COINS, return_value=mock_coins):
             with patch(PATH_GET_DYNAMODB_MANAGER) as mock_get_manager:
-                mock_connection = MagicMock()
-                mock_dao = MagicMock()
+                with patch(PATH_GET_REDIS_CLIENT) as mock_redis:
+                    mock_connection = MagicMock()
+                    mock_dao = MagicMock()
+                    mock_redis_client = MagicMock()
 
-                mock_manager = MagicMock()
-                mock_manager.get_connection.return_value = mock_connection
-                mock_get_manager.return_value = mock_manager
+                    mock_manager = MagicMock()
+                    mock_manager.get_connection.return_value = mock_connection
+                    mock_get_manager.return_value = mock_manager
+                    mock_redis.return_value = mock_redis_client
 
-                # Simulate database error
-                mock_dao.get_asset_by_id.side_effect = Exception("Database error")
+                    mock_dao.get_asset_by_id.return_value = MagicMock()
+                    mock_dao.update_asset.return_value = None
+                    mock_redis_client.setex.side_effect = Exception("Redis down")
 
-                with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
-                    # Should not raise exception
-                    await initialize_inventory_data()
+                    with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
+                        result = await price_update_cycle()
+
+                        assert result is True
+                        mock_dao.update_asset.assert_called_once()
 
 
 class TestStartupInventoryInitialization:
-    """Test the startup_inventory_initialization function"""
+    """Test the startup_inventory_initialization continuous loop"""
 
     @pytest.mark.asyncio
-    async def test_startup_calls_initialize(self):
-        """Test that startup function calls initialize_inventory_data"""
-        with patch(PATH_INITIALIZE_INVENTORY_DATA) as mock_init:
-            await startup_inventory_initialization()
+    async def test_startup_initialization_first_cycle(self):
+        """Test that startup function runs the first update cycle"""
+        min_expected_calls = 1
 
-            mock_init.assert_called_once_with()
+        with patch(PATH_PRICE_UPDATE_CYCLE, return_value=True) as mock_cycle:
+            with patch(PATH_ASYNCIO_SLEEP, side_effect=KeyboardInterrupt):
+                try:
+                    await startup_inventory_initialization()
+                except KeyboardInterrupt:
+                    pass
+
+                mock_cycle.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_startup_initialization_handles_cycle_failure(self):
+        """Test that startup continues even if a cycle fails"""
+        min_expected_calls = 1
+
+        with patch(PATH_PRICE_UPDATE_CYCLE, return_value=False) as mock_cycle:
+            with patch(PATH_ASYNCIO_SLEEP, side_effect=[None, KeyboardInterrupt]):
+                try:
+                    await startup_inventory_initialization()
+                except KeyboardInterrupt:
+                    pass
+
+                assert mock_cycle.call_count >= min_expected_calls
+
+    @pytest.mark.asyncio
+    async def test_startup_initialization_handles_exception(self):
+        """Test that startup handles unexpected exceptions and continues"""
+        min_expected_calls = 2
+
+        with patch(PATH_PRICE_UPDATE_CYCLE, side_effect=[Exception("Unexpected"), True]) as mock_cycle:
+            with patch(PATH_ASYNCIO_SLEEP, side_effect=[None, KeyboardInterrupt]):
+                try:
+                    await startup_inventory_initialization()
+                except KeyboardInterrupt:
+                    pass
+
+                assert mock_cycle.call_count >= min_expected_calls
 
 
 class TestIntegrationScenarios:
     """Test integration scenarios with real function interactions"""
 
     @pytest.mark.asyncio
-    async def test_full_initialization_flow(self):
-        """Test the complete flow from fetch to database upsert"""
+    async def test_full_price_update_flow(self):
+        """Test the complete flow from fetch to database upsert and Redis update"""
         mock_coins = [
             create_test_coin("BTC", "Bitcoin", 45000.0),
             create_test_coin("ETH", "Ethereum", 3000.0)
         ]
+        total_coins = len(mock_coins)
+        expected_creates = 1
+        expected_updates = 1
 
         with patch(PATH_FETCH_COINS, return_value=mock_coins):
             with patch(PATH_GET_DYNAMODB_MANAGER) as mock_get_manager:
-                mock_connection = MagicMock()
-                mock_dao = MagicMock()
+                with patch(PATH_GET_REDIS_CLIENT) as mock_redis:
+                    mock_connection = MagicMock()
+                    mock_dao = MagicMock()
+                    mock_redis_client = MagicMock()
 
-                mock_manager = MagicMock()
-                mock_manager.get_connection.return_value = mock_connection
-                mock_get_manager.return_value = mock_manager
+                    mock_manager = MagicMock()
+                    mock_manager.get_connection.return_value = mock_connection
+                    mock_get_manager.return_value = mock_manager
+                    mock_redis.return_value = mock_redis_client
 
-                # Mix of new and existing assets
-                mock_dao.get_asset_by_id.side_effect = [
-                    CNOPAssetNotFoundException("Not found"),  # BTC is new
-                    MagicMock()  # ETH exists
-                ]
-                mock_dao.create_asset.return_value = None
-                mock_dao.update_asset.return_value = None
+                    mock_dao.get_asset_by_id.side_effect = [
+                        CNOPAssetNotFoundException("Not found"),
+                        MagicMock()
+                    ]
+                    mock_dao.create_asset.return_value = None
+                    mock_dao.update_asset.return_value = None
 
-                with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
-                    await initialize_inventory_data()
+                    with patch(PATH_ASSET_DAO_CLASS, return_value=mock_dao):
+                        result = await price_update_cycle()
 
-                    # Verify both operations occurred
-                    assert mock_dao.create_asset.call_count == 1
-                    assert mock_dao.update_asset.call_count == 1
+                        assert result is True
+                        assert mock_dao.create_asset.call_count == expected_creates
+                        assert mock_dao.update_asset.call_count == expected_updates
+                        assert mock_redis_client.setex.call_count == total_coins
 
     def test_coin_to_asset_preserves_all_data(self):
         """Test that coin_to_asset preserves all important data fields"""

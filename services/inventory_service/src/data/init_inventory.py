@@ -15,6 +15,7 @@ from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.database.dynamodb_connection import get_dynamodb_manager
 from common.data.database.redis_connection import get_redis_client
 from common.data.entities.inventory import Asset
+from common.data.entities.price_data import PriceData
 from common.exceptions import CNOPEntityNotFoundException, CNOPAssetNotFoundException
 from common.shared.logging import BaseLogger, LoggerName, LogAction
 from constants import (
@@ -70,6 +71,14 @@ def coin_to_asset(coin: CoinData) -> Asset:
         atl_date=coin.atl_date,
         last_updated=coin.last_updated,
         sparkline_7d=coin.sparkline_7d
+    )
+
+
+def coin_to_price_data(coin: CoinData) -> PriceData:
+    """Convert CoinData to PriceData entity for Redis storage"""
+    return PriceData(
+        asset_id=coin.symbol,
+        price=coin.current_price
     )
 
 
@@ -191,9 +200,9 @@ async def startup_inventory_initialization() -> None:
 
 async def update_redis_prices(coins: List[CoinData]) -> int:
     """
-    Update Redis with current prices for all coins
+    Update Redis with current prices for all coins using PriceData entity
 
-    Redis Key Format: price:{asset_id} = "45000.00"
+    Redis Key Format: price:{asset_id} = PriceData JSON
     TTL: 10 minutes (ensures data freshness)
 
     Args:
@@ -215,20 +224,19 @@ async def update_redis_prices(coins: List[CoinData]) -> int:
                 )
                 continue
 
-            # Redis key format: price:BTC, price:ETH, etc.
-            redis_key = f"price:{coin.symbol}"
-            price_str = str(coin.current_price)
+            # Convert to PriceData entity
+            price_data = coin_to_price_data(coin)
 
-            # Set with TTL (10 minutes = 600 seconds)
+            # Store as JSON with TTL
             redis_client.setex(
-                name=redis_key,
+                name=price_data.redis_key,
                 time=PRICE_REDIS_TTL_SECONDS,
-                value=price_str
+                value=price_data.to_json()
             )
 
             logger.info(
                 action=LogAction.CACHE_OPERATION,
-                message=f"Updated Redis: {redis_key} = {price_str} (TTL: {PRICE_REDIS_TTL_SECONDS}s)"
+                message=f"Updated Redis: {price_data.redis_key} = {price_data.price} (TTL: {PRICE_REDIS_TTL_SECONDS}s)"
             )
             updated_count += 1
 
