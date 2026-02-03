@@ -5,9 +5,9 @@
 ## 🚀 Quick Start
 - **Prerequisites**: Terraform, AWS CLI, kubectl
 - **Configure**: `aws configure` (set up AWS credentials)
-- **Deploy Dev**: `./deploy.sh dev` (development environment)
-- **Deploy Prod**: `./deploy.sh prod` (production environment)
-- **Destroy**: `./deploy.sh destroy` (clean up resources)
+- **Deploy Dev**: `./apply.sh dev` (development environment)
+- **Deploy Prod**: `./apply.sh prod` (production environment)
+- **Destroy**: `./destroy.sh` (clean up resources)
 
 ## ✨ Key Features
 - Multi-environment deployment (dev/prod)
@@ -19,22 +19,22 @@
 ## 📁 Project Structure
 ```
 terraform/
-├── environments/
-│   ├── dev/                   # Development environment
-│   │   ├── main.tf           # Core infrastructure
-│   │   ├── variables.tf      # Environment variables
-│   │   └── outputs.tf        # Output values
-│   └── prod/                  # Production environment
-│       ├── main.tf           # Core infrastructure
-│       ├── variables.tf      # Environment variables
-│       └── outputs.tf        # Output values
-├── modules/                   # Reusable Terraform modules
-│   ├── eks/                  # EKS cluster module
-│   ├── dynamodb/             # DynamoDB module
-│   └── monitoring/           # Monitoring stack module
-├── scripts/                   # Deployment scripts
-│   └── deploy.sh             # Main deployment script
-└── README.md                 # This file
+├── apply.sh                  # Deploy infrastructure
+├── destroy.sh                # Tear down infrastructure
+├── dynamodb.tf               # DynamoDB tables (users, orders, inventory)
+├── iam.tf                    # IAM roles and policies
+├── eks.tf                    # EKS cluster (prod only)
+├── ecr.tf                    # ECR repositories (prod only)
+├── vpc.tf                    # VPC networking (prod only)
+├── redis.tf                  # ElastiCache Redis (prod only)
+├── s3.tf                     # S3 buckets
+├── messaging.tf              # SQS/SNS
+├── locals.tf                 # Naming conventions and constants
+├── variables.tf              # Input variables
+├── outputs.tf                # Output values
+├── main.tf                   # Provider configuration
+├── config/                   # Environment configs
+└── infrastructure-tests/     # Infrastructure tests
 ```
 
 ## 🔗 Quick Links

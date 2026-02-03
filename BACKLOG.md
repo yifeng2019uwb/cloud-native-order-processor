@@ -82,7 +82,7 @@
 - **Estimated time for this part**:
   - **Backend (endpoint + LLM integration)**: ~2–4 hours
   - **Frontend (call API + display)**: ~1–2 hours
-  - **Testing + run-through for this feature**: ~1–2 hours  
+  - **Testing + run-through for this feature**: ~1–2 hours
   - **Total for this part**: **~4–8 hours** (your full demo can include other flows as well).
 - **Dependencies**: Existing user, order, inventory/price services; external LLM API key and SDK (e.g. `openai`, `anthropic`).
 - **Files to add/update** (examples):
@@ -604,7 +604,9 @@ _Optional maintenance items below._
 - **Phase 11**: AWS EKS Production Deployment & Infrastructure Success - ✅ **COMPLETED** (9/27/2025)
 
 ### **🔄 Current Focus**
+- **Infrastructure**: Deploy infra now — **DB (DynamoDB) + Docker only** (docker-compose with Redis). No Kubernetes for demo.
 - **DEMO-001: Project Demo** — Full workflow & all existing APIs. **FEATURE-002: AI Analysis** — One part of the demo. Project otherwise complete at ~95%.
+- **Testing**: Rerun all integration tests after infra is up and AI part (FEATURE-002) coding + unit tests are finished.
 
 ### **📋 Next Milestones**
 - **Q4 2025**: ✅ **COMPLETED** — Backend cleanup, frontend auth, monitoring
@@ -613,7 +615,10 @@ _Optional maintenance items below._
 - **Demo (one part)**: FEATURE-002 (AI Analysis endpoint + frontend) — ~4–8 hours for this part
 - **Optional**: INFRA-021 (K8s simplify), ARCH-002 (CORS), CODE-001 (TODOs) — low priority
 
-**🎯 IMMEDIATE NEXT STEP**: DEMO-001 — Prepare and deliver project demo (all existing APIs, full workflow). Optionally implement FEATURE-002 (AI Analysis) as one segment of the demo.
+**🎯 IMMEDIATE NEXT STEP**:
+1. Deploy infra: DB (DynamoDB) + Docker (docker-compose with Redis) — no Kubernetes needed for demo
+2. DEMO-001 — Prepare and deliver project demo (all existing APIs, full workflow)
+3. Optionally implement FEATURE-002 (AI Analysis) as one segment of the demo
 
 ---
 
