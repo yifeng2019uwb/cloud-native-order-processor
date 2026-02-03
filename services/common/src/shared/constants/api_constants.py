@@ -29,6 +29,7 @@ class HTTPStatus(IntEnum):
     NOT_FOUND = 404
     CONFLICT = 409
     UNPROCESSABLE_ENTITY = 422
+    TOO_MANY_REQUESTS = 429
 
     # Server error responses
     INTERNAL_SERVER_ERROR = 500

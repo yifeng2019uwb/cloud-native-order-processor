@@ -9,6 +9,118 @@
 
 ## 📊 Progress Summary
 
+### **2026-01-31: FEATURE-002 - AI Analysis / Insights Service** 🔄 **IN PROGRESS** (Backend Complete)
+
+**Task**: Implement AI-powered portfolio insights feature using LLM (Google Gemini) to analyze user portfolios and provide actionable summaries.
+
+**Key Achievements**:
+- ✅ **New Microservice Created**: Complete `insights_service` microservice with FastAPI
+- ✅ **LLM Integration**: Google Gemini API integration (`gemini-1.5-flash`) with proper error handling
+- ✅ **Portfolio Data Aggregation**: Service aggregates portfolio, holdings, orders, and market data from existing services
+- ✅ **Comprehensive Testing**: Full unit test suite with ~89% code coverage (44 tests passing)
+- ✅ **Best Practices**: All code follows project standards (Pydantic models, constants, no hardcoded strings)
+- ✅ **Design Document**: Complete design doc created (`docs/design-docs/ai-insights-design.md`)
+- ✅ **Development Tools**: dev.sh script with build, test, run, clean commands and coverage reporting
+
+**Technical Implementation**:
+- **Service Architecture**:
+  - New microservice: `services/insights_service/`
+  - Port: 8004 (configurable via `SERVICE_PORT` env var)
+  - Endpoint: `GET /api/insights/portfolio` (requires JWT authentication)
+  - Uses shared common package for DAOs, logging, constants
+- **LLM Integration**:
+  - Provider: Google Gemini (`gemini-1.5-flash` model)
+  - API Key: `GOOGLE_GEMINI_API_KEY` environment variable
+  - Prompt: System prompt + user portfolio context (holdings, orders, balance)
+  - Output: 2-4 sentence portfolio analysis
+  - Error Handling: Timeout, rate limit, and general error handling with appropriate HTTP status codes
+- **Data Aggregation**:
+  - Aggregates data from User, Balance, AssetBalance, Asset, and Order DAOs
+  - Calculates portfolio metrics (total value, allocations, account age)
+  - Limits recent orders to 10 for LLM prompt
+  - Handles empty portfolios gracefully
+- **API Models**:
+  - `GetInsightsResponse`: Main response model
+  - `InsightsData`: Contains summary, generated_at timestamp, model name
+  - `PortfolioContext`: Internal data structure for LLM input
+  - `HoldingData`: Asset holding with market data
+  - `OrderData`: Recent order summary
+
+**Files Created**:
+- `services/insights_service/src/main.py` - FastAPI application entry point
+- `services/insights_service/src/constants.py` - All service constants (no hardcoded strings)
+- `services/insights_service/src/api_info_enum.py` - Service metadata and API paths
+- `services/insights_service/src/controllers/health.py` - Health check endpoint
+- `services/insights_service/src/controllers/dependencies.py` - Dependency injection
+- `services/insights_service/src/controllers/insights/portfolio_insights.py` - Main insights endpoint
+- `services/insights_service/src/services/llm_service.py` - Google Gemini LLM integration
+- `services/insights_service/src/services/data_aggregator.py` - Portfolio data aggregation
+- `services/insights_service/src/api_models/insights/insights_models.py` - API response models
+- `services/insights_service/src/api_models/insights/portfolio_context.py` - Internal data models
+- `services/insights_service/tests/` - Complete unit test suite (44 tests)
+- `services/insights_service/dev.sh` - Development script with coverage reporting
+- `services/insights_service/pytest.ini` - Pytest configuration with coverage
+- `docs/design-docs/ai-insights-design.md` - Complete design document
+
+**Files Modified**:
+- `services/common/src/shared/constants/service_names.py` - Added `INSIGHTS_SERVICE`
+- `services/common/src/shared/logging/log_constants.py` - Added `INSIGHTS` logger name
+- `services/common/src/shared/constants/api_constants.py` - Added `TOO_MANY_REQUESTS` (429) status code
+- `BACKLOG.md` - Updated FEATURE-002 status and added DEV-002 task
+
+**Test Coverage**:
+- **Total Coverage**: ~89% (292 lines covered, 33 lines missing)
+- **Test Files**: 7 test files with 44 tests total
+  - `test_main.py` - Application and exception handler tests
+  - `controllers/test_health.py` - Health endpoint tests
+  - `controllers/test_dependencies.py` - Dependency injection tests
+  - `controllers/insights/test_portfolio_insights.py` - Main endpoint tests (11 tests)
+  - `services/test_llm_service.py` - LLM service tests
+  - `services/test_data_aggregator.py` - Data aggregation tests (12 tests)
+  - `api_models/insights/test_insights_models.py` - Model validation tests
+- **Coverage Areas**:
+  - ✅ Success cases (insights generation, empty portfolio)
+  - ✅ Error handling (LLM timeout, rate limit, API errors, user not found)
+  - ✅ Edge cases (zero quantity, missing prices, Decimal type handling)
+  - ✅ Exception handling (HTTPException re-raise, ValueError, general exceptions)
+
+**Code Quality**:
+- ✅ **No Hardcoded Strings**: All strings moved to constants.py
+- ✅ **Pydantic Models**: All data structures use Pydantic models (no raw dicts)
+- ✅ **Proper Logging**: Structured logging with BaseLogger, keyword arguments
+- ✅ **Error Handling**: Comprehensive error handling with appropriate HTTP status codes
+- ✅ **Type Safety**: Proper type hints and Decimal handling for financial data
+- ✅ **Test Organization**: Tests mirror src directory structure, no duplicate tests
+
+**API Endpoint**:
+- **Path**: `GET /api/insights/portfolio`
+- **Authentication**: Required (JWT token via `get_current_user` dependency)
+- **Response**: `GetInsightsResponse` with `InsightsData` containing:
+  - `summary`: AI-generated portfolio analysis (string)
+  - `generated_at`: Timestamp (datetime)
+  - `model`: LLM model name (string)
+- **Error Responses**:
+  - `401`: Invalid user context
+  - `503`: LLM service not configured (missing API key)
+  - `404`: User not found
+  - `429`: Rate limit exceeded
+  - `500`: Internal server error (timeout, LLM failure, unexpected errors)
+
+**Completed**:
+- ✅ Backend implementation complete
+- ✅ Unit tests passing (44 tests, ~89% coverage)
+- ✅ Design document created
+
+**Remaining Work**:
+- ⏳ Deploy insights service to Docker environment
+- ⏳ Run integration tests to verify end-to-end functionality
+- ⏳ Add gateway route for insights endpoint
+- ⏳ Frontend integration: API client method, component, and wiring to dashboard/profile
+
+**Testing**: All 44 unit tests passing with ~89% coverage. Backend ready for deployment and integration testing.
+
+---
+
 ### **2025-11-01: MON-001 - Comprehensive Monitoring Dashboards** ✅ **COMPLETED**
 
 **Task**: Deploy complete monitoring stack with Prometheus, Loki, and Grafana for metrics and log visualization.

@@ -40,7 +40,7 @@
 - **Scope**:
   - **All existing APIs**: Auth (login/register/token), User (profile, portfolio), Order (place/list), Inventory (assets, prices), Gateway as single entry, plus any other live endpoints.
   - **Whole workflow**: End-to-end flow showing how a user signs in, views portfolio, sees prices, places an order, and how services interact (e.g. gateway → backend services, frontend ↔ API).
-  - **Optional part**: FEATURE-002 (AI Analysis / Insights) can be included as one segment of the demo once implemented.
+  - **Optional part**: FEATURE-002 (AI Analysis / Insights) 🔄 **IN PROGRESS** - Backend complete, deployment & frontend pending.
 - **Acceptance Criteria**:
   - [ ] Demo script or runbook that walks through the full workflow with running services
   - [ ] All major existing APIs exercised and explained (auth, user, portfolio, orders, inventory/prices)
@@ -51,16 +51,16 @@
   - Demo script / talking points (step-by-step flow)
   - List of APIs and order of calls for the workflow
   - Optional: Short doc or checklist (“How this project works” for the demo)
-- **Dependencies**: Running services (local or deployed); optionally FEATURE-002 completed for AI analysis segment
+- **Dependencies**: Running services (local or deployed); FEATURE-002 🔄 **IN PROGRESS** - Backend complete, deployment & frontend pending
 - **Demo assistance**: An AI assistant can help create the script, API order, and narrative once you share how you run the project (e.g. `dev.sh`, endpoints, frontend URL). No code change required—this task is about **preparing and delivering** the demo with existing APIs and workflow.
 
 ---
 
-#### **FEATURE-002: AI Analysis / Insights (Option 1)** — _Part of demo_
-- **Component**: User Service (or new insights endpoint)
+#### **FEATURE-002: AI Analysis / Insights (Option 1)** — _Part of demo_ 🔄 **IN PROGRESS**
+- **Component**: Insights Service (new microservice)
 - **Type**: New Feature
 - **Priority**: 🔥 **HIGH** (one part of your demo)
-- **Status**: 📋 **To Do**
+- **Status**: 🔄 **IN PROGRESS** (Backend ✅ Complete, Deployment & Integration Testing ⏳ Pending, Frontend ⏳ Pending)
 - **Goal**: Add an endpoint that aggregates portfolio, orders, and price data, calls an external LLM API (OpenAI or Claude), and returns a short text analysis for display in the UI.
 - **Design doc**: **Optional** for this scope. A short design note (1–2 pages) is enough if you want to lock scope before coding or hand off to someone else. Use a full design doc if you need review, multiple implementers, or future extension. Suggested contents if you add one: scope (Option 1 only), endpoint contract (path, method, request/response), data flow (which services are called, payload to LLM), prompt strategy (system + user prompt, length limits), config (env vars, API key), error handling and timeouts.
 - **Approach** (Option 1 – lightweight):
@@ -72,13 +72,17 @@
   - **Frontend**: One new section or modal that calls this endpoint and displays the analysis text.
   - **Config**: API key via env var (e.g. `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`); no new infra.
 - **Acceptance Criteria**:
-  - [ ] New endpoint implemented and documented (e.g. `GET /api/users/{userId}/insights` or similar)
-  - [ ] Endpoint aggregates portfolio, orders, and price data from existing services
-  - [ ] LLM call is made with a bounded prompt; response is parsed and returned as structured JSON
-  - [ ] API key is read from environment; no keys in code
-  - [ ] Frontend can request and display the analysis (e.g. on dashboard or profile)
-  - [ ] Errors (missing key, LLM failure, timeout) are handled and return clear HTTP/JSON responses
-  - [ ] **Optional**: Design doc or design note for Insights feature (scope, API contract, data flow, prompt strategy, config, errors)
+  - [x] New endpoint implemented and documented (`GET /api/insights/portfolio`)
+  - [x] Endpoint aggregates portfolio, orders, and price data from existing services
+  - [x] LLM call is made with a bounded prompt; response is parsed and returned as structured JSON
+  - [x] API key is read from environment; no keys in code
+  - [x] Errors (missing key, LLM failure, timeout) are handled and return clear HTTP/JSON responses
+  - [x] Design doc created (`docs/design-docs/ai-insights-design.md`)
+  - [ ] **Deploy insights service** to Docker environment
+  - [ ] **Run integration tests** successfully (end-to-end verification)
+  - [ ] **Add gateway route** for insights endpoint
+  - [ ] **Frontend integration**: API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile
+  - [ ] **Frontend can request and display** the analysis (e.g. on dashboard or profile)
 - **Estimated time for this part**:
   - **Backend (endpoint + LLM integration)**: ~2–4 hours
   - **Frontend (call API + display)**: ~1–2 hours
@@ -605,20 +609,20 @@ _Optional maintenance items below._
 
 ### **🔄 Current Focus**
 - **Infrastructure**: Deploy infra now — **DB (DynamoDB) + Docker only** (docker-compose with Redis). No Kubernetes for demo.
-- **DEMO-001: Project Demo** — Full workflow & all existing APIs. **FEATURE-002: AI Analysis** — One part of the demo. Project otherwise complete at ~95%.
-- **Testing**: Rerun all integration tests after infra is up and AI part (FEATURE-002) coding + unit tests are finished.
+- **DEMO-001: Project Demo** — Full workflow & all existing APIs. **FEATURE-002: AI Analysis** 🔄 **IN PROGRESS** — Backend complete, deployment & frontend pending.
+- **FEATURE-002 Next Steps**: Deploy insights service → Run integration tests → Add gateway route → Frontend integration
 
 ### **📋 Next Milestones**
 - **Q4 2025**: ✅ **COMPLETED** — Backend cleanup, frontend auth, monitoring
 - **Q1 2026**: ✅ **COMPLETED** — Core platform, Docker, K8s, EKS deployment
 - **DEMO-001**: Project demo with all existing APIs and whole workflow (script, narrative, run-through)
-- **Demo (one part)**: FEATURE-002 (AI Analysis endpoint + frontend) — ~4–8 hours for this part
+- **Demo (one part)**: FEATURE-002 (AI Analysis endpoint + frontend) 🔄 **IN PROGRESS** — Backend complete, deployment & frontend pending
 - **Optional**: INFRA-021 (K8s simplify), ARCH-002 (CORS), CODE-001 (TODOs) — low priority
 
 **🎯 IMMEDIATE NEXT STEP**:
 1. Deploy infra: DB (DynamoDB) + Docker (docker-compose with Redis) — no Kubernetes needed for demo
 2. DEMO-001 — Prepare and deliver project demo (all existing APIs, full workflow)
-3. Optionally implement FEATURE-002 (AI Analysis) as one segment of the demo
+3. FEATURE-002 (AI Analysis): Deploy service → Run integration tests → Add gateway route → Frontend integration
 
 ---
 

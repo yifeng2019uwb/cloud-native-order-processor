@@ -13,6 +13,7 @@ class ServiceNames(str, Enum):
     USER_SERVICE = "user-service"
     ORDER_SERVICE = "order-service"
     INVENTORY_SERVICE = "inventory-service"
+    INSIGHTS_SERVICE = "insights-service"
 
     # Service identifiers for validation
     SOURCE_GATEWAY = "gateway"

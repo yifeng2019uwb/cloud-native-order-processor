@@ -14,6 +14,7 @@ class LoggerName(str, Enum):
     USER = "user"
     ORDER = "order"
     INVENTORY = "inventory"
+    INSIGHTS = "insights"
     GATEWAY = "gateway"
     DATABASE = "database"
     CACHE = "cache"
