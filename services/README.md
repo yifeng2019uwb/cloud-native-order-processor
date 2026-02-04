@@ -98,6 +98,13 @@ A comprehensive microservices platform showcasing production-ready patterns incl
   - Asset information and pricing
   - Public asset browsing
 
+### **Insights Service**
+- **Responsibilities**:
+  - AI-powered portfolio analysis and insights
+  - Portfolio data aggregation from multiple services
+  - LLM integration for generating actionable insights
+  - Portfolio performance analysis and recommendations
+
 ### **API Gateway**
 - **Responsibilities**:
   - Request routing and load balancing
@@ -212,12 +219,13 @@ A comprehensive microservices platform showcasing production-ready patterns incl
 
 ## ⚠️ Current Status
 
-- ✅ **Core Services** - All 5 services operational with security features
+- ✅ **Core Services** - All 6 services operational with security features
 - ✅ **Authentication** - JWT-based auth with centralized validation
 - ✅ **Security** - Rate limiting, circuit breakers, audit logging
 - ✅ **Monitoring** - Prometheus, Grafana, structured logging
 - ✅ **Database** - DynamoDB with PynamoDB ORM and distributed locking
 - ✅ **Deployment** - Docker, Kubernetes, and AWS integration
+- 🔄 **Insights Service** - Backend complete, deployment & frontend integration pending
 
 ---
 
