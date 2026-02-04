@@ -27,6 +27,7 @@ This package contains all design documentation for the Cloud Native Order Proces
 - `monitoring-design.md` - Monitoring and observability system design decisions
 - `logging-standards.md` - Base logging standards and implementation patterns
 - `integration-test-design.md` - Integration testing architecture and design decisions
+- `load-testing-design.md` - Load testing strategy and security feature validation
 - `iam-redis-setup.md` - IAM and Redis setup design decisions
 
 ## 🚀 **Quick Start**
