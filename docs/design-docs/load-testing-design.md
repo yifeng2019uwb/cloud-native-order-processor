@@ -199,7 +199,41 @@
 
 ---
 
-### **Test Category 6: End-to-End Scenarios**
+### **Test Category 6: Latency Testing (P90, P99)**
+
+**Objectives**:
+- Measure response time percentiles (P90, P99) for Docker deployed services
+- Identify performance bottlenecks under load
+- Validate service performance meets acceptable thresholds
+- Establish baseline latency metrics for future tuning
+
+**Key Test Cases**:
+- TC-LATENCY-001: P90/P99 latency measurement for User Service endpoints
+- TC-LATENCY-002: P90/P99 latency measurement for Order Service endpoints
+- TC-LATENCY-003: P90/P99 latency measurement for Inventory Service endpoints
+- TC-LATENCY-004: P90/P99 latency measurement for Gateway routing
+- TC-LATENCY-005: Latency comparison under different load levels (baseline, moderate, high)
+
+**Test Approach**:
+- Run load tests against Docker deployed services (Docker Compose or Kubernetes)
+- Measure response times for all API endpoints
+- Calculate P90 (90th percentile) and P99 (99th percentile) latencies
+- Compare latency metrics across different load scenarios
+- Monitor resource utilization (CPU, memory) during tests
+- Test in realistic Docker environment to capture container overhead
+
+**Success Criteria**:
+- P90 latency measured and documented for all services
+- P99 latency measured and documented for all services
+- Latency metrics exported to Prometheus
+- Grafana dashboards display latency percentiles
+- Baseline metrics established for future tuning
+
+**Note**: Initial thresholds will be established during first test run. These can be tuned later based on requirements and performance optimization.
+
+---
+
+### **Test Category 7: End-to-End Scenarios**
 
 **Objectives**:
 - Simulate realistic user workflows under load
@@ -271,7 +305,13 @@
 - Validate resource management
 - Test recovery mechanisms
 
-**Phase 7: End-to-End Testing**
+**Phase 7: Latency Testing (P90, P99)**
+- Measure response time percentiles for all services
+- Test under different load levels
+- Establish baseline latency metrics
+- Export metrics to Prometheus/Grafana
+
+**Phase 8: End-to-End Testing**
 - Simulate realistic workflows
 - Test complete system behavior
 - Validate overall system stability
@@ -312,6 +352,13 @@
 - ✅ System recovers after load decreases
 - ✅ Resource usage within limits
 
+### **Latency (P90, P99)**
+- ✅ P90 latency measured for all services
+- ✅ P99 latency measured for all services
+- ✅ Latency metrics available in Prometheus/Grafana
+- ✅ Baseline metrics established for future tuning
+- ✅ Latency trends tracked across test runs
+
 ---
 
 ## 🔄 Load Test Execution
@@ -329,44 +376,26 @@
 
 ### **Test Data Management Strategy**
 
-Since the system design doesn't allow record deletion, load tests use the following approach:
+Since the system design doesn't allow record deletion, load tests use a simple prefix-based approach:
 
-**Option 1: Test-Specific Identifiers (Recommended)**
-- Use test-specific prefixes for all test data (e.g., `loadtest_user_*`, `test_*`)
-- Test users: `loadtest_user_1`, `loadtest_user_2`, etc.
-- Test orders: `loadtest_order_*`
-- Test data can be filtered/ignored in production queries
-- Acceptable for personal project scale
-
-**Option 2: Separate Test Tables**
-- Use separate DynamoDB tables for load testing (e.g., `users-loadtest`, `orders-loadtest`)
-- Test data isolated from production data
-- Can be dropped/recreated between test runs
-- Requires additional infrastructure setup
-
-**Option 3: Time-Based Test Data**
-- Use timestamps to identify test data (e.g., `loadtest_20260201_*`)
-- Test data naturally ages out over time
-- Can be filtered by date range in queries
-- Simplest approach for personal project
-
-**Option 4: Accept Test Data**
-- Leave test data in database (simplest approach)
-- Test data doesn't interfere with production functionality
-- Acceptable for personal project where data volume is manageable
-- Can manually clean up periodically if needed
-
-**Recommendation**: Use Option 1 (test-specific identifiers) - simple, effective, and doesn't require infrastructure changes.
+**Test Data Naming Convention**:
+- All test users use `load_test` prefix: `load_test_user_1`, `load_test_user_2`, etc.
+- Test orders are automatically identified by their associated username (orders created by `load_test_*` users)
+- Order IDs follow the existing format (`ord_{uuid}`) - no changes to order ID generation
+- Test data can be easily identified and filtered in queries by username
+- Simple and straightforward for personal project scale
+- No infrastructure changes or complex setup required
 
 ---
 
 ## 📝 Key Design Decisions
 
 1. **Tool Choice**: k6 selected for performance and Prometheus integration
-2. **Test Scope**: Focus on security features (rate limits, circuit breakers, audit logs)
+2. **Test Scope**: Focus on security features (rate limits, circuit breakers, audit logs) and latency metrics (P90, P99)
 3. **Integration**: Leverage existing Prometheus/Grafana/Loki stack
 4. **Execution**: Manual execution (personal project - no scheduled automation needed)
 5. **Validation**: Real-time validation during tests via Prometheus/Grafana dashboards
+6. **Latency Testing**: P90/P99 metrics measured for Docker deployed services, thresholds to be tuned later
 
 ---
 
