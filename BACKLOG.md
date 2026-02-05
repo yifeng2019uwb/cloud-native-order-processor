@@ -31,10 +31,12 @@
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
-#### **DEV-003: Simple Quick Deploy Solution for Local Testing**
-- **Component**: Infrastructure & Deployment
-- **Type**: Developer Experience / Documentation
-- **Priority**: 🔥 **HIGH**
+> **Priority Order**: 1) Load Testing → 2) AI Insights → 3) Local Deploy → 4) Demo → 5) Others
+
+#### **TEST-002: Implement Load Testing for Security Feature Validation** 🔥 **PRIORITY #1**
+- **Component**: Testing & Security
+- **Type**: Security Testing / Load Testing
+- **Priority**: 🔥 **HIGH** (Do First - Validate Design Before Demo)
 - **Status**: 📋 **To Do**
 - **Goal**: Create a quick deploy/start solution so anyone can try and learn from the project easily. Use LocalStack as the solution to enable local deployment without AWS account requirement. Add `localstack` as a third environment option (alongside `dev` and `prod`) while keeping existing `dev` and `prod` environments unchanged.
 - **Current State**:
@@ -72,7 +74,86 @@
   - `QUICK_START.md` - Document `localstack` environment option
 - **Dependencies**: Docker, Docker Compose, LocalStack
 - **Estimated Time**: 2-3 hours
-- **Why This Matters**: Creates a quick deploy/start solution that removes barriers for learners. Testers can use `localstack` environment to try the project without AWS accounts, while `dev` and `prod` environments remain unchanged for existing workflows.
+- **Why This Matters**: Creates a quick deploy/start solution that removes barriers for learners. Testers can use `localstack` environment to try the project without AWS accounts, while `dev` and `prod` environments remain unchanged for existing workflows. **Part of comprehensive demo - show how to deploy locally.**
+
+---
+
+#### **TEST-002: Implement Load Testing for Security Feature Validation** 🔥 **PRIORITY #1**
+- **Component**: Testing & Security
+- **Type**: Security Testing / Load Testing
+- **Priority**: 🔥 **HIGH** (Do First - Validate Design Before Demo)
+- **Status**: 📋 **To Do**
+- **Goal**: Implement load testing to validate security features (rate limiting, circuit breakers, audit logging, lock management) work correctly under load. This validates that our security-focused design is functioning as intended. **Do this first to confirm existing design is good and fix any issues before demo.**
+- **Design Document**: `docs/design-docs/load-testing-design.md` (already exists, ready for implementation)
+- **Current State**:
+  - **Design Complete**: Load testing design document exists with 9 test cases defined
+  - **Security Features Implemented**: Rate limiting, circuit breakers, audit logs, lock management all implemented
+  - **Monitoring Stack**: Prometheus/Grafana/Loki already set up
+  - **Basic Load Test Scripts**: Some basic scripts exist in `integration_tests/load_tests/` but need k6 implementation
+- **Solution**:
+  - **Tool**: k6 (Go-based, JavaScript scripting) - chosen for Prometheus integration
+  - **Test Coverage**: 9 test cases focusing on security features (not scalability)
+  - **Test Categories**:
+    1. **Rate Limiting** (2 tests): Gateway rate limit enforcement, rate limit headers
+    2. **Circuit Breakers** (2 tests): Circuit trip on failures, circuit recovery
+    3. **Monitoring** (1 test): Prometheus metrics accuracy
+    4. **Audit Logs** (1 test): Audit log capture under load
+    5. **Resilience** (1 test): Graceful degradation
+    6. **Lock Management** (1 test): Concurrent operations for same user
+    7. **Latency** (1 test): P90/P99 latency measurement
+  - **Execution**: Manual execution (personal project - simple and practical)
+  - **Integration**: Use existing Prometheus/Grafana monitoring stack
+- **Acceptance Criteria**:
+  - [ ] **k6 installed** and configured for project
+  - [ ] **TC-RL-001**: Gateway rate limit enforcement test implemented (101+ requests, verify 429)
+  - [ ] **TC-RL-002**: Rate limit headers test implemented (verify X-RateLimit-* headers)
+  - [ ] **TC-CB-001**: Circuit breaker trip test implemented (5 failures, verify 503)
+  - [ ] **TC-CB-002**: Circuit breaker recovery test implemented (timeout + 3 successes)
+  - [ ] **TC-MON-001**: Prometheus metrics accuracy test implemented (compare request counts)
+  - [ ] **TC-AUDIT-001**: Audit log capture test implemented (verify security events logged)
+  - [ ] **TC-RES-001**: Graceful degradation test implemented (high load, verify no crashes)
+  - [ ] **TC-LOCK-001**: Lock management test implemented (5-10 concurrent requests, verify 1 success)
+  - [ ] **TC-LATENCY-001**: P90/P99 latency test implemented (measure response time percentiles)
+  - [ ] **All tests passing** - All 9 test cases execute successfully
+  - [ ] **Test execution guide** - Document how to run load tests
+  - [ ] **Results documented** - Baseline metrics established
+- **Key Deliverables**:
+  - k6 test scripts for all 9 test cases in `integration_tests/load_tests/k6/`
+  - Test execution guide/README for running load tests
+  - Integration with existing Prometheus/Grafana monitoring
+  - Baseline performance metrics documented
+- **Files to Update/Create**:
+  - `integration_tests/load_tests/k6/` - New directory for k6 test scripts
+  - `integration_tests/load_tests/k6/rate-limiting.js` - Rate limiting tests (TC-RL-001, TC-RL-002)
+  - `integration_tests/load_tests/k6/circuit-breaker.js` - Circuit breaker tests (TC-CB-001, TC-CB-002)
+  - `integration_tests/load_tests/k6/monitoring.js` - Monitoring test (TC-MON-001)
+  - `integration_tests/load_tests/k6/audit-logs.js` - Audit log test (TC-AUDIT-001)
+  - `integration_tests/load_tests/k6/resilience.js` - Resilience test (TC-RES-001)
+  - `integration_tests/load_tests/k6/lock-management.js` - Lock management test (TC-LOCK-001)
+  - `integration_tests/load_tests/k6/latency.js` - Latency test (TC-LATENCY-001)
+  - `integration_tests/load_tests/k6/README.md` - Test execution guide
+  - `integration_tests/load_tests/k6/config.js` - Shared k6 configuration (endpoints, thresholds)
+  - Update `integration_tests/load_tests/README.md` - Add k6 section
+- **Test Data Strategy**:
+  - Use `load_test_*` prefix for test users (e.g., `load_test_user_1`, `load_test_user_2`)
+  - Test orders identified by associated username (no changes to order ID format)
+  - No deletion required (matches existing no-deletion database design)
+- **Dependencies**:
+  - k6 tool (installation required)
+  - Existing Prometheus/Grafana monitoring stack
+  - Running services (Docker Compose or Kubernetes)
+  - Design document: `docs/design-docs/load-testing-design.md`
+- **Estimated Time**: 6-8 hours
+  - k6 setup and configuration: 1 hour
+  - Implement 9 test scripts: 4-5 hours
+  - Test execution and validation: 1-2 hours
+  - Documentation: 1 hour
+- **Why This Matters**:
+  - **Security Validation**: Ensures rate limiting, circuit breakers, and other security features work correctly under load
+  - **Confidence**: Validates that security-focused design is functioning as intended
+  - **Baseline Metrics**: Establishes performance benchmarks for all services
+  - **Personal Project Focus**: Tests security features (not scalability) - aligns with project goals
+  - **Documentation**: Design document exists, now needs implementation to validate security features
 
 ---
 
@@ -99,13 +180,6 @@
 - **Dependencies**: Running services (local or deployed); FEATURE-002 🔄 **IN PROGRESS** - Backend complete, deployment & frontend pending
 - **Demo assistance**: An AI assistant can help create the script, API order, and narrative once you share how you run the project (e.g. `dev.sh`, endpoints, frontend URL). No code change required—this task is about **preparing and delivering** the demo with existing APIs and workflow.
 
----
-
-#### **FEATURE-002: AI Analysis / Insights (Option 1)** — _Part of demo_ 🔄 **IN PROGRESS**
-- **Component**: Insights Service (new microservice)
-- **Type**: New Feature
-- **Priority**: 🔥 **HIGH** (one part of your demo)
-- **Status**: 🔄 **IN PROGRESS** (Backend ✅ Complete, Deployment & Integration Testing ⏳ Pending, Frontend ⏳ Pending)
 - **Goal**: Add an endpoint that aggregates portfolio, orders, and price data, calls an external LLM API (OpenAI or Claude), and returns a short text analysis for display in the UI.
 - **Design doc**: **Optional** for this scope. A short design note (1–2 pages) is enough if you want to lock scope before coding or hand off to someone else. Use a full design doc if you need review, multiple implementers, or future extension. Suggested contents if you add one: scope (Option 1 only), endpoint contract (path, method, request/response), data flow (which services are called, payload to LLM), prompt strategy (system + user prompt, length limits), config (env vars, API key), error handling and timeouts.
 - **Approach** (Option 1 – lightweight):
@@ -145,10 +219,79 @@
 
 _Optional maintenance items below._
 
+#### **INFRA-022: Remove Kubernetes Scaling & Load Balancing Features (Discussion)**
+- **Component**: Infrastructure & Deployment
+- **Type**: Architecture Simplification / Discussion
+- **Priority**: 📋 **UNDER DISCUSSION** (No decision made)
+- **Status**: 💬 **DISCUSSION**
+- **Goal**: Evaluate removing scaling and load balancing features from Kubernetes/Terraform configuration to simplify the project for personal project scale. Focus on security features (rate limiting, circuit breakers) rather than scalability.
+- **Current State Analysis**:
+  - **Terraform EKS (`terraform/eks.tf`)**:
+    - Node group autoscaling: `desired_size = 2`, `max_size = 3`, `min_size = 1` (lines 32-36)
+    - AWS Network Load Balancer for API Gateway (lines 49-107) with target group and health checks
+    - Adds complexity and cost for personal project
+  - **Kubernetes Kind Config (`kubernetes/kind-config.yaml`)**:
+    - Multi-node cluster: 1 control-plane + 2 worker nodes
+    - Overkill for personal project testing
+  - **Kubernetes Deployments**:
+    - All monitoring services: `replicas: 1` (Loki, Promtail, Grafana) ✅ Already simple
+    - Redis: `replicas: 1` ✅ Already simple
+  - **Gateway Code**:
+    - Single URL per service (no load balancing logic) ✅ Already simple
+    - Matches simplified approach
+- **Discussion Points**:
+  - **Why Remove?**:
+    - Personal project focus: Security features (rate limits, circuit breakers) more important than scalability
+    - Hard to test/validate scaling features in personal project context
+    - Don't want to maintain autoscaling/load balancing complexity
+    - Lower cost: No load balancer, fewer nodes
+    - Easier debugging: Single instance per service
+  - **What to Remove/Simplify?**:
+    1. **Terraform EKS Node Group Autoscaling**:
+       - Remove `scaling_config` block OR set fixed size: `desired_size = 1`, `max_size = 1`, `min_size = 1`
+       - Simplifies node management
+    2. **AWS Network Load Balancer**:
+       - Remove `aws_lb.api_gateway`, `aws_lb_target_group.api_gateway`, `aws_lb_listener.api_gateway`
+       - Use NodePort or ClusterIP + port-forwarding instead
+       - Removes external load balancer cost and complexity
+    3. **Kind Multi-Node Config**:
+       - Simplify to single-node cluster (1 control-plane)
+       - Sufficient for local development/testing
+  - **What to Keep**:
+    - All `replicas: 1` (already done) ✅
+    - Single-node Kind cluster for local dev
+    - Fixed-size EKS node group (1 node) for prod (if EKS still needed)
+    - No load balancer (use NodePort/port-forwarding)
+    - Security features: Rate limiting, circuit breakers ✅
+- **Benefits of Simplification**:
+  - ✅ **Lower Cost**: No load balancer, fewer nodes
+  - ✅ **Easier Testing**: Single instance per service
+  - ✅ **Less Maintenance**: No autoscaling to tune
+  - ✅ **Simpler Debugging**: No multi-instance routing issues
+  - ✅ **Still Functional**: Services work fine with single instances
+- **Open Questions** (No decisions made):
+  1. EKS node group: Keep fixed at 1 node, or remove EKS entirely and use Docker Compose only?
+  2. Load balancer: Remove entirely, or keep for external access (if needed)?
+  3. Kind config: Single-node or keep multi-node for learning?
+- **Recommendation** (For Discussion):
+  - Remove autoscaling and load balancer
+  - Simplify Kind to single node
+  - Keep EKS with fixed 1-node group if AWS deployment needed
+  - Focus on security features rather than scalability
+- **Files Affected** (If Implemented):
+  - `terraform/eks.tf` - Remove/modify `scaling_config`, remove load balancer resources
+  - `kubernetes/kind-config.yaml` - Simplify to single node
+  - Documentation updates to reflect simplified architecture
+- **Dependencies**: None (discussion only)
+- **Estimated Time**: N/A (Discussion phase)
+- **Why This Matters**: Aligns infrastructure with personal project goals: security-focused rather than scalability-focused. Reduces complexity, cost, and maintenance burden.
+
+---
+
 #### **INFRA-021: Simplify Kubernetes Configuration - Remove Dev/Prod Split**
 - **Component**: Infrastructure & Deployment
 - **Type**: Refactoring
-- **Priority**: 🔥 **HIGH PRIORITY**
+- **Priority**: ⚠️ **MEDIUM** (Can Wait - Not Blocking Demo or Core Functionality)
 - **Status**: 📋 **To Do**
 - **Problem**: Kubernetes has separate dev/prod overlays, but only one unified Kubernetes configuration is needed
 - **Goal**: Remove dev/prod distinction in Kubernetes, keep single unified Kubernetes config
