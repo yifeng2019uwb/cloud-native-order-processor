@@ -38,51 +38,6 @@
 - **Type**: Security Testing / Load Testing
 - **Priority**: 🔥 **HIGH** (Do First - Validate Design Before Demo)
 - **Status**: 📋 **To Do**
-- **Goal**: Create a quick deploy/start solution so anyone can try and learn from the project easily. Use LocalStack as the solution to enable local deployment without AWS account requirement. Add `localstack` as a third environment option (alongside `dev` and `prod`) while keeping existing `dev` and `prod` environments unchanged.
-- **Current State**:
-  - **dev** environment: Uses AWS DynamoDB (requires AWS credentials)
-  - **prod** environment: Uses AWS DynamoDB (requires AWS credentials)
-  - **Problem**: Testers without AWS accounts cannot deploy
-- **Solution**:
-  - **Add `localstack` environment** - Third environment option that uses LocalStack DynamoDB
-  - **Keep `dev` and `prod` unchanged** - Both continue using AWS DynamoDB (no changes to existing setup)
-  - **LocalStack service** - Add to docker-compose.yml for local DynamoDB
-  - **Environment variable for endpoint** - Add `AWS_ENDPOINT_URL` environment variable support in database connection (read from env, not hardcoded)
-  - **Modify database connection** - Update `dynamodb_connection.py` to read `AWS_ENDPOINT_URL` from environment and use it when creating boto3 client/resource (if set)
-  - **Complete `.env.example`** - Show all three environment options with `AWS_ENDPOINT_URL` for localstack environment
-- **Acceptance Criteria**:
-  - [ ] **`localstack` environment added** - New environment option alongside dev/prod
-  - [ ] **LocalStack service added** to docker-compose.yml
-  - [ ] **`AWS_ENDPOINT_URL` environment variable support** - Added to `database_constants.py` and read in `dynamodb_connection.py`
-  - [ ] **Database connection updated** - `dynamodb_connection.py` reads `AWS_ENDPOINT_URL` from environment and passes it to boto3 client/resource (if set, otherwise uses default AWS)
-  - [ ] **`dev` and `prod` unchanged** - Both still use AWS DynamoDB (no `AWS_ENDPOINT_URL` set, uses default)
-  - [ ] **Complete `.env.example`** - Shows all three environment options with `AWS_ENDPOINT_URL=http://localstack:4566` for localstack
-  - [ ] **Quick Start guide updated** - Document `localstack` environment option
-  - [ ] **Tested** - Verified `localstack` environment works (no AWS credentials) AND `dev`/`prod` still work (AWS)
-- **Key Deliverables**:
-  - `localstack` environment option (third option, doesn't change dev/prod)
-  - LocalStack service in docker-compose.yml
-  - Environment-based endpoint configuration
-  - Complete `docker/.env.example` with three environment options
-  - Updated `QUICK_START.md` with localstack instructions
-- **Files to Update/Create**:
-  - `scripts/config-loader.sh` - Add `localstack` to `ENV_CONFIGS`
-  - `docker/docker-compose.yml` - Add LocalStack service
-  - `services/common/src/data/database/database_constants.py` - Add `AWS_ENDPOINT_URL` to `EnvironmentVariables` class and create `get_aws_endpoint_url()` function
-  - `services/common/src/data/database/dynamodb_connection.py` - Read `AWS_ENDPOINT_URL` from environment and pass `endpoint_url` parameter to boto3 client/resource when creating connections (if set)
-  - `docker/.env.example` - Show `ENVIRONMENT=localstack` option with `AWS_ENDPOINT_URL=http://localstack:4566`
-  - `QUICK_START.md` - Document `localstack` environment option
-- **Dependencies**: Docker, Docker Compose, LocalStack
-- **Estimated Time**: 2-3 hours
-- **Why This Matters**: Creates a quick deploy/start solution that removes barriers for learners. Testers can use `localstack` environment to try the project without AWS accounts, while `dev` and `prod` environments remain unchanged for existing workflows. **Part of comprehensive demo - show how to deploy locally.**
-
----
-
-#### **TEST-002: Implement Load Testing for Security Feature Validation** 🔥 **PRIORITY #1**
-- **Component**: Testing & Security
-- **Type**: Security Testing / Load Testing
-- **Priority**: 🔥 **HIGH** (Do First - Validate Design Before Demo)
-- **Status**: 📋 **To Do**
 - **Goal**: Implement load testing to validate security features (rate limiting, circuit breakers, audit logging, lock management) work correctly under load. This validates that our security-focused design is functioning as intended. **Do this first to confirm existing design is good and fix any issues before demo.**
 - **Design Document**: `docs/design-docs/load-testing-design.md` (already exists, ready for implementation)
 - **Current State**:
@@ -143,11 +98,13 @@
   - Existing Prometheus/Grafana monitoring stack
   - Running services (Docker Compose or Kubernetes)
   - Design document: `docs/design-docs/load-testing-design.md`
-- **Estimated Time**: 6-8 hours
-  - k6 setup and configuration: 1 hour
-  - Implement 9 test scripts: 4-5 hours
-  - Test execution and validation: 1-2 hours
+- **Estimated Time**: 10-15 hours (includes buffer for integration issues and debugging)
+  - k6 setup and configuration: 1-2 hours
+  - Implement 9 test scripts: 4-6 hours
+  - Test execution and validation: 2-4 hours
+  - **Integration debugging** (may find system issues): 2-3 hours
   - Documentation: 1 hour
+  - **Note**: Whole system integration testing may uncover unexpected issues that require debugging and fixes
 - **Why This Matters**:
   - **Security Validation**: Ensures rate limiting, circuit breakers, and other security features work correctly under load
   - **Confidence**: Validates that security-focused design is functioning as intended
@@ -157,7 +114,100 @@
 
 ---
 
-#### **DEMO-001: Project Demo — Full Workflow & All Existing APIs**
+#### **FEATURE-002: AI Analysis / Insights (Option 1)** — _Part of demo_ 🔥 **PRIORITY #2**
+- **Component**: Insights Service (new microservice)
+- **Type**: New Feature
+- **Priority**: 🔥 **HIGH** (Complete Quickly - Optional but Needs Completion)
+- **Status**: 🔄 **IN PROGRESS** (Backend ✅ Complete, Deployment & Integration Testing ⏳ Pending, Frontend ⏳ Pending)
+- **Goal**: Add an endpoint that aggregates portfolio, orders, and price data, calls an external LLM API (OpenAI or Claude), and returns a short text analysis for display in the UI.
+- **Design doc**: **Optional** for this scope. A short design note (1–2 pages) is enough if you want to lock scope before coding or hand off to someone else. Use a full design doc if you need review, multiple implementers, or future extension. Suggested contents if you add one: scope (Option 1 only), endpoint contract (path, method, request/response), data flow (which services are called, payload to LLM), prompt strategy (system + user prompt, length limits), config (env vars, API key), error handling and timeouts.
+- **Approach** (Option 1 – lightweight):
+  - **Backend**: New API route (e.g. in user_service or gateway-proxied) that:
+    1. Fetches user portfolio, recent orders, and current/market prices from existing services
+    2. Builds a small JSON/text payload for the LLM
+    3. Calls external LLM API (OpenAI/Anthropic) with a fixed system + user prompt
+    4. Returns the model's short analysis (e.g. 2–4 sentences) as JSON
+  - **Frontend**: One new section or modal that calls this endpoint and displays the analysis text.
+  - **Config**: API key via env var (e.g. `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`); no new infra.
+- **Acceptance Criteria**:
+  - [x] New endpoint implemented and documented (`GET /api/insights/portfolio`)
+  - [x] Endpoint aggregates portfolio, orders, and price data from existing services
+  - [x] LLM call is made with a bounded prompt; response is parsed and returned as structured JSON
+  - [x] API key is read from environment; no keys in code
+  - [x] Errors (missing key, LLM failure, timeout) are handled and return clear HTTP/JSON responses
+  - [x] Design doc created (`docs/design-docs/ai-insights-design.md`)
+  - [ ] **Deploy insights service** to Docker environment
+  - [ ] **Run integration tests** successfully (end-to-end verification)
+  - [ ] **Add gateway route** for insights endpoint
+  - [ ] **Frontend integration**: API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile
+  - [ ] **Frontend can request and display** the analysis (e.g. on dashboard or profile)
+- **Estimated time for this part**:
+  - **Backend (endpoint + LLM integration)**: ~2–4 hours
+  - **Frontend (call API + display)**: ~1–2 hours
+  - **Testing + run-through for this feature**: ~1–2 hours
+  - **Total for this part**: **~4–8 hours** (your full demo can include other flows as well).
+- **Dependencies**: Existing user, order, inventory/price services; external LLM API key and SDK (e.g. `openai`, `anthropic`).
+- **Files to add/update** (examples):
+  - New route/handler in user_service (or dedicated insights module): e.g. `services/user_service/src/.../insights.py` and router registration
+  - Gateway: proxy route for the new endpoint if needed
+  - Frontend: new API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile
+  - Config/env: document new env var(s) for LLM API key
+- **Demo assistance**: Yes — an AI assistant can help with this part and with the full demo once it's in place: e.g. scripted flow for the AI insights step, plus talking points and narrative for the rest of your demo. Share your running endpoints (and optionally a Postman/curl one-pager), and the assistant can suggest exact requests, UI clicks, and narrative.
+
+---
+
+#### **DEV-003: Simple Quick Deploy Solution for Local Testing** 🔥 **PRIORITY #3**
+- **Component**: Infrastructure & Deployment
+- **Type**: Developer Experience / Documentation
+- **Priority**: 🔥 **HIGH** (Enable Easy Deployment for Demo)
+- **Status**: 📋 **To Do**
+- **Goal**: Create a quick deploy/start solution so anyone can try and learn from the project easily. Use LocalStack as the solution to enable local deployment without AWS account requirement. Add `localstack` as a third environment option (alongside `dev` and `prod`) while keeping existing `dev` and `prod` environments unchanged.
+- **Current State**:
+  - **dev** environment: Uses AWS DynamoDB (requires AWS credentials)
+  - **prod** environment: Uses AWS DynamoDB (requires AWS credentials)
+  - **Problem**: Testers without AWS accounts cannot deploy
+- **Solution**:
+  - **Add `localstack` environment** - Third environment option that uses LocalStack DynamoDB
+  - **Keep `dev` and `prod` unchanged** - Both continue using AWS DynamoDB (no changes to existing setup)
+  - **LocalStack service** - Add to docker-compose.yml for local DynamoDB
+  - **Environment variable for endpoint** - Add `AWS_ENDPOINT_URL` environment variable support in database connection (read from env, not hardcoded)
+  - **Modify database connection** - Update `dynamodb_connection.py` to read `AWS_ENDPOINT_URL` from environment and use it when creating boto3 client/resource (if set)
+  - **Complete `.env.example`** - Show all three environment options with `AWS_ENDPOINT_URL` for localstack environment
+- **Acceptance Criteria**:
+  - [ ] **`localstack` environment added** - New environment option alongside dev/prod
+  - [ ] **LocalStack service added** to docker-compose.yml
+  - [ ] **`AWS_ENDPOINT_URL` environment variable support** - Added to `database_constants.py` and read in `dynamodb_connection.py`
+  - [ ] **Database connection updated** - `dynamodb_connection.py` reads `AWS_ENDPOINT_URL` from environment and passes it to boto3 client/resource (if set, otherwise uses default AWS)
+  - [ ] **`dev` and `prod` unchanged** - Both still use AWS DynamoDB (no `AWS_ENDPOINT_URL` set, uses default)
+  - [ ] **Complete `.env.example`** - Shows all three environment options with `AWS_ENDPOINT_URL=http://localstack:4566` for localstack
+  - [ ] **Quick Start guide updated** - Document `localstack` environment option
+  - [ ] **Tested** - Verified `localstack` environment works (no AWS credentials) AND `dev`/`prod` still work (AWS)
+- **Key Deliverables**:
+  - `localstack` environment option (third option, doesn't change dev/prod)
+  - LocalStack service in docker-compose.yml
+  - Environment-based endpoint configuration
+  - Complete `docker/.env.example` with three environment options
+  - Updated `QUICK_START.md` with localstack instructions
+- **Files to Update/Create**:
+  - `scripts/config-loader.sh` - Add `localstack` to `ENV_CONFIGS`
+  - `docker/docker-compose.yml` - Add LocalStack service
+  - `services/common/src/data/database/database_constants.py` - Add `AWS_ENDPOINT_URL` to `EnvironmentVariables` class and create `get_aws_endpoint_url()` function
+  - `services/common/src/data/database/dynamodb_connection.py` - Read `AWS_ENDPOINT_URL` from environment and pass `endpoint_url` parameter to boto3 client/resource when creating connections (if set)
+  - `docker/.env.example` - Show `ENVIRONMENT=localstack` option with `AWS_ENDPOINT_URL=http://localstack:4566`
+  - `QUICK_START.md` - Document `localstack` environment option
+- **Dependencies**: Docker, Docker Compose, LocalStack
+- **Estimated Time**: 4-6 hours (includes buffer for integration issues and debugging)
+  - LocalStack service setup: 1 hour
+  - Database connection modifications: 1-2 hours
+  - Environment configuration updates: 1 hour
+  - **Integration testing & debugging** (may find system issues): 1-2 hours
+  - Documentation updates: 1 hour
+  - **Note**: Whole system integration with LocalStack may uncover unexpected issues (endpoint configuration, service discovery, connection handling) that require debugging and fixes
+- **Why This Matters**: Creates a quick deploy/start solution that removes barriers for learners. Testers can use `localstack` environment to try the project without AWS accounts, while `dev` and `prod` environments remain unchanged for existing workflows. **Part of comprehensive demo - show how to deploy locally.**
+
+---
+
+#### **DEMO-001: Project Demo — Full Workflow & All Existing APIs** 🔥 **PRIORITY #4**
 - **Component**: Demo / Documentation
 - **Type**: Demo Preparation & Delivery
 - **Priority**: 🔥 **HIGH**
