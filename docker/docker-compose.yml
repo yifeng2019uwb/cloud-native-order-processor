@@ -290,6 +290,8 @@ services:
       - REDIS_DB=0
       - REDIS_PASSWORD=
       - REDIS_SSL=false
+      # Gateway rate limiting (requests per minute, default: 10000)
+      - GATEWAY_RATE_LIMIT=${GATEWAY_RATE_LIMIT:-10000}
     volumes:
       - ~/.aws:/root/.aws:ro
     depends_on:

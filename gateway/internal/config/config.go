@@ -4,15 +4,17 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"order-processor-gateway/pkg/constants"
 )
 
 // Config holds all configuration for the gateway
 type Config struct {
-	Server   ServerConfig
-	Redis    RedisConfig
-	Services ServicesConfig
+	Server     ServerConfig
+	Redis      RedisConfig
+	Services   ServicesConfig
+	RateLimit  RateLimitConfig
 }
 
 // ServerConfig holds server-related configuration
@@ -38,6 +40,12 @@ type ServicesConfig struct {
 	AuthService      string
 }
 
+// RateLimitConfig holds rate limiting configuration
+type RateLimitConfig struct {
+	Limit  int           // Requests per window
+	Window time.Duration // Time window
+}
+
 // Load loads configuration from environment variables
 func Load() (*Config, error) {
 	// Parse Redis configuration with error handling
@@ -49,6 +57,12 @@ func Load() (*Config, error) {
 	redisSSL, err := strconv.ParseBool(getEnv(constants.EnvRedisSSL, strconv.FormatBool(constants.DefaultRedisSSL)))
 	if err != nil {
 		return nil, fmt.Errorf("invalid Redis SSL configuration: %w", err)
+	}
+
+	// Parse rate limit configuration
+	rateLimit, err := strconv.Atoi(getEnv(constants.EnvGatewayRateLimit, strconv.Itoa(constants.GatewayRateLimit)))
+	if err != nil {
+		return nil, fmt.Errorf("invalid gateway rate limit configuration: %w", err)
 	}
 
 	return &Config{
@@ -68,6 +82,10 @@ func Load() (*Config, error) {
 			InventoryService: getEnv(constants.EnvInventoryServiceURL, constants.DefaultInventoryServiceURL),
 			OrderService:     getEnv(constants.EnvOrderServiceURL, constants.DefaultOrderServiceURL),
 			AuthService:      getEnv(constants.EnvAuthServiceURL, constants.DefaultAuthServiceURL),
+		},
+		RateLimit: RateLimitConfig{
+			Limit:  rateLimit,
+			Window: constants.RateLimitWindow,
 		},
 	}, nil
 }

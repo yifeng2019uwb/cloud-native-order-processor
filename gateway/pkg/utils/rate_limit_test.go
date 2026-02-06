@@ -24,6 +24,15 @@ func TestGetServiceRateLimit(t *testing.T) {
 		t.Errorf("Expected inventory service window to be %v, got %v", constants.RateLimitWindow, inventoryLimit.WindowSize)
 	}
 
+	// Test order service rate limit
+	orderLimit := GetServiceRateLimit(constants.OrderService)
+	if orderLimit.Limit != constants.OrderServiceRateLimit {
+		t.Errorf("Expected order service limit to be %d, got %d", constants.OrderServiceRateLimit, orderLimit.Limit)
+	}
+	if orderLimit.WindowSize != constants.RateLimitWindow {
+		t.Errorf("Expected order service window to be %v, got %v", constants.RateLimitWindow, orderLimit.WindowSize)
+	}
+
 	// Test unknown service (should return default)
 	unknownLimit := GetServiceRateLimit("unknown_service")
 	if unknownLimit.Limit != constants.DefaultRateLimit {

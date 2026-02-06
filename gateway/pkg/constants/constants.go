@@ -13,9 +13,11 @@ const (
 
 // Rate limiting constants
 const (
-	UserServiceRateLimit      = 10  // 10 requests per minute
-	InventoryServiceRateLimit = 100 // 100 requests per minute
-	DefaultRateLimit          = 50  // 50 requests per minute
+	UserServiceRateLimit      = 5000  // 5000 requests per minute
+	InventoryServiceRateLimit = 7500  // 7500 requests per minute
+	OrderServiceRateLimit     = 3000  // 3000 requests per minute
+	DefaultRateLimit          = 3000  // 3000 requests per minute (default for services without specific limits)
+	GatewayRateLimit          = 10000 // 10000 requests per minute (default for gateway, configurable)
 	RateLimitWindow           = time.Minute
 )
 
@@ -61,6 +63,7 @@ const (
 	EnvRedisPassword       = "REDIS_PASSWORD"
 	EnvRedisDB             = "REDIS_DB"
 	EnvRedisSSL            = "REDIS_SSL"
+	EnvGatewayRateLimit    = "GATEWAY_RATE_LIMIT" // Requests per minute
 	EnvUserServiceURL      = "USER_SERVICE_URL"
 	EnvInventoryServiceURL = "INVENTORY_SERVICE_URL"
 	EnvOrderServiceURL     = "ORDER_SERVICE_URL"

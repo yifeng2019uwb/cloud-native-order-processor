@@ -16,6 +16,10 @@ func GetServiceRateLimit(serviceName string) models.RateLimitInfo {
 			Limit:      constants.InventoryServiceRateLimit,
 			WindowSize: constants.RateLimitWindow,
 		},
+		constants.OrderService: {
+			Limit:      constants.OrderServiceRateLimit,
+			WindowSize: constants.RateLimitWindow,
+		},
 	}
 
 	if limit, exists := limits[serviceName]; exists {

@@ -114,8 +114,8 @@ run_load_tests() {
     if [ -d "load_tests" ]; then
         echo "Running load test suite..."
         cd load_tests
-        chmod +x *.sh
-        ./run_all_load_tests.sh
+        chmod +x run_load_tests.sh
+        ./run_load_tests.sh
         cd ..
     else
         echo "❌ Load tests directory not found"

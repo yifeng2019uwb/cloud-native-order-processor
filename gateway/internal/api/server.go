@@ -63,8 +63,8 @@ func (s *Server) setupRoutes() {
 
 	// Add Redis-based middleware if Redis is available
 	if s.redisService != nil {
-		// Add rate limiting middleware with metrics (increased for testing)
-		s.router.Use(middleware.RateLimitMiddleware(s.redisService, 1000, time.Minute, s.metrics.RateLimit))
+		// Add rate limiting middleware with metrics (configurable via GATEWAY_RATE_LIMIT env var)
+		s.router.Use(middleware.RateLimitMiddleware(s.redisService, s.config.RateLimit.Limit, s.config.RateLimit.Window, s.metrics.RateLimit))
 
 		// Phase 2: Add session middleware
 		// s.router.Use(middleware.SessionMiddleware(s.redisService))
@@ -273,11 +273,27 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	// Copy response headers
+	// Save rate limit headers before copying backend headers (they may be overwritten)
+	rateLimitLimit := c.Writer.Header().Get(constants.RateLimitHeaderLimit)
+	rateLimitRemaining := c.Writer.Header().Get(constants.RateLimitHeaderRemaining)
+	rateLimitReset := c.Writer.Header().Get(constants.RateLimitHeaderReset)
+
+	// Copy response headers from backend
 	for key, values := range resp.Header {
 		for _, value := range values {
 			c.Header(key, value)
 		}
+	}
+
+	// Restore rate limit headers (they take precedence over backend headers)
+	if rateLimitLimit != "" {
+		c.Header(constants.RateLimitHeaderLimit, rateLimitLimit)
+	}
+	if rateLimitRemaining != "" {
+		c.Header(constants.RateLimitHeaderRemaining, rateLimitRemaining)
+	}
+	if rateLimitReset != "" {
+		c.Header(constants.RateLimitHeaderReset, rateLimitReset)
 	}
 
 	// Copy response body
