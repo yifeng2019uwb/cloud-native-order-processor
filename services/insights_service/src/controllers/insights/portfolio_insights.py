@@ -4,7 +4,7 @@ Portfolio Insights Controller
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from common.auth.security.auth_dependencies import get_current_user
+from common.auth.security.auth_dependencies import AuthenticatedUser, get_current_user
 from common.shared.constants.api_constants import HTTPStatus
 from common.shared.logging import BaseLogger, LoggerName, LogAction
 
@@ -23,7 +23,8 @@ from constants import (
     ERROR_KEYWORD_TIMEOUT,
     ERROR_KEYWORD_TIMED_OUT,
     ERROR_KEYWORD_RATE_LIMIT,
-    ERROR_CODE_RATE_LIMIT
+    ERROR_CODE_RATE_LIMIT,
+    MSG_ERROR_LLM_BLOCKED
 )
 from controllers.dependencies import get_data_aggregator, get_llm_service
 from services.data_aggregator import DataAggregator
@@ -35,7 +36,7 @@ router = APIRouter(tags=[ApiTags.INSIGHTS.value])
 
 @router.get(ApiPaths.PORTFOLIO_INSIGHTS.value, response_model=GetInsightsResponse)
 def get_portfolio_insights(
-    current_user: dict = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     data_aggregator: DataAggregator = Depends(get_data_aggregator),
     llm_service: LLMService = Depends(get_llm_service)
 ):
@@ -44,7 +45,7 @@ def get_portfolio_insights(
 
     Requires authentication via JWT token.
     """
-    username = current_user.get("username")
+    username = current_user.username
     if not username:
         raise HTTPException(
             status_code=HTTPStatus.UNAUTHORIZED,
@@ -76,6 +77,21 @@ def get_portfolio_insights(
         # Generate insights via LLM
         try:
             summary = llm_service.generate_insights(portfolio_context)
+        except ValueError as e:
+            error_msg = str(e)
+            # Handle blocked responses gracefully (return 429 for rate limits/blocking)
+            if MSG_ERROR_LLM_BLOCKED in error_msg:
+                logger.warning(action=LogAction.ERROR, message=f"LLM blocked response: {error_msg}", user=username)
+                raise HTTPException(
+                    status_code=HTTPStatus.TOO_MANY_REQUESTS,
+                    detail=MSG_ERROR_LLM_BLOCKED
+                )
+            else:
+                logger.error(action=LogAction.ERROR, message=f"{MSG_ERROR_INSIGHTS_FAILED}: {error_msg}", user=username)
+                raise HTTPException(
+                    status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                    detail=MSG_ERROR_INSIGHTS_FAILED
+                )
         except Exception as e:
             error_msg = str(e).lower()
             if "timeout" in error_msg or "timed out" in error_msg:
@@ -117,8 +133,10 @@ def get_portfolio_insights(
             detail=str(e)
         )
     except Exception as e:
-        logger.error(action=LogAction.ERROR, message=f"{MSG_ERROR_UNEXPECTED}: {str(e)}", user=username)
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.error(action=LogAction.ERROR, message=f"{MSG_ERROR_UNEXPECTED}: {str(e)}\n{error_traceback}", user=username)
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            detail=MSG_ERROR_UNEXPECTED
+            detail=f"{MSG_ERROR_UNEXPECTED}: {str(e)}"
         )

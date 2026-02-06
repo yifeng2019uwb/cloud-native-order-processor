@@ -27,7 +27,7 @@ show_usage() {
     cat << EOF
 Usage: $0 [service_name] [action] [--no-cache]
 
-Services: all, auth, user, inventory, order, gateway, frontend, monitoring
+Services: all, auth, user, inventory, order, insights, gateway, frontend, monitoring
 Actions: deploy, rebuild, restart, stop, start, logs, status, clean
 
 Examples:
@@ -163,7 +163,7 @@ deploy_service() {
 # Deploy all
 deploy_all() {
     log_info "Deploying all services..."
-    local services=("auth_service" "user_service" "inventory_service" "order_service" "gateway" "frontend")
+    local services=("auth_service" "user_service" "inventory_service" "order_service" "insights_service" "gateway" "frontend")
     local failed=()
 
     for service in "${services[@]}"; do
@@ -232,7 +232,7 @@ show_status() {
     echo ""
 
     log_info "Health Status:"
-    for service in auth_service user_service inventory_service order_service gateway frontend; do
+    for service in auth_service user_service inventory_service order_service insights_service gateway frontend; do
         local container_id=$(docker-compose ps -q "$service" 2>/dev/null)
         if [ -n "$container_id" ]; then
             local health=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id" 2>/dev/null)
@@ -376,7 +376,7 @@ main() {
                 *) log_error "Invalid action"; exit 1 ;;
             esac
             ;;
-        auth|user|inventory|order|gateway|frontend)
+        auth|user|inventory|order|insights|gateway|frontend)
             local svc_name="${service}"
             [ "$service" != "gateway" ] && [ "$service" != "frontend" ] && svc_name="${service}_service"
 

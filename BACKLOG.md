@@ -35,33 +35,82 @@
 
 ---
 
+#### **FEATURE-002.1: Insights Caching - Store Gemini Results in Database** 📋 **TO DO**
+- **Component**: Insights Service
+- **Type**: Performance Optimization
+- **Priority**: 🔶 **MEDIUM** (Optimization - Not Blocking)
+- **Status**: 📋 **To Do**
+- **Goal**: Cache Gemini API results in DynamoDB to avoid redundant API calls when user's portfolio hasn't changed. Return cached result if retrieved within 24 hours AND portfolio hasn't changed.
+- **Requirements**:
+  - Store insights results in DynamoDB `users` table (following single-table pattern)
+  - Use `PK=username, SK=INSIGHTS#{portfolio_hash}` schema
+  - Portfolio hash includes: total_value, usd_balance, top 10 holdings, last 10 orders
+  - Check `generated_at` timestamp - if < 24 hours AND portfolio hash matches → return cached
+  - Use DynamoDB TTL (24 hours) for automatic cleanup
+  - Graceful degradation: If DynamoDB fails, still call Gemini API
+- **Design Document**: `services/insights_service/docs/INSIGHTS_CACHING_DESIGN.md`
+- **Acceptance Criteria**:
+  - [ ] DynamoDB entity model created (InsightsItem)
+  - [ ] DAO layer implemented (InsightsDAO)
+  - [ ] Portfolio hash generation implemented
+  - [ ] Cache check logic implemented (24-hour validity + portfolio hash match)
+  - [ ] Cache save logic implemented (with DynamoDB TTL)
+  - [ ] Controller updated to use caching
+  - [ ] Tests added for cache hit/miss scenarios
+  - [ ] Graceful degradation tested (DynamoDB failure doesn't break endpoint)
+- **Key Design Decisions** (from design doc):
+  - **Storage**: DynamoDB `users` table (persistent, follows single-table pattern)
+  - **Hash includes prices**: Yes (users want updated insights for price movements)
+  - **TTL**: 24 hours via DynamoDB TTL feature
+  - **Multiple portfolio states**: Each state gets its own SK (different hash)
+- **Files to Create/Update**:
+  - `services/insights_service/src/data/entities/insights/insights_item.py` (DynamoDB model)
+  - `services/insights_service/src/data/dao/insights/insights_dao.py` (DAO layer)
+  - `services/insights_service/src/services/portfolio_hash.py` (hash generation)
+  - `services/insights_service/src/controllers/insights/portfolio_insights.py` (use caching)
+  - `services/insights_service/tests/` (cache tests)
+- **Dependencies**: DynamoDB `users` table, existing portfolio aggregation logic
+- **Estimated Time**: 4-6 hours
+  - Entity model & DAO: 1-2 hours
+  - Hash generation: 1 hour
+  - Controller integration: 1 hour
+  - Tests: 1-2 hours
+- **Benefits**:
+  - Reduces Gemini API calls (cost savings)
+  - Faster response times for cached requests
+  - Better user experience (consistent insights for same portfolio state)
+  - Very low cost (~$0.14/month for 1000 users)
+
+---
+
 ---
 
 #### **FEATURE-002: AI Analysis / Insights (Option 1)** — _Part of demo_ 🔥 **PRIORITY #2**
 - **Component**: Insights Service (new microservice)
 - **Type**: New Feature
 - **Priority**: 🔥 **HIGH** (Complete Quickly - Optional but Needs Completion)
-- **Status**: 🔄 **IN PROGRESS** (Backend ✅ Complete, Deployment & Integration Testing ⏳ Pending, Frontend ⏳ Pending)
-- **Goal**: Add an endpoint that aggregates portfolio, orders, and price data, calls an external LLM API (OpenAI or Claude), and returns a short text analysis for display in the UI.
+- **Status**: 🚧 **IN PROGRESS**
+- **Goal**: Add an endpoint that aggregates portfolio, orders, and price data, calls an external LLM API (Google Gemini), and returns a short text analysis for display in the UI.
 - **Design doc**: **Optional** for this scope. A short design note (1–2 pages) is enough if you want to lock scope before coding or hand off to someone else. Use a full design doc if you need review, multiple implementers, or future extension. Suggested contents if you add one: scope (Option 1 only), endpoint contract (path, method, request/response), data flow (which services are called, payload to LLM), prompt strategy (system + user prompt, length limits), config (env vars, API key), error handling and timeouts.
 - **Approach** (Option 1 – lightweight):
   - **Backend**: New API route (e.g. in user_service or gateway-proxied) that:
     1. Fetches user portfolio, recent orders, and current/market prices from existing services
     2. Builds a small JSON/text payload for the LLM
-    3. Calls external LLM API (OpenAI/Anthropic) with a fixed system + user prompt
+    3. Calls external LLM API (Google Gemini) with a fixed system + user prompt
     4. Returns the model's short analysis (e.g. 2–4 sentences) as JSON
   - **Frontend**: One new section or modal that calls this endpoint and displays the analysis text.
-  - **Config**: API key via env var (e.g. `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`); no new infra.
+  - **Config**: API key via env var (`GOOGLE_GEMINI_API_KEY`); no new infra.
 - **Acceptance Criteria**:
-  - [x] New endpoint implemented and documented (`GET /api/insights/portfolio`)
+  - [x] New endpoint implemented and documented (`GET /api/v1/insights/portfolio`)
   - [x] Endpoint aggregates portfolio, orders, and price data from existing services
   - [x] LLM call is made with a bounded prompt; response is parsed and returned as structured JSON
   - [x] API key is read from environment; no keys in code
-  - [x] Errors (missing key, LLM failure, timeout) are handled and return clear HTTP/JSON responses
+  - [x] Errors (missing key, LLM failure, timeout, rate limits) are handled and return clear HTTP/JSON responses
   - [x] Design doc created (`docs/design-docs/ai-insights-design.md`)
-  - [ ] **Deploy insights service** to Docker environment
+  - [x] **Deploy insights service** to Docker environment
+  - [x] **Add gateway route** for insights endpoint
+  - [x] **Happy case verified** - Endpoint returns 200 OK with valid response
   - [ ] **Run integration tests** successfully (end-to-end verification)
-  - [ ] **Add gateway route** for insights endpoint
   - [ ] **Frontend integration**: API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile
   - [ ] **Frontend can request and display** the analysis (e.g. on dashboard or profile)
 - **Estimated time for this part**:
@@ -139,7 +188,7 @@
 - **Scope**:
   - **All existing APIs**: Auth (login/register/token), User (profile, portfolio), Order (place/list), Inventory (assets, prices), Gateway as single entry, plus any other live endpoints.
   - **Whole workflow**: End-to-end flow showing how a user signs in, views portfolio, sees prices, places an order, and how services interact (e.g. gateway → backend services, frontend ↔ API).
-  - **Optional part**: FEATURE-002 (AI Analysis / Insights) 🔄 **IN PROGRESS** - Backend complete, deployment & frontend pending.
+  - **Optional part**: FEATURE-002 (AI Analysis / Insights) 🚧 **IN PROGRESS**
 - **Acceptance Criteria**:
   - [ ] Demo script or runbook that walks through the full workflow with running services
   - [ ] All major existing APIs exercised and explained (auth, user, portfolio, orders, inventory/prices)
@@ -150,7 +199,7 @@
   - Demo script / talking points (step-by-step flow)
   - List of APIs and order of calls for the workflow
   - Optional: Short doc or checklist (“How this project works” for the demo)
-- **Dependencies**: Running services (local or deployed); FEATURE-002 🔄 **IN PROGRESS** - Backend complete, deployment & frontend pending
+- **Dependencies**: Running services (local or deployed); FEATURE-002 🚧 **IN PROGRESS**
 - **Demo assistance**: An AI assistant can help create the script, API order, and narrative once you share how you run the project (e.g. `dev.sh`, endpoints, frontend URL). No code change required—this task is about **preparing and delivering** the demo with existing APIs and workflow.
 
 - **Goal**: Add an endpoint that aggregates portfolio, orders, and price data, calls an external LLM API (OpenAI or Claude), and returns a short text analysis for display in the UI.
@@ -785,13 +834,13 @@ _Optional maintenance items below._
 - **Q4 2025**: ✅ **COMPLETED** — Backend cleanup, frontend auth, monitoring
 - **Q1 2026**: ✅ **COMPLETED** — Core platform, Docker, K8s, EKS deployment
 - **DEMO-001**: Project demo with all existing APIs and whole workflow (script, narrative, run-through)
-- **Demo (one part)**: FEATURE-002 (AI Analysis endpoint + frontend) 🔄 **IN PROGRESS** — Backend complete, deployment & frontend pending
+- **Demo (one part)**: FEATURE-002 (AI Analysis endpoint + frontend) 🚧 **IN PROGRESS**
 - **Optional**: INFRA-021 (K8s simplify), ARCH-002 (CORS), CODE-001 (TODOs) — low priority
 
 **🎯 IMMEDIATE NEXT STEP**:
 1. Deploy infra: DB (DynamoDB) + Docker (docker-compose with Redis) — no Kubernetes needed for demo
 2. DEMO-001 — Prepare and deliver project demo (all existing APIs, full workflow)
-3. FEATURE-002 (AI Analysis): Deploy service → Run integration tests → Add gateway route → Frontend integration
+3. FEATURE-002 (AI Analysis): 🚧 **IN PROGRESS** — Backend & deployment complete, integration tests & frontend pending
 
 ---
 

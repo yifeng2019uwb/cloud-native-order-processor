@@ -22,7 +22,8 @@ from constants import (
     PROMPT_POSITIVE_SIGN,
     PROMPT_NEGATIVE_SIGN,
     MSG_ERROR_LLM_API_KEY_NOT_CONFIGURED,
-    MSG_ERROR_LLM_API_ERROR
+    MSG_ERROR_LLM_API_ERROR,
+    MSG_ERROR_LLM_BLOCKED
 )
 
 logger = BaseLogger(LoggerName.INSIGHTS)
@@ -55,16 +56,52 @@ class LLMService:
             prompt = self._build_prompt(portfolio_context)
             
             # Call Gemini API
+            # Note: system_instruction parameter not supported, include in prompt instead
+            full_prompt = f"{LLM_SYSTEM_PROMPT}\n\n{prompt}"
             response = self.model.generate_content(
-                system_instruction=LLM_SYSTEM_PROMPT,
-                contents=prompt,
+                contents=full_prompt,
                 generation_config={
                     "max_output_tokens": LLM_MAX_OUTPUT_TOKENS,
                     "temperature": LLM_TEMPERATURE,
                 }
             )
             
-            return response.text.strip()
+            # Check if response was blocked by safety filters
+            if response.candidates and len(response.candidates) > 0:
+                candidate = response.candidates[0]
+                if hasattr(candidate, 'finish_reason'):
+                    finish_reason = candidate.finish_reason
+                    # finish_reason: 1=STOP (normal), 2=MAX_TOKENS, 3=SAFETY (blocked), 4=RECITATION (blocked)
+                    if finish_reason in [3, 4]:  # SAFETY or RECITATION (blocked)
+                        logger.warning(
+                            action=LogAction.ERROR,
+                            message=f"Gemini API blocked response (finish_reason: {finish_reason})"
+                        )
+                        raise ValueError(MSG_ERROR_LLM_BLOCKED)
+            
+            # Extract text from response
+            try:
+                if hasattr(response, 'text') and response.text:
+                    return response.text.strip()
+            except ValueError as e:
+                # Handle case where response.text fails (e.g., blocked response)
+                if "finish_reason" in str(e).lower() or "no valid" in str(e).lower():
+                    logger.warning(
+                        action=LogAction.ERROR,
+                        message=f"Gemini API response blocked: {str(e)}"
+                    )
+                    raise ValueError(MSG_ERROR_LLM_BLOCKED)
+                raise
+            
+            # Fallback: try to extract from candidates
+            if response.candidates and len(response.candidates) > 0:
+                candidate = response.candidates[0]
+                if hasattr(candidate, 'content') and candidate.content:
+                    parts = candidate.content.parts
+                    if parts and len(parts) > 0 and hasattr(parts[0], 'text'):
+                        return parts[0].text.strip()
+            
+            raise ValueError("No text content in Gemini API response")
             
         except Exception as e:
             logger.error(action=LogAction.ERROR, message=f"{MSG_ERROR_LLM_API_ERROR}: {str(e)}")

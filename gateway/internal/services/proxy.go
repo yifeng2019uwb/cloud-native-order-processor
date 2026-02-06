@@ -47,6 +47,7 @@ func NewProxyService(cfg *config.Config) *ProxyService {
 		constants.InventoryService,
 		constants.OrderService,
 		constants.AuthService,
+		constants.InsightsService,
 	}
 
 	for _, service := range services {
@@ -125,6 +126,10 @@ func (p *ProxyService) buildTargetURL(proxyReq *models.ProxyRequest) (string, er
 		baseURL = p.config.Services.InventoryService
 	case constants.OrderService:
 		baseURL = p.config.Services.OrderService
+	case constants.AuthService:
+		baseURL = p.config.Services.AuthService
+	case constants.InsightsService:
+		baseURL = p.config.Services.InsightsService
 	default:
 		return "", fmt.Errorf("unknown target service: %s", proxyReq.TargetService)
 	}
@@ -233,6 +238,8 @@ func (p *ProxyService) GetTargetService(path string) string {
 		return constants.UserService // Balance is handled by user service
 	case strings.HasPrefix(path, constants.APIV1AssetPath):
 		return constants.OrderService // Asset balances handled by order service
+	case strings.HasPrefix(path, constants.APIV1InsightsPath):
+		return constants.InsightsService // Insights service
 	default:
 		return ""
 	}

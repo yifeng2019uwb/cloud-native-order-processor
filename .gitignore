@@ -133,3 +133,37 @@ kubernetes/secrets/deployment_dev.yaml
 kubernetes/secrets/development.yaml
 kubernetes/dev/kustomization.yaml
 kubernetes/base/service-account.yaml
+
+# API Keys and Secrets
+*api_key*
+*apikey*
+*API_KEY*
+*APIKEY*
+*GEMINI*
+*gemini*
+*GOOGLE_GEMINI*
+*OPENAI_API_KEY*
+*ANTHROPIC_API_KEY*
+*JWT_SECRET*
+*jwt_secret*
+
+# Environment files (all locations)
+.env
+.env.*
+!/.env.example
+docker/.env
+docker/.env.*
+services/.env
+services/.env.*
+*.env.local
+*.env.production
+*.env.development
+*.env.test
+
+# Credentials and tokens
+credentials.json
+token.json
+*.token
+secrets.yaml
+secrets.yml
+secrets.json

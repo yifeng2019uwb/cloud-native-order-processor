@@ -133,6 +133,12 @@ func (s *Server) setupRoutes() {
 			assets.GET("/balances", s.handleProxyRequest)               // Get all asset balances
 			assets.GET("/:asset_id/transactions", s.handleProxyRequest) // Get asset transactions
 		}
+
+		// Insights service routes (all require auth)
+		insights := api.Group("/insights")
+		{
+			insights.GET("/portfolio", s.handleProxyRequest) // Get portfolio insights
+		}
 	}
 }
 

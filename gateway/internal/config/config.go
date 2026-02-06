@@ -38,6 +38,7 @@ type ServicesConfig struct {
 	InventoryService string
 	OrderService     string
 	AuthService      string
+	InsightsService  string
 }
 
 // RateLimitConfig holds rate limiting configuration
@@ -82,6 +83,7 @@ func Load() (*Config, error) {
 			InventoryService: getEnv(constants.EnvInventoryServiceURL, constants.DefaultInventoryServiceURL),
 			OrderService:     getEnv(constants.EnvOrderServiceURL, constants.DefaultOrderServiceURL),
 			AuthService:      getEnv(constants.EnvAuthServiceURL, constants.DefaultAuthServiceURL),
+			InsightsService:  getEnv(constants.EnvInsightsServiceURL, constants.DefaultInsightsServiceURL),
 		},
 		RateLimit: RateLimitConfig{
 			Limit:  rateLimit,

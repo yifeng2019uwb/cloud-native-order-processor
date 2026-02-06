@@ -19,17 +19,21 @@ MSG_ERROR_UNEXPECTED = "An unexpected error occurred"
 MSG_ERROR_USER_NOT_FOUND = "User not found"
 MSG_ERROR_LLM_API_KEY_NOT_CONFIGURED = "not configured"
 MSG_ERROR_LLM_API_ERROR = "LLM API error"
+MSG_ERROR_LLM_BLOCKED = "Analysis temporarily unavailable due to content filtering"
 
 # =============================================================================
 # LLM CONFIGURATION
 # =============================================================================
-LLM_MODEL_NAME = "gemini-1.5-flash"
+LLM_MODEL_NAME = "gemini-flash-latest"  # Use latest flash model (was gemini-1.5-flash which is deprecated)
 LLM_API_KEY_ENV_VAR = "GOOGLE_GEMINI_API_KEY"
 LLM_MAX_OUTPUT_TOKENS = 150
 LLM_TEMPERATURE = 0.7
-LLM_MAX_HOLDINGS_IN_PROMPT = 5
-LLM_MAX_ORDERS_IN_PROMPT = 3
-LLM_MAX_RECENT_ORDERS = 10
+# Prompt limits - what we send to Gemini (keep reasonable for API)
+LLM_MAX_HOLDINGS_IN_PROMPT = 10  # Top 10 holdings in prompt
+LLM_MAX_ORDERS_IN_PROMPT = 10  # Last 10 orders in prompt
+# Fetch limits - what we get from DB (can be higher for accounts with many records)
+LLM_MAX_RECENT_ORDERS = 100  # Fetch up to 100 orders, use top 10 in prompt
+LLM_MAX_HOLDINGS_FETCH = 100  # Fetch up to 100 holdings, use top 10 in prompt
 
 # =============================================================================
 # LLM PROMPT TEMPLATES

@@ -11,7 +11,7 @@ from common.data.dao.inventory.asset_dao import AssetDAO
 from common.data.dao.order.order_dao import OrderDAO
 from common.shared.logging import BaseLogger, LoggerName, LogAction
 from api_models.insights.portfolio_context import PortfolioContext, HoldingData, OrderData
-from constants import LLM_MAX_RECENT_ORDERS, MSG_ERROR_USER_NOT_FOUND
+from constants import LLM_MAX_RECENT_ORDERS, LLM_MAX_HOLDINGS_FETCH, MSG_ERROR_USER_NOT_FOUND
 
 logger = BaseLogger(LoggerName.INSIGHTS)
 
@@ -112,8 +112,11 @@ class DataAggregator:
 
         # Sort by value descending
         holdings.sort(key=lambda x: x.value_usd, reverse=True)
+        
+        # Limit holdings to top N by value to reduce prompt size for accounts with many assets
+        holdings = holdings[:LLM_MAX_HOLDINGS_FETCH]
 
-        # Get recent orders
+        # Get recent orders (limited to reduce prompt size)
         orders = self.order_dao.get_orders_by_user(username, limit=LLM_MAX_RECENT_ORDERS, offset=0)
         recent_orders = []
         for order in orders:

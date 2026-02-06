@@ -264,6 +264,73 @@ services:
           cpus: '0.25'
           memory: 256M
 
+  insights_service:
+    build:
+      context: ../
+      dockerfile: docker/insights-service/Dockerfile
+    container_name: order-processor-insights_service
+    # No external ports - only accessible through Gateway
+    expose:
+      - "8004"
+    environment:
+      # Use environment variables that can be overridden
+      - GOOGLE_GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-development-jwt-secret-key-here}
+      - JWT_ALGORITHM=HS256
+      - USER_SERVICE_URL=http://user_service:8000
+      - ORDER_SERVICE_URL=http://order_service:8002
+      - INVENTORY_SERVICE_URL=http://inventory_service:8001
+      - AUTH_SERVICE_URL=http://auth_service:8003
+      - USERS_TABLE=${USERS_TABLE:-order-processor-dev-users}
+      - ORDERS_TABLE=${ORDERS_TABLE:-order-processor-dev-orders}
+      - INVENTORY_TABLE=${INVENTORY_TABLE:-order-processor-dev-inventory}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
+      - SERVICE_NAME=insights_service
+      - SERVICE_PORT=8004
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+      - LOG_FILE_PATH=/var/log
+      # Redis configuration (if needed)
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=
+      - REDIS_SSL=false
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      # Auto-reload for development
+      - ../services:/app/services:ro
+      # Mount log directory for Promtail collection
+      - ./logs/insights_service:/var/log/services/insights_service
+    depends_on:
+      user_service:
+        condition: service_healthy
+      order_service:
+        condition: service_healthy
+      inventory_service:
+        condition: service_healthy
+      auth_service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    networks:
+      - order-processor-network
+    # Resource limits - Insights Service gets 1 CPU, 512MB RAM
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
   gateway:
     build:
       context: ../
@@ -284,6 +351,7 @@ services:
       - INVENTORY_SERVICE_URL=http://inventory_service:8001
       - ORDER_SERVICE_URL=http://order_service:8002
       - AUTH_SERVICE_URL=http://auth_service:8003
+      - INSIGHTS_SERVICE_URL=http://insights_service:8004
       # Redis configuration for rate limiting and session management
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -296,6 +364,8 @@ services:
       - ~/.aws:/root/.aws:ro
     depends_on:
       auth_service:
+        condition: service_healthy
+      insights_service:
         condition: service_healthy
       redis:
         condition: service_healthy

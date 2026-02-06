@@ -8,6 +8,7 @@ const (
 	InventoryService = "inventory_service"
 	OrderService     = "order_service"
 	AuthService      = "auth_service"
+	InsightsService  = "insights_service"
 	GatewayService   = "gateway"
 )
 
@@ -68,6 +69,7 @@ const (
 	EnvInventoryServiceURL = "INVENTORY_SERVICE_URL"
 	EnvOrderServiceURL     = "ORDER_SERVICE_URL"
 	EnvAuthServiceURL      = "AUTH_SERVICE_URL"
+	EnvInsightsServiceURL  = "INSIGHTS_SERVICE_URL"
 )
 
 // Default service URLs
@@ -76,6 +78,7 @@ const (
 	DefaultInventoryServiceURL = "http://inventory_service:8001"
 	DefaultOrderServiceURL     = "http://order_service:8002"
 	DefaultAuthServiceURL      = "http://auth_service:8003"
+	DefaultInsightsServiceURL  = "http://insights_service:8004"
 )
 
 // Time constants
@@ -141,6 +144,10 @@ const (
 	// Asset service paths
 	APIV1AssetPath             = "/api/v1/assets"
 	APIV1AssetTransactionsByID = "/api/v1/assets/:asset_id/transactions"
+
+	// Insights service paths
+	APIV1InsightsPath        = "/api/v1/insights"
+	APIV1InsightsPortfolio   = "/api/v1/insights/portfolio"
 )
 
 // Path patterns for dynamic route matching
@@ -475,6 +482,13 @@ var (
 		},
 		APIV1AssetTransactionsByID: {
 			Path:         APIV1AssetTransactionsByID,
+			RequiresAuth: true,
+			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
+		},
+
+		// Insights service routes (all require auth)
+		APIV1InsightsPortfolio: {
+			Path:         APIV1InsightsPortfolio,
 			RequiresAuth: true,
 			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
 		},
