@@ -86,6 +86,13 @@ open reports/test_report_*.html
 cat reports/test_report_*.json
 ```
 
+### 4. Load Tests
+For performance and stress testing (rate limiting, circuit breaker, lock management, latency), see the **[Load Tests documentation](load_tests/README.md)**:
+```bash
+cd load_tests
+./run_load_tests.sh
+```
+
 ## 🧪 Test Categories
 
 ### Smoke Tests (Health Checks)
@@ -108,6 +115,23 @@ cat reports/test_report_*.json
 - **Purpose**: Test order management and portfolio operations
 - **Status**: ✅ Fully Implemented - 7 test suites with comprehensive coverage
 - **Coverage**: Health, orders (list/create/get), portfolio, asset balances, transactions
+
+### Load Tests
+- **Purpose**: Performance and stress testing for security features and system reliability
+- **Status**: ✅ Fully Implemented - 4 test suites using k6
+- **Documentation**: See **[Load Tests README](load_tests/README.md)** and **[k6 Tests README](load_tests/k6/README.md)** for detailed information
+- **Coverage**: Rate limiting, circuit breaker, lock management, latency measurement
+
+| Test Case | Status | Focus |
+|-----------|--------|-------|
+| Rate Limiting | ✅ Pass | Gateway/Redis efficiency |
+| Circuit Breaker | ✅ Pass | System fault tolerance |
+| Lock Management | ✅ Pass | Data consistency under stress |
+| Latency | ✅ Pass | P99 Baseline |
+
+**Note**: Load test configurations are optimized for a limited memory local environment. VU counts and durations have been set accordingly to work within these constraints. This helps understand the solution's resource efficiency and scalability characteristics.
+
+For detailed load test documentation, configuration, and running instructions, please refer to **[load_tests/README.md](load_tests/README.md)**.
 
 ## ⚙️ Configuration
 
@@ -185,3 +209,4 @@ bash run_all_tests.sh user 2>&1 | tee test_output.log
 - **Integration Test Design**: See `../docs/design-docs/integration-test-design.md` for detailed architecture
 - **API Endpoints**: See `config/api_endpoints.py` for endpoint definitions
 - **Service URLs**: See `config/service_urls.py` for URL detection logic
+- **Load Tests**: See `load_tests/README.md` for load testing documentation and `load_tests/k6/README.md` for detailed k6 test information

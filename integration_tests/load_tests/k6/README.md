@@ -72,15 +72,75 @@ k6 run k6/rate-limiting.js
 - `lock-management.js` - Concurrent operations (TC-LOCK-001) ✅
 - `latency.js` - P90/P99 latency measurement (TC-LATENCY-001) ✅
 
+| Test Case | Status | Focus |
+|-----------|--------|-------|
+| Rate Limiting | ✅ Pass | Gateway/Redis efficiency |
+| Circuit Breaker | ✅ Pass | System fault tolerance |
+| Lock Management | ✅ Pass | Data consistency under stress |
+| Latency | ✅ Pass | P99 Baseline |
+
 **Notes**: 
 - Monitoring and audit log tests are excluded - they test internal admin APIs, not customer-facing endpoints
 - Resilience test is skipped - keeping simple for personal project (other tests already verify system stability under load)
 
 ## Configuration
 
-- Gateway URL: Read from `GATEWAY_HOST` and `GATEWAY_PORT` environment variables
-- Test users: Pre-created via `setup/create_load_test_users.py`
-- Test data: Uses `load_test_*` prefix
+### Environment Variables
+
+- **Gateway URL**: Read from `GATEWAY_HOST` and `GATEWAY_PORT` environment variables
+- **Gateway Rate Limit**: Configurable via `GATEWAY_RATE_LIMIT` (default: 10,000 req/min)
+- **Test users**: Pre-created via `setup/create_load_test_users.py`
+- **Test data**: Uses `load_test_*` prefix
+
+### ⚠️ Memory Constraints
+
+**Note**: Test configurations are optimized for a limited memory local environment. VU counts and durations have been set accordingly to work within these constraints. This helps understand the solution's resource efficiency and scalability characteristics.
+
+### Rate Limit Configuration
+
+The API Gateway implements IP-based rate limiting using Redis:
+
+- **Gateway Rate Limit**: Configurable via `GATEWAY_RATE_LIMIT` environment variable
+  - Default: 10,000 requests per minute (~166 req/sec)
+  - Set in `docker-compose.yml` or via environment variable
+- **Service-Specific Rate Limits** (configured in `gateway/pkg/constants/constants.go`):
+  - Inventory Service: 7,500 req/min
+  - User Service: 5,000 req/min
+  - Order Service: 3,000 req/min
+
+**Rate Limit Headers**: All responses include rate limit headers:
+- `X-RateLimit-Limit`: Maximum requests allowed per window
+- `X-RateLimit-Remaining`: Remaining requests in current window
+- `X-RateLimit-Reset`: Unix timestamp when the rate limit window resets
+
+These headers are preserved even when proxying backend responses (BUG-002 fix).
+
+### Test Configurations
+
+**Rate Limiting Test** (`rate-limiting.js`):
+- VUs: 150
+- Duration: 30s
+- Purpose: Exceed gateway rate limit to verify enforcement
+- Expected: 429 responses after exceeding limit
+
+**Latency Test** (`latency.js`):
+- VUs: 5
+- Duration: 50s (15s ramp-up, 30s steady, 5s ramp-down)
+- Sleep: 100ms between requests
+- Purpose: Measure P90/P95/P99 latency across multiple endpoints
+- Thresholds: P90<500ms, P95<1000ms, P99<2000ms
+
+**Lock Management Test** (`lock-management.js`):
+- Max VUs: 50
+- Request Rate: 30 req/s
+- Duration: ~10s
+- Purpose: Verify user-level locking prevents race conditions
+
+**Circuit Breaker Test** (`circuit-breaker.js`):
+- VUs: 1
+- Purpose: Test circuit breaker trip and recovery mechanisms
+
+**Note**: All test configurations are optimized for limited local memory. Increasing VUs or durations may cause memory issues.
 
 ## Reporting
 
@@ -125,7 +185,8 @@ Files are timestamped when using `run_load_tests.sh`:
 **Rate Limiting Tests:**
 - `http_req_status{status:429}` - Count of rate limit violations
 - `http_req_duration` - Response time (p95, p99)
-- `X-RateLimit-*` headers - Rate limit headers present
+- `X-RateLimit-*` headers - Rate limit headers present (should be present in all responses)
+- **Note**: Tests are configured to exceed the gateway rate limit, so high 429 rates are expected
 
 **Circuit Breaker Tests:**
 - `http_req_status{status:503}` - Circuit breaker trips
@@ -133,11 +194,13 @@ Files are timestamped when using `run_load_tests.sh`:
 
 **Lock Management Tests:**
 - `http_req_duration` - p99 latency (should spike during lock contention)
+- `http_req_status{status:429}` - Verified that lock timeouts are mapped to 429 (Too Many Requests) instead of 503, aligning with API semantic best practices
 - Request success rate (only one should succeed)
 
 **Latency Tests:**
 - `http_req_duration` - p90, p95, p99 percentiles
-- Compare against thresholds defined in test scripts
+- Compare against thresholds defined in test scripts (P90<500ms, P95<1000ms, P99<2000ms)
+- **Note**: Test accepts 429 (rate limited) responses as valid for latency measurement purposes
 
 ### Integration with Monitoring
 
