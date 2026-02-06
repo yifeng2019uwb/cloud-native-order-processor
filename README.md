@@ -66,12 +66,13 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 
 | **Service** | **Purpose** | **Port** | **Security Features** | **Status** |
 |-------------|-------------|----------|----------------------|------------|
-| **Frontend** | User Interface | 80 | JWT token management | ✅ Ready |
+| **Frontend** | User Interface | 3000 | JWT token management | ✅ Ready |
 | **API Gateway** | Routing & Security | 8080 | Rate limiting, circuit breakers, CORS | ✅ Ready |
 | **Auth Service** | JWT Validation | 8003 | Token validation, user context, security analytics | ✅ Ready |
 | **User Service** | User Management | 8000 | Password hashing, RBAC, audit logging | ✅ Ready |
 | **Order Service** | Order Processing | 8002 | Distributed locking, atomic transactions | ✅ Ready |
 | **Inventory Service** | Asset Management | 8001 | Public access, input validation | ✅ Ready |
+| **Redis** | Cache & Coordination | Internal | Rate limiting, distributed locking, caching | ✅ Ready |
 
 ## 🔐 Security Architecture
 
@@ -95,10 +96,10 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 ## 📊 Monitoring & Observability
 
 **Comprehensive Monitoring Stack:**
-- **Prometheus** - Metrics collection and storage
-- **Grafana** - Visualization and dashboards
-- **Loki** - Log aggregation and querying
-- **AlertManager** - Intelligent alerting and notifications
+- **Prometheus** - Metrics collection and storage (port 9090)
+- **Grafana** - Visualization and dashboards for metrics and logs (port 3001)
+- **Loki** - Log aggregation and querying (port 3100)
+- **Promtail** - Log collection agent (collects from Docker containers)
 
 **Monitoring Categories:**
 - **Security Monitoring** - Authentication, authorization, and security events
@@ -122,18 +123,18 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 - **Health Checks** - Service health monitoring and automatic recovery
 
 **Data Consistency:**
-- **Distributed Locking** - User-level locks for atomic operations
-- **Transaction Management** - Distributed transaction coordination
+- **Distributed Locking** - User-level locks for atomic operations (Redis-based)
+- **Transaction Management** - Database transaction coordination
 - **Atomic Operations** - Database operations with rollback support
-- **Event Sourcing** - Audit trail and event replay capabilities
+- **Audit Logging** - Comprehensive audit trail for security and compliance
 
 ## 🏗️ Data Architecture
 
 **Database Design:**
 - **DynamoDB** - Serverless NoSQL with single-table design
 - **PynamoDB ORM** - Type-safe database operations
-- **Redis** - Caching and session management
-- **Atomic Operations** - Distributed locking and transaction support
+- **Redis** - Caching, rate limiting, distributed locking, and session management
+- **Atomic Operations** - Database operations with rollback support
 
 **Data Models:**
 - **User Entities** - Authentication, profiles, and account management
@@ -144,9 +145,10 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 ## 🔄 Service Integration
 
 **Inter-Service Communication:**
-- **Synchronous HTTP** - REST API calls between services
+- **Synchronous HTTP/REST** - Direct API calls between services via API Gateway
 - **Centralized Authentication** - JWT validation through Auth Service
-- **Service Discovery** - API Gateway-based routing and load balancing
+- **API Gateway Routing** - Single entry point for all service requests
+- **Redis-based Coordination** - Shared state for distributed locking and caching
 - **Error Handling** - Consistent exception handling and error responses
 
 **Shared Components:**
@@ -194,6 +196,6 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 
 **🔐 Enterprise-grade microservices platform demonstrating production-ready security, monitoring, and resilience patterns**
 
-**🛡️ Built with**: Python, FastAPI, Go, DynamoDB, Prometheus, Grafana, Docker, Kubernetes, and modern security patterns
+**🛡️ Built with**: Python, FastAPI, Go, DynamoDB, Redis, Prometheus, Grafana, Loki, Docker, Kubernetes, and modern security patterns
 
 **🔒 Questions?** Check the documentation or open an issue
