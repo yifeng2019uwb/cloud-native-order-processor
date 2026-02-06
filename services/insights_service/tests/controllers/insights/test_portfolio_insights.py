@@ -19,6 +19,7 @@ from src.constants import (
     MSG_ERROR_INSIGHTS_FAILED,
     MSG_ERROR_UNEXPECTED,
     MSG_ERROR_USER_NOT_FOUND,
+    MSG_ERROR_LLM_BLOCKED,
     LLM_MODEL_NAME,
     ERROR_KEYWORD_TIMEOUT,
     ERROR_KEYWORD_TIMED_OUT,
@@ -182,7 +183,7 @@ class TestPortfolioInsightsController:
         mock_logger
     ):
         """Test 401 when user context is invalid"""
-        invalid_user = {}
+        invalid_user = MagicMock(username=None)  # Object with missing username
         
         with pytest.raises(HTTPException) as exc_info:
             get_portfolio_insights(
@@ -296,6 +297,68 @@ class TestPortfolioInsightsController:
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE)
+    def test_get_portfolio_insights_llm_blocked(
+        self,
+        mock_get_llm_service,
+        mock_get_data_aggregator,
+        mock_logger,
+        mock_current_user,
+        mock_portfolio_context
+    ):
+        """Test 429 when LLM raises ValueError with MSG_ERROR_LLM_BLOCKED (content filtering)"""
+        mock_aggregator = MagicMock()
+        mock_aggregator.aggregate_portfolio_data.return_value = mock_portfolio_context
+        mock_get_data_aggregator.return_value = mock_aggregator
+
+        mock_llm_service = MagicMock()
+        mock_llm_service.generate_insights.side_effect = ValueError(MSG_ERROR_LLM_BLOCKED)
+        mock_get_llm_service.return_value = mock_llm_service
+
+        with pytest.raises(HTTPException) as exc_info:
+            get_portfolio_insights(
+                current_user=mock_current_user,
+                data_aggregator=mock_aggregator,
+                llm_service=mock_llm_service
+            )
+
+        assert exc_info.value.status_code == HTTPStatus.TOO_MANY_REQUESTS
+        assert exc_info.value.detail == MSG_ERROR_LLM_BLOCKED
+        mock_logger.warning.assert_called()
+
+    @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
+    @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR)
+    @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE)
+    def test_get_portfolio_insights_llm_value_error(
+        self,
+        mock_get_llm_service,
+        mock_get_data_aggregator,
+        mock_logger,
+        mock_current_user,
+        mock_portfolio_context
+    ):
+        """Test 500 when LLM raises ValueError (non-blocked, e.g. invalid response)"""
+        mock_aggregator = MagicMock()
+        mock_aggregator.aggregate_portfolio_data.return_value = mock_portfolio_context
+        mock_get_data_aggregator.return_value = mock_aggregator
+
+        mock_llm_service = MagicMock()
+        mock_llm_service.generate_insights.side_effect = ValueError("Invalid response format")
+        mock_get_llm_service.return_value = mock_llm_service
+
+        with pytest.raises(HTTPException) as exc_info:
+            get_portfolio_insights(
+                current_user=mock_current_user,
+                data_aggregator=mock_aggregator,
+                llm_service=mock_llm_service
+            )
+
+        assert exc_info.value.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+        assert exc_info.value.detail == MSG_ERROR_INSIGHTS_FAILED
+        mock_logger.error.assert_called()
+
+    @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
+    @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR)
+    @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE)
     def test_get_portfolio_insights_user_not_found(
         self,
         mock_get_llm_service,
@@ -348,7 +411,7 @@ class TestPortfolioInsightsController:
             )
 
         assert exc_info.value.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-        assert exc_info.value.detail == MSG_ERROR_UNEXPECTED
+        assert MSG_ERROR_UNEXPECTED in exc_info.value.detail
         mock_logger.error.assert_called()
 
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)

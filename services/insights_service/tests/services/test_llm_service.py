@@ -17,7 +17,8 @@ from src.constants import (
     PROMPT_TOTAL_VALUE,
     PROMPT_HOLDINGS_HEADER,
     PROMPT_RECENT_ACTIVITY_HEADER,
-    PROMPT_SUMMARY_INSTRUCTION
+    PROMPT_SUMMARY_INSTRUCTION,
+    MSG_ERROR_LLM_BLOCKED,
 )
 
 # Test constants
@@ -95,7 +96,9 @@ class TestLLMService:
         assert result == TEST_SUMMARY
         mock_model.generate_content.assert_called_once()
         call_args = mock_model.generate_content.call_args
-        assert call_args.kwargs['system_instruction'] == LLM_SYSTEM_PROMPT
+        # LLM service includes system prompt in contents, not as system_instruction kwarg
+        contents = call_args.kwargs.get('contents', '')
+        assert LLM_SYSTEM_PROMPT in contents
 
     @patch(PATCH_PATH_LLM_SERVICE_LOGGER)
     @patch.dict(os.environ, {LLM_API_KEY_ENV_VAR: TEST_API_KEY})
@@ -161,3 +164,129 @@ class TestLLMService:
 
         with pytest.raises(Exception):
             service.generate_insights(mock_portfolio_context)
+
+    @pytest.mark.parametrize("finish_reason", [3, 4])
+    @patch(PATCH_PATH_LLM_SERVICE_LOGGER)
+    @patch.dict(os.environ, {LLM_API_KEY_ENV_VAR: TEST_API_KEY})
+    @patch(PATCH_PATH_LLM_SERVICE_GENAI)
+    def test_generate_insights_safety_filter_blocked(
+        self, mock_genai, mock_logger, mock_portfolio_context, finish_reason
+    ):
+        """Test response blocked by safety filters (finish_reason 3=SAFETY, 4=RECITATION)"""
+        mock_candidate = MagicMock()
+        mock_candidate.finish_reason = finish_reason
+        mock_response = MagicMock()
+        mock_response.candidates = [mock_candidate]
+
+        mock_model = MagicMock()
+        mock_model.generate_content.return_value = mock_response
+        mock_genai.GenerativeModel.return_value = mock_model
+
+        service = LLMService()
+
+        with pytest.raises(ValueError) as exc_info:
+            service.generate_insights(mock_portfolio_context)
+
+        assert exc_info.value.args[0] == MSG_ERROR_LLM_BLOCKED
+        mock_logger.warning.assert_called()
+
+    @patch(PATCH_PATH_LLM_SERVICE_LOGGER)
+    @patch.dict(os.environ, {LLM_API_KEY_ENV_VAR: TEST_API_KEY})
+    @patch(PATCH_PATH_LLM_SERVICE_GENAI)
+    def test_generate_insights_text_blocked_raises_value_error(
+        self, mock_genai, mock_logger, mock_portfolio_context
+    ):
+        """Test response.text raises ValueError with 'finish_reason' (blocked response)"""
+        def raise_finish_reason():
+            raise ValueError("Response blocked due to finish_reason")
+
+        mock_candidate = MagicMock()
+        mock_candidate.finish_reason = 1
+        mock_response = MagicMock()
+        mock_response.candidates = [mock_candidate]
+        type(mock_response).text = property(lambda self: raise_finish_reason())
+
+        mock_model = MagicMock()
+        mock_model.generate_content.return_value = mock_response
+        mock_genai.GenerativeModel.return_value = mock_model
+
+        service = LLMService()
+
+        with pytest.raises(ValueError) as exc_info:
+            service.generate_insights(mock_portfolio_context)
+
+        assert exc_info.value.args[0] == MSG_ERROR_LLM_BLOCKED
+        mock_logger.warning.assert_called()
+
+    @patch(PATCH_PATH_LLM_SERVICE_LOGGER)
+    @patch.dict(os.environ, {LLM_API_KEY_ENV_VAR: TEST_API_KEY})
+    @patch(PATCH_PATH_LLM_SERVICE_GENAI)
+    def test_generate_insights_text_blocked_no_valid_content(
+        self, mock_genai, mock_logger, mock_portfolio_context
+    ):
+        """Test response.text raises ValueError with 'no valid' (blocked response)"""
+        def raise_no_valid():
+            raise ValueError("No valid text in response")
+
+        mock_candidate = MagicMock()
+        mock_candidate.finish_reason = 1
+        mock_response = MagicMock()
+        mock_response.candidates = [mock_candidate]
+        type(mock_response).text = property(lambda self: raise_no_valid())
+
+        mock_model = MagicMock()
+        mock_model.generate_content.return_value = mock_response
+        mock_genai.GenerativeModel.return_value = mock_model
+
+        service = LLMService()
+
+        with pytest.raises(ValueError) as exc_info:
+            service.generate_insights(mock_portfolio_context)
+
+        assert exc_info.value.args[0] == MSG_ERROR_LLM_BLOCKED
+
+    @patch(PATCH_PATH_LLM_SERVICE_LOGGER)
+    @patch.dict(os.environ, {LLM_API_KEY_ENV_VAR: TEST_API_KEY})
+    @patch(PATCH_PATH_LLM_SERVICE_GENAI)
+    def test_generate_insights_fallback_to_candidates(self, mock_genai, mock_logger, mock_portfolio_context):
+        """Test fallback to candidate.content.parts when response.text is empty"""
+        mock_part = MagicMock()
+        mock_part.text = f"  {TEST_SUMMARY}  "
+        mock_content = MagicMock()
+        mock_content.parts = [mock_part]
+        mock_candidate = MagicMock()
+        mock_candidate.content = mock_content
+        mock_response = MagicMock()
+        mock_response.candidates = [mock_candidate]
+        mock_response.text = ""  # Empty text, triggers fallback
+
+        mock_model = MagicMock()
+        mock_model.generate_content.return_value = mock_response
+        mock_genai.GenerativeModel.return_value = mock_model
+
+        service = LLMService()
+        result = service.generate_insights(mock_portfolio_context)
+
+        assert result == TEST_SUMMARY
+
+    @patch(PATCH_PATH_LLM_SERVICE_LOGGER)
+    @patch.dict(os.environ, {LLM_API_KEY_ENV_VAR: TEST_API_KEY})
+    @patch(PATCH_PATH_LLM_SERVICE_GENAI)
+    def test_generate_insights_no_text_content_raises(self, mock_genai, mock_logger, mock_portfolio_context):
+        """Test ValueError when response has no extractable text content"""
+        mock_candidate = MagicMock()
+        mock_candidate.content = None
+        mock_response = MagicMock()
+        mock_response.candidates = [mock_candidate]
+        mock_response.text = ""
+
+        mock_model = MagicMock()
+        mock_model.generate_content.return_value = mock_response
+        mock_genai.GenerativeModel.return_value = mock_model
+
+        service = LLMService()
+
+        with pytest.raises(ValueError) as exc_info:
+            service.generate_insights(mock_portfolio_context)
+
+        assert "No text content" in str(exc_info.value)

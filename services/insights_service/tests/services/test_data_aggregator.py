@@ -112,11 +112,11 @@ class TestDataAggregator:
         # Create inactive asset
         inactive_asset = mock_assets["BTC"].model_copy()
         inactive_asset.is_active = False
-        
+
         asset_balances = [
             AssetBalance(username=TEST_USERNAME, asset_id="BTC", quantity=Decimal("0.15"))
         ]
-        
+
         data_aggregator.user_dao.get_user_by_username.return_value = mock_user
         data_aggregator.balance_dao.get_balance.return_value = mock_balance
         data_aggregator.asset_balance_dao.get_all_asset_balances.return_value = asset_balances
@@ -174,7 +174,7 @@ class TestDataAggregator:
             )
             for i in range(LLM_MAX_RECENT_ORDERS + 5)
         ]
-        
+
         data_aggregator.user_dao.get_user_by_username.return_value = mock_user
         data_aggregator.balance_dao.get_balance.return_value = mock_balance
         data_aggregator.asset_balance_dao.get_all_asset_balances.return_value = mock_asset_balances
@@ -204,7 +204,7 @@ class TestDataAggregator:
             AssetBalance(username=TEST_USERNAME, asset_id="BTC", quantity=Decimal("0")),
             AssetBalance(username=TEST_USERNAME, asset_id="ETH", quantity=Decimal("-1"))
         ]
-        
+
         data_aggregator.user_dao.get_user_by_username.return_value = mock_user
         data_aggregator.balance_dao.get_balance.return_value = mock_balance
         data_aggregator.asset_balance_dao.get_all_asset_balances.return_value = asset_balances
@@ -227,11 +227,11 @@ class TestDataAggregator:
         asset_no_price = mock_assets["BTC"].model_copy()
         asset_no_price.current_price = None
         asset_no_price.price_usd = None
-        
+
         asset_balances = [
             AssetBalance(username=TEST_USERNAME, asset_id="BTC", quantity=Decimal("0.15"))
         ]
-        
+
         data_aggregator.user_dao.get_user_by_username.return_value = mock_user
         data_aggregator.balance_dao.get_balance.return_value = mock_balance
         data_aggregator.asset_balance_dao.get_all_asset_balances.return_value = asset_balances
@@ -254,11 +254,11 @@ class TestDataAggregator:
         asset_zero_price = mock_assets["BTC"].model_copy()
         asset_zero_price.current_price = Decimal("0")
         asset_zero_price.price_usd = Decimal("0")  # Set both to 0 to ensure filtering
-        
+
         asset_balances = [
             AssetBalance(username=TEST_USERNAME, asset_id="BTC", quantity=Decimal("0.15"))
         ]
-        
+
         data_aggregator.user_dao.get_user_by_username.return_value = mock_user
         data_aggregator.balance_dao.get_balance.return_value = mock_balance
         data_aggregator.asset_balance_dao.get_all_asset_balances.return_value = asset_balances
@@ -280,11 +280,11 @@ class TestDataAggregator:
         """Test handling when price_change_percentage_24h is None"""
         asset_no_change = mock_assets["BTC"].model_copy()
         asset_no_change.price_change_percentage_24h = None
-        
+
         asset_balances = [
             AssetBalance(username=TEST_USERNAME, asset_id="BTC", quantity=Decimal("0.15"))
         ]
-        
+
         data_aggregator.user_dao.get_user_by_username.return_value = mock_user
         data_aggregator.balance_dao.get_balance.return_value = mock_balance
         data_aggregator.asset_balance_dao.get_all_asset_balances.return_value = asset_balances
@@ -305,7 +305,7 @@ class TestDataAggregator:
     ):
         """Test handling when price is Decimal (not float)"""
         from common.data.entities.inventory.asset import Asset
-        
+
         asset_decimal_price = Asset(
             asset_id="BTC",
             name="Bitcoin",
@@ -316,11 +316,11 @@ class TestDataAggregator:
             current_price=Decimal("45000"),  # Decimal instead of float
             price_change_percentage_24h=Decimal("2.5")  # Decimal instead of float
         )
-        
+
         asset_balances = [
             AssetBalance(username=TEST_USERNAME, asset_id="BTC", quantity=Decimal("0.15"))
         ]
-        
+
         data_aggregator.user_dao.get_user_by_username.return_value = mock_user
         data_aggregator.balance_dao.get_balance.return_value = mock_balance
         data_aggregator.asset_balance_dao.get_all_asset_balances.return_value = asset_balances
@@ -333,4 +333,3 @@ class TestDataAggregator:
         assert len(result.holdings) == 1
         assert result.holdings[0].current_price == Decimal("45000")
         assert result.holdings[0].price_change_24h_pct == Decimal("2.5")
-

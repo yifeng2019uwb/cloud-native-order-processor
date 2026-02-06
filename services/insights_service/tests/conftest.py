@@ -158,8 +158,8 @@ def mock_orders():
 
 @pytest.fixture
 def mock_current_user():
-    """Mock current user from JWT"""
-    return {
-        "username": "testuser",
-        "email": "test@example.com"
-    }
+    """Mock current user from JWT - returns object with .username for controller compatibility"""
+    mock_user = MagicMock()
+    mock_user.username = "testuser"
+    mock_user.email = "test@example.com"
+    return mock_user
