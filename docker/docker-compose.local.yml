@@ -1,0 +1,120 @@
+# docker-compose.local.yml - Local deploy with LocalStack DynamoDB
+# Use: docker-compose -f docker-compose.yml -f docker-compose.local.yml up -d
+# Or: ./deploy.sh local all deploy
+
+services:
+  localstack:
+    image: localstack/localstack:latest
+    container_name: order-processor-localstack
+    ports:
+      - "4566:4566"            # LocalStack Gateway (all AWS APIs)
+    environment:
+      - SERVICES=dynamodb
+      - DEBUG=0
+      - PERSISTENCE=0
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - localstack_data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - order-processor-network
+
+  # Override backend services to use LocalStack
+  user_service:
+    depends_on:
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=local
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - USERS_TABLE=order-processor-local-users
+      - ORDERS_TABLE=order-processor-local-orders
+      - INVENTORY_TABLE=order-processor-local-inventory
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      - ../services:/app/services:ro
+      - ./logs/user_service:/var/log/services/user_service
+
+  inventory_service:
+    depends_on:
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=local
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - USERS_TABLE=order-processor-local-users
+      - ORDERS_TABLE=order-processor-local-orders
+      - INVENTORY_TABLE=order-processor-local-inventory
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      - ../services:/app/services:ro
+      - ./logs/inventory_service:/var/log/services/inventory_service
+
+  order_service:
+    depends_on:
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=local
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - USERS_TABLE=order-processor-local-users
+      - ORDERS_TABLE=order-processor-local-orders
+      - INVENTORY_TABLE=order-processor-local-inventory
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      - ../services:/app/services:ro
+      - ./logs/order_service:/var/log/services/order_service
+
+  auth_service:
+    depends_on:
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=local
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - USERS_TABLE=order-processor-local-users
+      - ORDERS_TABLE=order-processor-local-orders
+      - INVENTORY_TABLE=order-processor-local-inventory
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      - ../services:/app/services:ro
+      - ./logs/auth_service:/var/log/services/auth_service
+
+  insights_service:
+    depends_on:
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=local
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - USERS_TABLE=order-processor-local-users
+      - ORDERS_TABLE=order-processor-local-orders
+      - INVENTORY_TABLE=order-processor-local-inventory
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      - ../services:/app/services:ro
+      - ./logs/insights_service:/var/log/services/insights_service
+
+volumes:
+  localstack_data:
+    driver: local

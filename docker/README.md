@@ -3,11 +3,26 @@
 > Docker configurations for running the entire Cloud Native Order Processor application stack
 
 ## 🚀 Quick Start
+
+### Local try-it (no AWS account needed) ⭐
+For testers and learners: download the repo, have Docker, run one command.
+
+```bash
+# From project root:
+./docker/deploy.sh local deploy
+./docker/deploy.sh local destroy    # Stop and remove local stack
+```
+
+**Prerequisites**: Docker, Docker Compose, AWS CLI (for table creation; `pip install awscli` or `brew install awscli`)
+
+- **Frontend**: http://localhost:3000
+- **Gateway**: http://localhost:8080
+
+### AWS deploy (requires AWS credentials)
 - **Prerequisites**: Docker, Docker Compose, AWS credentials
-- **Deploy All**: `./deploy.sh all` (deploy all services)
-- **Deploy Single**: `./deploy.sh [service_name]` (deploy specific service)
-- **Stop All**: `./deploy.sh stop` (stop all services)
-- **Example**: http://localhost:80 (frontend), http://localhost:8080 (API)
+- **Deploy All**: `./deploy.sh all deploy` (deploy all services with AWS DynamoDB)
+- **Deploy Single**: `./deploy.sh [service_name] deploy` (deploy specific service)
+- **Stop All**: `./deploy.sh all stop`
 
 ## ✨ Key Features
 - Multi-service architecture with Docker Compose

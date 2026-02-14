@@ -27,22 +27,26 @@ show_usage() {
     cat << EOF
 Usage: $0 [service_name] [action] [--no-cache]
 
+  local deploy       - Deploy full stack with LocalStack (no AWS needed)
+  local destroy      - Stop and remove local stack (LocalStack + all services)
+
 Services: all, auth, user, inventory, order, insights, gateway, frontend, monitoring
 Actions: deploy, rebuild, restart, stop, start, logs, status, clean
 
 Examples:
-    $0 auth deploy              # Deploy with cache
-    $0 frontend rebuild         # Rebuild without cache
-    $0 all status               # Show status
-    $0 monitoring start         # Start monitoring stack
-    $0 monitoring deploy         # Deploy monitoring stack
+    $0 local deploy            # Local deploy (LocalStack + all services)
+    $0 local destroy           # Stop and remove local stack
+    $0 auth deploy             # Deploy with cache (AWS DynamoDB)
+    $0 frontend rebuild        # Rebuild without cache
+    $0 all status              # Show status
+    $0 monitoring deploy       # Deploy monitoring stack
 EOF
 }
 
 # Check Docker
 check_docker_compose() {
-    if ! command -v docker-compose &> /dev/null; then
-        log_error "docker-compose not found"
+    if ! command -v docker-compose &> /dev/null && ! command -v docker &> /dev/null; then
+        log_error "docker-compose or docker not found"
         exit 1
     fi
 }
@@ -158,6 +162,64 @@ deploy_service() {
     # Start
     docker-compose up -d "$service"
     wait_for_healthy "$service"
+}
+
+# Wait for LocalStack to be ready
+wait_for_localstack() {
+    log_info "Waiting for LocalStack to be ready..."
+    local max_attempts=30
+    local attempt=1
+    while [ $attempt -le $max_attempts ]; do
+        if curl -s http://localhost:4566/_localstack/health 2>/dev/null | grep -q "dynamodb"; then
+            log_success "LocalStack is ready!"
+            return 0
+        fi
+        log_info "Waiting for LocalStack... ($attempt/$max_attempts)"
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+    log_error "LocalStack failed to start"
+    return 1
+}
+
+# Create DynamoDB tables in LocalStack (uses scripts/init-local-dynamodb.sh)
+init_local_dynamodb() {
+    log_info "Creating DynamoDB tables in LocalStack..."
+    local init_script="$SCRIPT_DIR/scripts/init-local-dynamodb.sh"
+    if [ -x "$init_script" ]; then
+        "$init_script" "http://localhost:4566" "us-west-2" || true
+    elif [ -f "$init_script" ]; then
+        bash "$init_script" "http://localhost:4566" "us-west-2" || true
+    else
+        log_warning "init-local-dynamodb.sh not found - tables may need to be created manually"
+    fi
+}
+
+# Local compose helper (only used by local deploy/destroy)
+local_compose() { docker-compose -f docker-compose.yml -f docker-compose.local.yml "$@"; }
+
+# Deploy local (DB + all services) - separate flow, does not touch main deploy
+# DB: LocalStack (DynamoDB) + Redis; Services: auth, user, inventory, order, insights, gateway, frontend
+deploy_local_all() {
+    log_info "Deploying LOCAL stack: DB (LocalStack + Redis) + all services..."
+    cd "$SCRIPT_DIR"
+    # 1. Start DB (LocalStack DynamoDB + Redis)
+    log_info "Starting DB: LocalStack + Redis..."
+    local_compose up -d localstack redis
+    wait_for_localstack || exit 1
+    init_local_dynamodb
+    # 2. Build and start all services
+    log_info "Starting all services..."
+    local_compose up -d --build auth_service user_service inventory_service order_service insights_service gateway frontend
+    log_success "Local deploy complete! Frontend: http://localhost:3000 Gateway: http://localhost:8080"
+}
+
+# Destroy local stack (stop and remove all containers)
+destroy_local_all() {
+    log_info "Stopping and removing local stack (LocalStack + Redis + all services)..."
+    cd "$SCRIPT_DIR"
+    local_compose down
+    log_success "Local stack destroyed."
 }
 
 # Deploy all
@@ -354,6 +416,16 @@ main() {
 
     local service="$1"
     local action="$2"
+
+    # Handle "local deploy" and "local destroy" - separate flow
+    if [ "$service" = "local" ]; then
+        case "$action" in
+            deploy) deploy_local_all ;;
+            destroy) destroy_local_all ;;
+            *) log_error "Invalid action for local. Use: deploy, destroy"; exit 1 ;;
+        esac
+        return $?
+    fi
 
     # Check for --no-cache
     if [ "${3:-}" = "--no-cache" ] || [ "$action" = "rebuild" ]; then

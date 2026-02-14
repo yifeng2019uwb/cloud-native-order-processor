@@ -9,6 +9,30 @@
 
 ## 📊 Progress Summary
 
+### **2026-02-06: DEV-003 - Local Deploy with Local DB** ✅ **COMPLETED**
+
+**Task**: Enable one-command local deployment with LocalStack (DynamoDB), Redis, and all services so developers can run the full stack locally without AWS.
+
+**Key Achievements**:
+- ✅ **Deploy entry point** – `./docker/deploy.sh local deploy` brings up full stack (LocalStack, Redis, all app services)
+- ✅ **Local DB in Docker** – LocalStack (DynamoDB) in stack; `AWS_ENDPOINT_URL` set for backend services via compose env
+- ✅ **DB connection for local** – `dynamodb_connection.py` uses `endpoint_url` from env when `ENVIRONMENT=local`; dev/prod unchanged
+- ✅ **Tables in local DB** – `init-local-dynamodb.sh` creates users, orders, inventory tables in LocalStack
+- ✅ **Integration tests pass** against local stack
+- ✅ **Docs** – "Local try-it" section in docker README
+- **Frontend order 422 fix** deferred to later (known issue: price: 0 for market orders; integration tests use valid payloads)
+
+**Files Created/Updated**:
+- `docker/deploy.sh` – `deploy_local_all` and `local_compose` for local deploy
+- `docker/docker-compose.local.yml` – LocalStack service and env overrides for backend services
+- `docker/scripts/init-local-dynamodb.sh` – Creates DynamoDB tables in LocalStack
+- `services/common/src/data/database/dynamodb_connection.py` – `ENVIRONMENT=local` → use `AWS_ENDPOINT_URL`, dummy creds
+- `docker/README.md` – "Local try-it" section
+
+**Run locally**: `./docker/deploy.sh local deploy` (prerequisites: Docker only)
+
+---
+
 ### **2026-02-06: FEATURE-002.1 - Insights Caching** ✅ **COMPLETED**
 
 **Task**: Cache Gemini API results to avoid redundant API calls when user's portfolio hasn't changed.

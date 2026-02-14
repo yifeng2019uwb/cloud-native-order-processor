@@ -31,6 +31,14 @@ logger = BaseLogger(LoggerName.DATABASE, log_to_file=True)
 
 def get_boto3_session():
     region = get_aws_region()
+    # Local deploy: use LocalStack with dummy creds (no AWS account)
+    env = os.getenv("ENVIRONMENT", "").lower()
+    if env == "local":
+        return boto3.Session(
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "test"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "test"),
+            region_name=region
+        )
     # If running in EKS with IRSA, let boto3 handle it natively
     if get_aws_web_identity_token_file():
         return boto3.Session(region_name=region)
@@ -76,8 +84,17 @@ class DynamoDBManager:
 
         # Use the universal session pattern
         session = get_boto3_session()
-        self.dynamodb = session.resource(DatabaseConfig.DYNAMODB_SERVICE_NAME, region_name=self.region)
-        self.client = session.client(DatabaseConfig.DYNAMODB_SERVICE_NAME, region_name=self.region)
+        # Local deploy: point to LocalStack instead of AWS
+        endpoint_url = None
+        if os.getenv("ENVIRONMENT", "").lower() == "local":
+            endpoint_url = os.getenv("AWS_ENDPOINT_URL")
+        resource_kwargs = {"region_name": self.region}
+        client_kwargs = {"region_name": self.region}
+        if endpoint_url:
+            resource_kwargs["endpoint_url"] = endpoint_url
+            client_kwargs["endpoint_url"] = endpoint_url
+        self.dynamodb = session.resource(DatabaseConfig.DYNAMODB_SERVICE_NAME, **resource_kwargs)
+        self.client = session.client(DatabaseConfig.DYNAMODB_SERVICE_NAME, **client_kwargs)
         logger.info(
             action=LogAction.DB_CONNECT,
             message="DynamoDB connection initialized using universal session pattern (IRSA/AssumeRole/local)"

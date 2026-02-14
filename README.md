@@ -189,10 +189,32 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 
 ## 🚀 Getting Started
 
+### Run Locally (one command, no AWS account needed)
+
+```bash
+./docker/deploy.sh local deploy
+```
+
+To stop and remove the local stack:
+
+```bash
+./docker/deploy.sh local destroy
+```
+
+**Prerequisites**: Docker and Docker Compose
+
+- **Frontend**: http://localhost:3000
+- **Gateway API**: http://localhost:8080
+- Uses LocalStack for DynamoDB (no AWS credentials required)
+
+See [Docker README](docker/README.md) for more options (AWS deploy, stop, logs).
+
+### Next Steps
+
 1. **Architecture**: Review [Services Overview](services/README.md) for service architecture
 2. **Security**: Check [Security Monitoring](docs/design-docs/monitoring-design.md) for security patterns
 3. **Development**: Follow [Local Development Guide](docs/deployment-guide.md) for detailed setup
-4. **Testing**: Use [Integration Tests](integration_tests/README.md) for testing approach (run `./run_all_tests.sh insights` for insights tests)
+4. **Testing**: Use [Integration Tests](integration_tests/README.md) for testing (run `./integration_tests/run_all_tests.sh` for full suite)
 
 ---
 
