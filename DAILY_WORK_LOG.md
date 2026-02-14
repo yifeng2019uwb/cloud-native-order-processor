@@ -9,6 +9,35 @@
 
 ## 📊 Progress Summary
 
+### **2026-02-13: FRONTEND-001 - Fix Frontend Issues Before Demo** ✅ **COMPLETED**
+
+**Task**: Fix known frontend issues so the full trading workflow can be demoed, and add order value constraint.
+
+**Key Achievements**:
+- ✅ **Order create 422 fix** – Market orders omit `price` (backend uses current market price); frontend no longer sends `price: 0`
+- ✅ **Daily limits UI** – Deposit ($10k) and withdraw ($5k) limits shown on Account page; errors displayed in user-friendly format
+- ✅ **Error formatting** – balanceApi and orderApi parse FastAPI/Pydantic errors; strip exception prefixes (e.g. CNOPDailyLimitExceededException)
+- ✅ **Order confirmation modal** – Error shown inside modal when order fails; Cancel clears error
+- ✅ **Order value constraint** – Backend: max total order value $10k (replaced quantity cap); frontend: MAX_ORDER_VALUE_USD validation, preview hint, submit blocked when exceeded
+- ✅ **Local deploy** – `./deploy.sh local frontend rebuild` to rebuild frontend only after local deploy
+
+**Backend Changes**:
+- `services/order_service/src/constants.py` – MAX_ORDER_VALUE_USD = 10000
+- `services/order_service/src/validation/business_validators.py` – Total value check (quantity × price ≤ $10k), no quantity cap
+- `services/order_service/src/validation/field_validators.py` – Removed quantity max
+
+**Frontend Changes**:
+- `frontend/src/constants/ui.ts` – MAX_ORDER_VALUE_USD, ORDER_MAX_VALUE_EXCEEDED
+- `frontend/src/components/Trading/TradingPage.tsx` – Price omit for market orders, totalValueCheck, error in modal, max value hint
+- `frontend/src/components/Account/AccountPage.tsx` – Daily limit hints, err.message/err.detail for errors
+- `frontend/src/services/balanceApi.ts` – formatValidationDetail, stripExceptionPrefix, handle detail as string/array
+- `frontend/src/services/orderApi.ts` – Same error formatting for order 422s
+- `frontend/src/types/orders.ts` – price optional for CreateOrderRequest
+
+**Files Updated**: TradingPage, AccountPage, balanceApi, orderApi, orders types, order service constants, business_validators, field_validators, tests
+
+---
+
 ### **2026-02-13: BALANCE-001 - Daily Deposit and Withdraw Limits** ✅ **COMPLETED**
 
 **Task**: Enforce daily aggregate limits on deposits and withdrawals per user in the user_service layer (no changes to common package).

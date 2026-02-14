@@ -31,7 +31,7 @@
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
-> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) AI Insights (frontend deferred) → 3) ~~Local Deploy~~ ✅ → 4) Frontend fixes → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) Demo → 7) Others
+> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) AI Insights (frontend deferred) → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) Demo → 7) Others
 
 > **Fun**: CNY-001 Chinese New Year secret feature (kid-friendly demo)
 
@@ -77,20 +77,6 @@
   - Frontend: new API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile
   - Config/env: document new env var(s) for LLM API key
 - **Demo assistance**: Yes — an AI assistant can help with this part and with the full demo once it's in place: e.g. scripted flow for the AI insights step, plus talking points and narrative for the rest of your demo. Share your running endpoints (and optionally a Postman/curl one-pager), and the assistant can suggest exact requests, UI clicks, and narrative.
-
----
-
-#### **FRONTEND-001: Fix Frontend Issues Before Demo** 🔥 **PRIORITY #4**
-- **Component**: Frontend
-- **Type**: Bug Fix
-- **Priority**: 🔥 **HIGH** (Blocking demo)
-- **Status**: 📋 **To Do**
-- **Goal**: Fix known frontend issues so the full workflow can be demoed.
-- **Scope**:
-  - Order create 422 error: frontend sends `price: 0` for market orders; backend expects `price: null` and validates `price > 0` when provided. Fix frontend to omit price for market orders or send `null`.
-  - Any other blocking UI/API issues discovered during demo prep.
-- **Files**: `frontend/src/components/Trading/TradingPage.tsx`, API client for orders
-- **Dependencies**: None
 
 ---
 
@@ -677,6 +663,9 @@ _Optional maintenance items below._
 
 ### **🌐 Frontend & User Experience**
 
+#### **FRONTEND-001: Fix Frontend Issues Before Demo** ✅ **COMPLETED**
+- Order create 422 fix (omit price for market orders), daily limits UI (deposit $10k, withdraw $5k), user-friendly error display (balance/order APIs), order value constraint ($10k max). See DAILY_WORK_LOG.md for details.
+
 #### **FRONTEND-006: Standardize Frontend Port to localhost:3000** ✅ **COMPLETED**
 - Frontend port already standardized to localhost:3000 for Docker and Kubernetes deployment
 
@@ -811,6 +800,7 @@ _Optional maintenance items below._
 ---
 
 *Last Updated: 2/13/2026*
+*📋 Note: FRONTEND-001 COMPLETED – Order create 422, daily limits UI, order value constraint ($10k), user-friendly error display*
 *Next Review: As needed. Backlog cleaned; limit order (FEATURE-001) deferred.*
 *📋 Note: ✅ **AWS EKS DEPLOYMENT SUCCESS** - Production-ready cloud-native architecture deployed with 95% functionality, comprehensive integration testing, and zero ongoing costs*
 *📋 Note: ✅ **Frontend Tasks COMPLETED** - All major frontend issues resolved, port standardized to 3000, authentication working*
