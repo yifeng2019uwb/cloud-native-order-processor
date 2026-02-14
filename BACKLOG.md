@@ -31,7 +31,7 @@
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
-> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) AI Insights (frontend deferred) → 3) ~~Local Deploy~~ ✅ → 4) Frontend fixes → 5) Daily deposit/withdraw limits → 6) Demo → 7) Others
+> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) AI Insights (frontend deferred) → 3) ~~Local Deploy~~ ✅ → 4) Frontend fixes → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) Demo → 7) Others
 
 > **Fun**: CNY-001 Chinese New Year secret feature (kid-friendly demo)
 
@@ -109,23 +109,6 @@
 - **Dependencies**: None
 
 ---
-
-#### **BALANCE-001: Add Daily Deposit and Withdraw Limits** 🔶 **PRIORITY #5**
-- **Component**: User Service / Balance
-- **Type**: New Feature / Risk Control
-- **Priority**: 🔶 **MEDIUM**
-- **Status**: 📋 **To Do**
-- **Goal**: Enforce daily aggregate limits on deposits and withdrawals per user.
-- **Current limits** (per-transaction only, no daily cap):
-  - **Deposit**: min $0.01, max $1,000,000 per transaction
-  - **Withdraw**: min $0.01, max $1,000,000 per transaction
-  - **Daily limit**: None — users can do unlimited deposits/withdrawals per day
-- **Proposed**:
-  - Add daily deposit limit: **$10,000** per user per calendar day (configurable via env)
-  - Add daily withdraw limit: **$5,000** per user per calendar day (configurable via env)
-  - Reject when user exceeds daily limit; return clear error
-- **Files**: `services/user_service/src/api_models/balance/balance_models.py`, `services/user_service/src/validation/field_validators.py`, `services/user_service/src/controllers/balance/deposit.py`, `services/user_service/src/controllers/balance/withdraw.py`, `services/common/src/core/utils/transaction_manager.py`, BalanceDAO (query daily totals)
-- **Dependencies**: Need to query transaction history by user + date to sum daily deposits/withdrawals
 
 ---
 
@@ -673,6 +656,11 @@ _Optional maintenance items below._
 #### **INVENTORY-001: Enhance Inventory Service to Return Additional Asset Attributes** ✅ **COMPLETED**
 - Enhanced inventory service with comprehensive asset attributes including market data, volume metrics, and historical context
 
+### **💰 Balance & Risk Control**
+
+#### **BALANCE-001: Add Daily Deposit and Withdraw Limits** ✅ **COMPLETED**
+- Daily deposit limit ($10,000) and withdraw limit ($5,000) enforced in user_service layer; validation in `validate_daily_deposit_limit` / `validate_daily_withdraw_limit`; integration tests updated; load test comment added. See DAILY_WORK_LOG.md for details.
+
 ### **🔐 Security & Compliance**
 
 #### **SEC-008: Security Architecture Evaluation** ✅ **COMPLETED**
@@ -822,7 +810,7 @@ _Optional maintenance items below._
 
 ---
 
-*Last Updated: 1/31/2026*
+*Last Updated: 2/13/2026*
 *Next Review: As needed. Backlog cleaned; limit order (FEATURE-001) deferred.*
 *📋 Note: ✅ **AWS EKS DEPLOYMENT SUCCESS** - Production-ready cloud-native architecture deployed with 95% functionality, comprehensive integration testing, and zero ongoing costs*
 *📋 Note: ✅ **Frontend Tasks COMPLETED** - All major frontend issues resolved, port standardized to 3000, authentication working*

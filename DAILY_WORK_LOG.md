@@ -9,6 +9,32 @@
 
 ## 📊 Progress Summary
 
+### **2026-02-13: BALANCE-001 - Daily Deposit and Withdraw Limits** ✅ **COMPLETED**
+
+**Task**: Enforce daily aggregate limits on deposits and withdrawals per user in the user_service layer (no changes to common package).
+
+**Key Achievements**:
+- ✅ **Service-layer validation** – Daily limits enforced in user_service via `validate_daily_deposit_limit` and `validate_daily_withdraw_limit` in `services/balance_limit.py`
+- ✅ **Limits configurable via env** – `DAILY_DEPOSIT_LIMIT` (default 10000), `DAILY_WITHDRAW_LIMIT` (default 5000)
+- ✅ **`get_daily_total` helper** – Computes daily totals from `balance_dao.get_user_transactions` (paginated, filtered by date/type)
+- ✅ **`CNOPDailyLimitExceededException`** – User-service exception, returns 422
+- ✅ **Unit tests** – Deposit/withdraw controller tests updated with `mock_balance_dao`, service-layer daily limit tests
+- ✅ **Integration tests** – Deposit amounts reduced to 10000 in portfolio/order tests; all passing
+- ✅ **Load test** – One-line comment in `lock-management.js` noting deposit API daily limit behavior
+
+**Files Created/Updated**:
+- `services/user_service/src/user_exceptions/exceptions.py` – Added `CNOPDailyLimitExceededException`
+- `services/user_service/src/constants.py` – Added limit env var names and defaults
+- `services/user_service/src/services/balance_limit.py` – New: `get_daily_total`, `validate_daily_deposit_limit`, `validate_daily_withdraw_limit`
+- `services/user_service/src/controllers/balance/deposit.py`, `withdraw.py` – Call validation helpers
+- `services/user_service/src/main.py` – Import `CNOPDailyLimitExceededException`
+- `services/common/tests/data/entities/test_price_data.py` – New unit tests for price_data coverage
+- `integration_tests/user_services/portfolio/portfolio_tests.py`, `asset_balance_tests.py` – Deposit 10000, order 0.1 BTC
+- `integration_tests/order_service/orders/create_order_tests.py`, `asset_transaction_tests.py` – Same
+- `integration_tests/load_tests/k6/lock-management.js` – Comment on deposit daily limit
+
+---
+
 ### **2026-02-06: DEV-003 - Local Deploy with Local DB** ✅ **COMPLETED**
 
 **Task**: Enable one-command local deployment with LocalStack (DynamoDB), Redis, and all services so developers can run the full stack locally without AWS.
