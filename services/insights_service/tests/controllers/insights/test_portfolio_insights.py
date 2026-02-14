@@ -35,10 +35,18 @@ TEST_SUMMARY = "Your portfolio is well-diversified with 45% in BTC."
 PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR = "src.controllers.insights.portfolio_insights.get_data_aggregator"
 PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE = "src.controllers.insights.portfolio_insights.get_llm_service"
 PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER = "src.controllers.insights.portfolio_insights.logger"
+PATCH_PATH_INSIGHTS_CACHE_GET_CACHED = "src.controllers.insights.portfolio_insights.get_cached"
 
 
 class TestPortfolioInsightsController:
     """Test portfolio insights controller"""
+
+    @pytest.fixture(autouse=True)
+    def clear_insights_cache(self):
+        """Clear in-memory insights cache before each test to avoid cross-test pollution"""
+        from src.services.insights_cache import clear_cache
+        clear_cache()
+        yield
 
     @pytest.fixture
     def mock_portfolio_context(self):
@@ -79,6 +87,7 @@ class TestPortfolioInsightsController:
         routes = [r for r in router.routes if hasattr(r, 'path')]
         assert any(ApiPaths.PORTFOLIO_INSIGHTS.value in str(r.path) for r in routes)
 
+    @patch(PATCH_PATH_INSIGHTS_CACHE_GET_CACHED, return_value=None)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE)
@@ -87,6 +96,7 @@ class TestPortfolioInsightsController:
         mock_get_llm_service,
         mock_get_data_aggregator,
         mock_logger,
+        mock_get_cached,
         mock_current_user,
         mock_portfolio_context
     ):
@@ -115,6 +125,7 @@ class TestPortfolioInsightsController:
         mock_aggregator.aggregate_portfolio_data.assert_called_once_with(TEST_USERNAME)
         mock_llm_service.generate_insights.assert_called_once()
 
+    @patch(PATCH_PATH_INSIGHTS_CACHE_GET_CACHED, return_value=None)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE)
@@ -123,6 +134,7 @@ class TestPortfolioInsightsController:
         mock_get_llm_service,
         mock_get_data_aggregator,
         mock_logger,
+        mock_get_cached,
         mock_current_user,
         mock_empty_portfolio_context
     ):
@@ -146,6 +158,42 @@ class TestPortfolioInsightsController:
         assert result.data.model == LLM_MODEL_NAME
         assert isinstance(result.data.generated_at, datetime)
         # LLM should not be called for empty portfolio
+        mock_llm_service.generate_insights.assert_not_called()
+
+    @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
+    @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR)
+    @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE)
+    def test_get_portfolio_insights_cache_hit(
+        self,
+        mock_get_llm_service,
+        mock_get_data_aggregator,
+        mock_logger,
+        mock_current_user,
+        mock_portfolio_context
+    ):
+        """Test cache hit returns cached result without calling LLM"""
+        from datetime import datetime, timezone
+
+        cached_summary = "Cached insights from previous request"
+        cached_at = datetime.now(timezone.utc)
+
+        def mock_get_cached(username, portfolio_hash):
+            return (cached_summary, cached_at, LLM_MODEL_NAME)
+
+        with patch(PATCH_PATH_INSIGHTS_CACHE_GET_CACHED, side_effect=mock_get_cached):
+            mock_aggregator = MagicMock()
+            mock_aggregator.aggregate_portfolio_data.return_value = mock_portfolio_context
+            mock_get_data_aggregator.return_value = mock_aggregator
+            mock_llm_service = MagicMock()
+            mock_get_llm_service.return_value = mock_llm_service
+
+            result = get_portfolio_insights(
+                current_user=mock_current_user,
+                data_aggregator=mock_aggregator,
+                llm_service=mock_llm_service
+            )
+
+        assert result.data.summary == cached_summary
         mock_llm_service.generate_insights.assert_not_called()
 
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
@@ -195,6 +243,7 @@ class TestPortfolioInsightsController:
         assert exc_info.value.status_code == HTTPStatus.UNAUTHORIZED
 
     @pytest.mark.parametrize("error_keyword", [ERROR_KEYWORD_TIMEOUT, ERROR_KEYWORD_TIMED_OUT])
+    @patch(PATCH_PATH_INSIGHTS_CACHE_GET_CACHED, return_value=None)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE)
@@ -203,6 +252,7 @@ class TestPortfolioInsightsController:
         mock_get_llm_service,
         mock_get_data_aggregator,
         mock_logger,
+        mock_get_cached,
         mock_current_user,
         mock_portfolio_context,
         error_keyword
@@ -231,6 +281,7 @@ class TestPortfolioInsightsController:
         f"{ERROR_KEYWORD_RATE_LIMIT} exceeded",
         f"Error {ERROR_CODE_RATE_LIMIT}"
     ])
+    @patch(PATCH_PATH_INSIGHTS_CACHE_GET_CACHED, return_value=None)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE)
@@ -239,6 +290,7 @@ class TestPortfolioInsightsController:
         mock_get_llm_service,
         mock_get_data_aggregator,
         mock_logger,
+        mock_get_cached,
         mock_current_user,
         mock_portfolio_context,
         error_message
@@ -262,6 +314,7 @@ class TestPortfolioInsightsController:
         assert exc_info.value.status_code == HTTPStatus.TOO_MANY_REQUESTS
         assert exc_info.value.detail == MSG_ERROR_INSIGHTS_RATE_LIMITED
 
+    @patch(PATCH_PATH_INSIGHTS_CACHE_GET_CACHED, return_value=None)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE)
@@ -270,6 +323,7 @@ class TestPortfolioInsightsController:
         mock_get_llm_service,
         mock_get_data_aggregator,
         mock_logger,
+        mock_get_cached,
         mock_current_user,
         mock_portfolio_context
     ):
@@ -294,6 +348,7 @@ class TestPortfolioInsightsController:
         assert exc_info.value.detail == MSG_ERROR_INSIGHTS_FAILED
         mock_logger.error.assert_called()
 
+    @patch(PATCH_PATH_INSIGHTS_CACHE_GET_CACHED, return_value=None)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE)
@@ -302,6 +357,7 @@ class TestPortfolioInsightsController:
         mock_get_llm_service,
         mock_get_data_aggregator,
         mock_logger,
+        mock_get_cached,
         mock_current_user,
         mock_portfolio_context
     ):
@@ -325,6 +381,7 @@ class TestPortfolioInsightsController:
         assert exc_info.value.detail == MSG_ERROR_LLM_BLOCKED
         mock_logger.warning.assert_called()
 
+    @patch(PATCH_PATH_INSIGHTS_CACHE_GET_CACHED, return_value=None)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_LOGGER)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_DATA_AGGREGATOR)
     @patch(PATCH_PATH_PORTFOLIO_INSIGHTS_GET_LLM_SERVICE)
@@ -333,6 +390,7 @@ class TestPortfolioInsightsController:
         mock_get_llm_service,
         mock_get_data_aggregator,
         mock_logger,
+        mock_get_cached,
         mock_current_user,
         mock_portfolio_context
     ):

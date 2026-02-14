@@ -71,6 +71,9 @@ class APIEndpoints:
     GET_ASSET_BALANCE_BY_ID = "/balance/asset/{asset_id}"  # Get specific asset balance by ID
     GET_ASSET_TRANSACTIONS_BY_ID = "/assets/{asset_id}/transactions"  # Get asset transaction history
 
+    # Insights Service Endpoints
+    INSIGHTS_PORTFOLIO = "/insights/portfolio"
+
 # Test Data Constants
 class TestData:
     # User Test Data

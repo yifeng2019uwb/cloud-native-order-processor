@@ -35,56 +35,6 @@
 
 ---
 
-#### **FEATURE-002.1: Insights Caching - Store Gemini Results in Database** 📋 **TO DO**
-- **Component**: Insights Service
-- **Type**: Performance Optimization
-- **Priority**: 🔶 **MEDIUM** (Optimization - Not Blocking)
-- **Status**: 📋 **To Do**
-- **Goal**: Cache Gemini API results in DynamoDB to avoid redundant API calls when user's portfolio hasn't changed. Return cached result if retrieved within 24 hours AND portfolio hasn't changed.
-- **Requirements**:
-  - Store insights results in DynamoDB `users` table (following single-table pattern)
-  - Use `PK=username, SK=INSIGHTS#{portfolio_hash}` schema
-  - Portfolio hash includes: total_value, usd_balance, top 10 holdings, last 10 orders
-  - Check `generated_at` timestamp - if < 24 hours AND portfolio hash matches → return cached
-  - Use DynamoDB TTL (24 hours) for automatic cleanup
-  - Graceful degradation: If DynamoDB fails, still call Gemini API
-- **Design Document**: `services/insights_service/docs/INSIGHTS_CACHING_DESIGN.md`
-- **Acceptance Criteria**:
-  - [ ] DynamoDB entity model created (InsightsItem)
-  - [ ] DAO layer implemented (InsightsDAO)
-  - [ ] Portfolio hash generation implemented
-  - [ ] Cache check logic implemented (24-hour validity + portfolio hash match)
-  - [ ] Cache save logic implemented (with DynamoDB TTL)
-  - [ ] Controller updated to use caching
-  - [ ] Tests added for cache hit/miss scenarios
-  - [ ] Graceful degradation tested (DynamoDB failure doesn't break endpoint)
-- **Key Design Decisions** (from design doc):
-  - **Storage**: DynamoDB `users` table (persistent, follows single-table pattern)
-  - **Hash includes prices**: Yes (users want updated insights for price movements)
-  - **TTL**: 24 hours via DynamoDB TTL feature
-  - **Multiple portfolio states**: Each state gets its own SK (different hash)
-- **Files to Create/Update**:
-  - `services/insights_service/src/data/entities/insights/insights_item.py` (DynamoDB model)
-  - `services/insights_service/src/data/dao/insights/insights_dao.py` (DAO layer)
-  - `services/insights_service/src/services/portfolio_hash.py` (hash generation)
-  - `services/insights_service/src/controllers/insights/portfolio_insights.py` (use caching)
-  - `services/insights_service/tests/` (cache tests)
-- **Dependencies**: DynamoDB `users` table, existing portfolio aggregation logic
-- **Estimated Time**: 4-6 hours
-  - Entity model & DAO: 1-2 hours
-  - Hash generation: 1 hour
-  - Controller integration: 1 hour
-  - Tests: 1-2 hours
-- **Benefits**:
-  - Reduces Gemini API calls (cost savings)
-  - Faster response times for cached requests
-  - Better user experience (consistent insights for same portfolio state)
-  - Very low cost (~$0.14/month for 1000 users)
-
----
-
----
-
 #### **FEATURE-002: AI Analysis / Insights (Option 1)** — _Part of demo_ 🔥 **PRIORITY #2**
 - **Component**: Insights Service (new microservice)
 - **Type**: New Feature
@@ -110,7 +60,7 @@
   - [x] **Deploy insights service** to Docker environment
   - [x] **Add gateway route** for insights endpoint
   - [x] **Happy case verified** - Endpoint returns 200 OK with valid response
-  - [ ] **Run integration tests** successfully (end-to-end verification)
+  - [x] **Run integration tests** successfully (end-to-end verification)
   - [ ] **Frontend integration**: API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile
   - [ ] **Frontend can request and display** the analysis (e.g. on dashboard or profile)
 - **Estimated time for this part**:
@@ -558,6 +508,11 @@ _Optional maintenance items below._
 ---
 
 ## ✅ **COMPLETED TASKS**
+
+#### **FEATURE-002.1: Insights Caching** ✅ **COMPLETED**
+- **Component**: Insights Service
+- **Summary**: Implemented in-memory cache for Gemini portfolio insights with 24-hour TTL. Portfolio hash generation, cache check/save logic in `insights_cache.py`, controller integration, and unit tests for cache hit/miss. Simplified approach instead of DynamoDB; design doc describes DynamoDB option for future scaling.
+- **Details**: See DAILY_WORK_LOG.md
 
 #### **BUG-002: Fix Rate Limit Headers Overwritten During Proxy Response** ✅ **COMPLETED**
 - **Priority**: 🔥 **HIGH PRIORITY**

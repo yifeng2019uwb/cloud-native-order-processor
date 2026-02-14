@@ -51,22 +51,53 @@ docker exec order-processor-gateway curl http://insights_service:8004/health
 
 ## Step 4: Test the Endpoint
 
-### Quick Test with Load Test User
+### End-to-End Test: New User + Transactions + Insights
+
+Create a fresh user, add transactions (deposit + order), then call insights to get LLM-generated analysis. Do not use `load_test_user_1`—it has heavy load-test history.
 
 ```bash
-# Login with load test user
+# 1. Register new user
+curl -s -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "insights_test_user",
+    "email": "insights_test@example.com",
+    "password": "TestPassword123!",
+    "first_name": "Insights",
+    "last_name": "Tester"
+  }'
+
+# 2. Login
 TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "load_test_user_1",
+    "username": "insights_test_user",
     "password": "TestPassword123!"
   }' | jq -r '.access_token')
 
-# Test insights endpoint
+# 3. Deposit funds
+curl -s -X POST http://localhost:8080/api/v1/balance/deposit \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 10000}'
+
+# 4. Create a market buy order (BTC)
+curl -s -X POST http://localhost:8080/api/v1/orders \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "asset_id": "BTC",
+    "order_type": "market_buy",
+    "quantity": 0.01
+  }'
+
+# 5. Get insights (LLM analyzes portfolio and recent orders)
 curl -X GET http://localhost:8080/api/v1/insights/portfolio \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json"
 ```
+
+**Expected**: Response includes `data.summary` with a 2–4 sentence AI analysis of the portfolio.
 
 **Note**: If you don't have `jq`, copy the `access_token` from the login response manually.
 

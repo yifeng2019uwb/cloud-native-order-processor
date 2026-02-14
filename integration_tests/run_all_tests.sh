@@ -25,13 +25,14 @@ install_prerequisites() {
 }
 
 show_usage() {
-    echo "Usage: $0 [all|auth|smoke|inventory|user|order]"
+    echo "Usage: $0 [all|auth|smoke|inventory|user|order|insights]"
     echo "  all       - Run all tests (default)"
     echo "  auth      - Run only auth requirement tests"
     echo "  smoke     - Run only smoke tests"
     echo "  inventory - Run only inventory service tests"
     echo "  user      - Run only user service tests"
     echo "  order     - Run only order service tests"
+    echo "  insights  - Run only insights service tests"
     echo ""
     echo "Examples:"
     echo "  $0          # Run all tests"
@@ -92,6 +93,11 @@ run_user_tests() {
     run_test_suite "user asset balance tests" "python3 user_services/portfolio/asset_balance_tests.py"
 }
 
+run_insights_tests() {
+    echo "=== Running Insights Service Tests ==="
+    run_test_suite "insights tests" "python3 user_services/insights/insights_tests.py"
+}
+
 run_order_tests() {
     echo "=== Running Order Service Tests ==="
 
@@ -145,6 +151,7 @@ case $ARG in
         run_inventory_tests
         run_user_tests
         run_order_tests
+        run_insights_tests
         echo "=== All tests completed ==="
         ;;
     "auth")
@@ -171,6 +178,11 @@ case $ARG in
         echo "=== Running Order Tests ==="
         run_order_tests
         echo "=== Order tests completed ==="
+        ;;
+    "insights")
+        echo "=== Running Insights Tests ==="
+        run_insights_tests
+        echo "=== Insights tests completed ==="
         ;;
     "load")
         echo "=== Running Load Tests ==="

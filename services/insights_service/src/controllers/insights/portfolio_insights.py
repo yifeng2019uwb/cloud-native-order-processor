@@ -29,6 +29,11 @@ from constants import (
 from controllers.dependencies import get_data_aggregator, get_llm_service
 from services.data_aggregator import DataAggregator
 from services.llm_service import LLMService
+from services.insights_cache import (
+    compute_portfolio_hash,
+    get_cached,
+    save_cached,
+)
 
 logger = BaseLogger(LoggerName.INSIGHTS)
 router = APIRouter(tags=[ApiTags.INSIGHTS.value])
@@ -74,6 +79,15 @@ def get_portfolio_insights(
                 )
             )
 
+        # Check in-memory cache (24h TTL)
+        portfolio_hash = compute_portfolio_hash(portfolio_context)
+        cached = get_cached(username, portfolio_hash)
+        if cached:
+            summary, generated_at, model = cached
+            return GetInsightsResponse(
+                data=InsightsData(summary=summary, generated_at=generated_at, model=model)
+            )
+
         # Generate insights via LLM
         try:
             summary = llm_service.generate_insights(portfolio_context)
@@ -114,6 +128,9 @@ def get_portfolio_insights(
                 )
 
         logger.info(action=LogAction.REQUEST_END, message=MSG_SUCCESS_INSIGHTS_GENERATED, user=username)
+
+        # Save to cache for next request
+        save_cached(username, portfolio_hash, summary, LLM_MODEL_NAME)
 
         return GetInsightsResponse(
             data=InsightsData(

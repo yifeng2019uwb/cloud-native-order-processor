@@ -9,6 +9,37 @@
 
 ## 📊 Progress Summary
 
+### **2026-02-06: FEATURE-002.1 - Insights Caching** ✅ **COMPLETED**
+
+**Task**: Cache Gemini API results to avoid redundant API calls when user's portfolio hasn't changed.
+
+**Key Achievements**:
+- ✅ **In-memory cache implemented** with 24-hour TTL (simplified approach instead of DynamoDB)
+- ✅ **Portfolio hash generation** includes total_value, usd_balance, top 10 holdings, last 10 orders
+- ✅ **Cache check/save logic** in `services/insights_service/src/services/insights_cache.py`
+- ✅ **Controller integration** - portfolio_insights checks cache before LLM, saves after LLM
+- ✅ **Unit tests** for cache hit/miss scenarios in portfolio_insights tests
+- ✅ **Integration tests** - `integration_tests/user_services/insights/insights_tests.py` (auth required, empty portfolio, portfolio with orders)
+
+**Implementation Details**:
+- **Storage**: In-memory dict (no DynamoDB - design doc `INSIGHTS_CACHING_DESIGN.md` describes DynamoDB option for future scaling)
+- **Hash**: `compute_portfolio_hash()` from portfolio data
+- **TTL**: 24 hours; entries auto-expire
+- **API**: `get_cached()`, `save_cached()`, `clear_cache()` for testing
+
+**Files Created/Updated**:
+- `services/insights_service/src/services/insights_cache.py` - Cache implementation
+- `services/insights_service/src/controllers/insights/portfolio_insights.py` - Cache integration
+- `services/insights_service/tests/controllers/insights/test_portfolio_insights.py` - Cache unit tests
+- `integration_tests/user_services/insights/insights_tests.py` - Integration tests
+- `integration_tests/config/api_endpoints.py` - Insights endpoint
+- `integration_tests/config/constants.py` - Insights constants
+- `integration_tests/run_all_tests.sh` - Insights target
+
+**Run insights tests**: `./run_all_tests.sh insights`
+
+---
+
 ### **2026-02-05: TEST-002 - Implement Load Testing for Security Feature Validation** ✅ **COMPLETED**
 
 **Task**: Implement comprehensive load testing suite using k6 to validate security features (rate limiting, circuit breakers, lock management, latency) work correctly under load.

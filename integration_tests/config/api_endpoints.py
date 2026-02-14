@@ -25,6 +25,7 @@ class UserAPI(Enum):
     BALANCE_TRANSACTIONS = APIConstants.BALANCE_TRANSACTIONS
     PORTFOLIO = APIConstants.PORTFOLIO_GET
     GET_ASSET_BALANCE_BY_ID = APIConstants.GET_ASSET_BALANCE_BY_ID
+    INSIGHTS_PORTFOLIO = APIConstants.INSIGHTS_PORTFOLIO
 
 # Inventory Service API Enum (Gateway Routes)
 class InventoryAPI(Enum):

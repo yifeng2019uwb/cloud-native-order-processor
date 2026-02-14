@@ -8,7 +8,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 
 **Key Features:**
 - 🔐 **Enterprise Security** - JWT authentication, RBAC, rate limiting, circuit breakers
-- 🏗️ **Microservices Architecture** - 5 independent services with clear responsibilities
+- 🏗️ **Microservices Architecture** - 6 independent services with clear responsibilities
 - 📊 **Comprehensive Monitoring** - Prometheus, Grafana, structured logging, security analytics
 - 🛡️ **Resilience Patterns** - Circuit breakers, retry logic, distributed locking
 - ☸️ **Production Deployment** - Kubernetes, Docker, AWS integration
@@ -72,6 +72,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 | **User Service** | User Management | 8000 | Password hashing, RBAC, audit logging | ✅ Ready |
 | **Order Service** | Order Processing | 8002 | Distributed locking, atomic transactions | ✅ Ready |
 | **Inventory Service** | Asset Management | 8001 | Public access, input validation | ✅ Ready |
+| **Insights Service** | AI Portfolio Analysis | 8004 | Google Gemini LLM, in-memory caching | ✅ Ready |
 | **Redis** | Cache & Coordination | Internal | Rate limiting, distributed locking, caching | ✅ Ready |
 
 ## 🔐 Security Architecture
@@ -160,6 +161,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 ## 📚 Documentation
 
 - **[Services Overview](services/README.md)** - Service architecture and development
+- **[Insights Setup](docker/SETUP_INSIGHTS.md)** - AI insights service setup and end-to-end flow
 - **[Common Package](services/common/README.md)** - Shared components and utilities
 - **[Architecture](docs/design-docs/)** - System design and patterns
 - **[Security](docs/design-docs/monitoring-design.md)** - Security monitoring and analytics
@@ -178,7 +180,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 
 ## ⚠️ Current Status
 
-- ✅ **Core Services** - All 5 services operational with security features
+- ✅ **Core Services** - All 6 services operational (user, order, inventory, auth, insights, gateway)
 - ✅ **Authentication** - JWT-based auth with centralized validation
 - ✅ **Security** - Rate limiting, circuit breakers, audit logging
 - ✅ **Monitoring** - Prometheus, Grafana, structured logging
@@ -190,7 +192,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 1. **Architecture**: Review [Services Overview](services/README.md) for service architecture
 2. **Security**: Check [Security Monitoring](docs/design-docs/monitoring-design.md) for security patterns
 3. **Development**: Follow [Local Development Guide](docs/deployment-guide.md) for detailed setup
-4. **Testing**: Use [Integration Tests](integration_tests/README.md) for testing approach
+4. **Testing**: Use [Integration Tests](integration_tests/README.md) for testing approach (run `./run_all_tests.sh insights` for insights tests)
 
 ---
 

@@ -40,6 +40,8 @@ integration_tests/
 │       ├── deposit_tests.py       # Deposit operation tests ✅ Refactored
 │       ├── withdraw_tests.py      # Withdrawal operation tests ✅ Refactored
 │       └── transaction_history_tests.py # Transaction history ✅ Refactored
+│   └── insights/                  # AI insights tests
+│       └── insights_tests.py      # Portfolio insights endpoint tests ✅
 ├── inventory_service/
 │   └── inventory_tests.py         # Asset management tests ✅ Refactored
 ├── order_service/
@@ -73,6 +75,7 @@ pip install -r requirements.txt
 ./run_all_tests.sh user      # User service only
 ./run_all_tests.sh inventory # Inventory service only
 ./run_all_tests.sh order     # Order service only
+./run_all_tests.sh insights  # Insights service only
 ./run_all_tests.sh auth      # Auth requirement tests
 ./run_all_tests.sh smoke     # Health checks only
 ```
@@ -115,6 +118,11 @@ cd load_tests
 - **Purpose**: Test order management and portfolio operations
 - **Status**: ✅ Fully Implemented - 7 test suites with comprehensive coverage
 - **Coverage**: Health, orders (list/create/get), portfolio, asset balances, transactions
+
+### Insights Service Tests
+- **Purpose**: Test AI portfolio insights endpoint (Google Gemini)
+- **Status**: ✅ Fully Implemented - 1 test suite
+- **Coverage**: Auth required, empty portfolio message, portfolio with orders returns summary
 
 ### Load Tests
 - **Purpose**: Performance and stress testing for security features and system reliability
@@ -181,8 +189,8 @@ RETRY_DELAY = 1  # seconds
 ## 📊 Test Results
 
 ### Current Status
-- **Total Test Suites**: 16
-- **Total Test Cases**: 200+
+- **Total Test Suites**: 17
+- **Total Test Cases**: 210+
 - **Coverage**: All major service endpoints
 - **Success Rate**: 100% (all tests passing)
 
