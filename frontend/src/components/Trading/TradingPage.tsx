@@ -5,7 +5,7 @@ import { orderApiService } from '@/services/orderApi';
 import { balanceApiService } from '@/services/balanceApi';
 import { inventoryApiService } from '@/services/inventoryApi';
 import { portfolioApiService } from '@/services/portfolioApi';
-import { UI_STRINGS, UI_PATTERNS, formatString } from '@/constants/ui';
+import { UI_STRINGS, UI_PATTERNS, formatString, MAX_ORDER_VALUE_USD } from '@/constants/ui';
 import type { Asset, Order, CreateOrderRequest, Balance } from '@/types';
 
 const TradingPage: React.FC = () => {
@@ -124,6 +124,7 @@ const TradingPage: React.FC = () => {
     const quantity = parseFloat(orderForm.quantity);
     const price = selectedAsset.price_usd || 0;
     const total = quantity * price;
+    const totalValueCheck = total <= MAX_ORDER_VALUE_USD;
 
     if (orderForm.orderType === 'market_buy') {
       const remainingBalance = (balance?.balance || 0) - total;
@@ -134,7 +135,8 @@ const TradingPage: React.FC = () => {
         total,
         orderType: UI_STRINGS.BUY,
         balanceAfter: remainingBalance,
-        balanceCheck: remainingBalance >= 0
+        balanceCheck: remainingBalance >= 0,
+        totalValueCheck
       };
     } else {
       const assetBalance = portfolio?.assets?.find((pa: any) => pa.asset_id === selectedAsset.asset_id);
@@ -147,7 +149,8 @@ const TradingPage: React.FC = () => {
         total,
         orderType: UI_STRINGS.SELL,
         quantityAfter: remainingQuantity,
-        quantityCheck: remainingQuantity >= 0
+        quantityCheck: remainingQuantity >= 0,
+        totalValueCheck
       };
     }
   };
@@ -170,8 +173,18 @@ const TradingPage: React.FC = () => {
       return;
     }
 
+    if (!preview.totalValueCheck) {
+      setError(UI_STRINGS.ORDER_MAX_VALUE_EXCEEDED);
+      return;
+    }
+
     setOrderPreview(preview);
     setShowConfirmation(true);
+    setError(null);
+  };
+
+  const handleCancelConfirm = () => {
+    setShowConfirmation(false);
     setError(null);
   };
 
@@ -180,10 +193,13 @@ const TradingPage: React.FC = () => {
 
     try {
       setIsLoading(true);
+      // Market orders: omit price (backend uses current market price). Limit orders would require price.
       const orderData: CreateOrderRequest = {
         asset_id: selectedAsset.asset_id,
         quantity: parseFloat(orderForm.quantity),
-        price: selectedAsset.price_usd || 0,
+        ...(orderForm.orderType.startsWith('limit_')
+          ? { price: selectedAsset.price_usd || 0 }
+          : {}),
         order_type: orderForm.orderType
       };
 
@@ -200,7 +216,8 @@ const TradingPage: React.FC = () => {
 
       alert(UI_STRINGS.ORDER_SUCCESS);
     } catch (err: any) {
-      setError(err.message || UI_STRINGS.ORDER_FAILED);
+      const msg = err?.message ?? err?.detail ?? UI_STRINGS.ORDER_FAILED;
+      setError(msg);
       console.error('Order creation error:', err);
     } finally {
       setIsLoading(false);
@@ -271,6 +288,7 @@ const TradingPage: React.FC = () => {
               <h2 className="text-lg font-medium text-gray-900 mb-4">
                   📝 {UI_STRINGS.CREATE_ORDER || 'Create Order'}
               </h2>
+              <p className="text-xs text-gray-500 mb-4">Max order value: ${MAX_ORDER_VALUE_USD.toLocaleString()}</p>
 
                 {error && (
                   <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -514,6 +532,11 @@ const TradingPage: React.FC = () => {
                             <span>{preview.quantityAfter.toFixed(6)}</span>
                           </div>
                         )}
+
+                        <div className={`flex justify-between ${preview.totalValueCheck ? 'text-green-600' : 'text-red-600'}`}>
+                          <span>Order Value:</span>
+                          <span>${preview.total.toFixed(2)} {!preview.totalValueCheck && '(exceeds max)'}</span>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -662,9 +685,15 @@ const TradingPage: React.FC = () => {
                 </p>
               </div>
 
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+                  {error}
+                </div>
+              )}
+
               <div className="flex space-x-3">
                 <button
-                  onClick={() => setShowConfirmation(false)}
+                  onClick={handleCancelConfirm}
                   className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md font-medium transition-colors"
                 >
                   Cancel

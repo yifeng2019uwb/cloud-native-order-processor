@@ -168,10 +168,7 @@ def validate_quantity(v: Decimal) -> Decimal:
     if v < Decimal("0.001"):
         raise CNOPOrderValidationException("Order quantity below minimum threshold (0.001)")
 
-    # Check for reasonable maximum (prevent excessive orders)
-    if v > Decimal("1000000"):
-        raise CNOPOrderValidationException("Order quantity exceeds maximum threshold (1,000,000)")
-
+    # No max quantity - constraint is on total order value (USD), not quantity
     return v
 
 

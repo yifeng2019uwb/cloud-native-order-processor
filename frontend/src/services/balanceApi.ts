@@ -51,13 +51,59 @@ class BalanceApiService {
     );
   }
 
+  /** Strip exception class prefix from backend error (e.g. CNOPDailyLimitExceededException: ) */
+  private stripExceptionPrefix(msg: string): string {
+    return msg.replace(/^[A-Za-z0-9_]+Exception:\s*/i, '').trim();
+  }
+
+  /** Convert Pydantic validation errors to user-friendly messages */
+  private formatValidationDetail(detail: unknown): string {
+    if (Array.isArray(detail)) {
+      const messages = detail.map((e: { type?: string; loc?: string[]; msg?: string; ctx?: { le?: number; gt?: number } }) => {
+        const loc = e.loc?.join('.') ?? '';
+        const isAmount = loc.includes('amount');
+        if (e.type === 'less_than_equal' && isAmount && e.ctx?.le != null) {
+          return `Amount must be at most $${e.ctx.le.toLocaleString()}`;
+        }
+        if ((e.type === 'greater_than' || e.type === 'greater_than_equal') && isAmount && e.ctx?.gt != null) {
+          return `Amount must be at least $${e.ctx.gt}`;
+        }
+        if (e.msg) return e.msg;
+        return String(e);
+      });
+      return messages.join('. ');
+    }
+    return String(detail);
+  }
+
   private formatError(error: AxiosError): BalanceApiError {
     if (error.response?.data) {
       const responseData = error.response.data as any;
 
-      // Handle FastAPI HTTPException format
+      // Handle FastAPI HTTPException format: detail as string (e.g. daily limit exceeded)
+      if (responseData.detail && typeof responseData.detail === 'string') {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: this.stripExceptionPrefix(responseData.detail),
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      // Handle FastAPI/Pydantic validation: detail as array of validation errors
+      if (responseData.detail && Array.isArray(responseData.detail)) {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: this.formatValidationDetail(responseData.detail),
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      // Handle FastAPI HTTPException format: detail as object
       if (responseData.detail && typeof responseData.detail === 'object') {
-        return responseData.detail as BalanceApiError;
+        const rawMsg = responseData.detail.message || JSON.stringify(responseData.detail);
+        return { ...responseData.detail, message: this.stripExceptionPrefix(rawMsg) };
       }
 
       // Handle direct error response format

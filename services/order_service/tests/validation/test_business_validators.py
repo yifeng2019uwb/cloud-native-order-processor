@@ -196,13 +196,13 @@ class TestBusinessValidators:
         # Mock successful validations
         mock_user_dao.get_user_by_username.return_value = Mock()
         mock_asset_dao.get_asset_by_id.return_value = Mock(is_active=True)
-        mock_balance_dao.get_balance.return_value = Mock(current_balance=Decimal("100000.00"))  # Sufficient for 1.0 * 50000.00
+        mock_balance_dao.get_balance.return_value = Mock(current_balance=Decimal("100000.00"))  # Sufficient for 0.1 * 50000
 
-        # Test successful case - limit buy order with all required fields
+        # Test successful case - limit buy order with all required fields (total 0.1*50000=$5k < $10k max)
         validate_order_creation_business_rules(
             OrderType.LIMIT_BUY,
             "BTC",
-            Decimal("1.0"),
+            Decimal("0.1"),
             Decimal("50000.00"),  # order_price
             datetime.now() + timedelta(days=1),  # expires_at
             "testuser",
@@ -253,19 +253,21 @@ class TestBusinessValidators:
                 mock_balance_dao,
             )
 
-        # Test quantity above maximum threshold
-        with pytest.raises(CNOPOrderValidationException, match="Order quantity exceeds maximum threshold"):
-            validate_order_creation_business_rules(
-                OrderType.MARKET_BUY,
-                "BTC",
-                Decimal("1500.0"),  # Above 1000
-                None,
-                None,
-                "testuser",
-                mock_asset_dao,
-                mock_user_dao,
-                mock_balance_dao,
-            )
+        # Test order total value above maximum (quantity * price > $10k)
+        with patch(MODULE_PATH_GET_CURRENT_MARKET_PRICE) as mock_get_price:
+            mock_get_price.return_value = Decimal("50000.00")  # BTC price
+            with pytest.raises(CNOPOrderValidationException, match="Order total exceeds maximum"):
+                validate_order_creation_business_rules(
+                    OrderType.MARKET_BUY,
+                    "BTC",
+                    Decimal("0.25"),  # 0.25 * 50000 = $12.5k > $10k max
+                    None,
+                    None,
+                    "testuser",
+                    mock_asset_dao,
+                    mock_user_dao,
+                    mock_balance_dao,
+                )
 
     def test_validate_order_cancellation_business_rules(self):
         """Test validate_order_cancellation_business_rules function"""
@@ -446,9 +448,9 @@ class TestBusinessValidators:
         mock_asset_dao = Mock(spec=ASSET_DAO_SPEC)
         mock_balance_dao = Mock(spec=['get_balance', 'save_balance', 'update_balance'])
 
-        # Mock successful validations
+        # Mock successful validations (price_usd needed for total value check, 5*0.5=$2.5 < $10k max)
         mock_user_dao.get_user_by_username.return_value = Mock()
-        mock_asset_dao.get_asset_by_id.return_value = Mock(is_active=True)
+        mock_asset_dao.get_asset_by_id.return_value = Mock(is_active=True, price_usd=Decimal("0.5"))
         # Test sell order case - no longer validates asset balance (moved to user service)
         validate_order_creation_business_rules(
             OrderType.MARKET_SELL,

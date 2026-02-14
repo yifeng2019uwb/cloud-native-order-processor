@@ -81,7 +81,7 @@ const AccountPage: React.FC = () => {
         await loadAccountData();
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to process deposit');
+      setError(err?.message ?? err?.detail ?? 'Failed to process deposit');
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +116,7 @@ const AccountPage: React.FC = () => {
         await loadAccountData();
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to process withdrawal');
+      setError(err?.message ?? err?.detail ?? 'Failed to process withdrawal');
     } finally {
       setIsLoading(false);
     }
@@ -220,6 +220,7 @@ const AccountPage: React.FC = () => {
                     {/* Deposit Form */}
                     <div className="bg-gray-50 p-6 rounded-lg">
                       <h3 className="text-lg font-medium text-gray-900 mb-4">💵 Deposit Funds</h3>
+                      <p className="text-xs text-gray-500 mb-3">Daily limit: $10,000</p>
                       <form onSubmit={handleDeposit} className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -252,6 +253,7 @@ const AccountPage: React.FC = () => {
                     {/* Withdraw Form */}
                     <div className="bg-gray-50 p-6 rounded-lg">
                       <h3 className="text-lg font-medium text-gray-900 mb-4">💸 Withdraw Funds</h3>
+                      <p className="text-xs text-gray-500 mb-3">Daily limit: $5,000</p>
                       <form onSubmit={handleWithdraw} className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">

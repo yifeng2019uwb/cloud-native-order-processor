@@ -18,7 +18,8 @@ export interface Order {
 export interface CreateOrderRequest {
   asset_id: string;
   quantity: number;
-  price: number;
+  /** Omit or null for market orders; required for limit orders */
+  price?: number | null;
   order_type: 'market_buy' | 'market_sell' | 'limit_buy' | 'limit_sell';
 }
 

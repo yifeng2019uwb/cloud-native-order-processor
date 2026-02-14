@@ -25,6 +25,8 @@ from common.data.dao.order.order_dao import OrderDAO
 from common.data.dao.user.user_dao import UserDAO
 from common.data.dao.user.balance_dao import BalanceDAO
 
+from constants import MAX_ORDER_VALUE_USD
+
 
 def _validate_username_exists_and_active(username: str, user_dao: UserDAO) -> None:
     """
@@ -160,8 +162,16 @@ def validate_order_creation_business_rules(
     if quantity < Decimal("0.001"):
         raise CNOPOrderValidationException("Order quantity below minimum threshold (0.001)")
 
-    if quantity > Decimal("1000"):
-        raise CNOPOrderValidationException("Order quantity exceeds maximum threshold (1000)")
+    # Max total order value (USD) - no quantity cap (allows large qty for cheap coins)
+    max_order_value = Decimal(str(MAX_ORDER_VALUE_USD))
+    if order_price is None:
+        from controllers.dependencies import get_current_market_price
+        price = get_current_market_price(asset_id, asset_dao)
+    else:
+        price = order_price
+    total_value = quantity * price
+    if total_value > max_order_value:
+        raise CNOPOrderValidationException(f"Order total exceeds maximum (${max_order_value:,.0f})")
 
     if order_type in [OrderType.MARKET_BUY, OrderType.LIMIT_BUY]:
         _validate_user_balance_for_buy_order(username, quantity, order_price, balance_dao, asset_dao, asset_id)

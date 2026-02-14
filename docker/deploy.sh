@@ -29,6 +29,7 @@ Usage: $0 [service_name] [action] [--no-cache]
 
   local deploy       - Deploy full stack with LocalStack (no AWS needed)
   local destroy      - Stop and remove local stack (LocalStack + all services)
+  local frontend rebuild  - Rebuild frontend only (use after local deploy for frontend-only testing)
 
 Services: all, auth, user, inventory, order, insights, gateway, frontend, monitoring
 Actions: deploy, rebuild, restart, stop, start, logs, status, clean
@@ -36,6 +37,7 @@ Actions: deploy, rebuild, restart, stop, start, logs, status, clean
 Examples:
     $0 local deploy            # Local deploy (LocalStack + all services)
     $0 local destroy           # Stop and remove local stack
+    $0 local frontend rebuild  # Rebuild frontend only (after local deploy)
     $0 auth deploy             # Deploy with cache (AWS DynamoDB)
     $0 frontend rebuild        # Rebuild without cache
     $0 all status              # Show status
@@ -212,6 +214,17 @@ deploy_local_all() {
     log_info "Starting all services..."
     local_compose up -d --build auth_service user_service inventory_service order_service insights_service gateway frontend
     log_success "Local deploy complete! Frontend: http://localhost:3000 Gateway: http://localhost:8080"
+}
+
+# Rebuild frontend only for local stack (use local_compose for consistency)
+rebuild_local_frontend() {
+    log_warning "Rebuilding frontend for LOCAL stack (no cache)..."
+    cd "$SCRIPT_DIR"
+    local_compose stop frontend 2>/dev/null || true
+    local_compose rm -f frontend 2>/dev/null || true
+    local_compose build --no-cache frontend
+    local_compose up -d frontend
+    log_success "Frontend rebuilt and started. http://localhost:3000"
 }
 
 # Destroy local stack (stop and remove all containers)
@@ -417,12 +430,20 @@ main() {
     local service="$1"
     local action="$2"
 
-    # Handle "local deploy" and "local destroy" - separate flow
+    # Handle "local ..." - separate flow
     if [ "$service" = "local" ]; then
         case "$action" in
             deploy) deploy_local_all ;;
             destroy) destroy_local_all ;;
-            *) log_error "Invalid action for local. Use: deploy, destroy"; exit 1 ;;
+            frontend)
+                if [ "${3:-}" = "rebuild" ]; then
+                    rebuild_local_frontend
+                else
+                    log_error "Use: ./deploy.sh local frontend rebuild"
+                    exit 1
+                fi
+                ;;
+            *) log_error "Invalid action for local. Use: deploy, destroy, frontend rebuild"; exit 1 ;;
         esac
         return $?
     fi

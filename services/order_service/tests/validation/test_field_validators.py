@@ -190,9 +190,9 @@ class TestFieldValidators:
         with pytest.raises(CNOPOrderValidationException, match="Order quantity below minimum threshold"):
             validate_quantity(Decimal("0.0001"))
 
-        # Test with very large quantity
-        with pytest.raises(CNOPOrderValidationException, match="Order quantity exceeds maximum threshold"):
-            validate_quantity(Decimal("2000000.0"))
+        # Test with very large quantity (no max - constraint is on total USD value)
+        result = validate_quantity(Decimal("2000000.0"))
+        assert result == Decimal("2000000.0")
 
     def test_validate_quantity_non_decimal_input(self):
         """Test validate_quantity with non-Decimal input"""

@@ -51,21 +51,54 @@ class OrderApiService {
     );
   }
 
+  private stripExceptionPrefix(msg: string): string {
+    return msg.replace(/^[A-Za-z0-9_]+Exception:\s*/i, '').trim();
+  }
+
+  private formatValidationDetail(detail: unknown): string {
+    if (Array.isArray(detail)) {
+      const messages = detail.map((e: { type?: string; msg?: string; ctx?: { le?: number; gt?: number } }) =>
+        e.msg || String(e)
+      );
+      return messages.join('. ');
+    }
+    return String(detail);
+  }
+
   private formatError(error: AxiosError): OrderApiError {
     if (error.response?.data) {
       const responseData = error.response.data as any;
 
-      // Handle FastAPI HTTPException format
-      if (responseData.detail && typeof responseData.detail === 'object') {
-        return responseData.detail as OrderApiError;
+      // Handle FastAPI: detail as string (e.g. insufficient balance, validation)
+      if (responseData.detail && typeof responseData.detail === 'string') {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: this.stripExceptionPrefix(responseData.detail),
+          timestamp: new Date().toISOString()
+        };
       }
 
-      // Handle direct error response format
+      // Handle Pydantic validation: detail as array
+      if (responseData.detail && Array.isArray(responseData.detail)) {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: this.stripExceptionPrefix(this.formatValidationDetail(responseData.detail)),
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      // Handle FastAPI: detail as object
+      if (responseData.detail && typeof responseData.detail === 'object') {
+        const raw = responseData.detail.message || JSON.stringify(responseData.detail);
+        return { ...responseData.detail, message: this.stripExceptionPrefix(raw) };
+      }
+
       if (responseData.success === false) {
         return responseData as OrderApiError;
       }
 
-      // Fallback to direct data
       return responseData as OrderApiError;
     }
 

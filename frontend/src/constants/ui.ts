@@ -1,6 +1,9 @@
 // UI String Constants
 // Centralized location for all user-facing text to improve maintainability and enable internationalization
 
+/** Max total order value (USD) per trade - must match backend constants.MAX_ORDER_VALUE_USD */
+export const MAX_ORDER_VALUE_USD = 10000;
+
 export const UI_STRINGS = {
   // Common Actions
   LOGIN: 'Login',
@@ -96,6 +99,7 @@ export const UI_STRINGS = {
   ORDER_FAILED: 'Failed to create order',
   INSUFFICIENT_BALANCE: 'Insufficient balance for this order',
   NO_ASSETS_AVAILABLE: 'No assets available for trading',
+  ORDER_MAX_VALUE_EXCEEDED: 'Order total exceeds maximum ($10,000)',
 
   // Transaction History
   TRANSACTION_HISTORY: 'Transaction History',
