@@ -31,7 +31,9 @@
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
-> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) AI Insights → 3) Local Deploy → 4) Demo → 5) Others
+> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) AI Insights (frontend deferred) → 3) ~~Local Deploy~~ ✅ → 4) Frontend fixes → 5) Daily deposit/withdraw limits → 6) Demo → 7) Others
+
+> **Fun**: CNY-001 Chinese New Year secret feature (kid-friendly demo)
 
 ---
 
@@ -61,7 +63,7 @@
   - [x] **Add gateway route** for insights endpoint
   - [x] **Happy case verified** - Endpoint returns 200 OK with valid response
   - [x] **Run integration tests** successfully (end-to-end verification)
-  - [ ] **Frontend integration**: API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile
+  - [ ] **Frontend integration**: API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile _(deferred: local deploy requires GOOGLE_GEMINI_API_KEY — adds steps for testers)_
   - [ ] **Frontend can request and display** the analysis (e.g. on dashboard or profile)
 - **Estimated time for this part**:
   - **Backend (endpoint + LLM integration)**: ~2–4 hours
@@ -78,8 +80,56 @@
 
 ---
 
+#### **FRONTEND-001: Fix Frontend Issues Before Demo** 🔥 **PRIORITY #4**
+- **Component**: Frontend
+- **Type**: Bug Fix
+- **Priority**: 🔥 **HIGH** (Blocking demo)
+- **Status**: 📋 **To Do**
+- **Goal**: Fix known frontend issues so the full workflow can be demoed.
+- **Scope**:
+  - Order create 422 error: frontend sends `price: 0` for market orders; backend expects `price: null` and validates `price > 0` when provided. Fix frontend to omit price for market orders or send `null`.
+  - Any other blocking UI/API issues discovered during demo prep.
+- **Files**: `frontend/src/components/Trading/TradingPage.tsx`, API client for orders
+- **Dependencies**: None
 
-#### **DEMO-001: Project Demo — Full Workflow & All Existing APIs** 🔥 **PRIORITY #4**
+---
+
+#### **CNY-001: Chinese New Year Secret — 恭喜发财，红包拿来** 🧧 **FUN / KID DEMO**
+- **Component**: Frontend + Backend (Gateway or User Service)
+- **Type**: Easter Egg / Fun Feature
+- **Priority**: 🎉 **FUN** (Kid will write a few lines and demo with parent)
+- **Status**: 📋 **To Do**
+- **Goal**: Hidden secret for Chinese New Year. User finds hidden element in frontend, clicks, says secret phrase **「恭喜发财，红包拿来」**, and gets a big red envelope / virtual cash reward.
+- **Scope**:
+  - **Frontend**: Hide a small element somewhere (e.g. subtle icon, footer link, double-click on logo). When user finds and clicks, show input/modal to say the secret phrase. On correct phrase, show celebration UI (big red envelope, confetti, virtual cash).
+  - **Backend**: Secret API endpoint (e.g. `POST /api/v1/cny/claim` or similar) that accepts the phrase, validates it, and returns a "red envelope" reward (e.g. bonus balance, or just a fun response). **One claim per user per day** — reject with a friendly message if already claimed today.
+  - **Secret phrase**: 恭喜发财，红包拿来
+- **Kid-friendly**: Minimal code — kid can add the frontend click handler, call the API, and show the red envelope animation. Parent can scaffold the API.
+- **Files**: Frontend (hidden element + modal/celebration), Gateway or User Service (secret endpoint), config for phrase validation
+- **Dependencies**: None
+
+---
+
+#### **BALANCE-001: Add Daily Deposit and Withdraw Limits** 🔶 **PRIORITY #5**
+- **Component**: User Service / Balance
+- **Type**: New Feature / Risk Control
+- **Priority**: 🔶 **MEDIUM**
+- **Status**: 📋 **To Do**
+- **Goal**: Enforce daily aggregate limits on deposits and withdrawals per user.
+- **Current limits** (per-transaction only, no daily cap):
+  - **Deposit**: min $0.01, max $1,000,000 per transaction
+  - **Withdraw**: min $0.01, max $1,000,000 per transaction
+  - **Daily limit**: None — users can do unlimited deposits/withdrawals per day
+- **Proposed**:
+  - Add daily deposit limit: **$10,000** per user per calendar day (configurable via env)
+  - Add daily withdraw limit: **$5,000** per user per calendar day (configurable via env)
+  - Reject when user exceeds daily limit; return clear error
+- **Files**: `services/user_service/src/api_models/balance/balance_models.py`, `services/user_service/src/validation/field_validators.py`, `services/user_service/src/controllers/balance/deposit.py`, `services/user_service/src/controllers/balance/withdraw.py`, `services/common/src/core/utils/transaction_manager.py`, BalanceDAO (query daily totals)
+- **Dependencies**: Need to query transaction history by user + date to sum daily deposits/withdrawals
+
+---
+
+#### **DEMO-001: Project Demo — Full Workflow & All Existing APIs** 🔥 **PRIORITY #6**
 - **Component**: Demo / Documentation
 - **Type**: Demo Preparation & Delivery
 - **Priority**: 🔥 **HIGH**

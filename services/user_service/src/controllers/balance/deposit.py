@@ -2,15 +2,20 @@
 Deposit API Endpoint
 Path: services/user_service/src/controllers/balance/deposit.py
 
-Layer 2: Business validation (in service layer)
+Layer 2: Business validation (in service layer) - daily limit, etc.
 Layer 1: Field validation (handled in API models)
 """
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Union
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from api_models.balance import DepositRequest, DepositResponse
 from common.data.entities.user import User
-from common.exceptions.shared_exceptions import CNOPUserNotFoundException, CNOPInternalServerException
+from common.exceptions.shared_exceptions import (
+    CNOPInternalServerException,
+    CNOPUserNotFoundException,
+)
+from user_exceptions import CNOPDailyLimitExceededException
 from common.exceptions import (
     CNOPDatabaseOperationException,
     CNOPEntityNotFoundException,
@@ -21,9 +26,10 @@ from common.shared.constants.api_constants import ErrorMessages
 from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
-from controllers.dependencies import get_transaction_manager
+from controllers.dependencies import get_transaction_manager, get_balance_dao_dependency
 from common.auth.gateway.header_validator import get_request_id_from_request
 from controllers.auth.dependencies import get_current_user
+from services.balance_limit import validate_daily_deposit_limit
 # Local constants for this controller only
 MSG_SUCCESS_DEPOSIT = "Deposit successful"
 MSG_ERROR_INVALID_AMOUNT = "Bad request - invalid amount"
@@ -43,7 +49,8 @@ async def deposit_funds(
     deposit_data: DepositRequest,
     request: Request,
     current_user: User = Depends(get_current_user),
-    transaction_manager = Depends(get_transaction_manager)
+    transaction_manager=Depends(get_transaction_manager),
+    balance_dao=Depends(get_balance_dao_dependency)
 ) -> DepositResponse:
     """
     Deposit funds to user account using transaction manager for atomicity
@@ -66,6 +73,9 @@ async def deposit_funds(
     )
 
     try:
+        # Layer 2: Daily deposit limit validation (service layer business rule)
+        validate_daily_deposit_limit(balance_dao, current_user.username, deposit_data.amount)
+
         # Use transaction manager for atomic deposit operation
         result = await transaction_manager.deposit_funds(
             username=current_user.username,
@@ -81,6 +91,8 @@ async def deposit_funds(
             timestamp=datetime.now(timezone.utc)
         )
 
+    except CNOPDailyLimitExceededException:
+        raise
     except CNOPLockAcquisitionException as e:
         logger.warning(action=LogAction.ERROR, message=f"Lock acquisition failed for deposit: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException("Service temporarily unavailable")

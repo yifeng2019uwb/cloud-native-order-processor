@@ -54,20 +54,21 @@ class PortfolioTests:
         token = self.user_manager.create_test_user(self.session, username)
         headers = self.user_manager.build_auth_headers(token)
 
-        # Deposit funds
-        deposit_data = {UserFields.AMOUNT: 200000}
-        self.session.post(
+        # Deposit funds (within daily limit of 10000)
+        deposit_data = {UserFields.AMOUNT: 10000}
+        deposit_resp = self.session.post(
             APIEndpoints.get_user_endpoint(UserAPI.BALANCE_DEPOSIT),
             json=deposit_data,
             headers=headers,
             timeout=self.timeout
         )
+        assert deposit_resp.status_code == 201, f"Deposit failed: {deposit_resp.text}"
 
-        # Create market buy order
+        # Create market buy order (0.1 BTC ~5000 at 50k/BTC, fits in balance)
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
             OrderFields.ORDER_TYPE: "market_buy",
-            OrderFields.QUANTITY: 0.5
+            OrderFields.QUANTITY: 0.1
         }
         order_response = self.session.post(
             APIEndpoints.get_order_endpoint(OrderAPI.CREATE_ORDER),

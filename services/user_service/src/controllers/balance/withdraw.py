@@ -2,7 +2,7 @@
 Withdraw API Endpoint
 Path: services/user_service/src/controllers/balance/withdraw.py
 
-Layer 2: Business validation (in service layer)
+Layer 2: Business validation (in service layer) - daily limit, etc.
 Layer 1: Field validation (handled in API models)
 """
 from datetime import datetime, timezone
@@ -10,9 +10,10 @@ from fastapi import APIRouter, HTTPException, Depends, status, Request
 from api_models.balance import WithdrawRequest, WithdrawResponse
 from common.data.entities.user import User
 from common.exceptions.shared_exceptions import (
+    CNOPInternalServerException,
     CNOPUserNotFoundException,
-    CNOPInternalServerException
 )
+from user_exceptions import CNOPDailyLimitExceededException
 from common.exceptions import (
     CNOPDatabaseOperationException,
     CNOPEntityNotFoundException,
@@ -25,9 +26,10 @@ from common.shared.constants.api_constants import APIResponseDescriptions
 from common.shared.constants.api_constants import HTTPStatus
 from api_info_enum import ApiTags, ApiPaths, ApiResponseKeys
 from user_exceptions import CNOPUserValidationException
-from controllers.dependencies import get_transaction_manager
+from controllers.dependencies import get_transaction_manager, get_balance_dao_dependency
 from common.auth.gateway.header_validator import get_request_id_from_request
 from controllers.auth.dependencies import get_current_user
+from services.balance_limit import validate_daily_withdraw_limit
 # Local constants for this controller only
 MSG_SUCCESS_WITHDRAW = "Withdrawal successful"
 MSG_ERROR_INSUFFICIENT_BALANCE = "Bad request - insufficient balance"
@@ -46,7 +48,8 @@ async def withdraw_funds(
     withdraw_data: WithdrawRequest,
     request: Request,
     current_user: User = Depends(get_current_user),
-    transaction_manager = Depends(get_transaction_manager)
+    transaction_manager=Depends(get_transaction_manager),
+    balance_dao=Depends(get_balance_dao_dependency)
 ) -> WithdrawResponse:
     """
     Withdraw funds from user account using transaction manager for atomicity
@@ -69,6 +72,9 @@ async def withdraw_funds(
     )
 
     try:
+        # Layer 2: Daily withdrawal limit validation (service layer business rule)
+        validate_daily_withdraw_limit(balance_dao, current_user.username, withdraw_data.amount)
+
         # Use transaction manager for atomic withdrawal operation
         result = await transaction_manager.withdraw_funds(
             username=current_user.username,
@@ -84,6 +90,8 @@ async def withdraw_funds(
             timestamp=datetime.now(timezone.utc)
         )
 
+    except CNOPDailyLimitExceededException:
+        raise
     except CNOPLockAcquisitionException as e:
         logger.warning(action=LogAction.ERROR, message=f"Lock acquisition failed for withdrawal: user={current_user.username}, error={str(e)}", user=current_user.username, request_id=request_id)
         raise CNOPInternalServerException(ErrorMessages.SERVICE_UNAVAILABLE)

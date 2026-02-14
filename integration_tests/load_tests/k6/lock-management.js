@@ -22,6 +22,7 @@ import { loadTestUserToken, buildAuthHeaders } from './utils.js';
 const testUserToken = loadTestUserToken();
 
 // Test configuration
+// Note: Deposit API enforces daily limit (default 10000 USD); amounts exceeding it return 422.
 const INITIAL_BALANCE_DEPOSIT = 50000.00;
 const DEPOSIT_AMOUNTS = [100.00, 50.00, 75.00];
 const WITHDRAW_AMOUNTS = [31.00, 43.00, 74.00];

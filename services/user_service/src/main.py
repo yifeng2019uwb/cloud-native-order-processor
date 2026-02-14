@@ -31,15 +31,15 @@ from middleware import metrics_middleware
 
 # Import custom exceptions
 from user_exceptions import (
+    CNOPDailyLimitExceededException,
     CNOPUserAlreadyExistsException,
-    CNOPUserValidationException
+    CNOPUserValidationException,
 )
-
 from common.exceptions import (
-    CNOPUserNotFoundException,
     CNOPInsufficientBalanceException,
+    CNOPInternalServerException,
     CNOPInvalidCredentialsException,
-    CNOPInternalServerException
+    CNOPUserNotFoundException,
 )
 
 # Initialize logger
@@ -101,6 +101,11 @@ def user_not_found_exception_handler(request, exc):
 @app.exception_handler(CNOPInsufficientBalanceException)
 def insufficient_balance_exception_handler(request, exc):
     logger.warning(action=LogAction.VALIDATION_ERROR, message=f"{ErrorMessages.INSUFFICIENT_BALANCE}: {exc}")
+    return JSONResponse(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, content={"detail": str(exc)})
+
+@app.exception_handler(CNOPDailyLimitExceededException)
+def daily_limit_exceeded_exception_handler(request, exc):
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Daily limit exceeded: {exc}")
     return JSONResponse(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPInvalidCredentialsException)

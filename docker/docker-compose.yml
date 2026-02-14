@@ -81,6 +81,9 @@ services:
       - REDIS_DB=0
       - REDIS_PASSWORD=
       - REDIS_SSL=false
+      # Daily limits (USD per user per calendar day)
+      - DAILY_DEPOSIT_LIMIT=${DAILY_DEPOSIT_LIMIT:-10000}
+      - DAILY_WITHDRAW_LIMIT=${DAILY_WITHDRAW_LIMIT:-5000}
     volumes:
       - ~/.aws:/root/.aws:ro
       # Auto-reload for development

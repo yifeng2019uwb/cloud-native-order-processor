@@ -28,6 +28,14 @@ MSG_ERROR_USER_BALANCE_NOT_FOUND = "User balance not found"
 MSG_ERROR_OPERATION_BUSY = "Operation is busy - try again"
 
 # =============================================================================
+# DAILY LIMITS (USD per user per calendar day - env overridable)
+# =============================================================================
+ENV_DAILY_DEPOSIT_LIMIT = "DAILY_DEPOSIT_LIMIT"
+ENV_DAILY_WITHDRAW_LIMIT = "DAILY_WITHDRAW_LIMIT"
+DEFAULT_DAILY_DEPOSIT_LIMIT = "10000"
+DEFAULT_DAILY_WITHDRAW_LIMIT = "5000"
+
+# =============================================================================
 # RESPONSE FIELD NAMES (Keep as constants - used in JSON responses)
 # =============================================================================
 RESPONSE_FIELD_SERVICE = "service"

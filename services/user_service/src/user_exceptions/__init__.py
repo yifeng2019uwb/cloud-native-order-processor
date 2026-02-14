@@ -37,6 +37,7 @@ from .exceptions import (
     CNOPUserAlreadyExistsException,
     CNOPUserServerException,
     CNOPUserValidationException,
+    CNOPDailyLimitExceededException,
 )
 
 __all__ = [
@@ -58,4 +59,5 @@ __all__ = [
     "CNOPUserAlreadyExistsException",
     "CNOPUserServerException",
     "CNOPUserValidationException",
+    "CNOPDailyLimitExceededException",
 ]

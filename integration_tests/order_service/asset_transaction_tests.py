@@ -47,19 +47,20 @@ class AssetTransactionTests:
         token = self.user_manager.create_test_user(self.session, username)
         headers = self.user_manager.build_auth_headers(token)
 
-        # Deposit and buy
-        deposit_data = {UserFields.AMOUNT: 200000}
-        self.session.post(
+        # Deposit and buy (within daily limit of 10000)
+        deposit_data = {UserFields.AMOUNT: 10000}
+        deposit_resp = self.session.post(
             APIEndpoints.get_user_endpoint(UserAPI.BALANCE_DEPOSIT),
             json=deposit_data,
             headers=headers,
             timeout=self.timeout
         )
+        assert deposit_resp.status_code == 201, f"Deposit failed: {deposit_resp.text}"
 
         order_data = {
             OrderFields.ASSET_ID: TestValues.BTC_ASSET_ID,
             OrderFields.ORDER_TYPE: "market_buy",
-            OrderFields.QUANTITY: 0.5
+            OrderFields.QUANTITY: 0.1
         }
         self.session.post(
             APIEndpoints.get_order_endpoint(OrderAPI.CREATE_ORDER),

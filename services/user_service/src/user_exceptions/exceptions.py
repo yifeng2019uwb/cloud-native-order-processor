@@ -21,3 +21,8 @@ class CNOPUserServerException(CNOPClientException):
 class CNOPUserValidationException(CNOPClientException):
     """User validation exception - business logic validation failures"""
     pass
+
+
+class CNOPDailyLimitExceededException(CNOPClientException):
+    """Daily deposit or withdrawal limit exceeded"""
+    pass
