@@ -26,6 +26,8 @@ class TimestampFields:
     """Timestamp field names shared across all entities"""
     CREATED_AT = "created_at"
     UPDATED_AT = "updated_at"
+    # Attribute name for extracting date from datetime (datetime.date() method)
+    DATE_ATTR = "date"
 
 
 # ==================== USER DOMAIN ====================

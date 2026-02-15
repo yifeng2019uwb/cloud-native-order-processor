@@ -31,9 +31,9 @@
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
-> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) AI Insights (frontend deferred) → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) Demo → 7) Others
+> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) ~~AI Insights~~ (frontend paused – local deploy config complexity) → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) **CNY-001** (kid demo) → 7) DEMO-001 → 8) Others
 
-> **Fun**: CNY-001 Chinese New Year secret feature (kid-friendly demo)
+> **Next**: CNY-001 Chinese New Year secret — kid-friendly demo (parent + kid together)
 
 ---
 
@@ -63,7 +63,7 @@
   - [x] **Add gateway route** for insights endpoint
   - [x] **Happy case verified** - Endpoint returns 200 OK with valid response
   - [x] **Run integration tests** successfully (end-to-end verification)
-  - [ ] **Frontend integration**: API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile _(deferred: local deploy requires GOOGLE_GEMINI_API_KEY — adds steps for testers)_
+  - [ ] **Frontend integration**: API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile _(**PAUSED**: local deploy needs extra config, causes issues — resume later)_
   - [ ] **Frontend can request and display** the analysis (e.g. on dashboard or profile)
 - **Estimated time for this part**:
   - **Backend (endpoint + LLM integration)**: ~2–4 hours
@@ -80,10 +80,10 @@
 
 ---
 
-#### **CNY-001: Chinese New Year Secret — 恭喜发财，红包拿来** 🧧 **FUN / KID DEMO**
+#### **CNY-001: Chinese New Year Secret — 恭喜发财，红包拿来** 🧧 **NEXT / KID DEMO**
 - **Component**: Frontend + Backend (Gateway or User Service)
 - **Type**: Easter Egg / Fun Feature
-- **Priority**: 🎉 **FUN** (Kid will write a few lines and demo with parent)
+- **Priority**: 🔥 **NEXT** (Parent + kid demo together — kid writes a few lines)
 - **Status**: 📋 **To Do**
 - **Goal**: Hidden secret for Chinese New Year. User finds hidden element in frontend, clicks, says secret phrase **「恭喜发财，红包拿来」**, and gets a big red envelope / virtual cash reward.
 - **Scope**:
@@ -775,9 +775,10 @@ _Optional maintenance items below._
 - **Optional**: INFRA-021 (K8s simplify), ARCH-002 (CORS), CODE-001 (TODOs) — low priority
 
 **🎯 IMMEDIATE NEXT STEP**:
-1. Deploy infra: DB (DynamoDB) + Docker (docker-compose with Redis) — no Kubernetes needed for demo
-2. DEMO-001 — Prepare and deliver project demo (all existing APIs, full workflow)
-3. FEATURE-002 (AI Analysis): 🚧 **IN PROGRESS** — Backend & deployment complete, integration tests & frontend pending
+1. **CNY-001** — Chinese New Year secret (kid demo with parent)
+2. Deploy infra: DB (DynamoDB) + Docker — no Kubernetes needed for demo
+3. DEMO-001 — Prepare and deliver project demo (all existing APIs, full workflow)
+4. FEATURE-002 (AI Analysis): **PAUSED** — Frontend deferred (local deploy config complexity)
 
 ---
 

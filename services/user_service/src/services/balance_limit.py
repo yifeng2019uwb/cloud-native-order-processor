@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import Any
 
 from common.data.entities.user.balance_enums import TransactionType
+from common.data.entities.entity_constants import TimestampFields
 from user_exceptions import CNOPDailyLimitExceededException
 
 from constants import (
@@ -51,7 +52,7 @@ def get_daily_total(
         for t in transactions:
             if t.transaction_type != transaction_type:
                 continue
-            t_date = t.created_at.date() if hasattr(t.created_at, "date") else t.created_at
+            t_date = t.created_at.date() if hasattr(t.created_at, TimestampFields.DATE_ATTR) else t.created_at
             if t_date != target_date:
                 continue
             amt = Decimal(str(t.amount)) if not isinstance(t.amount, Decimal) else t.amount

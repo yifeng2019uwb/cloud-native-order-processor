@@ -26,3 +26,8 @@ class CNOPUserValidationException(CNOPClientException):
 class CNOPDailyLimitExceededException(CNOPClientException):
     """Daily deposit or withdrawal limit exceeded"""
     pass
+
+
+class CNOPAlreadyClaimedTodayException(CNOPClientException):
+    """User already claimed CNY reward today - one claim per user per day"""
+    pass
