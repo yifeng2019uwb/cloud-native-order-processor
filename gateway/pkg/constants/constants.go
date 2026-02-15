@@ -148,6 +148,10 @@ const (
 	// Insights service paths
 	APIV1InsightsPath        = "/api/v1/insights"
 	APIV1InsightsPortfolio   = "/api/v1/insights/portfolio"
+
+	// CNY service paths (user service)
+	APIV1CNYPath  = "/api/v1/cny"
+	APIV1CNYClaim = "/api/v1/cny/claim"
 )
 
 // Path patterns for dynamic route matching
@@ -491,6 +495,13 @@ var (
 			Path:         APIV1InsightsPortfolio,
 			RequiresAuth: true,
 			AllowedRoles: []string{}, // No role restrictions - just need to be authenticated
+		},
+
+		// CNY service routes (require auth)
+		APIV1CNYClaim: {
+			Path:         APIV1CNYClaim,
+			RequiresAuth: true,
+			AllowedRoles: []string{},
 		},
 	}
 )

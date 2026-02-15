@@ -139,6 +139,12 @@ func (s *Server) setupRoutes() {
 		{
 			insights.GET("/portfolio", s.handleProxyRequest) // Get portfolio insights
 		}
+
+		// CNY service routes (require auth)
+		cny := api.Group("/cny")
+		{
+			cny.POST("/claim", s.handleProxyRequest) // Claim CNY red pocket
+		}
 	}
 }
 

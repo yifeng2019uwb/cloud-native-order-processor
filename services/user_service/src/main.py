@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from common.shared.logging import BaseLogger, LogAction, LoggerName
 from controllers.auth.login import router as login_router
+from controllers.cny import router as cny_router
 from controllers.auth.register import router as register_router
 from controllers.auth.profile import router as profile_router
 from controllers.auth.logout import router as logout_router
@@ -23,7 +24,8 @@ from constants import (
     RESPONSE_FIELD_SERVICE, RESPONSE_FIELD_VERSION, RESPONSE_FIELD_STATUS, RESPONSE_FIELD_TIMESTAMP, RESPONSE_FIELD_ENDPOINTS,
     RESPONSE_FIELD_DOCS, RESPONSE_FIELD_HEALTH, RESPONSE_FIELD_REGISTER, RESPONSE_FIELD_LOGIN, RESPONSE_FIELD_PROFILE,
     RESPONSE_FIELD_LOGOUT, RESPONSE_FIELD_BALANCE, RESPONSE_FIELD_DEPOSIT, RESPONSE_FIELD_WITHDRAW, RESPONSE_FIELD_TRANSACTIONS,
-    RESPONSE_FIELD_PORTFOLIO, RESPONSE_FIELD_ASSET_BALANCE
+    RESPONSE_FIELD_PORTFOLIO, RESPONSE_FIELD_ASSET_BALANCE,
+    RESPONSE_FIELD_CNY_CLAIM
 )
 from common.shared.constants.api_constants import HTTPStatus
 from common.shared.constants.api_constants import ErrorMessages
@@ -31,6 +33,7 @@ from middleware import metrics_middleware
 
 # Import custom exceptions
 from user_exceptions import (
+    CNOPAlreadyClaimedTodayException,
     CNOPDailyLimitExceededException,
     CNOPUserAlreadyExistsException,
     CNOPUserValidationException,
@@ -74,6 +77,7 @@ app.include_router(logout_router, tags=[ApiTags.AUTHENTICATION.value])
 app.include_router(balance_router, tags=[ApiTags.BALANCE.value])
 app.include_router(portfolio_router, tags=[ApiTags.PORTFOLIO.value])
 app.include_router(asset_balance_router, tags=[ApiTags.ASSET_BALANCE.value])
+app.include_router(cny_router, tags=[ApiTags.CNY.value])
 app.include_router(health_router, tags=[ApiTags.HEALTH.value])
 
 # Add internal metrics endpoint
@@ -101,6 +105,11 @@ def user_not_found_exception_handler(request, exc):
 @app.exception_handler(CNOPInsufficientBalanceException)
 def insufficient_balance_exception_handler(request, exc):
     logger.warning(action=LogAction.VALIDATION_ERROR, message=f"{ErrorMessages.INSUFFICIENT_BALANCE}: {exc}")
+    return JSONResponse(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, content={"detail": str(exc)})
+
+@app.exception_handler(CNOPAlreadyClaimedTodayException)
+def already_claimed_today_exception_handler(request, exc):
+    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"CNY already claimed: {exc}")
     return JSONResponse(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, content={"detail": str(exc)})
 
 @app.exception_handler(CNOPDailyLimitExceededException)
@@ -144,7 +153,8 @@ def root():
             RESPONSE_FIELD_WITHDRAW: ApiPaths.WITHDRAW.value,
             RESPONSE_FIELD_TRANSACTIONS: ApiPaths.TRANSACTIONS.value,
             RESPONSE_FIELD_PORTFOLIO: ApiPaths.PORTFOLIO.value,
-            RESPONSE_FIELD_ASSET_BALANCE: ApiPaths.ASSET_BALANCE.value
+            RESPONSE_FIELD_ASSET_BALANCE: ApiPaths.ASSET_BALANCE.value,
+            RESPONSE_FIELD_CNY_CLAIM: "/cny/claim"
         }
     }
 

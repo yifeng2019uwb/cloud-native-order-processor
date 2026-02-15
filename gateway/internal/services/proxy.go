@@ -240,6 +240,8 @@ func (p *ProxyService) GetTargetService(path string) string {
 		return constants.OrderService // Asset balances handled by order service
 	case strings.HasPrefix(path, constants.APIV1InsightsPath):
 		return constants.InsightsService // Insights service
+	case strings.HasPrefix(path, constants.APIV1CNYPath):
+		return constants.UserService // CNY claim handled by user service
 	default:
 		return ""
 	}

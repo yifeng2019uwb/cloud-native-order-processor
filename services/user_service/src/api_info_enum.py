@@ -37,6 +37,9 @@ class ApiPaths(str, Enum):
     # Portfolio endpoints
     PORTFOLIO = "/portfolio"
 
+    # CNY endpoints
+    CNY_CLAIM = "/cny/claim"
+
     # System endpoints
     HEALTH = "/health"
     METRICS = "/internal/metrics"
@@ -50,6 +53,7 @@ class ApiTags(str, Enum):
     BALANCE = "balance"
     PORTFOLIO = "portfolio"
     ASSET_BALANCE = "asset balance"
+    CNY = "cny"
     HEALTH = "health"
 
 
