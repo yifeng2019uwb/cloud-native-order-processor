@@ -31,9 +31,9 @@
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
-> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) ~~AI Insights~~ (frontend paused – local deploy config complexity) → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) **CNY-001** (kid demo) → 7) DEMO-001 → 8) Others
+> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) ~~AI Insights~~ (frontend paused – local deploy config complexity) → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) ~~CNY-001 Backend~~ ✅ → 7) **CNY-001 Frontend** (kid demo) → 8) DEMO-001 → 9) Others
 
-> **Next**: CNY-001 Chinese New Year secret — kid-friendly demo (parent + kid together)
+> **Next**: CNY-001 Frontend — hidden element, modal, celebration UI (backend ✅ done)
 
 ---
 
@@ -84,15 +84,21 @@
 - **Component**: Frontend + Backend (Gateway or User Service)
 - **Type**: Easter Egg / Fun Feature
 - **Priority**: 🔥 **NEXT** (Parent + kid demo together — kid writes a few lines)
-- **Status**: 📋 **To Do**
+- **Status**: 🚧 **IN PROGRESS** (Backend ✅ | Frontend 📋 To Do)
 - **Goal**: Hidden secret for Chinese New Year. User finds hidden element in frontend, clicks, says secret phrase **「恭喜发财，红包拿来」**, and gets a big red envelope / virtual cash reward.
 - **Scope**:
-  - **Frontend**: Hide a small element somewhere (e.g. subtle icon, footer link, double-click on logo). When user finds and clicks, show input/modal to say the secret phrase. On correct phrase, show celebration UI (big red envelope, confetti, virtual cash).
-  - **Backend**: Secret API endpoint (e.g. `POST /api/v1/cny/claim` or similar) that accepts the phrase, validates it, and returns a "red envelope" reward (e.g. bonus balance, or just a fun response). **One claim per user per day** — reject with a friendly message if already claimed today.
-  - **Secret phrase**: 恭喜发财，红包拿来
-- **Kid-friendly**: Minimal code — kid can add the frontend click handler, call the API, and show the red envelope animation. Parent can scaffold the API.
-- **Files**: Frontend (hidden element + modal/celebration), Gateway or User Service (secret endpoint), config for phrase validation
-- **Dependencies**: None
+  - **Backend**: ✅ **COMPLETED** — See DAILY_WORK_LOG.md
+    - [x] `POST /api/v1/cny/claim` — validates phrase, credits reward, returns `got_red_pocket`, `amount`
+    - [x] Config `cny_phrases.json` with `secret_words` and `amounts` (kid can edit)
+    - [x] Red pocket = phrase in config with valid amount; default reward for any other phrase
+    - [x] One red pocket per user per day (default rewards unlimited)
+    - [x] Gateway route (auth required)
+  - **Frontend**: 📋 **To Do**
+    - [ ] Hide small element (icon, footer link, double-click on logo)
+    - [ ] Modal/input for secret phrase
+    - [ ] Call `POST /api/v1/cny/claim` with phrase
+    - [ ] Celebration UI (red envelope, confetti) on success
+- **Kid-friendly**: Config is simple — kid edits `secret_words` and `amounts` in JSON. Parent scaffolds API.
 
 ---
 
@@ -477,6 +483,10 @@ _Optional maintenance items below._
 ---
 
 ## ✅ **COMPLETED TASKS**
+
+#### **CNY-001 Backend: Chinese New Year Secret API** ✅ **COMPLETED**
+- **Component**: User Service + Gateway
+- **Summary**: Secret `POST /api/v1/cny/claim` endpoint; config `cny_phrases.json` with `secret_words` and `amounts`; red pocket vs default reward; one red pocket per user per day. See DAILY_WORK_LOG.md for details.
 
 #### **DEV-003: Local Deploy with Local DB** ✅ **COMPLETED**
 - **Component**: Infrastructure & Deployment

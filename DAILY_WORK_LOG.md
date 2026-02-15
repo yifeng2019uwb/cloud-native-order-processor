@@ -9,6 +9,34 @@
 
 ## 📊 Progress Summary
 
+### **2026-02-06: CNY-001 Backend - Chinese New Year Secret API** ✅ **COMPLETED**
+
+**Task**: Implement backend for CNY red pocket — secret phrase validation, config-driven rewards, one red pocket per user per day.
+
+**Key Achievements**:
+- ✅ **CNYClaimService** — Loads `secret_words` and `amounts` from `config/cny_phrases.json`; phrase lookup by index; default reward (8.88) for any phrase not in config
+- ✅ **Red pocket vs default** — Phrase in config with valid amount = red pocket; otherwise default reward; only red pocket blocks further claims today
+- ✅ **POST /cny/claim** — User service endpoint; request `{phrase}`, response `{success, message, amount, got_red_pocket, timestamp}`; auth required
+- ✅ **Gateway route** — `POST /api/v1/cny/claim` → user service; auth required
+- ✅ **CNOPAlreadyClaimedTodayException** — 422 when user already claimed red pocket today
+- ✅ **Unit tests** — Simplified tests for `_has_claimed_red_pocket_today`, `claim_reward` (red pocket, default, already claimed)
+
+**Files Created/Updated**:
+- `services/user_service/src/services/cny_claim.py` — CNYClaimService
+- `services/user_service/src/controllers/cny/claim.py` — POST /cny/claim
+- `services/user_service/src/api_models/cny/cny_models.py` — CnyClaimRequest, CnyClaimResponse
+- `services/user_service/config/cny_phrases.json` — `{"secret_words": [], "amounts": []}`
+- `services/user_service/src/user_exceptions/exceptions.py` — CNOPAlreadyClaimedTodayException
+- `services/user_service/src/main.py` — CNY router, exception handler
+- `gateway/internal/api/server.go` — CNY route
+- `gateway/pkg/constants/constants.go` — APIV1CNYPath, APIV1CNYClaim, RouteConfig
+- `gateway/internal/services/proxy.go` — CNY → UserService routing
+- `services/user_service/tests/services/test_cny_claim.py` — Unit tests
+
+**Remaining**: CNY-001 Frontend — hidden element, modal, celebration UI.
+
+---
+
 ### **2026-02-13: FRONTEND-001 - Fix Frontend Issues Before Demo** ✅ **COMPLETED**
 
 **Task**: Fix known frontend issues so the full trading workflow can be demoed, and add order value constraint.
