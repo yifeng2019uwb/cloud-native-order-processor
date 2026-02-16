@@ -125,6 +125,9 @@ lambda_package/**/
 *.pem
 *.key
 *secret*
+# Exception: CNY secret feature (easter egg component, not sensitive data)
+!frontend/src/components/CnySecret/
+!frontend/src/components/CnySecret/*
 *credential*
 .env.local
 .env.prod
