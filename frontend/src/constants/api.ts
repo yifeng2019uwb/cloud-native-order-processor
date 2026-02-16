@@ -1,6 +1,7 @@
 // API Configuration Constants
+// Base API URL - can be overridden via VITE_REACT_APP_API_BASE_URL (baked in at build time).
+// Uses http://localhost:8080 so API calls go directly to the gateway (works for both dev and Docker).
 export const API_CONFIG = {
-  // Base API URL - can be configured via VITE_REACT_APP_API_BASE_URL environment variable
   BASE_URL: import.meta.env.VITE_REACT_APP_API_BASE_URL || 'http://localhost:8080',
 
   // API Version
@@ -13,6 +14,7 @@ export const API_CONFIG = {
   ORDERS_BASE: '/api/v1/orders',
   PORTFOLIO_BASE: '/api/v1/portfolio',
   ASSETS_BASE: '/api/v1/assets',
+  CNY_BASE: '/api/v1/cny',
 
   // Health check endpoints
   HEALTH_CHECK: '/health',
@@ -32,6 +34,7 @@ export const API_URLS = {
   ORDERS: buildApiUrl(API_CONFIG.ORDERS_BASE),
   PORTFOLIO: buildApiUrl(API_CONFIG.PORTFOLIO_BASE),
   ASSETS: buildApiUrl(API_CONFIG.ASSETS_BASE),
+  CNY: buildApiUrl(API_CONFIG.CNY_BASE),
   HEALTH: buildApiUrl(API_CONFIG.HEALTH_CHECK),
   GATEWAY_HEALTH: buildApiUrl(API_CONFIG.GATEWAY_HEALTH),
 } as const;

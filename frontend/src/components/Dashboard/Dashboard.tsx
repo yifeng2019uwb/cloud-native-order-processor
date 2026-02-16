@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { balanceApiService } from '@/services/balanceApi';
 import { portfolioApiService } from '@/services/portfolioApi';
 import { UI_STRINGS, UI_PATTERNS, formatString } from '@/constants/ui';
+import CnyTrigger from '@/components/CnySecret/CnyTrigger';
 import type { Balance } from '@/types';
 
 const Dashboard: React.FC = () => {
@@ -251,6 +252,10 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </main>
+      {/* Footer with secret trigger */}
+      <footer className="max-w-7xl mx-auto py-4 flex justify-end pr-4 sm:pr-6 lg:pr-8">
+        <CnyTrigger />
+      </footer>
     </div>
   );
 };

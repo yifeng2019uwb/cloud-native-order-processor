@@ -79,6 +79,9 @@ export type {
     AssetBalanceApiResponse
   } from './assetBalance';
 
+  // CNY types
+  export type { CnyClaimRequest, CnyClaimResponse } from './cny';
+
   // Asset Transaction History types
   export type {
     AssetTransactionHistory,

@@ -11,7 +11,7 @@ services:
     environment:
       - SERVICES=dynamodb
       - DEBUG=0
-      - PERSISTENCE=0
+      - PERSISTENCE=1
       - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:
       - localstack_data:/var/lib/localstack

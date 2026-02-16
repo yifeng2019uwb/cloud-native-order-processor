@@ -202,6 +202,7 @@ local_compose() { docker-compose -f docker-compose.yml -f docker-compose.local.y
 
 # Deploy local (DB + all services) - separate flow, does not touch main deploy
 # DB: LocalStack (DynamoDB) + Redis; Services: auth, user, inventory, order, insights, gateway, frontend
+# Uses --no-cache so developers always get latest code (new routes, fixes, etc.)
 deploy_local_all() {
     log_info "Deploying LOCAL stack: DB (LocalStack + Redis) + all services..."
     cd "$SCRIPT_DIR"
@@ -210,20 +211,24 @@ deploy_local_all() {
     local_compose up -d localstack redis
     wait_for_localstack || exit 1
     init_local_dynamodb
-    # 2. Build and start all services
+    # 2. Build (no cache) and start all services
+    log_info "Building all services (no cache for latest code)..."
+    local_compose build --no-cache auth_service user_service inventory_service order_service insights_service gateway frontend
     log_info "Starting all services..."
-    local_compose up -d --build auth_service user_service inventory_service order_service insights_service gateway frontend
+    local_compose up -d auth_service user_service inventory_service order_service insights_service gateway frontend
     log_success "Local deploy complete! Frontend: http://localhost:3000 Gateway: http://localhost:8080"
 }
 
 # Rebuild frontend only for local stack (use local_compose for consistency)
+# Uses --no-deps so we never touch LocalStack, Redis, gateway, or other backend services
+# (prevents data loss / balance reset when rebuilding frontend)
 rebuild_local_frontend() {
     log_warning "Rebuilding frontend for LOCAL stack (no cache)..."
     cd "$SCRIPT_DIR"
     local_compose stop frontend 2>/dev/null || true
     local_compose rm -f frontend 2>/dev/null || true
     local_compose build --no-cache frontend
-    local_compose up -d frontend
+    local_compose up -d --no-deps frontend
     log_success "Frontend rebuilt and started. http://localhost:3000"
 }
 
