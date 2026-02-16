@@ -31,9 +31,9 @@
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
-> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) ~~AI Insights~~ (frontend paused – local deploy config complexity) → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) ~~CNY-001 Backend~~ ✅ → 7) **CNY-001 Frontend** (kid demo) → 8) DEMO-001 → 9) Others
+> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) ~~AI Insights~~ (frontend paused – local deploy config complexity) → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) ~~CNY-001~~ ✅ → 7) **DEMO-001** → 8) Others
 
-> **Next**: CNY-001 Frontend — hidden element, modal, celebration UI (backend ✅ done)
+> **Next**: DEMO-001 — Full workflow demo (all existing APIs, runbook/script)
 
 ---
 
@@ -80,25 +80,18 @@
 
 ---
 
-#### **CNY-001: Chinese New Year Secret — 恭喜发财，红包拿来** 🧧 **NEXT / KID DEMO**
+#### **CNY-001: Chinese New Year Secret — 恭喜发财，红包拿来** 🧧 ✅ **COMPLETED**
 - **Component**: Frontend + Backend (Gateway or User Service)
 - **Type**: Easter Egg / Fun Feature
-- **Priority**: 🔥 **NEXT** (Parent + kid demo together — kid writes a few lines)
-- **Status**: 🚧 **IN PROGRESS** (Backend ✅ | Frontend 📋 To Do)
-- **Goal**: Hidden secret for Chinese New Year. User finds hidden element in frontend, clicks, says secret phrase **「恭喜发财，红包拿来」**, and gets a big red envelope / virtual cash reward.
+- **Status**: ✅ **COMPLETED** — See DAILY_WORK_LOG.md
 - **Scope**:
-  - **Backend**: ✅ **COMPLETED** — See DAILY_WORK_LOG.md
-    - [x] `POST /api/v1/cny/claim` — validates phrase, credits reward, returns `got_red_pocket`, `amount`
-    - [x] Config `cny_phrases.json` with `secret_words` and `amounts` (kid can edit)
-    - [x] Red pocket = phrase in config with valid amount; default reward for any other phrase
-    - [x] One red pocket per user per day (default rewards unlimited)
-    - [x] Gateway route (auth required)
-  - **Frontend**: 📋 **To Do**
-    - [ ] Hide small element (icon, footer link, double-click on logo)
-    - [ ] Modal/input for secret phrase
-    - [ ] Call `POST /api/v1/cny/claim` with phrase
-    - [ ] Celebration UI (red envelope, confetti) on success
-- **Kid-friendly**: Config is simple — kid edits `secret_words` and `amounts` in JSON. Parent scaffolds API.
+  - **Backend**: ✅ COMPLETED
+  - **Frontend**: ✅ COMPLETED
+    - [x] Hidden 🧧 button in Dashboard footer (`CnyTrigger`)
+    - [x] Modal with form (`CnyClaimModal`) — phrase input, submit, error display
+    - [x] Call `POST /api/v1/cny/claim` via `cnyApi.ts`
+    - [x] Success UI — big/small red pocket images (`bigrpocket.jpg`, `littleredpocket.jpg`), amount at bottom (avoids covering god's face)
+    - [x] Animation removed (attempts did not run; user opted to skip)
 
 ---
 
@@ -484,9 +477,9 @@ _Optional maintenance items below._
 
 ## ✅ **COMPLETED TASKS**
 
-#### **CNY-001 Backend: Chinese New Year Secret API** ✅ **COMPLETED**
-- **Component**: User Service + Gateway
-- **Summary**: Secret `POST /api/v1/cny/claim` endpoint; config `cny_phrases.json` with `secret_words` and `amounts`; red pocket vs default reward; one red pocket per user per day. See DAILY_WORK_LOG.md for details.
+#### **CNY-001: Chinese New Year Secret (Full Stack)** ✅ **COMPLETED**
+- **Component**: Frontend + User Service + Gateway
+- **Summary**: Hidden 🧧 trigger in Dashboard footer; modal for secret phrase; `POST /api/v1/cny/claim`; big/small red pocket images (`bigrpocket.jpg`, `littleredpocket.jpg`); amount at bottom. Backend: config `cny_phrases.json`, one red pocket per user per day. See DAILY_WORK_LOG.md for details.
 
 #### **DEV-003: Local Deploy with Local DB** ✅ **COMPLETED**
 - **Component**: Infrastructure & Deployment
@@ -785,10 +778,9 @@ _Optional maintenance items below._
 - **Optional**: INFRA-021 (K8s simplify), ARCH-002 (CORS), CODE-001 (TODOs) — low priority
 
 **🎯 IMMEDIATE NEXT STEP**:
-1. **CNY-001** — Chinese New Year secret (kid demo with parent)
+1. **DEMO-001** — Prepare and deliver project demo (all existing APIs, full workflow)
 2. Deploy infra: DB (DynamoDB) + Docker — no Kubernetes needed for demo
-3. DEMO-001 — Prepare and deliver project demo (all existing APIs, full workflow)
-4. FEATURE-002 (AI Analysis): **PAUSED** — Frontend deferred (local deploy config complexity)
+3. FEATURE-002 (AI Analysis): **PAUSED** — Frontend deferred (local deploy config complexity)
 
 ---
 
@@ -810,8 +802,8 @@ _Optional maintenance items below._
 
 ---
 
-*Last Updated: 2/13/2026*
-*📋 Note: FRONTEND-001 COMPLETED – Order create 422, daily limits UI, order value constraint ($10k), user-friendly error display*
+*Last Updated: 2/15/2026*
+*📋 Note: CNY-001 COMPLETED – Frontend: CnyTrigger, CnyClaimModal, big/small red pocket images, amount at bottom*
 *Next Review: As needed. Backlog cleaned; limit order (FEATURE-001) deferred.*
 *📋 Note: ✅ **AWS EKS DEPLOYMENT SUCCESS** - Production-ready cloud-native architecture deployed with 95% functionality, comprehensive integration testing, and zero ongoing costs*
 *📋 Note: ✅ **Frontend Tasks COMPLETED** - All major frontend issues resolved, port standardized to 3000, authentication working*

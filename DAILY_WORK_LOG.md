@@ -9,6 +9,30 @@
 
 ## 📊 Progress Summary
 
+### **2026-02-15: CNY-001 Frontend & Dashboard Fix** ✅ **COMPLETED**
+
+**Task**: Complete CNY-001 frontend (hidden trigger, modal, celebration UI) and fix broken Dashboard.
+
+**Key Achievements**:
+- ✅ **CnyTrigger** — 🧧 button in Dashboard footer opens modal
+- ✅ **CnyClaimModal** — Form for secret phrase, call `POST /api/v1/cny/claim`, success view with big/small red pocket
+- ✅ **Red pocket images** — `bigrpocket.jpg`, `littleredpocket.jpg`; amount positioned at bottom to avoid covering god's face
+- ✅ **cnyApi.ts** — API client; types in `types/index.ts`; constants in `constants/api.ts`
+- ✅ **Animation removed** — CSS/Web Animations attempts did not run; user opted to skip
+- ✅ **Dashboard fix** — `index.css` was empty; restored Tailwind directives (`@tailwind base/components/utilities`)
+
+**Files Created/Updated**:
+- `frontend/src/components/CnySecret/CnyTrigger.tsx` — Trigger button
+- `frontend/src/components/CnySecret/CnyClaimModal.tsx` — Modal with form and success view
+- `frontend/src/services/cnyApi.ts` — Claim API
+- `frontend/src/types/index.ts` — CnyClaimRequest, CnyClaimResponse
+- `frontend/src/constants/api.ts` — CNY_BASE, API_URLS.CNY
+- `frontend/src/components/Dashboard/Dashboard.tsx` — CnyTrigger in footer
+- `frontend/src/index.css` — Restored Tailwind directives (was empty, Dashboard broken)
+- `frontend/public/bigrpocket.jpg`, `littleredpocket.jpg` — Red pocket images (user-provided)
+
+---
+
 ### **2026-02-06: CNY-001 Backend - Chinese New Year Secret API** ✅ **COMPLETED**
 
 **Task**: Implement backend for CNY red pocket — secret phrase validation, config-driven rewards, one red pocket per user per day.
@@ -33,7 +57,7 @@
 - `gateway/internal/services/proxy.go` — CNY → UserService routing
 - `services/user_service/tests/services/test_cny_claim.py` — Unit tests
 
-**Remaining**: CNY-001 Frontend — hidden element, modal, celebration UI.
+**Frontend**: See 2026-02-15 entry — CnyTrigger, CnyClaimModal, big/small red pocket images.
 
 ---
 
