@@ -200,11 +200,11 @@ To stop and remove the local stack:
 ./docker/deploy.sh local destroy
 ```
 
-**Prerequisites**: Docker and Docker Compose
+**Prerequisites**: Docker and Docker Compose only. You do **not** need Python, Go, or AWS CLI—all services and table creation run inside Docker.
 
 - **Frontend**: http://localhost:3000
 - **Gateway API**: http://localhost:8080
-- Uses LocalStack for DynamoDB (no AWS credentials required)
+- Uses LocalStack for DynamoDB (no AWS account or credentials required)
 
 See [Docker README](docker/README.md) for more options (AWS deploy, stop, logs).
 

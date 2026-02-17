@@ -13,7 +13,7 @@ For testers and learners: download the repo, have Docker, run one command.
 ./docker/deploy.sh local destroy    # Stop and remove local stack
 ```
 
-**Prerequisites**: Docker, Docker Compose, AWS CLI (for table creation; `pip install awscli` or `brew install awscli`)
+**Prerequisites**: Docker and Docker Compose only. You do **not** need Python, Go, or AWS CLI—all services and DynamoDB table creation run in containers.
 
 - **Frontend**: http://localhost:3000
 - **Gateway**: http://localhost:8080
