@@ -2251,7 +2251,7 @@ logger.info("service_started", "New service is running")
 **📊 Architecture Benefits:**
 - **Better Service Separation**: Each service has clear, focused responsibilities
 - **Improved Scalability**: Auth Service can be scaled independently
-- **Future RBAC Ready**: Architecture designed for role-based access control
+- **Auth-only**: No application RBAC; architecture extensible if needed
 - **Network Security**: Backend services completely isolated from external access
 - **Operational Excellence**: Complete visibility into authentication layer
 
@@ -2260,7 +2260,7 @@ logger.info("service_started", "New service is running")
 2. **Phase 2**: Gateway Integration (request forwarding to Auth Service)
 3. **Phase 3**: Backend Service Updates (remove JWT validation, add source validation)
 4. **Phase 4**: Network Security Implementation (Kubernetes NetworkPolicies, IP whitelisting)
-5. **Phase 5**: RBAC Implementation (role-based access control in Auth Service)
+5. **Phase 5**: Auth implementation (no application RBAC)
 6. **Phase 6**: Testing and Validation (comprehensive security and integration testing)
 7. **Phase 7**: Rate Limiting & Circuit Breaker Implementation
 8. **Phase 8**: Resilience Enhancement (caching, failover, health checks)
@@ -2305,7 +2305,7 @@ logger.info("service_started", "New service is running")
 - Real-time security monitoring and alerting
 - Operational excellence with comprehensive monitoring
 - Network-level security controls preventing external access
-- Scalable architecture ready for RBAC implementation
+- Auth-only model (no application RBAC)
 
 ---
 
@@ -2898,7 +2898,7 @@ logger.info("service_started", "New service is running")
 - **Impact**: Frontend development cannot begin until backend routes are fixed
 
 - [x] **Comprehensive Security Analysis**
-  - **Current Security Model**: JWT validation, role-based access, token expiration
+  - **Current Security Model**: JWT validation, auth-gated routes, token expiration
   - **Frontend Security Issues**: Token storage, automatic refresh, route protection
   - **Security Improvements**: 3-phase implementation plan (Critical → Enhanced → Advanced)
   - **Security Checklist**: 10-point security implementation guide
@@ -3816,7 +3816,7 @@ The existing integration test suite is actually well-designed and matches our cu
 - **✅ Complete Gateway-Auth Service Integration** - **COMPLETED**
 - **✅ JWT Validation Flow** - All requests now go through Auth Service via Gateway
 - **✅ User Context Injection** - Gateway properly extracts and injects user information
-- **✅ Role-Based Access Control** - Working through integrated middleware
+- **✅ JWT auth** - Working through integrated middleware (no role enforcement)
 - **✅ Integration Test Validation** - 95%+ test cases passing with new architecture
 
 ### **Technical Implementation Details:**
@@ -4129,7 +4129,7 @@ The existing integration test suite is actually well-designed and matches our cu
 - **OIDC Provider**: Dynamic configuration using EKS cluster identity for proper thumbprint
 - **IAM Role Trust Policy**: Correctly configured for EKS service account authentication
 - **Database Access**: Services can now access DynamoDB through proper IAM role assumption
-- **Service Account Permissions**: RBAC properly configured for Kubernetes resource access
+- **Service Account Permissions**: Kubernetes RBAC properly configured for in-cluster resource access
 
 #### **Infrastructure as Code:**
 - **Terraform Scripts**: Comprehensive apply/destroy automation with proper dependency handling

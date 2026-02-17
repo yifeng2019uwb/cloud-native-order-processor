@@ -423,7 +423,7 @@ func TestHandleProxyRequestComprehensive(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
-	t.Run("Role-Based Access Control", func(t *testing.T) {
+	t.Run("Protected route requires auth", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/orders", nil)
 
@@ -542,7 +542,7 @@ func TestHandleProxyRequestErrorScenarios(t *testing.T) {
 		ctx := gin.CreateTestContextOnly(w, server.router)
 		ctx.Request = req
 
-		// Set user role to public to pass authentication
+		// Set user context to pass authentication
 		ctx.Set(constants.ContextKeyUserRole, "public")
 
 		server.handleProxyRequest(ctx)
@@ -559,7 +559,7 @@ func TestHandleProxyRequestErrorScenarios(t *testing.T) {
 		ctx := gin.CreateTestContextOnly(w, server.router)
 		ctx.Request = req
 
-		// Set user role to public to pass authentication
+		// Set user context to pass authentication
 		ctx.Set(constants.ContextKeyUserRole, "public")
 
 		server.handleProxyRequest(ctx)
@@ -600,15 +600,15 @@ func TestHandleProxyRequestErrorScenarios(t *testing.T) {
 		assert.Contains(t, response.Message, "Invalid JSON body")
 	})
 
-	t.Run("Role-Based Access Control with Empty AllowedRoles", func(t *testing.T) {
-		// Note: Current routes have empty AllowedRoles, so any authenticated role is allowed
+	t.Run("Authenticated user when route has no role restriction", func(t *testing.T) {
+		// Current routes use empty AllowedRoles, so any authenticated user is allowed
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", constants.APIV1Orders, nil)
 
 		gin.SetMode(gin.TestMode)
 		ctx := gin.CreateTestContextOnly(w, server.router)
 		ctx.Request = req
-		ctx.Set(constants.ContextKeyUserRole, "guest") // Any role is allowed when AllowedRoles is empty
+		ctx.Set(constants.ContextKeyUserRole, "guest") // Any authenticated user when AllowedRoles is empty
 
 		server.handleProxyRequest(ctx)
 

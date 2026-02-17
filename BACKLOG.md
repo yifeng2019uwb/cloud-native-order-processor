@@ -798,7 +798,7 @@ _Optional maintenance items below._
 - Professional user experience
 - Production-ready deployment
 - Comprehensive monitoring and alerting
-- Future-ready architecture for RBAC and advanced features
+- Future-ready architecture for advanced features
 
 ---
 

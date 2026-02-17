@@ -68,7 +68,7 @@ This document outlines the design for implementing centralized authentication in
 - `/internal/auth/introspect` - Token introspection
 - `/internal/auth/permissions` - User permissions
 - `/internal/auth/blacklist/*` - Token blacklist management
-- `/internal/auth/roles/*` - Role-based access control
+- `/internal/auth/roles/*` - Reserved (no application RBAC; auth-only)
 
 ### Key Principles
 
@@ -394,6 +394,9 @@ spec:
 
 ### Simplified Authentication Design (No RBAC)
 
+**Why RBAC was removed:**  
+The platform scope does not require different permissions per user type: all authenticated users can use the same trading, portfolio, and account features. Role-based access (e.g. customer vs admin) was removed to simplify the gateway and auth flow, avoid role matrix maintenance, and keep status codes clear (401 for auth failures only). The design remains extensible so roles or permissions can be added later if product requirements change.
+
 #### Authentication Architecture
 - **Single User Type**: All authenticated users have same permissions
 - **No Role System**: Simple authentication without role complexity
@@ -570,7 +573,7 @@ USER_PERMISSIONS = [
 - Better resource utilization
 
 #### Future-Proof Design
-- Ready for RBAC implementation
+- Extensible for future permission/role model if needed
 - Easy to add new authentication methods
 - Flexible permission system
 

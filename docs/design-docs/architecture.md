@@ -71,7 +71,7 @@ The Cloud-Native Order Processor is designed as a microservices-based trading pl
 - **Security**: Token management and secure API calls
 
 #### **API Gateway (Go + Gin)**
-- **Authentication**: JWT validation and role-based access
+- **Authentication**: JWT validation and protected routes
 - **Routing**: Intelligent request routing to backend services
 - **Security**: CORS, rate limiting, input validation
 - **Performance**: Request/response optimization
@@ -111,15 +111,15 @@ Users Table:
 
 ### **Multi-Layer Security**
 - **API Gateway**: JWT validation, rate limiting, CORS
-- **Service Level**: Role-based access control, input validation
+- **Service Level**: Auth-gated endpoints, input validation
 - **Database**: AWS IAM roles, least privilege access
-- **Infrastructure**: Kubernetes RBAC, network policies
+- **Infrastructure**: Kubernetes (service accounts), network policies
 
 ### **Authentication Flow**
 1. **User Login**: Credentials validated against User Service
 2. **JWT Generation**: Secure token with user claims
 3. **Request Validation**: Gateway validates JWT for each request
-4. **Service Authorization**: Services check user permissions
+4. **Service context**: Services receive user context from gateway (auth-only; no RBAC—see [Gateway Design](gateway-design.md#authorization-model) for rationale)
 
 ## 🚀 **Deployment Architecture**
 

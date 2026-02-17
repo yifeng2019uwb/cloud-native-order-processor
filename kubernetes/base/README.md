@@ -5,7 +5,7 @@ This directory contains the base Kubernetes configurations that are shared acros
 ## Contents
 
 - **namespace.yaml**: Defines the `order-processor` namespace
-- **service-account.yaml**: Defines the service account and RBAC permissions
+- **service-account.yaml**: Defines the service account and Kubernetes RBAC (Role/RoleBinding) for in-cluster permissions
 - **kustomization.yaml**: Kustomize configuration for base resources
 
 ## Usage
@@ -25,7 +25,7 @@ kubectl get all -n order-processor
 ```
 base/
 ├── namespace.yaml          # Shared namespace
-├── service-account.yaml    # Service account + RBAC
+├── service-account.yaml    # Service account + K8s RBAC
 ├── kustomization.yaml      # Kustomize config
 └── README.md              # This file
 ```

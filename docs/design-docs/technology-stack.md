@@ -31,7 +31,7 @@ Complete technology stack for the Cloud Native Order Processor system, including
 ### **API Gateway**
 - **Go 1.24+**: High-performance programming language for the gateway
 - **Gin Framework**: Fast HTTP web framework with middleware support
-- **JWT Authentication**: JSON Web Token validation and role-based access control
+- **JWT Authentication**: JSON Web Token validation and protected routes
 - **Request Proxying**: Intelligent routing to backend microservices
 
 ### **Microservices**
@@ -77,7 +77,7 @@ Complete technology stack for the Cloud Native Order Processor system, including
 ### **Authentication & Authorization**
 - **JWT Tokens**: Stateless authentication with secure token validation
 - **bcrypt**: Secure password hashing with salt and cost factors
-- **Role-Based Access Control**: Granular permission management
+- **Route protection**: Public vs JWT-required endpoints
 - **Session Management**: Secure session handling and logout
 
 ### **Security Components**

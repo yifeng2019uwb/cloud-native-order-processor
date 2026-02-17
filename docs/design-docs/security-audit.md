@@ -408,7 +408,7 @@ Security audit for personal project. Focuses on **essential security measures** 
 | Practice | Status | Notes |
 |----------|--------|-------|
 | **Authentication** | ✅ Strong | Centralized JWT with Auth Service |
-| **Authorization** | ✅ Good | Role-based access control |
+| **Authorization** | ✅ Good | JWT-based auth (protected vs public routes) |
 | **Password Security** | ✅ Strong | bcrypt hashing, strong requirements |
 | **Input Validation** | ✅ Strong | Multi-layer validation, sanitization |
 | **Error Handling** | ✅ Strong | RFC 7807, no info leakage |

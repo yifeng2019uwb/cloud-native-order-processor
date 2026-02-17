@@ -73,7 +73,7 @@ A comprehensive microservices platform showcasing production-ready patterns incl
 ### **Auth Service**
 - **Responsibilities**:
   - Validates JWT tokens from incoming requests
-  - Extracts user context and permissions
+  - Extracts user context
   - Provides authentication middleware for other services
   - Handles token expiration and refresh logic
 
@@ -120,8 +120,7 @@ A comprehensive microservices platform showcasing production-ready patterns incl
 - Stateless authentication design
 
 **Authorization:**
-- Role-based access control (Customer, Admin, Public)
-- Endpoint-level permission management
+- JWT-required routes (authenticated vs public endpoints)
 - Service-to-service authentication
 
 **Security Features:**
@@ -212,7 +211,7 @@ A comprehensive microservices platform showcasing production-ready patterns incl
 **Perfect for:**
 - Learning enterprise microservices architecture
 - Understanding security-first design patterns
-- JWT authentication and RBAC implementation
+- JWT authentication implementation
 - Monitoring and observability in production
 - Resilience patterns and fault tolerance
 - Kubernetes deployment and scaling

@@ -40,7 +40,7 @@ A comprehensive, production-ready cloud-native microservice platform demonstrati
 ## 🚪 **API Gateway (Go + Gin)**
 
 ### **JWT Authentication**
-- **Complete Token Validation**: JWT token verification and role-based access
+- **Complete Token Validation**: JWT token verification and auth-gated routes
 - **Request Proxying**: Intelligent routing to all backend services
 - **Security Features**: CORS, rate limiting, input validation
 - **Route Coverage**: Order, Balance, Portfolio, Asset, Profile endpoints
@@ -97,7 +97,7 @@ A comprehensive, production-ready cloud-native microservice platform demonstrati
 ## 🔐 **Security Architecture**
 
 ### **Authentication & Authorization**
-- **JWT Tokens**: Secure authentication with role-based access
+- **JWT Tokens**: Secure authentication with protected routes
 - **Password Security**: bcrypt-based hashing and verification
 - **Access Control**: Public, customer, and admin roles
 - **Audit Logging**: Security event tracking and monitoring

@@ -7,7 +7,7 @@
 A comprehensive, production-ready microservices platform that demonstrates modern cloud-native architecture patterns with a **security-first approach**. Built for learning enterprise patterns while showcasing real-world trading platform capabilities.
 
 **Key Features:**
-- 🔐 **Enterprise Security** - JWT authentication, RBAC, rate limiting, circuit breakers
+- 🔐 **Enterprise Security** - JWT authentication, rate limiting, circuit breakers
 - 🏗️ **Microservices Architecture** - 6 independent services with clear responsibilities
 - 📊 **Comprehensive Monitoring** - Prometheus, Grafana, structured logging, security analytics
 - 🛡️ **Resilience Patterns** - Circuit breakers, retry logic, distributed locking
@@ -69,7 +69,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 | **Frontend** | User Interface | 3000 | JWT token management | ✅ Ready |
 | **API Gateway** | Routing & Security | 8080 | Rate limiting, circuit breakers, CORS | ✅ Ready |
 | **Auth Service** | JWT Validation | 8003 | Token validation, user context, security analytics | ✅ Ready |
-| **User Service** | User Management | 8000 | Password hashing, RBAC, audit logging | ✅ Ready |
+| **User Service** | User Management | 8000 | Password hashing, audit logging | ✅ Ready |
 | **Order Service** | Order Processing | 8002 | Distributed locking, atomic transactions | ✅ Ready |
 | **Inventory Service** | Asset Management | 8001 | Public access, input validation | ✅ Ready |
 | **Insights Service** | AI Portfolio Analysis | 8004 | Google Gemini LLM, in-memory caching | ✅ Ready |
@@ -79,7 +79,6 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 
 **Enterprise Security Features:**
 - **JWT Authentication** - Centralized token validation with Auth Service
-- **Role-Based Access Control** - Public, customer, and admin roles
 - **Rate Limiting** - Per-IP and per-user request throttling
 - **Circuit Breakers** - Service failure protection and resilience
 - **Input Validation** - Comprehensive request validation and sanitization
@@ -89,7 +88,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 
 **Security Monitoring:**
 - **Authentication Analytics** - Login patterns and failure analysis
-- **Authorization Tracking** - RBAC violations and permission usage
+- **Authorization Tracking** - Auth failures and token validation events
 - **Rate Limit Monitoring** - Throttling events and abuse detection
 - **Circuit Breaker States** - Service health and failure patterns
 - **Security Event Correlation** - Cross-service security event tracking
@@ -173,7 +172,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 **Perfect for:**
 - Learning enterprise microservices architecture
 - Understanding security-first design patterns
-- JWT authentication and RBAC implementation
+- JWT authentication implementation
 - Monitoring and observability in production
 - Resilience patterns and fault tolerance
 - Kubernetes deployment and scaling

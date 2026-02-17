@@ -49,7 +49,7 @@
 
 ## 🎉 **Key Achievements**
 
-- ✅ **Complete Authentication System**: JWT-based auth with role-based access
+- ✅ **Complete Authentication System**: JWT-based auth with protected routes
 - ✅ **API Gateway**: Go-based gateway with intelligent routing
 - ✅ **Microservices**: Python FastAPI services with DynamoDB integration
 - ✅ **Frontend**: React application with modern UI/UX ✅ **COMPLETED**

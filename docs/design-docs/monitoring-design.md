@@ -70,7 +70,7 @@
 **Dashboards:**
 - **Security Overview**: Real-time security event dashboard
 - **Authentication Analytics**: Login patterns and failure analysis
-- **Access Control**: RBAC violations and permission usage
+- **Access Control**: Auth failures and token validation events
 
 ### **2. 🌐 Gateway Monitoring**
 **Monitor API Gateway performance, routing, and security**

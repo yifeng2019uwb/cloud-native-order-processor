@@ -68,7 +68,7 @@ The system needs a centralized entry point that can:
    ├── Recovery ✅
    ├── Authentication (JWT validation via Auth Service) ✅
    ├── Rate Limiting (Redis-based) ✅
-   └── Role Authorization (Role-based access) ✅
+   └── Auth check (protected vs public routes) ✅
    ↓
 4. Route Handler
    ↓
@@ -89,13 +89,14 @@ The system needs a centralized entry point that can:
   - Gateway delegates JWT validation to Auth Service
   - No JWT secret distribution (only Auth Service has secrets)
   - Token expiration and signature verification handled by Auth Service
-- **Role Extraction**: User roles embedded in JWT claims, extracted by Auth Service
+- **User Context**: Username and context extracted by Auth Service from JWT
 
 ### **Authorization Model**
-- **Role-Based Access Control (RBAC)**:
-  - `public`: Unauthenticated users (no JWT token)
-  - `customer`: Authenticated users with JWT token
-  - `admin`: Administrative users (future)
+- **Public vs protected routes**: No role-based access control; routes are either public (no JWT) or protected (valid JWT required).
+- Public: login, register. Protected: all other API routes require a valid JWT.
+
+**Why auth-only (no RBAC)?**  
+RBAC was removed to match actual product needs: this is a trading platform where all logged-in users perform the same actions (trade, portfolio, account). There are no admin-only or role-specific APIs, so role checks added complexity without benefit. The gateway now only enforces “valid JWT or not,” returning 401 for missing/invalid tokens. Roles can be reintroduced later if requirements change (e.g. admin or read-only roles).
 
 ### **Route Protection**
 ```go
@@ -104,8 +105,8 @@ APIV1AuthLogin:    {AllowedRoles: []string{"public"}}
 APIV1AuthRegister: {AllowedRoles: []string{"public"}}
 
 // Protected routes (any authenticated user)
-APIV1AuthMe:       {AllowedRoles: []string{}} // Empty = any role
-APIV1AuthLogout:   {AllowedRoles: []string{}} // Empty = any role
+APIV1AuthMe:       {AllowedRoles: []string{}} // Empty = any authenticated user
+APIV1AuthLogout:   {AllowedRoles: []string{}}
 ```
 
 ### **Security Middleware Stack**
@@ -121,7 +122,7 @@ Gateway injects security headers into requests forwarded to backend services:
 - `X-Source: gateway` - Identifies request source
 - `X-Auth-Service: auth-service` - Indicates Auth Service validation
 - `X-User-ID` - User identifier from JWT
-- `X-User-Role` - User role from JWT
+- `X-User-Role` - User context from JWT (legacy field; no role enforcement)
 - `X-Authenticated: true/false` - Authentication status
 - `X-Request-ID` - Request correlation ID for tracing
 
@@ -204,7 +205,7 @@ Gateway injects security headers into requests forwarded to backend services:
 | 8/17 | Framework | Gin over Echo | Better middleware support | Medium | ✅ Done |
 | 8/17 | Auth | JWT over Sessions | Stateless, scalable | High | ✅ Done |
 | 8/17 | Routing | Custom proxy over library | Full control over logic | Medium | ✅ Done |
-| 8/17 | Security | RBAC over ABAC | Simpler, sufficient for current needs | Low | ✅ Done |
+| 8/17 | Security | Auth-only (no RBAC) | Simpler, sufficient for current needs | Low | ✅ Done |
 | - | Auth | Auth Service Integration | Centralized JWT validation | High | ✅ Done |
 | - | Security | Gateway CORS only | Single entry point architecture | Medium | ✅ Done |
 

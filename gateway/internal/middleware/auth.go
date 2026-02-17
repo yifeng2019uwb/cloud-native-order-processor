@@ -61,8 +61,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 // Note: JWT validation is now handled by the Auth Service
 // This function has been replaced by AuthServiceClient.ValidateToken()
 
-// RoleMiddleware checks if user has required role
-// Phase 1: Simple role-based access control
+// RoleMiddleware checks if user is authenticated (requiredRoles empty = any authenticated user allowed)
 func RoleMiddleware(requiredRoles []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		logger.Info(logging.REQUEST_START, "RoleMiddleware processing request", "", map[string]interface{}{

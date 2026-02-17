@@ -1,6 +1,6 @@
 # 🚪 API Gateway
 
-> High-performance Go-based API gateway with JWT authentication, role-based authorization, and intelligent request routing
+> High-performance Go-based API gateway with JWT authentication and intelligent request routing
 
 ## 🚀 Quick Start
 - **Prerequisites**: Go 1.24+, Redis (optional)
@@ -10,7 +10,7 @@
 - **Example**: `curl http://localhost:8080/health`
 
 ## ✨ Key Features
-- JWT authentication and role-based authorization
+- JWT authentication
 - Intelligent request routing to backend services
 - Security features (CORS, input validation)
 - Production-ready with comprehensive testing

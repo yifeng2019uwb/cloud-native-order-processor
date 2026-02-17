@@ -10,7 +10,7 @@
 - ✅ **Ready for Development**: Backend is stable, can focus on new features
 
 A **multi-asset trading platform** built with microservices architecture, featuring:
-- **Security-first design** with JWT authentication, RBAC, and audit logging
+- **Security-first design** with JWT authentication and audit logging
 - **Multi-asset portfolio management** with real-time balance tracking
 - **Cloud-native architecture** using AWS DynamoDB, Redis, and Kubernetes
 - **Production-ready quality** with 96%+ test coverage
@@ -20,7 +20,7 @@ A **multi-asset trading platform** built with microservices architecture, featur
 - **Database**: AWS DynamoDB (3 tables: Users, Orders, Assets)
 - **Caching**: Redis for sessions and token blacklist
 - **Containerization**: Docker (Kubernetes in development)
-- **Security**: JWT, RBAC, encryption, audit logging
+- **Security**: JWT, encryption, audit logging
 - **Testing**: pytest, integration tests, chaos engineering
 
 ## ⚡ Quick Start (5 minutes)
@@ -135,7 +135,6 @@ cd frontend
 ## 🔐 Security Features
 
 - **JWT Authentication** with token blacklist
-- **Role-Based Access Control** (RBAC)
 - **Audit logging** for all operations
 - **Input validation** and sanitization
 - **Encryption** at rest and in transit

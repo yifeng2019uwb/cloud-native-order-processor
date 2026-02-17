@@ -973,7 +973,7 @@ src/
 
 #### **✅ What's Already Implemented**
 - **JWT Token Validation**: Gateway validates JWT tokens with expiration checks
-- **Role-Based Access Control**: Different roles (public, customer, admin)
+- **Authentication**: Public vs authenticated routes (no role-based UI)
 - **Token Expiration**: 24-hour JWT expiration with automatic validation
 - **Centralized Token Management**: Common package handles all token operations
 - **Audit Logging**: Security events are logged for monitoring
