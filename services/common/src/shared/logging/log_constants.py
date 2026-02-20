@@ -129,6 +129,9 @@ class LogField:
 # Defaults - Simple constants for configuration
 class LogDefault:
     """Default values for logging configuration."""
+    ENVIRONMENT_VAR = "ENVIRONMENT"
+    LOG_TO_STDOUT_ENV = "LOG_TO_STDOUT"
+    PRODUCTION_ENV = "production"
     LOG_FILE_PATH = "logs"
     SERVICES_DIR = "services"
     TMP_PATH = "/tmp"

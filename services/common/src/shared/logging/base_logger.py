@@ -13,6 +13,7 @@ Responsibilities:
 
 import json
 import os
+import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -57,9 +58,13 @@ class BaseLogger:
         """
         self.service_name = service_name
         self.log_to_file = log_to_file
+        # stdout if: prod (K8s) OR LOG_TO_STDOUT=1 (local/dev override for Loki without changing ENVIRONMENT)
+        env_val = os.getenv(LogDefault.ENVIRONMENT_VAR, "").strip().lower()
+        log_stdout = os.getenv(LogDefault.LOG_TO_STDOUT_ENV, "").strip().lower() in ("1", "true", "yes")
+        self._use_stdout = (env_val == LogDefault.PRODUCTION_ENV.lower()) or log_stdout
 
-        # Setup file logging if enabled
-        if self.log_to_file:
+        # Setup file logging only when using file (Docker: file for Promtail)
+        if not self._use_stdout and self.log_to_file:
             self._setup_file_logging(log_file_path)
 
     def _setup_file_logging(self, log_file_path: Optional[str] = None):
@@ -126,9 +131,18 @@ class BaseLogger:
         # Convert to JSON string
         log_json = log_entry.model_dump_json()
 
-        # Write to file (for Promtail collection and persistence)
-        if self.log_to_file:
-            self._write_to_file(log_json)
+        # Always emit to stdout so Loki/Promtail see backend logs (Docker collects stdout)
+        try:
+            print(log_json, file=sys.stdout, flush=True)
+        except OSError:
+            pass
+
+        # When not prod (local/dev): also write to file
+        if not self._use_stdout and self.log_to_file and hasattr(self, LogDefault.LOG_FILE_ATTR):
+            try:
+                self._write_to_file(log_json)
+            except OSError:
+                pass
 
     def debug(self, action: str, message: str, **kwargs) -> None:
         """Log debug level message."""
