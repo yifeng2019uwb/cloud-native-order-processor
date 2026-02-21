@@ -92,6 +92,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 - **Rate Limit Monitoring** - Throttling events and abuse detection
 - **Circuit Breaker States** - Service health and failure patterns
 - **Security Event Correlation** - Cross-service security event tracking
+- **OWASP ZAP** - Baseline vulnerability scan; see [OWASP ZAP Security Scan](docs/OWASP_ZAP_SCAN.md) for how to run and interpret results
 
 ## 📊 Monitoring & Observability
 
@@ -164,6 +165,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 - **[Common Package](services/common/README.md)** - Shared components and utilities
 - **[Architecture](docs/design-docs/)** - System design and patterns
 - **[Security](docs/design-docs/monitoring-design.md)** - Security monitoring and analytics
+- **[OWASP ZAP Security Scan](docs/OWASP_ZAP_SCAN.md)** - How to run ZAP baseline scan and interpret the report
 - **[Kubernetes](kubernetes/README.md)** - Container orchestration
 - **[Testing](integration_tests/README.md)** - Testing strategy and implementation
 
