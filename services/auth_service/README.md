@@ -5,7 +5,7 @@
 ## 🚀 Quick Start
 - **Prerequisites**: Python 3.11+, pip, virtual environment
 - **Build & Test**: `./dev.sh` (builds and runs unit tests)
-- **Deploy**: `./deploy.sh` (deploy to Docker or K8s)
+- **Deploy**: From repo root: `./docker/deploy.sh local deploy` (local) or `./docker/deploy.sh auth deploy` (dev/AWS), or K8s (see [Docker](../../docker/README.md), [Kubernetes](../../kubernetes/README.md))
 - **Integration Tests**: `./integration_tests/run_all_tests.sh`
 - **Example**: `curl http://localhost:8003/health`
 
@@ -44,7 +44,7 @@ auth_service/
 
 ## 📊 Status
 - **Current Status**: ✅ **PRODUCTION READY** - JWT validation and user context extraction working
-- **Last Updated**: January 8, 2025
+- **Last Updated**: February 2026
 
 ---
 

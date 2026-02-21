@@ -6,7 +6,7 @@
 - **Prerequisites**: Go 1.24+, Redis (optional)
 - **Build & Test**: `./build.sh` (builds and runs tests)
 - **Run Locally**: `./dev.sh run`
-- **Deploy**: `./deploy.sh` (deploy to Docker or K8s)
+- **Deploy**: From repo root: `./docker/deploy.sh local deploy` (local) or `./docker/deploy.sh gateway deploy` (dev/AWS), or K8s (see [Docker](../docker/README.md), [Kubernetes](../kubernetes/README.md))
 - **Example**: `curl http://localhost:8080/health`
 
 ## ✨ Key Features
@@ -18,24 +18,16 @@
 ## 📁 Project Structure
 ```
 gateway/
-├── src/
-│   ├── main.go                 # Application entry point
-│   ├── handlers/               # HTTP handlers
-│   │   ├── auth_handler.go     # Authentication endpoints
-│   │   └── proxy_handler.go    # Request proxying
-│   ├── middleware/             # Middleware components
-│   │   ├── auth.go            # JWT authentication
-│   │   ├── cors.go            # CORS handling
-│   │   └── logging.go         # Request logging
-│   ├── services/              # Business logic
-│   │   └── auth_service.go    # Authentication service
-│   └── config/                # Configuration
-│       └── config.go          # App configuration
-├── tests/                     # Unit and integration tests
+├── cmd/gateway/                # Application entry point
+├── internal/                  # Private application code
+│   ├── api/                   # HTTP server and routing
+│   ├── config/                # Configuration
+│   ├── middleware/            # Auth, rate limit, metrics, CORS, logging
+│   └── services/              # Proxy, auth client, Redis, circuit breaker
+├── pkg/                       # Public packages (logging, metrics, models, utils)
 ├── docker/                    # Docker configuration
 ├── build.sh                   # Build and test script
-├── dev.sh                     # Development script
-└── deploy.sh                  # Deployment script
+└── dev.sh                     # Development script
 ```
 
 ## 🔗 Quick Links
@@ -45,7 +37,7 @@ gateway/
 
 ## 📊 Status
 - **Current Status**: ✅ **PRODUCTION READY** - All core features implemented and tested
-- **Last Updated**: January 8, 2025
+- **Last Updated**: February 2026
 
 ---
 

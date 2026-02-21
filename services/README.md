@@ -166,11 +166,7 @@ A comprehensive microservices platform showcasing production-ready patterns incl
 - **Loki** - Log aggregation and querying
 - **AlertManager** - Intelligent alerting and notifications
 
-**Key Metrics:** (See [Metrics](../docs/METRICS.md) for the full list and PromQL.)
-- **Security KPIs** - Authentication success rate, security violations
-- **Performance KPIs** - Response time percentiles, error rates
-- **Business KPIs** - Order success rate, user activity, trading volume
-- **Gateway KPIs** - Routing success rate, circuit breaker stability
+**Metrics:** See [docs/METRICS.md](../docs/METRICS.md) for metric definitions and PromQL.
 
 ## 🛡️ Resilience Patterns
 
@@ -189,9 +185,8 @@ A comprehensive microservices platform showcasing production-ready patterns incl
 ## 🚀 Deployment Architecture
 
 **Containerization:**
-- **Docker** - All services containerized
-- **Kubernetes** - Container orchestration and scaling
-- **Service Discovery** - Automatic service discovery and load balancing
+- **Docker** - From repo root: `./docker/deploy.sh local deploy` (local, no AWS) or `./docker/deploy.sh all deploy` / `./docker/deploy.sh <service> deploy` (dev/AWS). All services containerized.
+- **Kubernetes** - Config retained; see [Kubernetes](../kubernetes/README.md) and [Deployment Guide](../docs/deployment-guide.md) for K8s deploy.
 
 **AWS Integration:**
 - **DynamoDB** - Serverless database with AWS integration
@@ -201,31 +196,23 @@ A comprehensive microservices platform showcasing production-ready patterns incl
 ## 📚 Documentation
 
 - **[Common Package](common/README.md)** - Shared components and utilities
+- **[Docker](../docker/README.md)** - Docker Compose deploy (primary)
+- **[Deployment Guide](../docs/deployment-guide.md)** - Docker, K8s, AWS
 - **[Architecture](../docs/design-docs/)** - System design and patterns
 - **[Metrics](../docs/METRICS.md)** - Application metrics (plan + PromQL)
 - **[Security](../docs/design-docs/monitoring-design.md)** - Security monitoring and analytics
-- **[Kubernetes](../kubernetes/README.md)** - Container orchestration
+- **[Kubernetes](../kubernetes/README.md)** - K8s config (retained)
 - **[Testing](../integration_tests/README.md)** - Testing strategy and implementation
 
-## 🎯 Use Cases
+## 📌 Status (Feb 2026)
 
-**Perfect for:**
-- Learning enterprise microservices architecture
-- Understanding security-first design patterns
-- JWT authentication implementation
-- Monitoring and observability in production
-- Resilience patterns and fault tolerance
-- Kubernetes deployment and scaling
-
-## ⚠️ Current Status
-
-- ✅ **Core Services** - All 6 services operational with security features
+- ✅ **Core Services** - All services operational (user, order, inventory, auth, insights, gateway)
 - ✅ **Authentication** - JWT-based auth with centralized validation
 - ✅ **Security** - Rate limiting, circuit breakers, audit logging
-- ✅ **Monitoring** - Prometheus, Grafana, structured logging
+- ✅ **Monitoring** - Prometheus, Grafana, structured logging; see [METRICS.md](../docs/METRICS.md)
 - ✅ **Database** - DynamoDB with PynamoDB ORM and distributed locking
-- ✅ **Deployment** - Docker, Kubernetes, and AWS integration
-- 🔄 **Insights Service** - Backend complete, deployment & frontend integration pending
+- ✅ **Deployment** - Docker (local: `./docker/deploy.sh local deploy`; dev/AWS: `./docker/deploy.sh all deploy` or per-service); K8s deploy via [kubernetes/README.md](../kubernetes/README.md)
+- 🔄 **Insights Service** - Backend complete; frontend integration optional/paused
 
 ---
 

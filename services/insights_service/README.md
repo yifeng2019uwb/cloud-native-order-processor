@@ -5,7 +5,7 @@
 ## 🚀 Quick Start
 - **Prerequisites**: Python 3.11+, pip, virtual environment, Google Gemini API key (`GOOGLE_GEMINI_API_KEY`)
 - **Build & Test**: `./dev.sh` (builds and runs unit tests)
-- **Deploy**: `./deploy.sh` (deploy to Docker or K8s)
+- **Deploy**: From repo root: `./docker/deploy.sh local deploy` (local) or `./docker/deploy.sh insights_service deploy` (dev/AWS), or K8s (see [Docker](../../docker/README.md), [Kubernetes](../../kubernetes/README.md))
 - **Integration Tests**: `./integration_tests/run_all_tests.sh`
 - **Example**: `curl http://localhost:8004/health`
 
@@ -55,7 +55,7 @@ insights_service/
 
 ## 📊 Status
 - **Current Status**: 🔄 **IN PROGRESS** - Backend complete, deployment & frontend integration pending
-- **Last Updated**: January 31, 2026
+- **Last Updated**: February 2026
 
 ---
 

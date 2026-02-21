@@ -6,7 +6,7 @@
 - **Prerequisites**: Node.js 18+, npm or yarn
 - **Build & Test**: `./build.sh` (builds and runs tests)
 - **Run Locally**: `npm run dev`
-- **Deploy**: `./deploy.sh` (deploy to Docker or K8s)
+- **Deploy**: From repo root: `./docker/deploy.sh local deploy` (local) or `./docker/deploy.sh frontend deploy` (dev/AWS), or K8s (see [Docker](../docker/README.md), [Kubernetes](../kubernetes/README.md))
 - **Example**: Open http://localhost:3000
 
 ## ✨ Key Features
@@ -48,7 +48,7 @@ frontend/
 
 ## 📊 Status
 - **Current Status**: ✅ **PRODUCTION READY** - All features implemented and working
-- **Last Updated**: January 8, 2025
+- **Last Updated**: February 2026
 
 ---
 

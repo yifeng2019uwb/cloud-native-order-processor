@@ -11,11 +11,11 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 - 🏗️ **Microservices Architecture** - 6 independent services with clear responsibilities
 - 📊 **Comprehensive Monitoring** - Prometheus, Grafana, structured logging, security analytics
 - 🛡️ **Resilience Patterns** - Circuit breakers, retry logic, distributed locking
-- ☸️ **Production Deployment** - Kubernetes, Docker, AWS integration
+- 🐳 **Deployment** - **Docker (Compose)** for day-to-day use; Kubernetes config retained and documented for K8s/EKS (see [Deployment](#-deployment) below)
 
-## 🏗️ System Architecture
+## 🏗️ High-Level System Overview
 
-**High-Level Architecture:**
+**Architecture:**
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   API Gateway   │    │   Auth Service  │    │   Services      │
@@ -34,35 +34,6 @@ A comprehensive, production-ready microservices platform that demonstrates moder
                        │   Handling      │
                        └─────────────────┘
 ```
-
-## 🔄 Service Communication
-
-**Request Flow:**
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│    User     │    │   Frontend  │    │ API Gateway │    │Auth Service │
-│             │    │             │    │             │    │             │
-│ 1. Request  │───►│ 2. Send     │───►│ 3. Route    │───►│ 4. Validate │
-│             │    │ Request     │    │ + Rate Limit│    │ JWT Token   │
-│             │    │             │    │ + Circuit Br│    │ + User Ctx  │
-│ 8. Response │◄───│ 7. Display  │◄───│ 6. Forward  │◄───│ 5. Extract  │
-│             │    │ Response    │    │ Response    │    │ User Context│
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-                                                              │
-                                                              ▼
-                                                   ┌─────────────┐
-                                                   │Backend      │
-                                                   │ Services    │
-                                                   │             │
-                                                   │ 5. Process  │
-                                                   │ Request     │
-                                                   │             │
-                                                   │ 6. Return   │
-                                                   │ Response    │
-                                                   └─────────────┘
-```
-
-## 🏗️ System Overview
 
 | **Service** | **Purpose** | **Port** | **Security Features** | **Status** |
 |-------------|-------------|----------|----------------------|------------|
@@ -92,28 +63,12 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 - **Rate Limit Monitoring** - Throttling events and abuse detection
 - **Circuit Breaker States** - Service health and failure patterns
 - **Security Event Correlation** - Cross-service security event tracking
-- **OWASP ZAP** - Baseline vulnerability scan; see [OWASP ZAP Security Scan](docs/OWASP_ZAP_SCAN.md) for how to run and interpret results
+- **STRIDE Threat Model** - Documented mitigations and test coverage; see [Threat Model](docs/security/THREAT_MODEL.md)
+- **Attack Simulation** - OWASP ZAP baseline scan (65 PASS, 0 FAIL); see [ZAP Scan report](docker/zap-report.html)
 
 ## 📊 Monitoring & Observability
 
-**Comprehensive Monitoring Stack:**
-- **Prometheus** - Metrics collection and storage (port 9090)
-- **Grafana** - Visualization and dashboards for metrics and logs (port 3001)
-- **Loki** - Log aggregation and querying (port 3100)
-- **Promtail** - Log collection agent (collects from Docker containers)
-
-**Monitoring Categories:**
-- **Security Monitoring** - Authentication, authorization, and security events
-- **Gateway Monitoring** - Routing, rate limiting, and circuit breaker states
-- **Service Performance** - Response times, error rates, and throughput
-- **Business Intelligence** - Trading operations and user analytics
-- **Infrastructure Health** - Kubernetes, AWS, and resource monitoring
-
-**Key Metrics:**
-- **Security KPIs** - Authentication success rate, security violations, audit compliance
-- **Performance KPIs** - Response time percentiles, error rates, service availability
-- **Business KPIs** - Order success rate, user activity, trading volume
-- **Gateway KPIs** - Routing success rate, auth service integration, circuit breaker stability
+**Stack:** Prometheus (metrics), Grafana (dashboards), Loki (logs), Promtail (log collection). For metric definitions and PromQL, see [docs/METRICS.md](docs/METRICS.md).
 
 ## 🛡️ Resilience Patterns
 
@@ -158,36 +113,34 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 - **Structured Logging** - JSON logging with correlation IDs
 - **Monitoring Integration** - Prometheus metrics and health checks
 
+## 🐳 Deployment
+
+- **Primary**: We use **Docker (Compose)** for deployment. Run locally with one command (see [Getting Started](#-getting-started)); no Kubernetes or AWS required.
+- **Kubernetes**: K8s manifests and scripts are **kept** in the repo and remain valid. Use them when you need K8s or AWS EKS; see [Kubernetes](kubernetes/README.md) and [Deployment Guide](docs/deployment-guide.md) for K8s/EKS steps and prerequisites.
+
 ## 📚 Documentation
 
 - **[Services Overview](services/README.md)** - Service architecture and development
+- **[Docker](docker/README.md)** - Docker Compose deploy (local & AWS)
+- **[Kubernetes](kubernetes/README.md)** - K8s deploy (config retained; see Deployment above)
+- **[Deployment Guide](docs/deployment-guide.md)** - Full deployment options (Docker, K8s, AWS)
 - **[Insights Setup](docker/SETUP_INSIGHTS.md)** - AI insights service setup and end-to-end flow
 - **[Common Package](services/common/README.md)** - Shared components and utilities
 - **[Architecture](docs/design-docs/)** - System design and patterns
 - **[Security](docs/design-docs/monitoring-design.md)** - Security monitoring and analytics
 - **[OWASP ZAP Security Scan](docs/OWASP_ZAP_SCAN.md)** - How to run ZAP baseline scan and interpret the report
 - **[Metrics](docs/METRICS.md)** - Application metrics (plan + PromQL); single source of truth
-- **[Kubernetes](kubernetes/README.md)** - Container orchestration
 - **[Testing](integration_tests/README.md)** - Testing strategy and implementation
 
-## 🎯 Use Cases
+## 📌 Project Status (Feb 2026)
 
-**Perfect for:**
-- Learning enterprise microservices architecture
-- Understanding security-first design patterns
-- JWT authentication implementation
-- Monitoring and observability in production
-- Resilience patterns and fault tolerance
-- Kubernetes deployment and scaling
-
-## ⚠️ Current Status
-
-- ✅ **Core Services** - All 6 services operational (user, order, inventory, auth, insights, gateway)
+- ✅ **Core Services** - All services operational (user, order, inventory, auth, insights, gateway)
 - ✅ **Authentication** - JWT-based auth with centralized validation
-- ✅ **Security** - Rate limiting, circuit breakers, audit logging
-- ✅ **Monitoring** - Prometheus, Grafana, structured logging
+- ✅ **Security** - Rate limiting, circuit breakers, audit logging, STRIDE threat model, OWASP ZAP scan (65 PASS, 0 FAIL)
+- ✅ **Monitoring** - Prometheus, Grafana, structured logging; metrics per [docs/METRICS.md](docs/METRICS.md)
 - ✅ **Database** - DynamoDB with PynamoDB ORM and distributed locking
-- ✅ **Deployment** - Docker, Kubernetes, and AWS integration
+- ✅ **Deployment** - **Docker (Compose)** is the supported deployment path; local one-command run via `./docker/deploy.sh local deploy`. Kubernetes config and docs are retained and work with [kubernetes/README.md](kubernetes/README.md) and [docs/deployment-guide.md](docs/deployment-guide.md) when you need K8s or EKS.
+- 📋 **Current focus** - Full workflow demo (DEMO-001); optional Insights frontend paused
 
 ## 🚀 Getting Started
 
@@ -222,6 +175,6 @@ See [Docker README](docker/README.md) for more options (AWS deploy, stop, logs).
 
 **🔐 Enterprise-grade microservices platform demonstrating production-ready security, monitoring, and resilience patterns**
 
-**🛡️ Built with**: Python, FastAPI, Go, DynamoDB, Redis, Prometheus, Grafana, Loki, Docker, Kubernetes, and modern security patterns
+**🛡️ Built with**: Python, FastAPI, Go, DynamoDB, Redis, Prometheus, Grafana, Loki, Docker (K8s config retained), and modern security patterns
 
 **🔒 Questions?** Check the documentation or open an issue
