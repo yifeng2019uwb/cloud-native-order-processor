@@ -1,79 +1,44 @@
 """
-User Service Middleware - Metrics Collection
+User Service Middleware - 3 metrics only: requests, errors, latency.
 """
 import time
-from fastapi import Request, Response
-from common.shared.logging import BaseLogger, LogAction, LoggerName
+from fastapi import Request
+from common.shared.logging import BaseLogger, LoggerName
+from api_info_enum import ApiPaths
 from metrics import metrics_collector
 
 logger = BaseLogger(LoggerName.USER)
 
-async def metrics_middleware(request: Request, call_next):
-    """Middleware to collect request metrics automatically"""
-    start_time = time.time()
+_METRICS_SKIP_PATHS = frozenset({
+    ApiPaths.METRICS.value,
+    ApiPaths.HEALTH.value,
+})
 
-    # Extract endpoint path for metrics
+
+def _is_internal_path(path: str) -> bool:
+    if not isinstance(path, str):
+        return False
+    return path in _METRICS_SKIP_PATHS or path.startswith("/health")
+
+
+async def metrics_middleware(request: Request, call_next):
+    start_time = time.time()
     endpoint = request.url.path
 
     try:
-        # Process the request
         response = await call_next(request)
-
-        # Calculate duration
         duration = time.time() - start_time
-
-        # Determine status based on response
-        status = "success" if 200 <= response.status_code < 400 else "error"
-
-        # Record metrics
-        metrics_collector.record_user_request(endpoint, status, duration)
-
-        # Record specific operation metrics based on endpoint
-        if "/auth/login" in endpoint:
-            metrics_collector.record_auth_operation("login", status, duration)
-        elif "/auth/register" in endpoint:
-            metrics_collector.record_auth_operation("register", status, duration)
-        elif "/auth/logout" in endpoint:
-            metrics_collector.record_auth_operation("logout", status, duration)
-        elif "/auth/profile" in endpoint:
-            metrics_collector.record_auth_operation("profile", status, duration)
-        elif "/balance" in endpoint:
-            operation = "get_balance" if "GET" in request.method else "balance_operation"
-            metrics_collector.record_balance_operation(operation, status, duration)
-        elif "/deposit" in endpoint:
-            metrics_collector.record_balance_operation("deposit", status, duration)
-        elif "/withdraw" in endpoint:
-            metrics_collector.record_balance_operation("withdraw", status, duration)
-        elif "/transactions" in endpoint:
-            metrics_collector.record_balance_operation("transactions", status, duration)
-
+        if _is_internal_path(endpoint):
+            return response
+        metrics_collector.record_request(
+            endpoint=endpoint,
+            status_code=str(response.status_code),
+            duration=duration,
+        )
         return response
-
-    except Exception as e:
-        # Calculate duration even for exceptions
+    except Exception:
         duration = time.time() - start_time
-
-        # Record error metrics
-        metrics_collector.record_user_request(endpoint, "error", duration)
-
-        # Record specific operation metrics for errors
-        if "/auth/login" in endpoint:
-            metrics_collector.record_auth_operation("login", "error", duration)
-        elif "/auth/register" in endpoint:
-            metrics_collector.record_auth_operation("register", "error", duration)
-        elif "/auth/logout" in endpoint:
-            metrics_collector.record_auth_operation("logout", "error", duration)
-        elif "/auth/profile" in endpoint:
-            metrics_collector.record_auth_operation("profile", "error", duration)
-        elif "/balance" in endpoint:
-            operation = "get_balance" if "GET" in request.method else "balance_operation"
-            metrics_collector.record_balance_operation(operation, "error", duration)
-        elif "/deposit" in endpoint:
-            metrics_collector.record_balance_operation("deposit", "error", duration)
-        elif "/withdraw" in endpoint:
-            metrics_collector.record_balance_operation("withdraw", "error", duration)
-        elif "/transactions" in endpoint:
-            metrics_collector.record_balance_operation("transactions", "error", duration)
-
-        # Re-raise the exception
+        if _is_internal_path(endpoint):
+            raise
+        metrics_collector.record_request(endpoint=endpoint, status_code="500", duration=duration)
         raise

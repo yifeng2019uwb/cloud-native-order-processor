@@ -154,7 +154,7 @@ REDIS_PASSWORD=your_redis_password
 - **Query Optimization**: Efficient DynamoDB queries
 
 **Monitoring:**
-- **Metrics**: Prometheus metrics integration
+- **Metrics**: Prometheus metrics; see [docs/METRICS.md](../../docs/METRICS.md) for application metric plan and PromQL
 - **Logging**: Structured JSON logging
 - **Tracing**: Request correlation IDs
 - **Health Checks**: Service health monitoring

@@ -166,6 +166,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 - **[Architecture](docs/design-docs/)** - System design and patterns
 - **[Security](docs/design-docs/monitoring-design.md)** - Security monitoring and analytics
 - **[OWASP ZAP Security Scan](docs/OWASP_ZAP_SCAN.md)** - How to run ZAP baseline scan and interpret the report
+- **[Metrics](docs/METRICS.md)** - Application metrics (plan + PromQL); single source of truth
 - **[Kubernetes](kubernetes/README.md)** - Container orchestration
 - **[Testing](integration_tests/README.md)** - Testing strategy and implementation
 

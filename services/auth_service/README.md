@@ -14,7 +14,7 @@
 - User context extraction from JWT claims
 - Security analytics and audit logging
 - Rate limiting and abuse prevention
-- Health monitoring and metrics
+- Health monitoring and metrics (see [Metrics](../../docs/METRICS.md) for plan and PromQL)
 
 ## 📁 Project Structure
 ```

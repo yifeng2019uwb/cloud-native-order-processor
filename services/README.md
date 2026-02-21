@@ -166,7 +166,7 @@ A comprehensive microservices platform showcasing production-ready patterns incl
 - **Loki** - Log aggregation and querying
 - **AlertManager** - Intelligent alerting and notifications
 
-**Key Metrics:**
+**Key Metrics:** (See [Metrics](../docs/METRICS.md) for the full list and PromQL.)
 - **Security KPIs** - Authentication success rate, security violations
 - **Performance KPIs** - Response time percentiles, error rates
 - **Business KPIs** - Order success rate, user activity, trading volume
@@ -201,10 +201,11 @@ A comprehensive microservices platform showcasing production-ready patterns incl
 ## 📚 Documentation
 
 - **[Common Package](common/README.md)** - Shared components and utilities
-- **[Architecture](docs/design-docs/)** - System design and patterns
-- **[Security](docs/design-docs/monitoring-design.md)** - Security monitoring and analytics
-- **[Kubernetes](kubernetes/README.md)** - Container orchestration
-- **[Testing](integration_tests/README.md)** - Testing strategy and implementation
+- **[Architecture](../docs/design-docs/)** - System design and patterns
+- **[Metrics](../docs/METRICS.md)** - Application metrics (plan + PromQL)
+- **[Security](../docs/design-docs/monitoring-design.md)** - Security monitoring and analytics
+- **[Kubernetes](../kubernetes/README.md)** - Container orchestration
+- **[Testing](../integration_tests/README.md)** - Testing strategy and implementation
 
 ## 🎯 Use Cases
 

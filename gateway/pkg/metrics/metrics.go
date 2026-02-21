@@ -7,27 +7,20 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-// GatewayMetrics holds all gateway-related metrics
+// GatewayMetrics holds the 4 gateway metrics: requests, errors, proxy_errors, latency.
 type GatewayMetrics struct {
-	// HTTP request metrics
-	HTTPRequestsTotal   *prometheus.CounterVec
-	HTTPRequestDuration *prometheus.HistogramVec
-
-	// Proxy service metrics
-	ProxyRequestsTotal   *prometheus.CounterVec
-	ProxyRequestDuration *prometheus.HistogramVec
-	ProxyErrorsTotal     *prometheus.CounterVec
-
-	// Rate limiting metrics
-	RateLimit *RateLimitMetrics
+	RequestsTotal    *prometheus.CounterVec
+	ErrorsTotal      *prometheus.CounterVec
+	ProxyErrorsTotal *prometheus.CounterVec
+	RequestLatency   *prometheus.HistogramVec
 }
 
-// NewGatewayMetrics creates and registers all gateway metrics
+// NewGatewayMetrics creates and registers gateway metrics.
 func NewGatewayMetrics() *GatewayMetrics {
 	return NewGatewayMetricsWithRegistry(nil)
 }
 
-// NewGatewayMetricsWithRegistry creates and registers all gateway metrics with a custom registry
+// NewGatewayMetricsWithRegistry creates and registers with a custom registry.
 func NewGatewayMetricsWithRegistry(reg prometheus.Registerer) *GatewayMetrics {
 	var factory promauto.Factory
 	if reg != nil {
@@ -35,67 +28,49 @@ func NewGatewayMetricsWithRegistry(reg prometheus.Registerer) *GatewayMetrics {
 	} else {
 		factory = promauto.With(prometheus.DefaultRegisterer)
 	}
-
 	return &GatewayMetrics{
-		HTTPRequestsTotal: factory.NewCounterVec(
+		RequestsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: constants.MetricHTTPRequestsTotal,
-				Help: "Total number of HTTP requests processed",
+				Name: constants.MetricGatewayRequestsTotal,
+				Help: "Total requests. Use rate(gateway_requests_total[5m]) for requests per 5 minutes. Labels: status_code, endpoint.",
 			},
-			[]string{constants.LabelMethod, constants.LabelPath, constants.LabelStatusCode, constants.LabelService},
+			[]string{constants.LabelStatusCode, constants.LabelEndpoint},
 		),
-
-		HTTPRequestDuration: factory.NewHistogramVec(
-			prometheus.HistogramOpts{
-				Name:    constants.MetricHTTPRequestDuration,
-				Help:    "Duration of HTTP requests in seconds",
-				Buckets: prometheus.DefBuckets,
-			},
-			[]string{constants.LabelMethod, constants.LabelPath, constants.LabelStatusCode, constants.LabelService},
-		),
-
-		ProxyRequestsTotal: factory.NewCounterVec(
+		ErrorsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: constants.MetricProxyRequestsTotal,
-				Help: "Total number of proxy requests to backend services",
+				Name: constants.MetricGatewayErrorsTotal,
+				Help: "Total 4xx+5xx responses. Use rate(gateway_errors_total[5m]) for error rate. Labels: status_code, endpoint.",
 			},
-			[]string{constants.LabelTargetService, constants.LabelMethod, constants.LabelStatusCode},
+			[]string{constants.LabelStatusCode, constants.LabelEndpoint},
 		),
-
-		ProxyRequestDuration: factory.NewHistogramVec(
-			prometheus.HistogramOpts{
-				Name:    constants.MetricProxyRequestDuration,
-				Help:    "Duration of proxy requests to backend services in seconds",
-				Buckets: prometheus.DefBuckets,
-			},
-			[]string{constants.LabelTargetService, constants.LabelMethod, constants.LabelStatusCode},
-		),
-
 		ProxyErrorsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: constants.MetricProxyErrorsTotal,
-				Help: "Total number of proxy errors to backend services",
+				Help: "Proxy/backend failures (request_failed or backend 5xx). Labels: target_service, error_type. Use rate() for error rate.",
 			},
 			[]string{constants.LabelTargetService, constants.LabelErrorType},
 		),
-
-		RateLimit: NewRateLimitMetricsWithRegistry(reg),
+		RequestLatency: factory.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    constants.MetricGatewayRequestLatency,
+				Help:    "Request latency in seconds. Use histogram_quantile(0.95, rate(gateway_request_latency_seconds_bucket[5m])) for p95. Label: endpoint.",
+				Buckets: prometheus.DefBuckets,
+			},
+			[]string{constants.LabelEndpoint},
+		),
 	}
 }
 
-// RecordHTTPRequest records an HTTP request
-func (m *GatewayMetrics) RecordHTTPRequest(method, path, statusCode, service string, duration float64) {
-	m.HTTPRequestsTotal.WithLabelValues(method, path, statusCode, service).Inc()
-	m.HTTPRequestDuration.WithLabelValues(method, path, statusCode, service).Observe(duration)
-}
-
-// RecordProxyRequest records a proxy request
-func (m *GatewayMetrics) RecordProxyRequest(targetService, method, statusCode string, duration float64) {
-	m.ProxyRequestsTotal.WithLabelValues(targetService, method, statusCode).Inc()
-	m.ProxyRequestDuration.WithLabelValues(targetService, method, statusCode).Observe(duration)
-}
-
-// RecordProxyError records a proxy error
+// RecordProxyError records a proxy/backend error (request_failed or 500, 502, 503).
 func (m *GatewayMetrics) RecordProxyError(targetService, errorType string) {
 	m.ProxyErrorsTotal.WithLabelValues(targetService, errorType).Inc()
+}
+
+// RecordRequest records one request (rate, errors if 4xx/5xx, latency).
+func (m *GatewayMetrics) RecordRequest(endpoint, statusCode string, duration float64) {
+	m.RequestsTotal.WithLabelValues(statusCode, endpoint).Inc()
+	if len(statusCode) >= 1 && (statusCode[0] == '4' || statusCode[0] == '5') {
+		m.ErrorsTotal.WithLabelValues(statusCode, endpoint).Inc()
+	}
+	m.RequestLatency.WithLabelValues(endpoint).Observe(duration)
 }

@@ -1,51 +1,46 @@
 """
-Auth Service Middleware - Metrics Collection
+Auth Service Middleware - 3 metrics only: requests, errors, latency.
 """
 import time
-from fastapi import Request, Response
-from common.shared.logging import BaseLogger, LoggerName, LogAction
-from metrics import metrics_collector
-from constants import METRICS_STATUS_SUCCESS, METRICS_STATUS_ERROR
+from fastapi import Request
+from common.shared.logging import BaseLogger, LoggerName
 from api_info_enum import ApiPaths
+from metrics import metrics_collector
 
 logger = BaseLogger(LoggerName.AUTH)
 
-async def metrics_middleware(request: Request, call_next):
-    """Middleware to collect request metrics automatically"""
-    start_time = time.time()
+_METRICS_SKIP_PATHS = frozenset({
+    ApiPaths.METRICS.value,
+    ApiPaths.HEALTH.value,
+    ApiPaths.HEALTH_READY.value,
+    ApiPaths.HEALTH_LIVE.value,
+})
 
-    # Extract endpoint path for metrics
+
+def _is_internal_path(path: str) -> bool:
+    if not isinstance(path, str):
+        return False
+    return path in _METRICS_SKIP_PATHS or path.startswith("/health")
+
+
+async def metrics_middleware(request: Request, call_next):
+    start_time = time.time()
     endpoint = request.url.path
 
     try:
-        # Process the request
         response = await call_next(request)
-
-        # Calculate duration
         duration = time.time() - start_time
-
-        # Determine status based on response
-        status = METRICS_STATUS_SUCCESS if 200 <= response.status_code < 400 else METRICS_STATUS_ERROR
-
-        # Record metrics
-        metrics_collector.record_request(status, duration)
-
-        # Record specific operation metrics based on endpoint
-        if ApiPaths.VALIDATE.value in endpoint:
-            metrics_collector.record_jwt_validation(status, duration)
-
+        if _is_internal_path(endpoint):
+            return response
+        metrics_collector.record_request(
+            endpoint=endpoint,
+            status_code=str(response.status_code),
+            duration=duration,
+        )
         return response
-
-    except Exception as e:
-        # Calculate duration even for exceptions
+    except Exception:
         duration = time.time() - start_time
-
-        # Record error metrics
-        metrics_collector.record_request(METRICS_STATUS_ERROR, duration)
-
-        # Record specific operation metrics for errors
-        if ApiPaths.VALIDATE.value in endpoint:
-            metrics_collector.record_jwt_validation(METRICS_STATUS_ERROR, duration)
-
-        # Re-raise the exception
+        if _is_internal_path(endpoint):
+            raise
+        metrics_collector.record_request(endpoint=endpoint, status_code="500", duration=duration)
         raise

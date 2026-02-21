@@ -29,6 +29,13 @@
 
 ---
 
+## 📌 **Status** (as of Feb 2026)
+- **Current focus:** DEMO-001 (full workflow demo) and optional FEATURE-002 frontend (Insights UI — paused).
+- **Recently completed:** Metrics (4 gateway + 3 per backend per [docs/METRICS.md](docs/METRICS.md)), CNY-001, monitoring design updates, doc cleanup (project-status, INFRA-009 audit, monitoring task plan removed).
+- **Active & planned:** See section below; optional/maintenance items at end.
+
+---
+
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
 > **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) ~~AI Insights~~ (frontend paused – local deploy config complexity) → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) ~~CNY-001~~ ✅ → 7) **DEMO-001** → 8) Others
@@ -120,40 +127,40 @@
 - **Dependencies**: Running services (local or deployed); FEATURE-002 🚧 **IN PROGRESS**
 - **Demo assistance**: An AI assistant can help create the script, API order, and narrative once you share how you run the project (e.g. `dev.sh`, endpoints, frontend URL). No code change required—this task is about **preparing and delivering** the demo with existing APIs and workflow.
 
-- **Goal**: Add an endpoint that aggregates portfolio, orders, and price data, calls an external LLM API (OpenAI or Claude), and returns a short text analysis for display in the UI.
-- **Design doc**: **Optional** for this scope. A short design note (1–2 pages) is enough if you want to lock scope before coding or hand off to someone else. Use a full design doc if you need review, multiple implementers, or future extension. Suggested contents if you add one: scope (Option 1 only), endpoint contract (path, method, request/response), data flow (which services are called, payload to LLM), prompt strategy (system + user prompt, length limits), config (env vars, API key), error handling and timeouts.
-- **Approach** (Option 1 – lightweight):
-  - **Backend**: New API route (e.g. in user_service or gateway-proxied) that:
-    1. Fetches user portfolio, recent orders, and current/market prices from existing services
-    2. Builds a small JSON/text payload for the LLM
-    3. Calls external LLM API (OpenAI/Anthropic) with a fixed system + user prompt
-    4. Returns the model’s short analysis (e.g. 2–4 sentences) as JSON
-  - **Frontend**: One new section or modal that calls this endpoint and displays the analysis text.
-  - **Config**: API key via env var (e.g. `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`); no new infra.
+#### **SEC-010: Incident Response Simulation — Failed-Login Runbook**
+- **Component**: Security Operations / Documentation
+- **Type**: Runbook & Security Ops
+- **Priority**: 📋 **MEDIUM** (Documents security ops thinking)
+- **Status**: 📋 **To Do**
+- **Goal**: Write a simple runbook that defines response steps when the audit log shows **5 failed logins from the same IP in 1 minute**. Documents security operations thinking and gives a concrete, repeatable procedure.
+- **Scope**:
+  - Single runbook scenario: trigger = 5 failed logins, same IP, within 1 minute.
+  - Step-by-step response (e.g. verify logs, decide block/alert, document, follow-up).
+  - No automation required—runbook is human-followable; can reference existing audit/log locations and tools.
 - **Acceptance Criteria**:
-  - [x] New endpoint implemented and documented (`GET /api/insights/portfolio`)
-  - [x] Endpoint aggregates portfolio, orders, and price data from existing services
-  - [x] LLM call is made with a bounded prompt; response is parsed and returned as structured JSON
-  - [x] API key is read from environment; no keys in code
-  - [x] Errors (missing key, LLM failure, timeout) are handled and return clear HTTP/JSON responses
-  - [x] Design doc created (`docs/design-docs/ai-insights-design.md`)
-  - [ ] **Deploy insights service** to Docker environment
-  - [ ] **Run integration tests** successfully (end-to-end verification)
-  - [ ] **Add gateway route** for insights endpoint
-  - [ ] **Frontend integration**: API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile
-  - [ ] **Frontend can request and display** the analysis (e.g. on dashboard or profile)
-- **Estimated time for this part**:
-  - **Backend (endpoint + LLM integration)**: ~2–4 hours
-  - **Frontend (call API + display)**: ~1–2 hours
-  - **Testing + run-through for this feature**: ~1–2 hours
-  - **Total for this part**: **~4–8 hours** (your full demo can include other flows as well).
-- **Dependencies**: Existing user, order, inventory/price services; external LLM API key and SDK (e.g. `openai`, `anthropic`).
-- **Files to add/update** (examples):
-  - New route/handler in user_service (or dedicated insights module): e.g. `services/user_service/src/.../insights.py` and router registration
-  - Gateway: proxy route for the new endpoint if needed
-  - Frontend: new API client method, component for “Insights” or “AI Summary”, and wiring to dashboard/profile
-  - Config/env: document new env var(s) for LLM API key
-- **Demo assistance**: Yes — an AI assistant can help with this part and with the full demo once it’s in place: e.g. scripted flow for the AI insights step, plus talking points and narrative for the rest of your demo. Share your running endpoints (and optionally a Postman/curl one-pager), and the assistant can suggest exact requests, UI clicks, and narrative.
+  - [ ] Runbook document exists (e.g. in `docs/` or `docs/runbooks/`) with a clear title and trigger condition
+  - [ ] Trigger is explicitly stated: "5 failed logins from same IP in 1 min" (or equivalent)
+  - [ ] Response steps are ordered and actionable (what to check, what to do, what to record)
+  - [ ] Runbook reflects security ops thinking (containment, evidence, communication, review)
+- **Deliverables**: One runbook doc (e.g. `docs/runbooks/failed-login-burst.md` or section in existing security/ops doc)
+- **Dependencies**: SEC-011 (IP block in gateway); runbook “block IP” step assumes gateway can enforce block
+
+#### **SEC-011: Simple IP Block in Gateway Auth Middleware**
+- **Component**: Gateway (Go) / Security
+- **Type**: Implementation
+- **Priority**: 📋 **MEDIUM**
+- **Status**: 📋 **To Do**
+- **Goal**: Use existing Redis (already used for rate limiting) to block requests from specific IPs. Add a check in the gateway **auth middleware**: if the client IP is in a Redis block list, return 403 before token validation.
+- **Scope**:
+  - **Redis**: One Redis set (e.g. `blocked_ips`) maintained by ops (SADD/SREM via CLI or future admin API). Gateway only reads.
+  - **Gateway**: In auth middleware, at the start of the handler, get client IP → call Redis “is this IP in the blocked set?” → if yes, respond 403 and abort.
+  - **No automation required** for adding/removing IPs in this task; manual Redis SADD/SREM is enough. Optional: runbook (SEC-010) can say “add IP to Redis blocked_ips set” as a response step.
+- **Acceptance Criteria**:
+  - [ ] Gateway auth middleware accepts optional Redis service (nil = skip check, no Redis dependency for auth when Redis unavailable).
+  - [ ] If Redis is available: before validating JWT, check client IP against Redis blocked-IP set; if blocked, return 403 with a clear message and abort.
+  - [ ] Block list is a single Redis set (key name documented); adding/removing IPs is via Redis CLI (or later admin endpoint).
+- **Deliverables**: Gateway code change (middleware + RedisService method), short doc or comment on Redis key and how to SADD/SREM.
+- **Dependencies**: None (Redis and auth middleware already exist). SEC-010 depends on this (runbook “block IP” step uses gateway block list).
 
 ---
 
@@ -410,20 +417,14 @@ _Optional maintenance items below._
 - **Type**: Maintenance
 - **Priority**: 🔵 **LOW PRIORITY**
 - **Status**: 📋 **To Do**
-- **Problem**: Project status documentation has outdated dates that need updating
-- **Goal**: Update dates in project documentation to reflect current status
+- **Problem**: Some documentation has outdated dates.
+- **Goal**: Update dates where needed; keep status in BACKLOG + README only.
+- **Note**: `docs/project-status.md` was removed (duplicate of BACKLOG + README status).
 - **Files to Update**:
-  - `docs/project-status.md`: Update dates (currently shows "August 20, 2025")
-  - `QUICK_START.md`: Update last updated date (currently shows "8/17/2025")
-  - Review other documentation for outdated timestamps
+  - `QUICK_START.md`: Update last updated date if needed
+  - Review other docs for outdated timestamps
 - **Acceptance Criteria**:
-  - All dates updated to current date
-  - Status information accurate
-  - Remove or archive outdated status information
-- **Implementation Notes**:
-  - Simple documentation update task
-  - Can be done quickly
-  - Low priority but improves documentation accuracy
+  - Dates updated where relevant; status lives in BACKLOG and main README
 
 #### **REVIEW-001: Evaluate All Tasks for Over-Engineering**
 - **Component**: Project Management & Architecture

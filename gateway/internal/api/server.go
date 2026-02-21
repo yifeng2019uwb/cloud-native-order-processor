@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -64,17 +65,20 @@ func (s *Server) setupRoutes() {
 	// Add Redis-based middleware if Redis is available
 	if s.redisService != nil {
 		// Add rate limiting middleware with metrics (configurable via GATEWAY_RATE_LIMIT env var)
-		s.router.Use(middleware.RateLimitMiddleware(s.redisService, s.config.RateLimit.Limit, s.config.RateLimit.Window, s.metrics.RateLimit))
+		s.router.Use(middleware.RateLimitMiddleware(s.redisService, s.config.RateLimit.Limit, s.config.RateLimit.Window, nil))
 
 		// Phase 2: Add session middleware
 		// s.router.Use(middleware.SessionMiddleware(s.redisService))
 	}
 
+	// Record HTTP request count and duration for every request (gateway_http_*)
+	s.router.Use(middleware.MetricsHTTP(s.metrics))
+
 	// Health check endpoint
 	s.router.GET(constants.HealthPath, s.healthCheck)
 
-	// Metrics endpoint for Prometheus
-	s.router.GET(constants.MetricsPath, gin.WrapH(promhttp.Handler()))
+	// Metrics endpoint for Prometheus (excludes *_created to avoid 1.77G timestamp in Grafana)
+	s.router.GET(constants.MetricsPath, gin.WrapH(promhttp.HandlerFor(metrics.Handler(), promhttp.HandlerOpts{})))
 
 	// API v1 routes
 	api := s.router.Group(constants.APIV1Path)
@@ -280,10 +284,24 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	// Forward request to backend service
 	resp, err := s.proxyService.ProxyRequest(c.Request.Context(), proxyReq)
 	if err != nil {
+		s.metrics.RecordProxyError(targetService, "request_failed")
+		s.logger.Error(logging.PROXY_FAILURE, "Proxy request failed", "", map[string]interface{}{
+			"target_service": targetService,
+			"path":           path,
+			"error":          err.Error(),
+		})
 		s.handleError(c, http.StatusServiceUnavailable, models.ErrSvcUnavailable, fmt.Sprintf(constants.ErrorBackendService, err))
 		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode >= 500 {
+		s.metrics.RecordProxyError(targetService, strconv.Itoa(resp.StatusCode))
+		s.logger.Error(logging.BACKEND_5XX, "Backend returned 5xx", "", map[string]interface{}{
+			"target_service": targetService,
+			"path":           path,
+			"status_code":    resp.StatusCode,
+		})
+	}
 
 	// Save rate limit headers before copying backend headers (they may be overwritten)
 	rateLimitLimit := c.Writer.Header().Get(constants.RateLimitHeaderLimit)

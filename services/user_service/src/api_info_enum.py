@@ -61,3 +61,21 @@ class ApiResponseKeys(str, Enum):
     """Standard keys used in FastAPI response definitions"""
     DESCRIPTION = "description"
     MODEL = "model"
+
+
+class MetricOperation(str, Enum):
+    """Operation names for Prometheus metric labels (operation-level metrics)."""
+    # Auth
+    LOGIN = "login"
+    REGISTER = "register"
+    LOGOUT = "logout"
+    PROFILE = "profile"
+    # Balance
+    GET_BALANCE = "get_balance"
+    BALANCE_OPERATION = "balance_operation"
+    DEPOSIT = "deposit"
+    WITHDRAW = "withdraw"
+    TRANSACTIONS = "transactions"
+    # Portfolio
+    GET_PORTFOLIO = "get_portfolio"
+    GET_ASSET_BALANCE = "get_asset_balance"

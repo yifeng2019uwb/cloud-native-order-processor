@@ -43,7 +43,6 @@ func RateLimitMiddleware(redisService *services.RedisService, limit int, window 
 			if metrics != nil {
 				metrics.RecordRateLimitViolation(clientIP, endpoint)
 				metrics.UpdateRateLimitRemaining(clientIP, endpoint, remaining)
-				metrics.UpdateRateLimitReset(clientIP, endpoint, resetTime)
 			}
 
 			c.JSON(http.StatusTooManyRequests, gin.H{
@@ -60,7 +59,6 @@ func RateLimitMiddleware(redisService *services.RedisService, limit int, window 
 		// Update metrics for allowed request
 		if metrics != nil {
 			metrics.UpdateRateLimitRemaining(clientIP, endpoint, remaining)
-			metrics.UpdateRateLimitReset(clientIP, endpoint, resetTime)
 		}
 
 		c.Next()

@@ -39,7 +39,9 @@ class InsightsTests:
             timeout=self.timeout
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 200, (
+            f"expected 200, got {response.status_code}; body={response.text[:500]}"
+        )
         data = response.json()
         assert 'data' in data
         assert 'summary' in data['data']
@@ -82,7 +84,9 @@ class InsightsTests:
             timeout=self.timeout
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 200, (
+            f"expected 200, got {response.status_code}; body={response.text[:500]}"
+        )
         data = response.json()
         assert 'data' in data
         assert 'summary' in data['data']

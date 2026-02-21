@@ -2,6 +2,18 @@
 
 > Comprehensive observability stack for microservices with security-focused monitoring, business intelligence, and operational insights
 
+## 📌 Current Implementation (Application Metrics)
+
+**Canonical reference:** [docs/METRICS.md](../METRICS.md) — single source of truth for metric names and PromQL.
+
+- **Gateway:** 4 metrics — `gateway_requests_total`, `gateway_errors_total`, `gateway_proxy_errors_total`, `gateway_request_latency_seconds` (labels: status_code, endpoint; proxy_errors: target_service, error_type).
+- **Each backend** (inventory, user, order, auth, insights): 3 metrics — `<service>_requests_total`, `<service>_errors_total`, `<service>_request_latency_seconds` (labels: status_code, endpoint).
+- **Endpoints:** Gateway `GET /metrics`; backends `GET /internal/metrics`. Middleware records requests and skips /internal/metrics and /health.
+
+The sections below describe the broader monitoring vision and design; the **implemented** metric set is defined in [METRICS.md](../METRICS.md).
+
+---
+
 ## 🎯 Design Objectives
 
 ### **Primary Goals**
@@ -220,16 +232,8 @@ Components:
 ```
 
 **2. Application Metrics**
-```python
-# FastAPI services expose /metrics endpoints
-# Custom metrics for business logic
-from prometheus_client import Counter, Histogram, Gauge
-
-# Example metrics
-user_registrations = Counter('user_registrations_total')
-order_processing_time = Histogram('order_processing_seconds')
-active_users = Gauge('active_users_current')
-```
+- **Implemented:** All services expose request/error/latency metrics per [METRICS.md](../METRICS.md) (gateway: 4 metrics; each backend: 3 metrics). Gateway at `GET /metrics`; backends at `GET /internal/metrics`.
+- **Implementation:** FastAPI services use Prometheus Counter and Histogram in `metrics.py` and middleware; Gateway uses `pkg/metrics` and middleware.
 
 **3. Structured Logging**
 ```json
@@ -687,7 +691,7 @@ order_logger.error("create_order_failed", "Insufficient balance",
 |------|-----------|----------|-----|---------|---------|
 | 8/20 | Monitoring Stack | Prometheus + Grafana | Industry standard, cost-effective | High | ✅ Done |
 | 8/20 | Logging | Structured JSON + correlation IDs | Debugging, security audit | Medium | ✅ Done |
-| 8/20 | Metrics | Custom business metrics | Domain-specific monitoring | High | 🔄 In Progress |
+| 8/20 | Metrics | Standard request/error/latency per service | [METRICS.md](../METRICS.md) — 4 gateway, 3 per backend | High | ✅ Done |
 | 8/20 | Alerting | AlertManager | Prometheus integration | Medium | 📋 Planned |
 | 8/20 | Dashboards | Security + Business focus | Learning value, portfolio | High | 📋 Planned |
 | 8/20 | Gateway Monitoring | Enhanced logging + metrics | Authentication flow visibility | High | 📋 Planned |
@@ -717,17 +721,17 @@ pip install prometheus-client
 
 ### **View Current Metrics**
 ```bash
-# Check service metrics
-curl http://localhost:8000/metrics  # User Service
-curl http://localhost:8001/metrics  # Inventory Service
-curl http://localhost:8002/metrics  # Order Service
-```
+# Gateway
+curl http://localhost:8080/metrics
 
-### **Gateway Metrics Endpoint**
-```bash
-# Gateway metrics (when implemented)
-curl http://localhost:8080/metrics  # API Gateway
+# Backends (each exposes /internal/metrics)
+curl http://localhost:8000/internal/metrics   # User Service
+curl http://localhost:8001/internal/metrics  # Inventory Service
+curl http://localhost:8002/internal/metrics  # Order Service
+curl http://localhost:8003/internal/metrics  # Auth Service
+# Insights: same pattern when deployed
 ```
+Metric names and PromQL: see [METRICS.md](../METRICS.md).
 
 ---
 

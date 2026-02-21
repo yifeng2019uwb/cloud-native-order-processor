@@ -17,6 +17,7 @@
 
 ## 🔗 Quick Links
 - [Design Documentation](../docs/design-docs/monitoring-design.md)
+- [Application Metrics (plan + PromQL)](../docs/METRICS.md)
 - [Prometheus Configuration](#prometheus-configuration)
 - [Grafana Dashboards](#grafana-dashboards)
 - [Alerting Rules](#alerting-rules)
@@ -112,13 +113,8 @@ kubernetes_sd_configs:
 ## 📈 Metrics Collection
 
 ### **Application Metrics**
-```python
-# Current metrics endpoints
-GET /metrics                    # Prometheus metrics
-GET /health                    # Service health status
-GET /health/ready             # Readiness probe
-GET /health/live              # Liveness probe
-```
+- **Metric list and PromQL:** [docs/METRICS.md](../docs/METRICS.md)
+- **Endpoints:** Gateway `GET /metrics`; each backend `GET /internal/metrics`; plus `GET /health`, `GET /health/ready`, `GET /health/live`
 
 ### **Business Metrics (Planned)**
 - **Trading Operations**: Orders created, executed, cancelled

@@ -20,6 +20,7 @@ This directory contains all design documentation, guides, and technical specific
 ### **📋 Guides**
 - `deployment-guide.md` - Complete deployment instructions
 - `port-configuration.md` - Port strategy and configuration
+- `METRICS.md` - Application metrics (plan + PromQL); single source of truth
 - `README_TEMPLATE.md` - Template for creating new documentation
 
 ### **🔧 Technical Specifications**
@@ -42,12 +43,14 @@ This directory contains all design documentation, guides, and technical specific
 ### **For DevOps**
 - [Kubernetes Design](design-docs/kubernetes-design.md) - Container orchestration
 - [Monitoring Design](design-docs/monitoring-design.md) - Observability stack
+- [Metrics](METRICS.md) - Application metrics and PromQL
 - [Deployment Guide](deployment-guide.md) - Infrastructure setup
 
 ## 🔗 Quick Links
 
 - [Main Project README](../README.md) - Project overview
 - [Services Overview](../services/README.md) - Service documentation
+- [Metrics](METRICS.md) - Application metrics (plan + PromQL)
 - [Quick Start Guide](../QUICK_START.md) - Get started quickly
 
 ## 📊 Status

@@ -1,20 +1,20 @@
 """
-Auth Service Metrics - 3 metrics only: requests, errors, latency.
+Insights Service Metrics - 3 metrics only: requests, errors, latency.
 """
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Response
 from common.shared.logging import BaseLogger, LogAction, LoggerName
 from common.shared.constants.api_constants import HTTPStatus
 
-logger = BaseLogger(LoggerName.AUTH)
+logger = BaseLogger(LoggerName.INSIGHTS)
 
-AUTH_REQUESTS_TOTAL = "auth_requests_total"
-AUTH_ERRORS_TOTAL = "auth_errors_total"
-AUTH_REQUEST_LATENCY = "auth_request_latency_seconds"
+INSIGHTS_REQUESTS_TOTAL = "insights_requests_total"
+INSIGHTS_ERRORS_TOTAL = "insights_errors_total"
+INSIGHTS_REQUEST_LATENCY = "insights_request_latency_seconds"
 
-MSG_REQUESTS = "Total requests. Use rate(auth_requests_total[5m]). Labels: status_code, endpoint."
-MSG_ERRORS = "Total 4xx+5xx. Use rate(auth_errors_total[5m]). Labels: status_code, endpoint."
-MSG_LATENCY = "Request latency in seconds. Use histogram_quantile(0.95, rate(auth_request_latency_seconds_bucket[5m])). Label: endpoint."
+MSG_REQUESTS = "Total requests. Use rate(insights_requests_total[5m]). Labels: status_code, endpoint."
+MSG_ERRORS = "Total 4xx+5xx. Use rate(insights_errors_total[5m]). Labels: status_code, endpoint."
+MSG_LATENCY = "Request latency in seconds. Use histogram_quantile(0.95, rate(insights_request_latency_seconds_bucket[5m])). Label: endpoint."
 
 LABEL_STATUS_CODE = "status_code"
 LABEL_ENDPOINT = "endpoint"
@@ -23,28 +23,28 @@ CACHE_CONTROL_HEADER = "Cache-Control"
 NO_CACHE_VALUE = "no-cache"
 ERROR_CONTENT = "# Error\n"
 
-auth_requests_total = Counter(
-    AUTH_REQUESTS_TOTAL, MSG_REQUESTS, [LABEL_STATUS_CODE, LABEL_ENDPOINT]
+insights_requests_total = Counter(
+    INSIGHTS_REQUESTS_TOTAL, MSG_REQUESTS, [LABEL_STATUS_CODE, LABEL_ENDPOINT]
 )
-auth_errors_total = Counter(
-    AUTH_ERRORS_TOTAL, MSG_ERRORS, [LABEL_STATUS_CODE, LABEL_ENDPOINT]
+insights_errors_total = Counter(
+    INSIGHTS_ERRORS_TOTAL, MSG_ERRORS, [LABEL_STATUS_CODE, LABEL_ENDPOINT]
 )
-auth_request_latency_seconds = Histogram(
-    AUTH_REQUEST_LATENCY, MSG_LATENCY, [LABEL_ENDPOINT]
+insights_request_latency_seconds = Histogram(
+    INSIGHTS_REQUEST_LATENCY, MSG_LATENCY, [LABEL_ENDPOINT]
 )
 
 
 class SimpleMetricsCollector:
     def record_request(self, endpoint: str, status_code: str, duration: float = None):
-        auth_requests_total.labels(
+        insights_requests_total.labels(
             **{LABEL_STATUS_CODE: status_code, LABEL_ENDPOINT: endpoint}
         ).inc()
         if len(status_code) >= 1 and (status_code[0] == "4" or status_code[0] == "5"):
-            auth_errors_total.labels(
+            insights_errors_total.labels(
                 **{LABEL_STATUS_CODE: status_code, LABEL_ENDPOINT: endpoint}
             ).inc()
         if duration is not None:
-            auth_request_latency_seconds.labels(**{LABEL_ENDPOINT: endpoint}).observe(
+            insights_request_latency_seconds.labels(**{LABEL_ENDPOINT: endpoint}).observe(
                 duration
             )
 

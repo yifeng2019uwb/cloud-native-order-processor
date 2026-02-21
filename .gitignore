@@ -6,8 +6,9 @@ terraform.tfstate*
 # Compiled class file
 *.class
 
-# Log file
+# Log files and runtime log directories (do not commit)
 *.log
+logs/
 
 # BlueJ files
 *.ctxt

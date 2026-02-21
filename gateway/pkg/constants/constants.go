@@ -89,6 +89,12 @@ const (
 	RedisTimeout   = 5 * time.Second
 )
 
+// Service label values for gateway HTTP metrics (grouping requests by path type)
+const (
+	ServiceLabelHealth  = "health"
+	ServiceLabelMetrics = "metrics"
+)
+
 // API paths
 const (
 	HealthPath       = "/health"
@@ -146,8 +152,8 @@ const (
 	APIV1AssetTransactionsByID = "/api/v1/assets/:asset_id/transactions"
 
 	// Insights service paths
-	APIV1InsightsPath        = "/api/v1/insights"
-	APIV1InsightsPortfolio   = "/api/v1/insights/portfolio"
+	APIV1InsightsPath      = "/api/v1/insights"
+	APIV1InsightsPortfolio = "/api/v1/insights/portfolio"
 
 	// CNY service paths (user service)
 	APIV1CNYPath  = "/api/v1/cny"
@@ -272,7 +278,9 @@ const (
 
 // Context keys
 const (
-	ContextKeyUserContext = "user_context"
+	ContextKeyUserContext      = "user_context"
+	ContextKeyProxyErrorTarget = "proxy_error_target" // set by handler; middleware records gateway_proxy_errors_total
+	ContextKeyProxyErrorType   = "proxy_error_type"   // request_failed | 500 | 502 | 503
 )
 
 // Header values
@@ -295,17 +303,19 @@ const (
 	CircuitBreakerFieldServiceName  = "service_name"
 )
 
-// Prometheus metric names
+// Prometheus metric names (3-metric plan: requests, errors, latency)
 const (
+	MetricGatewayRequestsTotal  = "gateway_requests_total"
+	MetricGatewayErrorsTotal    = "gateway_errors_total"
+	MetricGatewayRequestLatency = "gateway_request_latency_seconds"
+	// Legacy / rate-limit (rate_limit_metrics.go still references these)
+	MetricRequestsTotal            = "gateway_requests_total" // rate-limit package
 	MetricHTTPRequestsTotal        = "gateway_http_requests_total"
-	MetricHTTPRequestDuration      = "gateway_http_request_duration_seconds"
-	MetricProxyRequestsTotal       = "gateway_proxy_requests_total"
-	MetricProxyRequestDuration     = "gateway_proxy_request_duration_seconds"
+	MetricHTTPRequestLatency       = "gateway_http_request_latency_seconds"
+	MetricHTTPErrorsTotal          = "gateway_http_errors_total"
 	MetricProxyErrorsTotal         = "gateway_proxy_errors_total"
-	MetricRequestsTotal            = "gateway_requests_total"
 	MetricRateLimitViolationsTotal = "gateway_rate_limit_violations_total"
 	MetricRateLimitRemaining       = "gateway_rate_limit_remaining"
-	MetricRateLimitReset           = "gateway_rate_limit_reset"
 )
 
 // Prometheus label names

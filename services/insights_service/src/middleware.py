@@ -1,5 +1,5 @@
 """
-Inventory Service Middleware - 3 metrics only: requests, errors, latency.
+Insights Service Middleware - 3 metrics only: requests, errors, latency.
 """
 import time
 from fastapi import Request
@@ -7,13 +7,11 @@ from common.shared.logging import BaseLogger, LoggerName
 from api_info_enum import ApiPaths
 from metrics import metrics_collector
 
-logger = BaseLogger(LoggerName.INVENTORY)
+logger = BaseLogger(LoggerName.INSIGHTS)
 
 _METRICS_SKIP_PATHS = frozenset({
     ApiPaths.METRICS.value,
     ApiPaths.HEALTH.value,
-    ApiPaths.HEALTH_READY.value,
-    ApiPaths.HEALTH_LIVE.value,
 })
 
 

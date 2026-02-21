@@ -17,7 +17,6 @@ func TestNewRateLimitMetrics(t *testing.T) {
 		assert.NotNil(t, metrics.RequestsTotal)
 		assert.NotNil(t, metrics.RateLimitViolationsTotal)
 		assert.NotNil(t, metrics.RateLimitRemaining)
-		assert.NotNil(t, metrics.RateLimitReset)
 	})
 
 	t.Run("Create with custom registry", func(t *testing.T) {
@@ -28,7 +27,6 @@ func TestNewRateLimitMetrics(t *testing.T) {
 		assert.NotNil(t, metrics.RequestsTotal)
 		assert.NotNil(t, metrics.RateLimitViolationsTotal)
 		assert.NotNil(t, metrics.RateLimitRemaining)
-		assert.NotNil(t, metrics.RateLimitReset)
 
 		// Verify metrics are registered in custom registry
 		err := reg.Register(metrics.RequestsTotal)
@@ -196,49 +194,6 @@ func TestRateLimitMetrics_UpdateRateLimitRemaining(t *testing.T) {
 	})
 }
 
-func TestRateLimitMetrics_UpdateRateLimitReset(t *testing.T) {
-	reg := prometheus.NewRegistry()
-	metrics := NewRateLimitMetricsWithRegistry(reg)
-
-	t.Run("Update reset time", func(t *testing.T) {
-		resetTime := int64(1672531200) // Fixed timestamp
-		metrics.UpdateRateLimitReset("127.0.0.1", "/api/v1/orders", resetTime)
-
-		metricFamilies, err := reg.Gather()
-		assert.NoError(t, err)
-		assert.Greater(t, len(metricFamilies), 0)
-	})
-
-	t.Run("Update reset time multiple times", func(t *testing.T) {
-		reg := prometheus.NewRegistry()
-		metrics := NewRateLimitMetricsWithRegistry(reg)
-
-		resetTimes := []int64{1672531200, 1672534800, 1672538400}
-		for _, resetTime := range resetTimes {
-			metrics.UpdateRateLimitReset("127.0.0.1", "/api/v1/orders", resetTime)
-		}
-
-		metricFamilies, err := reg.Gather()
-		assert.NoError(t, err)
-		assert.Greater(t, len(metricFamilies), 0)
-	})
-
-	t.Run("Update reset time for different clients", func(t *testing.T) {
-		reg := prometheus.NewRegistry()
-		metrics := NewRateLimitMetricsWithRegistry(reg)
-
-		clients := []string{"127.0.0.1", "192.168.1.1"}
-		resetTime := int64(1672531200)
-		for _, client := range clients {
-			metrics.UpdateRateLimitReset(client, "/api/v1/orders", resetTime)
-		}
-
-		metricFamilies, err := reg.Gather()
-		assert.NoError(t, err)
-		assert.Greater(t, len(metricFamilies), 0)
-	})
-}
-
 func TestRateLimitMetrics_Integration(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := NewRateLimitMetricsWithRegistry(reg)
@@ -256,7 +211,6 @@ func TestRateLimitMetrics_Integration(t *testing.T) {
 		// Record violation when limit exceeded
 		metrics.RecordRateLimitViolation(clientIP, endpoint)
 		metrics.UpdateRateLimitRemaining(clientIP, endpoint, 0)
-		metrics.UpdateRateLimitReset(clientIP, endpoint, 1672534800)
 
 		metricFamilies, err := reg.Gather()
 		assert.NoError(t, err)

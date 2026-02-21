@@ -38,3 +38,4 @@ PROMETHEUS_HISTOGRAM = "prometheus_client.Histogram"
 
 
 METRICS_COLLECTOR = "src.middleware.metrics_collector"
+METRICS_COLLECTOR_GET_METRICS = "src.metrics.metrics_collector.get_metrics"

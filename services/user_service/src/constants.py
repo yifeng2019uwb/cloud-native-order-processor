@@ -36,6 +36,18 @@ DEFAULT_DAILY_DEPOSIT_LIMIT = "10000"
 DEFAULT_DAILY_WITHDRAW_LIMIT = "5000"
 
 # =============================================================================
+# METRICS RESULT LABELS (Prometheus metric label values: success / error)
+# =============================================================================
+METRICS_RESULT_SUCCESS = "success"
+METRICS_RESULT_ERROR = "error"
+
+# =============================================================================
+# HTTP METHOD (for metrics path branching)
+# =============================================================================
+HTTP_METHOD_GET = "GET"
+HTTP_METHOD_POST = "POST"
+
+# =============================================================================
 # RESPONSE FIELD NAMES (Keep as constants - used in JSON responses)
 # =============================================================================
 RESPONSE_FIELD_SERVICE = "service"

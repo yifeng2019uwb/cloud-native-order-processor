@@ -61,3 +61,30 @@ class ApiResponseKeys(str, Enum):
     """Standard keys used in FastAPI response definitions"""
     DESCRIPTION = "description"
     MODEL = "model"
+
+
+# =============================================================================
+# METRICS: path segments and operation names (no hardcoding in middleware)
+# =============================================================================
+
+class MetricOperation(str, Enum):
+    """Operation names for asset and API-call metrics"""
+    LIST_ASSETS = "list_assets"
+    GET_ASSET_DETAIL = "get_asset_detail"
+    CREATE_ASSET = "create_asset"
+    UPDATE_ASSET = "update_asset"
+    DELETE_ASSET = "delete_asset"
+
+
+class MetricApiCall(str, Enum):
+    """External API name for metrics"""
+    COINGECKO = "coingecko"
+
+
+# Path segment used to detect asset endpoints (must match ApiPaths.ASSETS)
+PATH_SEGMENT_ASSETS = "/inventory/assets"
+# Path segment to detect external API calls (e.g. /api/coingecko)
+PATH_SEGMENT_API = "api"
+URL_CONTAINS_COINGECKO = "coingecko"
+# Slash count threshold: more than 3 slashes in path with ASSETS => get_asset_detail
+ASSET_DETAIL_PATH_SLASH_COUNT = 3

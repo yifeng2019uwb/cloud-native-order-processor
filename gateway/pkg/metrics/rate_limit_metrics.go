@@ -17,9 +17,6 @@ type RateLimitMetrics struct {
 
 	// Rate limit remaining (requests allowed in current window)
 	RateLimitRemaining *prometheus.GaugeVec
-
-	// Rate limit reset time (when the window resets)
-	RateLimitReset *prometheus.GaugeVec
 }
 
 // NewRateLimitMetrics creates and registers new rate limiting metrics
@@ -60,14 +57,6 @@ func NewRateLimitMetricsWithRegistry(reg prometheus.Registerer) *RateLimitMetric
 			},
 			[]string{constants.LabelClientIP, constants.LabelEndpoint},
 		),
-
-		RateLimitReset: factory.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: constants.MetricRateLimitReset,
-				Help: "Unix timestamp when the rate limit window resets",
-			},
-			[]string{constants.LabelClientIP, constants.LabelEndpoint},
-		),
 	}
 }
 
@@ -84,9 +73,4 @@ func (m *RateLimitMetrics) RecordRateLimitViolation(clientIP, endpoint string) {
 // UpdateRateLimitRemaining updates the remaining requests in the window
 func (m *RateLimitMetrics) UpdateRateLimitRemaining(clientIP, endpoint string, remaining int64) {
 	m.RateLimitRemaining.WithLabelValues(clientIP, endpoint).Set(float64(remaining))
-}
-
-// UpdateRateLimitReset updates the rate limit reset timestamp
-func (m *RateLimitMetrics) UpdateRateLimitReset(clientIP, endpoint string, resetTime int64) {
-	m.RateLimitReset.WithLabelValues(clientIP, endpoint).Set(float64(resetTime))
 }

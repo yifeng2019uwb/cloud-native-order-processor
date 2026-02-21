@@ -22,8 +22,9 @@ class ServiceMetadata(str, Enum):
 class ApiPaths(str, Enum):
     """API endpoint paths"""
     PORTFOLIO_INSIGHTS = "/insights/portfolio"
-    
+
     # System endpoints
+    METRICS = "/internal/metrics"
     HEALTH = "/health"
     DOCS = "/docs"
     REDOC = "/redoc"

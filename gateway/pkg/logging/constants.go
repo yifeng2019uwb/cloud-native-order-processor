@@ -15,6 +15,10 @@ const (
 	STARTUP  LogActions = "startup"
 	SHUTDOWN LogActions = "shutdown"
 	HEALTH   LogActions = "health"
+
+	// Backend/proxy actions (service catches and logs; metrics record separately)
+	PROXY_FAILURE LogActions = "proxy_failure" // connection/timeout to backend
+	BACKEND_5XX   LogActions = "backend_5xx"   // backend returned 5xx
 )
 
 // Loggers represents the service identifier for logging
