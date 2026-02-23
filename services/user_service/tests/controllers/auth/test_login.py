@@ -23,9 +23,12 @@ TEST_TOKEN_TYPE = "bearer"
 os.environ["JWT_SECRET_KEY"] = TEST_JWT_SECRET
 
 def create_mock_request(request_id=TEST_REQUEST_ID):
-    """Helper function to create a mock request object with headers"""
+    """Helper function to create a mock request object with headers and client (JSON-serializable for audit logger)."""
     mock_request = MagicMock()
     mock_request.headers = {"X-Request-ID": request_id}
+    # request.client.host and headers.get(User-Agent) are passed to audit logger and must be JSON-serializable (no MagicMock)
+    mock_request.client = MagicMock()
+    mock_request.client.host = "127.0.0.1"
     return mock_request
 
 
