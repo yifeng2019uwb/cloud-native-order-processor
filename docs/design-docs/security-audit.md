@@ -337,6 +337,21 @@ Security audit for personal project. Focuses on **essential security measures** 
 - **Recommendations**:
   - ✅ Current implementation is adequate for project scope
 
+### ✅ **11. IP Block / Brute-Force Protection (SEC-011)**
+
+#### **Implementation**
+- **Status**: ✅ **Implemented**
+- **Implementation**:
+  - **Gateway auth middleware**: Before JWT validation, checks Redis key `ip_block:<client_ip>`. If present, returns **403 Forbidden** and aborts (no proxy to backend).
+  - **Failed-login recording**: On **401** from POST `/api/v1/auth/login`, gateway calls `RecordFailedLogin(clientIP)`: increments `login_fail:<ip>` (1-day window); after **5** failures in that window, sets `ip_block:<ip>` with TTL (e.g. 5 min dev/test, configurable for production).
+  - **Redis**: Keys `login_fail:<ip>` (counter + TTL 1 day), `ip_block:<ip>` (block with TTL). Manual block/unblock: `redis-cli SET ip_block:<ip> 1 EX 300` / `redis-cli DEL ip_block:<ip>`.
+- **Location**: `gateway/internal/middleware/auth.go` (block check), `gateway/internal/api/server.go` (RecordFailedLogin on 401 login), `gateway/internal/services/redis.go` (IsIPBlocked, RecordFailedLogin).
+- **Strengths**:
+  - Limits brute-force and credential stuffing from a single IP
+  - Fail-open on Redis errors (no block check if Redis unavailable)
+  - Integration tests verify full flow: init → 5 wrong logins → 6th request 403 → wait for TTL → login works again (`integration_tests/incident/test_ip_block.py`).
+- **References**: Gateway README (IP block + tracing), `integration_tests/incident/README.md`, BACKLOG SEC-011 (completed).
+
 ---
 
 ## 🔍 Security Gaps Identified

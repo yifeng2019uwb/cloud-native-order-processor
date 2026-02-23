@@ -145,11 +145,11 @@
 - **Deliverables**: One runbook doc (e.g. `docs/runbooks/failed-login-burst.md` or section in existing security/ops doc)
 - **Dependencies**: SEC-011 (IP block in gateway); runbook “block IP” step assumes gateway can enforce block
 
-#### **SEC-011: Simple IP Block in Gateway Auth Middleware**
+#### **SEC-011: IP Block in Gateway** ✅ **COMPLETED**
 - **Component**: Gateway (Go) / Security
 - **Type**: Implementation
 - **Priority**: 📋 **MEDIUM**
-- **Status**: 📋 **To Do**
+- **Status**: ✅ **COMPLETED** — Auth middleware checks Redis `ip_block:<ip>` (403 if blocked). Gateway records failed logins; after 5 in 1-day window sets block. Integration tests: init → 5 wrong logins → 403 → wait 5 min → login works. See DAILY_WORK_LOG.md, `integration_tests/incident/README.md`.
 - **Goal**: Use existing Redis (already used for rate limiting) to block requests from specific IPs. Add a check in the gateway **auth middleware**: if the client IP is in a Redis block list, return 403 before token validation.
 - **Scope**:
   - **Redis**: One Redis set (e.g. `blocked_ips`) maintained by ops (SADD/SREM via CLI or future admin API). Gateway only reads.
@@ -477,6 +477,11 @@ _Optional maintenance items below._
 ---
 
 ## ✅ **COMPLETED TASKS**
+
+#### **SEC-011: IP Block in Gateway (Auth Middleware + Auto-Block after 5 Failed Logins)** ✅ **COMPLETED**
+- **Component**: Gateway (Go) / Security
+- **Summary**: Gateway auth middleware checks Redis `ip_block:<ip>` before token validation; blocked IPs get 403. Gateway records failed logins (401 from POST /auth/login) and sets `ip_block:<ip>` after 5 failures in a 1-day window (TTL 5 min dev / configurable). Integration tests (`integration_tests/incident/test_ip_block.py`) verify full flow: init → 5 wrong logins → 6th request 403 → wait 5 min → login works again.
+- **Details**: See DAILY_WORK_LOG.md
 
 #### **CNY-001: Chinese New Year Secret (Full Stack)** ✅ **COMPLETED**
 - **Component**: Frontend + User Service + Gateway

@@ -110,6 +110,9 @@ const (
 
 	// Rate Limiting
 	ErrRateLimitExceeded ErrorCode = "RATE_001"
+
+	// IP Block (SEC-011)
+	ErrIPBlocked ErrorCode = "AUTH_004"
 )
 
 // RouteConfig defines routing configuration for API endpoints

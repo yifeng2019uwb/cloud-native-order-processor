@@ -124,6 +124,38 @@ func (r *RedisService) GetCachedResponse(ctx context.Context, key string) ([]byt
 	return r.client.Get(ctx, key).Bytes()
 }
 
+// IsIPBlocked returns true if the client IP has an active block key (ip_block:<ip> with TTL).
+// Ops: block with TTL via redis-cli SET ip_block:<ip> 1 EX <seconds> (e.g. EX 300 for 5 min dev/test, EX 86400 for 24hr production).
+func (r *RedisService) IsIPBlocked(ctx context.Context, clientIP string) (bool, error) {
+	key := constants.RedisKeyPrefixIPBlock + clientIP
+	n, err := r.client.Exists(ctx, key).Result()
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
+// RecordFailedLogin increments the failed-login count for the client IP. If the count reaches FailedLoginBlockThreshold
+// within the window (FailedLoginWindowSeconds), sets the IP block key (ip_block:<ip>) with TTL BlockDurationSeconds.
+// Call this when the gateway receives 401 from POST /auth/login.
+func (r *RedisService) RecordFailedLogin(ctx context.Context, clientIP string) error {
+	keyFail := constants.RedisKeyPrefixLoginFail + clientIP
+	count, err := r.client.Incr(ctx, keyFail).Result()
+	if err != nil {
+		return err
+	}
+	if count == 1 {
+		r.client.Expire(ctx, keyFail, time.Duration(constants.FailedLoginWindowSeconds)*time.Second)
+	}
+	if count >= int64(constants.FailedLoginBlockThreshold) {
+		blockKey := constants.RedisKeyPrefixIPBlock + clientIP
+		if err := r.client.Set(ctx, blockKey, "1", time.Duration(constants.BlockDurationSeconds)*time.Second).Err(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Close closes Redis connection
 func (r *RedisService) Close() error {
 	return r.client.Close()

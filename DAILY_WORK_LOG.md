@@ -9,6 +9,27 @@
 
 ## 📊 Progress Summary
 
+### **2026-02-06: SEC-011 Incident IP Block – Integration Tests & Gateway Recording** ✅ **COMPLETED**
+
+**Task**: Complete IP block (SEC-011) behaviour: gateway records failed logins and sets block after 5 in 1-day window; incident integration tests verify full flow (403 on 6th request, block expiry after 5 min). Update README, backlog, and daily work log.
+
+**Key Achievements**:
+- ✅ **Gateway RecordFailedLogin** – On 401 from POST /auth/login, gateway increments `login_fail:<ip>` (1-day window); after 5 failures sets `ip_block:<ip>` with TTL (BlockDurationSeconds). Redis keys: `login_fail:<ip>`, `ip_block:<ip>`.
+- ✅ **Constants** – `FailedLoginWindowSeconds = 86400`, `FailedLoginBlockThreshold = 5`, `RedisKeyPrefixLoginFail`.
+- ✅ **Incident integration tests** – Full flow: init (create user, login, logout) → 5 wrong logins → 6th request gets **403** → wait 5 minutes → login with correct password gets **200** (block expired). Run: `./run_all_tests.sh incident` or `python3 incident/test_ip_block.py`.
+- ✅ **Docs** – `integration_tests/incident/README.md` updated (what we test from outside). Gateway README has “Tracing IP block in gateway logs”. BACKLOG: SEC-011 marked ✅ COMPLETED; entry in Completed section.
+
+**Files Created/Updated**:
+- `gateway/internal/services/redis.go` – `RecordFailedLogin(ctx, clientIP)`
+- `gateway/pkg/constants/constants.go` – `RedisKeyPrefixLoginFail`, `FailedLoginWindowSeconds`, `FailedLoginBlockThreshold`
+- `gateway/internal/api/server.go` – On 401 from POST /auth/login, call `RecordFailedLogin`
+- `gateway/README.md` – IP block description, “Tracing IP block in gateway logs”
+- `integration_tests/incident/README.md` – Full test flow (init, step 3 = 403, step 4 = 5 min wait then login)
+- `BACKLOG.md` – SEC-011 status ✅ COMPLETED; new completed task entry
+- `DAILY_WORK_LOG.md` – This entry
+
+---
+
 ### **2026-02-15: CNY-001 Frontend & Dashboard Fix** ✅ **COMPLETED**
 
 **Task**: Complete CNY-001 frontend (hidden trigger, modal, celebration UI) and fix broken Dashboard.

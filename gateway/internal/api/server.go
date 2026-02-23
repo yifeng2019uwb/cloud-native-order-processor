@@ -59,8 +59,8 @@ func (s *Server) setupRoutes() {
 	s.router.Use(middleware.Logger())
 	s.router.Use(middleware.Recovery())
 
-	// Add auth middleware globally to set user roles for all routes
-	s.router.Use(middleware.AuthMiddleware(s.config))
+	// Add auth middleware globally to set user roles for all routes (SEC-011: IP block check when Redis available)
+	s.router.Use(middleware.AuthMiddleware(s.config, s.redisService))
 
 	// Add Redis-based middleware if Redis is available
 	if s.redisService != nil {
@@ -331,6 +331,16 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	if err != nil {
 		s.handleError(c, http.StatusInternalServerError, models.ErrSvcUnavailable, constants.ErrorReadResponseBody)
 		return
+	}
+
+	// SEC-011: record failed login for IP block. On 5th 401 from login, set ip_block:<ip> so next request gets 403.
+	if s.redisService != nil && path == constants.APIV1AuthLogin && c.Request.Method == http.MethodPost && resp.StatusCode == http.StatusUnauthorized {
+		if err := s.redisService.RecordFailedLogin(c.Request.Context(), c.ClientIP()); err != nil {
+			s.logger.Info(logging.REQUEST_END, "RecordFailedLogin failed (non-fatal)", "", map[string]interface{}{
+				"client_ip": c.ClientIP(),
+				"error":     err.Error(),
+			})
+		}
 	}
 
 	// Return response

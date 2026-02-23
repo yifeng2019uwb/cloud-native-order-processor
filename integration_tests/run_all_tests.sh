@@ -25,7 +25,7 @@ install_prerequisites() {
 }
 
 show_usage() {
-    echo "Usage: $0 [all|auth|smoke|inventory|user|order|insights]"
+    echo "Usage: $0 [all|auth|smoke|inventory|user|order|insights|incident]"
     echo "  all       - Run all tests (default)"
     echo "  auth      - Run only auth requirement tests"
     echo "  smoke     - Run only smoke tests"
@@ -33,13 +33,13 @@ show_usage() {
     echo "  user      - Run only user service tests"
     echo "  order     - Run only order service tests"
     echo "  insights  - Run only insights service tests"
+    echo "  incident  - Run only incident response tests (e.g. IP block SEC-011)"
     echo ""
     echo "Examples:"
     echo "  $0          # Run all tests"
     echo "  $0 auth     # Run only auth tests"
     echo "  $0 smoke    # Run only smoke tests"
-    echo "  $0 inventory # Run only inventory tests"
-    echo "  $0 order    # Run only order service tests"
+    echo "  $0 incident # Run only incident IP block test (run individually to see result)"
 }
 
 # Helper function to run tests and track exit codes
@@ -98,6 +98,11 @@ run_insights_tests() {
     run_test_suite "insights tests" "python3 user_services/insights/insights_tests.py"
 }
 
+run_incident_tests() {
+    echo "=== Running Incident Response Tests (IP block SEC-011) ==="
+    run_test_suite "incident IP block tests" "python3 incident/test_ip_block.py"
+}
+
 run_order_tests() {
     echo "=== Running Order Service Tests ==="
 
@@ -151,8 +156,8 @@ case $ARG in
         run_inventory_tests
         run_user_tests
         run_order_tests
-        run_insights_tests
         echo "=== All tests completed ==="
+        echo "(Insights and incident tests are separate: $0 insights | $0 incident)"
         ;;
     "auth")
         echo "=== Running Auth Tests ==="
@@ -183,6 +188,11 @@ case $ARG in
         echo "=== Running Insights Tests ==="
         run_insights_tests
         echo "=== Insights tests completed ==="
+        ;;
+    "incident")
+        echo "=== Running Incident Tests ==="
+        run_incident_tests
+        echo "=== Incident tests completed ==="
         ;;
     "load")
         echo "=== Running Load Tests ==="

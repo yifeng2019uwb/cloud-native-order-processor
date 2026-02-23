@@ -32,7 +32,7 @@ func setupAuthTestRouter() *gin.Engine {
 
 func TestAuthMiddleware(t *testing.T) {
 	router := setupAuthTestRouter()
-	router.Use(AuthMiddleware(testConfig))
+	router.Use(AuthMiddleware(testConfig, nil))
 	router.GET("/test", func(c *gin.Context) {
 		userID, userIDExists := c.Get(constants.ContextKeyUserID)
 		userRole, userRoleExists := c.Get(constants.ContextKeyUserRole)

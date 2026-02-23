@@ -11,6 +11,7 @@ This document maps STRIDE threats to components, mitigations, and test coverage 
 | **Repudiation** | All services (mutations) | Audit log on auth events (login/logout/register, failures); AuditLogger to Loki | None (manual Loki e.g. `{service="audit"} \| json \| action="auth_failed"`). |
 | **Information disclosure** | Order / User services | Owner check; wrong-owner → 404; no secrets in logs | None. |
 | **Denial of service** | Gateway | Redis-based rate limiting per IP; circuit breakers on backend calls | `integration_tests/load_tests/k6/rate-limiting.js` |
+| **Brute-force / credential stuffing** | Gateway (auth) | **IP block (SEC-011):** After 5 failed logins (401) per IP in a 1-day window, gateway sets `ip_block:<ip>` in Redis; subsequent requests from that IP get 403 until TTL expires. | `integration_tests/incident/test_ip_block.py` — init, 5 wrong logins → 6th 403, wait 5 min → login works again |
 | **Elevation of privilege** | All services | Single user role; no RBAC; protected = any valid JWT | N/A — no role-based endpoints |
 
 ## IDOR (Insecure Direct Object Reference)
@@ -31,4 +32,5 @@ This document maps STRIDE threats to components, mitigations, and test coverage 
 - Authentication: `docs/design-docs/gateway-design.md`, `docs/centralized-authentication-architecture.md`
 - Security audit: `docs/design-docs/security-audit.md`
 - Rate limiting: `integration_tests/load_tests/k6/README.md`, `gateway/pkg/utils/rate_limit.go`
+- IP block (SEC-011): `gateway/README.md`, `integration_tests/incident/README.md`, `docs/design-docs/security-audit.md` (§11)
 - Audit logging: `services/common/src/auth/security/audit_logger.py`; query audit logs: `{service="audit"} \| json \| action="auth_failed"` (Loki)

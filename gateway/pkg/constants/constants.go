@@ -381,12 +381,26 @@ const (
 	ErrorInvalidJSONBody   = "Invalid JSON body"
 	ErrorReadResponseBody  = "Failed to read response body"
 	ErrorBackendService    = "Backend service error: %v"
+	ErrorIPBlocked         = "Access denied: IP blocked"
 )
 
-// Redis key prefixes
+// Redis key prefixes and keys
 const (
 	RedisKeyPrefixSession   = "session:"
 	RedisKeyPrefixRateLimit = "rate_limit:"
+	// RedisKeyPrefixIPBlock is the Redis key prefix for per-IP block with TTL. Key: ip_block:<ip>. Ops: SET ip_block:<ip> 1 EX <seconds> to block (e.g. EX 300 for 5 min, EX 86400 for 24hr).
+	RedisKeyPrefixIPBlock   = "ip_block:"
+	RedisKeyPrefixLoginFail = "login_fail:" // per-IP failed login count; triggers IP block after threshold
+)
+
+// IP block duration (SEC-011). Used when setting a block (e.g. runbook or after 5 failed logins).
+// NOTE: 5 min for dev/testing. Production would use 24hr (86400s).
+const BlockDurationSeconds = 300
+
+// Failed login tracking (SEC-011). After FailedLoginBlockThreshold failed logins within FailedLoginWindowSeconds, the IP is blocked for BlockDurationSeconds.
+const (
+	FailedLoginWindowSeconds   = 86400 // count failures in a 1-day window (24 * 60 * 60)
+	FailedLoginBlockThreshold = 5     // block after this many failed logins in the window
 )
 
 // Context keys

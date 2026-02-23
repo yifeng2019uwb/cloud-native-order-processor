@@ -38,7 +38,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 | **Service** | **Purpose** | **Port** | **Security Features** | **Status** |
 |-------------|-------------|----------|----------------------|------------|
 | **Frontend** | User Interface | 3000 | JWT token management | ✅ Ready |
-| **API Gateway** | Routing & Security | 8080 | Rate limiting, circuit breakers, CORS | ✅ Ready |
+| **API Gateway** | Routing & Security | 8080 | Rate limiting, circuit breakers, CORS, **IP block (brute-force)** | ✅ Ready |
 | **Auth Service** | JWT Validation | 8003 | Token validation, user context, security analytics | ✅ Ready |
 | **User Service** | User Management | 8000 | Password hashing, audit logging | ✅ Ready |
 | **Order Service** | Order Processing | 8002 | Distributed locking, atomic transactions | ✅ Ready |
@@ -51,6 +51,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 **Enterprise Security Features:**
 - **JWT Authentication** - Centralized token validation with Auth Service
 - **Rate Limiting** - Per-IP and per-user request throttling
+- **IP Block (SEC-011)** - Brute-force protection: after 5 failed logins per IP in a 1-day window, the gateway blocks the IP (403) for a configured period; integration tests in `integration_tests/incident/`
 - **Circuit Breakers** - Service failure protection and resilience
 - **Input Validation** - Comprehensive request validation and sanitization
 - **Audit Logging** - Security event tracking and compliance
@@ -136,7 +137,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 
 - ✅ **Core Services** - All services operational (user, order, inventory, auth, insights, gateway)
 - ✅ **Authentication** - JWT-based auth with centralized validation
-- ✅ **Security** - Rate limiting, circuit breakers, audit logging, STRIDE threat model, OWASP ZAP scan (65 PASS, 0 FAIL)
+- ✅ **Security** - Rate limiting, IP block (brute-force protection), circuit breakers, audit logging, STRIDE threat model, OWASP ZAP scan (65 PASS, 0 FAIL)
 - ✅ **Monitoring** - Prometheus, Grafana, structured logging; metrics per [docs/METRICS.md](docs/METRICS.md)
 - ✅ **Database** - DynamoDB with PynamoDB ORM and distributed locking
 - ✅ **Deployment** - **Docker (Compose)** is the supported deployment path; local one-command run via `./docker/deploy.sh local deploy`. Kubernetes config and docs are retained and work with [kubernetes/README.md](kubernetes/README.md) and [docs/deployment-guide.md](docs/deployment-guide.md) when you need K8s or EKS.
