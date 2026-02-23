@@ -9,6 +9,24 @@
 
 ## 📊 Progress Summary
 
+### **2026-02-06: SEC-010 Incident Response — Failed-Login Runbook** ✅ **COMPLETED**
+
+**Task**: Complete SEC-010 runbook for failed-login burst: define trigger (5 failed logins from same IP in 1 day), ordered response steps (verify → containment → evidence → follow-up), and references to SEC-011, audit logs, and integration test.
+
+**Key Achievements**:
+- ✅ **Runbook created** – `docs/runbooks/failed-login-burst.md` with clear title and trigger.
+- ✅ **Trigger** – "5 failed logins from same IP in 1 day" (configured window; matches SEC-011).
+- ✅ **Steps** – (1) Verify & identify: Loki audit query `{service="audit"} | json | action="auth_failed"`, gateway logs, record client IP; (2) Containment: confirm auto-block (SEC-011) or apply manual block `redis-cli SET ip_block:<ip> 1 EX 300`, verify 403; (3) Evidence: record time, IP, action, log excerpts; (4) Follow-up: unblock policy, communication, review.
+- ✅ **Security ops** – Containment, evidence, communication, review reflected in runbook.
+- ✅ **References** – SEC-011 (gateway README), integration test (incident/README.md), threat model, logging standards, security audit §11.
+
+**Files Created/Updated**:
+- `docs/runbooks/failed-login-burst.md` – New runbook
+- `BACKLOG.md` – SEC-010 marked ✅ COMPLETED; summary in Active section; entry in Completed section
+- `DAILY_WORK_LOG.md` – This entry
+
+---
+
 ### **2026-02-06: SEC-011 Incident IP Block – Integration Tests & Gateway Recording** ✅ **COMPLETED**
 
 **Task**: Complete IP block (SEC-011) behaviour: gateway records failed logins and sets block after 5 in 1-day window; incident integration tests verify full flow (403 on 6th request, block expiry after 5 min). Update README, backlog, and daily work log.
@@ -25,8 +43,15 @@
 - `gateway/internal/api/server.go` – On 401 from POST /auth/login, call `RecordFailedLogin`
 - `gateway/README.md` – IP block description, “Tracing IP block in gateway logs”
 - `integration_tests/incident/README.md` – Full test flow (init, step 3 = 403, step 4 = 5 min wait then login)
-- `BACKLOG.md` – SEC-011 status ✅ COMPLETED; new completed task entry
+- `BACKLOG.md` – SEC-011 status ✅ COMPLETED; new completed task entry; detail (Goal/Scope/Acceptance Criteria) moved here from backlog
 - `DAILY_WORK_LOG.md` – This entry
+
+**Original backlog task (for reference):**
+- **Goal**: Use existing Redis to block requests from specific IPs. In gateway auth middleware: if client IP is in a Redis block list, return 403 before token validation.
+- **Scope**: Redis key for block (e.g. `ip_block:<ip>`); gateway reads it; optional automation to add/remove IPs (we implemented auto-block after 5 failed logins).
+- **Acceptance Criteria**: Auth middleware accepts optional Redis (nil = skip); if Redis available, check IP before JWT, return 403 if blocked; block key documented; ops can use redis-cli.
+- **Deliverables**: Gateway middleware + RedisService method; doc/comment on Redis key. (Done: plus RecordFailedLogin, constants, integration tests.)
+- **Dependencies**: SEC-010 runbook depends on this (runbook “block IP” step uses gateway block).
 
 ---
 

@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAssetDetail } from '@/hooks/useInventory';
-import AssetCard from './AssetCard';
 
 interface AssetDetailProps {
   assetId: string;
@@ -134,333 +133,92 @@ const AssetDetail: React.FC<AssetDetailProps> = ({ assetId, onBack }) => {
     );
   }
 
+  const Row = ({ label, value, className = '' }: { label: string; value: React.ReactNode; className?: string }) => (
+    <div className={`flex justify-between gap-2 py-2 ${className}`}>
+      <dt className="text-sm text-gray-500 shrink-0">{label}</dt>
+      <dd className="text-sm text-gray-900 text-right min-w-0">{value}</dd>
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Asset Header */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-6">
-          <div className="flex items-center space-x-6">
-            {asset.image && (
-              <div className="flex-shrink-0">
-                <img
-                  src={asset.image}
-                  alt={asset.name}
-                  className="h-20 w-20 rounded-full"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              </div>
+    <div className="bg-white shadow rounded-lg overflow-hidden">
+      {/* Header: name, price, actions in one row */}
+      <div className="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center gap-4">
+        {asset.image && (
+          <img
+            src={asset.image}
+            alt={asset.name}
+            className="h-14 w-14 rounded-full shrink-0"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold text-gray-900 truncate">{asset.name}</h1>
+            {asset.symbol && <span className="text-sm px-2.5 py-1 rounded bg-indigo-100 text-indigo-800">{asset.symbol}</span>}
+            {asset.market_cap_rank != null && <span className="text-sm text-gray-500">#{asset.market_cap_rank}</span>}
+          </div>
+          <p className="text-base text-gray-600 mt-1">
+            {formatCurrency(asset.price_usd)}
+            {asset.price_change_percentage_24h != null && (
+              <span className={`ml-2 ${getPercentageColor(asset.price_change_percentage_24h)}`}>
+                {formatPercentage(asset.price_change_percentage_24h)} 24h
+              </span>
             )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-3">
-                <h1 className="text-3xl font-bold text-gray-900">{asset.name}</h1>
-                {asset.symbol && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
-                    {asset.symbol}
-                  </span>
-                )}
-                {asset.market_cap_rank && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                    Rank #{asset.market_cap_rank}
-                  </span>
-                )}
-              </div>
-              <p className="mt-2 text-lg text-gray-600">
-                {formatCurrency(asset.price_usd)} USD
-                {asset.price_change_percentage_24h !== undefined && (
-                  <span className={`ml-3 ${getPercentageColor(asset.price_change_percentage_24h)}`}>
-                    {formatPercentage(asset.price_change_percentage_24h)} (24h)
-                  </span>
-                )}
-              </p>
-              {asset.description && (
-                <p className="mt-2 text-sm text-gray-500">{asset.description}</p>
-              )}
-            </div>
-          </div>
+          </p>
         </div>
-      </div>
-
-      {/* Asset Card */}
-      <AssetCard asset={asset} showDetails={true} />
-
-      {/* Detailed Information */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Asset Details</h3>
-        </div>
-        <div className="px-6 py-4">
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Asset ID</dt>
-              <dd className="mt-1 text-sm text-gray-900">{asset.asset_id}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Symbol</dt>
-              <dd className="mt-1 text-sm text-gray-900">{asset.symbol || 'N/A'}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Name</dt>
-              <dd className="mt-1 text-sm text-gray-900">{asset.name}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Market Cap Rank</dt>
-              <dd className="mt-1 text-sm text-gray-900">{asset.market_cap_rank || 'N/A'}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Category</dt>
-              <dd className="mt-1 text-sm text-gray-900 capitalize">{asset.category}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Status</dt>
-              <dd className="mt-1">
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getAvailabilityColor(asset.availability_status)}`}>
-                  {getAvailabilityText(asset.availability_status)}
-                </span>
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Active</dt>
-              <dd className="mt-1">
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                  asset.is_active
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {asset.is_active ? 'Yes' : 'No'}
-                </span>
-              </dd>
-            </div>
-
-            {asset.description && (
-              <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-gray-500">Description</dt>
-                <dd className="mt-1 text-sm text-gray-900">{asset.description}</dd>
-              </div>
-            )}
-          </dl>
-        </div>
-      </div>
-
-      {/* Price Information */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Price Information</h3>
-        </div>
-        <div className="px-6 py-4">
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Current Price (USD)</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.price_usd)}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">24h Change</dt>
-              <dd className="mt-1 text-sm">
-                <span className={getPercentageColor(asset.price_change_percentage_24h)}>
-                  {formatPercentage(asset.price_change_percentage_24h)}
-                </span>
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">7d Change</dt>
-              <dd className="mt-1 text-sm">
-                <span className={getPercentageColor(asset.price_change_percentage_7d)}>
-                  {formatPercentage(asset.price_change_percentage_7d)}
-                </span>
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">30d Change</dt>
-              <dd className="mt-1 text-sm">
-                <span className={getPercentageColor(asset.price_change_percentage_30d)}>
-                  {formatPercentage(asset.price_change_percentage_30d)}
-                </span>
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">24h High</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.high_24h)}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">24h Low</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.low_24h)}</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-
-      {/* Market Data */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Market Data</h3>
-        </div>
-        <div className="px-6 py-4">
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Market Cap</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.market_cap)}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">24h Volume</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.total_volume_24h)}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Circulating Supply</dt>
-              <dd className="mt-1 text-sm text-gray-900">
-                {asset.circulating_supply ? asset.circulating_supply.toLocaleString() : 'N/A'}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Total Supply</dt>
-              <dd className="mt-1 text-sm text-gray-900">
-                {asset.total_supply ? asset.total_supply.toLocaleString() : 'N/A'}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Max Supply</dt>
-              <dd className="mt-1 text-sm text-gray-900">
-                {asset.max_supply ? asset.max_supply.toLocaleString() : 'N/A'}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-
-      {/* Historical Data */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Historical Data</h3>
-        </div>
-        <div className="px-6 py-4">
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">All-Time High</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.ath)}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">ATH Change</dt>
-              <dd className="mt-1 text-sm">
-                <span className={getPercentageColor(asset.ath_change_percentage)}>
-                  {formatPercentage(asset.ath_change_percentage)}
-                </span>
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">ATH Date</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatDate(asset.ath_date)}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">All-Time Low</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatCurrency(asset.atl)}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">ATL Change</dt>
-              <dd className="mt-1 text-sm">
-                <span className={getPercentageColor(asset.atl_change_percentage)}>
-                  {formatPercentage(asset.atl_change_percentage)}
-                </span>
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">ATL Date</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatDate(asset.atl_date)}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatDateTime(asset.last_updated)}</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-
-      {/* 7-Day Price Chart */}
-      {asset.sparkline_7d?.price && asset.sparkline_7d.price.length > 0 && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">7-Day Price Trend</h3>
-          </div>
-          <div className="px-6 py-4">
-            <div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center">
-              <p className="text-sm text-gray-500">
-                Chart visualization would go here for {asset.sparkline_7d.price.length} data points
-              </p>
-            </div>
-            <p className="mt-2 text-xs text-gray-500 text-center">
-              {asset.sparkline_7d.price.length} price points over the last 7 days
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex justify-between items-center">
-        <button
-          onClick={onBack}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Back to Assets
-        </button>
-
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={onBack}
+            className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+          >
+            ← Back
+          </button>
           {isAuthenticated && asset.is_active && (
             <>
-              <Link
-                to={`/trading?asset=${asset.asset_id}&action=buy`}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Buy
-              </Link>
-              <Link
-                to={`/trading?asset=${asset.asset_id}&action=sell`}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
-                </svg>
-                Sell
-              </Link>
+              <Link to={`/trading?asset=${asset.asset_id}&action=buy`} className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">Buy</Link>
+              <Link to={`/trading?asset=${asset.asset_id}&action=sell`} className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">Sell</Link>
             </>
           )}
-
-          <button
-            onClick={refetch}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
-          </button>
+          <button onClick={refetch} className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200">Refresh</button>
         </div>
+      </div>
+
+      {/* All info in one grid */}
+      <div className="px-6 py-5">
+        {asset.description && <p className="text-sm text-gray-500 mb-4 line-clamp-2">{asset.description}</p>}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-0">
+          <Row label="Asset ID" value={asset.asset_id} />
+          <Row label="Category" value={asset.category} />
+          <Row label="Status" value={<span className={`inline-flex px-2 py-1 rounded text-sm font-medium ${getAvailabilityColor(asset.availability_status)}`}>{getAvailabilityText(asset.availability_status)}</span>} />
+          <Row label="Active" value={asset.is_active ? 'Yes' : 'No'} />
+          <Row label="Price (USD)" value={formatCurrency(asset.price_usd)} />
+          <Row label="24h" value={<span className={getPercentageColor(asset.price_change_percentage_24h)}>{formatPercentage(asset.price_change_percentage_24h)}</span>} />
+          <Row label="7d" value={<span className={getPercentageColor(asset.price_change_percentage_7d)}>{formatPercentage(asset.price_change_percentage_7d)}</span>} />
+          <Row label="30d" value={<span className={getPercentageColor(asset.price_change_percentage_30d)}>{formatPercentage(asset.price_change_percentage_30d)}</span>} />
+          <Row label="24h High" value={formatCurrency(asset.high_24h)} />
+          <Row label="24h Low" value={formatCurrency(asset.low_24h)} />
+          <Row label="Market Cap" value={formatCurrency(asset.market_cap)} />
+          <Row label="24h Volume" value={formatCurrency(asset.total_volume_24h)} />
+          <Row label="Circ. Supply" value={asset.circulating_supply != null ? asset.circulating_supply.toLocaleString() : 'N/A'} />
+          <Row label="Total Supply" value={asset.total_supply != null ? asset.total_supply.toLocaleString() : 'N/A'} />
+          <Row label="Max Supply" value={asset.max_supply != null ? asset.max_supply.toLocaleString() : 'N/A'} />
+          <Row label="ATH" value={formatCurrency(asset.ath)} />
+          <Row label="ATH %" value={<span className={getPercentageColor(asset.ath_change_percentage)}>{formatPercentage(asset.ath_change_percentage)}</span>} />
+          <Row label="ATH Date" value={formatDate(asset.ath_date)} />
+          <Row label="ATL" value={formatCurrency(asset.atl)} />
+          <Row label="ATL %" value={<span className={getPercentageColor(asset.atl_change_percentage)}>{formatPercentage(asset.atl_change_percentage)}</span>} />
+          <Row label="ATL Date" value={formatDate(asset.atl_date)} />
+          <Row label="Last Updated" value={formatDateTime(asset.last_updated)} className="lg:col-span-2" />
+        </div>
+        {asset.sparkline_7d?.price && asset.sparkline_7d.price.length > 0 && (
+          <div className="mt-5 pt-5 border-t border-gray-200">
+            <p className="text-sm text-gray-500 mb-2">7d trend · {asset.sparkline_7d.price.length} points</p>
+            <div className="h-24 bg-gray-50 rounded-lg flex items-center justify-center">
+              <span className="text-sm text-gray-500">Chart: {asset.sparkline_7d.price.length} price points</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

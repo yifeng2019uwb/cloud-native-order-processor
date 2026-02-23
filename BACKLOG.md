@@ -31,7 +31,7 @@
 
 ## 📌 **Status** (as of Feb 2026)
 - **Current focus:** DEMO-001 (full workflow demo) and optional FEATURE-002 frontend (Insights UI — paused).
-- **Recently completed:** Metrics (4 gateway + 3 per backend per [docs/METRICS.md](docs/METRICS.md)), CNY-001, monitoring design updates, doc cleanup (project-status, INFRA-009 audit, monitoring task plan removed).
+- **Recently completed:** SEC-010 (failed-login runbook), SEC-011 (IP block / brute-force protection in gateway), metrics (4 gateway + 3 per backend per [docs/METRICS.md](docs/METRICS.md)), CNY-001, monitoring design updates, doc cleanup (project-status, INFRA-009 audit, monitoring task plan removed).
 - **Active & planned:** See section below; optional/maintenance items at end.
 
 ---
@@ -127,40 +127,18 @@
 - **Dependencies**: Running services (local or deployed); FEATURE-002 🚧 **IN PROGRESS**
 - **Demo assistance**: An AI assistant can help create the script, API order, and narrative once you share how you run the project (e.g. `dev.sh`, endpoints, frontend URL). No code change required—this task is about **preparing and delivering** the demo with existing APIs and workflow.
 
-#### **SEC-010: Incident Response Simulation — Failed-Login Runbook**
+#### **SEC-010: Incident Response Simulation — Failed-Login Runbook** ✅ **COMPLETED**
 - **Component**: Security Operations / Documentation
 - **Type**: Runbook & Security Ops
-- **Priority**: 📋 **MEDIUM** (Documents security ops thinking)
-- **Status**: 📋 **To Do**
-- **Goal**: Write a simple runbook that defines response steps when the audit log shows **5 failed logins from the same IP in 1 minute**. Documents security operations thinking and gives a concrete, repeatable procedure.
-- **Scope**:
-  - Single runbook scenario: trigger = 5 failed logins, same IP, within 1 minute.
-  - Step-by-step response (e.g. verify logs, decide block/alert, document, follow-up).
-  - No automation required—runbook is human-followable; can reference existing audit/log locations and tools.
-- **Acceptance Criteria**:
-  - [ ] Runbook document exists (e.g. in `docs/` or `docs/runbooks/`) with a clear title and trigger condition
-  - [ ] Trigger is explicitly stated: "5 failed logins from same IP in 1 min" (or equivalent)
-  - [ ] Response steps are ordered and actionable (what to check, what to do, what to record)
-  - [ ] Runbook reflects security ops thinking (containment, evidence, communication, review)
-- **Deliverables**: One runbook doc (e.g. `docs/runbooks/failed-login-burst.md` or section in existing security/ops doc)
-- **Dependencies**: SEC-011 (IP block in gateway); runbook “block IP” step assumes gateway can enforce block
+- **Priority**: 📋 **MEDIUM**
+- **Status**: ✅ **COMPLETED** — Runbook: `docs/runbooks/failed-login-burst.md`. Trigger: 5 failed logins from same IP in 1 day. Steps: verify (Loki/audit, gateway logs) → containment (auto-block or manual redis-cli) → evidence → follow-up. See DAILY_WORK_LOG.md.
+
 
 #### **SEC-011: IP Block in Gateway** ✅ **COMPLETED**
 - **Component**: Gateway (Go) / Security
 - **Type**: Implementation
 - **Priority**: 📋 **MEDIUM**
 - **Status**: ✅ **COMPLETED** — Auth middleware checks Redis `ip_block:<ip>` (403 if blocked). Gateway records failed logins; after 5 in 1-day window sets block. Integration tests: init → 5 wrong logins → 403 → wait 5 min → login works. See DAILY_WORK_LOG.md, `integration_tests/incident/README.md`.
-- **Goal**: Use existing Redis (already used for rate limiting) to block requests from specific IPs. Add a check in the gateway **auth middleware**: if the client IP is in a Redis block list, return 403 before token validation.
-- **Scope**:
-  - **Redis**: One Redis set (e.g. `blocked_ips`) maintained by ops (SADD/SREM via CLI or future admin API). Gateway only reads.
-  - **Gateway**: In auth middleware, at the start of the handler, get client IP → call Redis “is this IP in the blocked set?” → if yes, respond 403 and abort.
-  - **No automation required** for adding/removing IPs in this task; manual Redis SADD/SREM is enough. Optional: runbook (SEC-010) can say “add IP to Redis blocked_ips set” as a response step.
-- **Acceptance Criteria**:
-  - [ ] Gateway auth middleware accepts optional Redis service (nil = skip check, no Redis dependency for auth when Redis unavailable).
-  - [ ] If Redis is available: before validating JWT, check client IP against Redis blocked-IP set; if blocked, return 403 with a clear message and abort.
-  - [ ] Block list is a single Redis set (key name documented); adding/removing IPs is via Redis CLI (or later admin endpoint).
-- **Deliverables**: Gateway code change (middleware + RedisService method), short doc or comment on Redis key and how to SADD/SREM.
-- **Dependencies**: None (Redis and auth middleware already exist). SEC-010 depends on this (runbook “block IP” step uses gateway block list).
 
 ---
 
@@ -477,6 +455,10 @@ _Optional maintenance items below._
 ---
 
 ## ✅ **COMPLETED TASKS**
+
+#### **SEC-010: Incident Response — Failed-Login Runbook** ✅ **COMPLETED**
+- **Component**: Security Operations / Documentation
+- **Summary**: Runbook at `docs/runbooks/failed-login-burst.md`. Trigger: 5 failed logins from same IP in 1 day. Steps: verify (Loki/audit, gateway logs) → containment (auto-block or manual redis-cli SET ip_block:<ip>) → evidence → follow-up/review. References SEC-011, integration test, threat model. See DAILY_WORK_LOG.md.
 
 #### **SEC-011: IP Block in Gateway (Auth Middleware + Auto-Block after 5 Failed Logins)** ✅ **COMPLETED**
 - **Component**: Gateway (Go) / Security

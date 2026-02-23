@@ -28,6 +28,9 @@ This directory contains all design documentation, guides, and technical specific
 - `integration-test-design.md` - Testing strategy and implementation
 - `iam-redis-setup.md` - IAM and Redis configuration
 
+### **🛡️ Runbooks (Security Ops)**
+- `runbooks/failed-login-burst.md` - Incident response: 5 failed logins from same IP (SEC-010); verify → containment (IP block) → evidence → follow-up. Depends on SEC-011 (gateway IP block).
+
 ## 🚀 Quick Start
 
 ### **For Developers**
@@ -45,6 +48,7 @@ This directory contains all design documentation, guides, and technical specific
 - [Monitoring Design](design-docs/monitoring-design.md) - Observability stack
 - [Metrics](METRICS.md) - Application metrics and PromQL
 - [Deployment Guide](deployment-guide.md) - Infrastructure setup
+- [Failed-Login Runbook](runbooks/failed-login-burst.md) - Incident response for failed-login burst (SEC-010)
 
 ## 🔗 Quick Links
 

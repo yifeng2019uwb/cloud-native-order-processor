@@ -26,7 +26,7 @@ services:
 
   frontend:
     build:
-      context: ../
+      context: ${PROJECT_ROOT:-../}
       dockerfile: docker/frontend/Dockerfile
     container_name: order-processor-frontend
     ports:
@@ -55,7 +55,7 @@ services:
 
   user_service:
     build:
-      context: ../
+      context: ${PROJECT_ROOT:-../}
       dockerfile: docker/user-service/Dockerfile
     container_name: order-processor-user_service
     # No external ports - only accessible through Gateway
@@ -113,7 +113,7 @@ services:
 
   inventory_service:
     build:
-      context: ../
+      context: ${PROJECT_ROOT:-../}
       dockerfile: docker/inventory-service/Dockerfile
     container_name: order-processor-inventory_service
     # No external ports - only accessible through Gateway
@@ -165,7 +165,7 @@ services:
 
   order_service:
     build:
-      context: ../
+      context: ${PROJECT_ROOT:-../}
       dockerfile: docker/order-service/Dockerfile
     container_name: order-processor-order_service
     # No external ports - only accessible through Gateway
@@ -219,7 +219,7 @@ services:
 
   auth_service:
     build:
-      context: ../
+      context: ${PROJECT_ROOT:-../}
       dockerfile: docker/auth-service/Dockerfile
     container_name: order-processor-auth_service
     # No external ports - only accessible through Gateway
@@ -269,7 +269,7 @@ services:
 
   insights_service:
     build:
-      context: ../
+      context: ${PROJECT_ROOT:-../}
       dockerfile: docker/insights-service/Dockerfile
     container_name: order-processor-insights_service
     # No external ports - only accessible through Gateway
@@ -336,7 +336,7 @@ services:
 
   gateway:
     build:
-      context: ../
+      context: ${PROJECT_ROOT:-../}
       dockerfile: docker/gateway/Dockerfile
     container_name: order-processor-gateway
     ports:

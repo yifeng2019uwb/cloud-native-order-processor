@@ -12,6 +12,9 @@ RUN npm ci
 # Copy source code
 COPY frontend/ ./
 
+# Copy nginx config into builder so final stage does not depend on build context
+COPY docker/frontend/nginx.conf /tmp/nginx.conf
+
 # Build the application
 RUN npm run build
 
@@ -21,8 +24,8 @@ FROM nginx:alpine
 # Copy built files from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY docker/frontend/nginx.conf /etc/nginx/nginx.conf
+# Copy nginx configuration (from builder; build context must be repo root)
+COPY --from=builder /tmp/nginx.conf /etc/nginx/nginx.conf
 
 # Expose port 3000 (non-privileged)
 EXPOSE 3000

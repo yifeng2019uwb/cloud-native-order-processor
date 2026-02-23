@@ -76,7 +76,7 @@ const TradingPage: React.FC = () => {
         inventoryApiService.listAssets(),
         balanceApiService.getBalance().catch(() => null),
         portfolioApiService.getPortfolio(user?.username || '').catch(() => null),
-        orderApiService.listOrders().catch(() => ({ success: false, message: '', data: [], has_more: false, timestamp: '' }))
+        orderApiService.listOrders().catch(() => ({ data: [], has_more: false }))
       ]);
 
       if (assetsRes.data) {
@@ -105,7 +105,8 @@ const TradingPage: React.FC = () => {
         setPortfolio(portfolioRes);
       }
 
-      if (ordersRes.success && ordersRes.data && Array.isArray(ordersRes.data)) {
+      // Backend returns { data, has_more } (no success field); treat any response with data array as success
+      if (ordersRes && Array.isArray(ordersRes.data)) {
         setOrders(ordersRes.data);
       } else {
         setOrders([]);
@@ -283,7 +284,7 @@ const TradingPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* Order Form */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div id="trading-order-form" className="bg-white overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">
                   📝 {UI_STRINGS.CREATE_ORDER || 'Create Order'}
@@ -558,9 +559,44 @@ const TradingPage: React.FC = () => {
               {selectedAsset && (
                 <div className="bg-white overflow-hidden shadow rounded-lg">
                   <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
                       📊 {selectedAsset.asset_id} - {selectedAsset.name}
                     </h3>
+                    {/* Quick order buttons at top */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="text-sm text-gray-500">Quick order:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOrderForm(prev => ({ ...prev, orderType: 'market_buy' }));
+                          setFilteredAssets(assets);
+                          document.getElementById('trading-order-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }}
+                        className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
+                          orderForm.orderType === 'market_buy'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-green-50 hover:text-green-700'
+                        }`}
+                      >
+                        Buy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOrderForm(prev => ({ ...prev, orderType: 'market_sell' }));
+                          const owned = assets.filter(a => portfolio?.assets?.some((pa: any) => pa.asset_id === a.asset_id));
+                          setFilteredAssets(owned);
+                          document.getElementById('trading-order-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }}
+                        className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
+                          orderForm.orderType === 'market_sell'
+                            ? 'bg-red-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700'
+                        }`}
+                      >
+                        Sell
+                      </button>
+                    </div>
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span>Current Price:</span>

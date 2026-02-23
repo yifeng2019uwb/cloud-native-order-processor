@@ -43,7 +43,7 @@ const PortfolioPage: React.FC = () => {
 
       const [portfolioRes, ordersRes] = await Promise.all([
         portfolioApiService.getPortfolio(user.username).catch(() => null),
-        orderApiService.listOrders().catch(() => ({ success: false, message: '', data: [], has_more: false, timestamp: '' }))
+        orderApiService.listOrders().catch(() => ({ data: [], has_more: false }))
       ]);
 
       if (portfolioRes) {
@@ -52,7 +52,8 @@ const PortfolioPage: React.FC = () => {
         setError('Failed to load portfolio data');
       }
 
-      if (ordersRes.success) {
+      // Backend returns { data, has_more } (no success field); treat any response with data array as success
+      if (ordersRes && Array.isArray(ordersRes.data)) {
         setOrders(ordersRes.data);
       }
     } catch (err) {

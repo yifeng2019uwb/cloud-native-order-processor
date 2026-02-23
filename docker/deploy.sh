@@ -15,6 +15,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 MONITORING_DIR="$ROOT_DIR/monitoring"
 USE_CACHE=true
+# Ensure Docker build context is always repo root (fixes frontend/build failures when cwd or compose -f differs)
+export PROJECT_ROOT="$ROOT_DIR"
 
 # Logging
 log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -342,6 +344,13 @@ clean_docker() {
 }
 
 # Monitoring stack functions
+# Remove monitoring containers that may be stuck on a missing network (e.g. after network prune or main stack down)
+clean_monitoring_containers() {
+    for c in prometheus loki promtail grafana prometheus-proxy; do
+        docker rm -f "$c" 2>/dev/null || true
+    done
+}
+
 deploy_monitoring() {
     log_info "Deploying monitoring stack..."
 
@@ -359,6 +368,10 @@ deploy_monitoring() {
         docker-compose up -d redis 2>/dev/null || log_warning "Failed to create network, but continuing..."
         cd "$MONITORING_DIR"
     fi
+
+    # Tear down cleanly; if containers are stuck on a missing network, force-remove them so up can recreate
+    docker-compose -f docker-compose.logs.yml down 2>/dev/null || true
+    clean_monitoring_containers
 
     docker-compose -f docker-compose.logs.yml up -d
     log_success "Monitoring stack deployed!"
@@ -384,7 +397,9 @@ stop_monitoring() {
 restart_monitoring() {
     log_info "Restarting monitoring stack..."
     cd "$MONITORING_DIR"
-    docker-compose -f docker-compose.logs.yml restart
+    docker-compose -f docker-compose.logs.yml down 2>/dev/null || true
+    clean_monitoring_containers
+    docker-compose -f docker-compose.logs.yml up -d
     log_success "Monitoring stack restarted!"
 }
 

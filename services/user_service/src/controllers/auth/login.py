@@ -16,8 +16,7 @@ from common.data.database.dependencies import get_user_dao
 from common.auth.security.token_manager import TokenManager
 from common.auth.security.audit_logger import AuditLogger
 from common.auth.security.jwt_constants import JWTConfig
-from common.shared.constants.api_constants import ErrorMessages
-from common.shared.constants.api_constants import HTTPStatus
+from common.shared.constants.api_constants import ErrorMessages, HTTPStatus, RequestHeaders, RequestHeaderDefaults
 from common.exceptions.shared_exceptions import CNOPInvalidCredentialsException, CNOPUserNotFoundException, CNOPInternalServerException
 from user_exceptions import CNOPUserValidationException
 from common.shared.logging import BaseLogger, LogAction, LoggerName
@@ -49,9 +48,9 @@ def login_user(
     token_manager = TokenManager()
     audit_logger = AuditLogger()
 
-    # Get client IP for audit logging (optional for now)
-    client_ip = None
-    user_agent = None
+    # Get client IP and User-Agent for audit logging (align with register.py)
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get(RequestHeaders.USER_AGENT, RequestHeaderDefaults.USER_AGENT_DEFAULT)
 
     # Extract request_id from headers using existing method
     request_id = get_request_id_from_request(request)

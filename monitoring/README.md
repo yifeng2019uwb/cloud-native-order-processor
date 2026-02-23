@@ -150,6 +150,45 @@ kubernetes_sd_configs:
 - **Centralized Storage**: Loki-based log aggregation
 - **Search & Analysis**: Full-text search and visualization
 
+### **Searching Loki (LogQL)**
+Promtail extracts JSON fields as labels: `service`, `level`, `action`, `user`. Use these in Grafana Explore (data source: Loki).
+
+| Service   | Label value  | Example query |
+|-----------|---------------|---------------|
+| Order     | `order`       | `{service="order"} \| json` |
+| Audit     | `audit`       | `{service="audit"} \| json` |
+| User      | `user`        | `{service="user"} \| json` |
+| Auth      | `auth`        | `{service="auth"} \| json` |
+| Gateway   | `gateway`     | `{service="gateway"} \| json` |
+| Inventory | `inventory`   | `{service="inventory"} \| json` |
+| Insights  | `insights`    | `{service="insights"} \| json` |
+
+**Orders (order service):**
+- All order logs:  
+  `{service="order"} | json`
+- Filter by action (e.g. request end, errors):  
+  `{service="order"} | json | action="request_end"`  
+  `{service="order"} | json | action=~"error|validation_error"`
+- Search message for "order":  
+  `{service="order"} | json | message =~ "(?i)order"`
+
+**Multiple services (e.g. order + user):**  
+`{service=~"order|user"} | json`
+
+### **Audit log (security events)**
+All audit entries use `service="audit"`. In Grafana Explore (Loki):
+
+- **All audit logs:**  
+  `{service="audit"} | json`
+- **Filter by action:**  
+  `{service="audit"} | json | action="auth_success"`  
+  `{service="audit"} | json | action="auth_failed"`  
+  `{service="audit"} | json | action="security_event"`
+- **Search message for a word (e.g. "import"):**  
+  `{service="audit"} | json | message =~ "(?i)import"`
+
+**What is currently audited:** login success/failure, logout, token created, password change, access denied, and generic security events (e.g. registration validation). **Data import or “import” actions are not logged to the audit log today**; if you need that, add a call to `AuditLogger.log_security_event()` (or a dedicated method) from the code that performs the import.
+
 ## 🚀 Deployment
 
 ### **Helm Installation**
