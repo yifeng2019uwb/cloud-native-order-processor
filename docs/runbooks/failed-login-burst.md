@@ -55,9 +55,28 @@
 
 | Step | Action |
 |------|--------|
-| 4.1 | **Unblock**: Block expires automatically when the Redis key TTL ends. To unblock earlier: `redis-cli DEL ip_block:<client_ip>`. |
+| 4.1 | **Unblock**: Block expires automatically when the Redis key TTL ends. To unblock earlier you must clear **both** keys or the next 401 will re-block: `redis-cli DEL ip_block:<client_ip> login_fail:<client_ip>`. |
 | 4.2 | **Communication**: If this is a production or shared environment, inform stakeholders per your policy (e.g. "IP &lt;x&gt; blocked due to failed-login burst; block expires at &lt;time&gt;"). |
 | 4.3 | **Review**: After the incident, review whether the trigger threshold or block duration should change; check for patterns (same user targeted, bot behaviour). Update this runbook if procedures change. |
+
+---
+
+## 5. Run integration tests after unblock
+
+**Goal**: So that user/auth integration tests do not hit 403 AUTH_004, clear **all** IP-block and login-fail keys in Redis before running tests. The gateway may see a different client IP (e.g. Docker bridge); clearing all keys avoids guessing.
+
+| Step | Action |
+|------|--------|
+| 5.1 | From the directory where `docker-compose.yml` runs (e.g. `docker/`), clear all IP-block and login-fail keys: |
+| | **Docker Compose**: |
+| | `docker compose exec redis redis-cli --scan --pattern "ip_block:*"   \| xargs -I {} docker compose exec -T redis redis-cli DEL {}` |
+| | `docker compose exec redis redis-cli --scan --pattern "login_fail:*" \| xargs -I {} docker compose exec -T redis redis-cli DEL {}` |
+| | **Plain Docker**: Replace `docker compose exec redis` with `docker exec <redis_container_name>`. |
+| | **Redis on host**: `redis-cli KEYS "ip_block:*"` and `KEYS "login_fail:*"`, then `DEL` each key (or use a loop). |
+| 5.2 | Verify: `KEYS "ip_block:*"` and `KEYS "login_fail:*"` both return `(empty array)`. |
+| 5.3 | Run integration tests immediately (e.g. `cd integration_tests && ./run_all_tests.sh user`). |
+
+See [integration_tests/README.md](../../integration_tests/README.md) and [integration_tests/incident/README.md](../../integration_tests/incident/README.md#before-running-userintegration-tests-avoid-403-auth_004).
 
 ---
 

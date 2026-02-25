@@ -72,22 +72,16 @@ def validate_username_uniqueness(username: str, user_dao: Any, exclude_username:
     Raises:
         UserAlreadyExistsException: If username already exists
     """
-    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Starting username uniqueness validation for: '{username}'")
-
     try:
-        logger.info(action=LogAction.REQUEST_START, message=f"Calling user_dao.get_user_by_username('{username}')")
         existing_user = user_dao.get_user_by_username(username)
 
         if existing_user:
             logger.warning(action=LogAction.VALIDATION_ERROR, message=f"User found! Username '{username}' already exists")
             raise CNOPUserAlreadyExistsException(f"Username '{username}' already exists")
-        else:
-            logger.info(action=LogAction.REQUEST_END, message=f"User not found! Username '{username}' is unique")
-            return True
+        return True
 
-    except CNOPUserNotFoundException as e:
+    except CNOPUserNotFoundException:
         # User doesn't exist, which means username is unique
-        logger.info(action=LogAction.REQUEST_END, message=f"User not found! Username '{username}' is unique. Exception: {str(e)}")
         return True
     except CNOPUserAlreadyExistsException:
         # Re-raise this specific exception to maintain proper flow
@@ -112,26 +106,18 @@ def validate_email_uniqueness(email: str, user_dao: Any, exclude_username: Optio
     Raises:
         UserAlreadyExistsException: If email already exists
     """
-    logger.warning(action=LogAction.VALIDATION_ERROR, message=f"Starting email uniqueness validation for: '{email}'")
-
     try:
-        logger.info(action=LogAction.REQUEST_START, message=f"Calling user_dao.get_user_by_email('{email}')")
         existing_user = user_dao.get_user_by_email(email)
 
         if existing_user:
             if exclude_username and existing_user.username == exclude_username:
-                logger.info(action=LogAction.REQUEST_END, message=f"Email '{email}' belongs to same user '{exclude_username}', allowing update")
                 return True
-            else:
-                logger.warning(action=LogAction.VALIDATION_ERROR, message=f"User found! Email '{email}' already exists")
-                raise CNOPUserAlreadyExistsException(f"Email '{email}' already exists")
-        else:
-            logger.info(action=LogAction.REQUEST_END, message=f"User not found! Email '{email}' is unique")
-            return True
+            logger.warning(action=LogAction.VALIDATION_ERROR, message=f"User found! Email '{email}' already exists")
+            raise CNOPUserAlreadyExistsException(f"Email '{email}' already exists")
+        return True
 
-    except CNOPUserNotFoundException as e:
+    except CNOPUserNotFoundException:
         # User doesn't exist, which means email is unique
-        logger.info(action=LogAction.REQUEST_END, message=f"User not found! Email '{email}' is unique. Exception: {str(e)}")
         return True
     except CNOPUserAlreadyExistsException:
         # Re-raise this specific exception to maintain proper flow

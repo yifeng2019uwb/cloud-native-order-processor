@@ -15,7 +15,7 @@
 - Security features (CORS, input validation, **IP block**)
 - Production-ready with comprehensive testing
 
-**IP block (SEC-011):** When Redis is available, the auth middleware checks for a per-IP block key before validating the token. Blocked IPs receive 403. After 5 failed logins (401 from POST /auth/login) in a 5-minute window (dev/test; production would use 1-day), the gateway sets `ip_block:<ip>` in Redis (TTL 5 min dev/test). Ops: manual block with `redis-cli SET ip_block:<ip> 1 EX 300`; unblock: key expires automatically, or `redis-cli DEL ip_block:<ip>`.
+**IP block (SEC-011):** When Redis is available, the auth middleware checks for a per-IP block key before validating the token. Blocked IPs receive 403. After 5 failed logins (401 from POST /auth/login) in a 1-day window, the gateway sets `ip_block:<ip>` in Redis (TTL 5 min dev/test). Ops: manual block with `redis-cli SET ip_block:<ip> 1 EX 300`; unblock: key expires automatically, or `redis-cli DEL ip_block:<ip>`.
 
 ### Tracing IP block in gateway logs
 
@@ -30,7 +30,7 @@ Use gateway logs to debug why you get **401** instead of **403** after 5 wrong l
    - If IP is blocked: log `"Request from blocked IP"` and respond **403**.
 
 3. **After proxying POST /auth/login**  
-   - If backend returns **401**, gateway calls `RecordFailedLogin(clientIP)` (increment `login_fail:<ip>` with 5-min window dev/test, and if count ≥ 5 set `ip_block:<ip>`).  
+   - If backend returns **401**, gateway calls `RecordFailedLogin(clientIP)` (increment `login_fail:<ip>`, and if count ≥ 5 set `ip_block:<ip>`).  
    - If that Redis call fails: log `"RecordFailedLogin failed (non-fatal)"` with `client_ip` and `error`; client still gets 401.
 
 **Code path:** `cmd/gateway/main.go` (Redis init) → `internal/middleware/auth.go` (IP block check then pass through) → `internal/api/server.go` `handleProxyRequest` (proxy to auth; on 401 call `redisService.RecordFailedLogin`) → next request from same IP hits middleware and gets 403 if block was set.

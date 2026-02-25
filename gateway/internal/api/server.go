@@ -52,9 +52,8 @@ func NewServerWithRegistry(cfg *config.Config, redisService *services.RedisServi
 	return server
 }
 
-// setupRoutes configures all routes and middleware
+// setupRoutes configures all routes and middleware.
 func (s *Server) setupRoutes() {
-	// Add basic middleware
 	s.router.Use(middleware.CORS())
 	s.router.Use(middleware.Logger())
 	s.router.Use(middleware.Recovery())
@@ -67,7 +66,6 @@ func (s *Server) setupRoutes() {
 		// Add rate limiting middleware with metrics (configurable via GATEWAY_RATE_LIMIT env var)
 		s.router.Use(middleware.RateLimitMiddleware(s.redisService, s.config.RateLimit.Limit, s.config.RateLimit.Window, nil))
 
-		// Phase 2: Add session middleware
 		// s.router.Use(middleware.SessionMiddleware(s.redisService))
 	}
 
@@ -166,8 +164,7 @@ func (s *Server) healthCheck(c *gin.Context) {
 	})
 }
 
-// handleProxyRequest handles all proxy requests with routing and error handling
-// Phase 1: Basic proxy logic with simple error handling
+// handleProxyRequest handles all proxy requests with routing and error handling.
 func (s *Server) handleProxyRequest(c *gin.Context) {
 	path := c.Request.URL.Path
 
@@ -182,8 +179,8 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 			})
 		} else if blocked {
 			s.logger.Error(logging.AUTH_FAILURE, "Request from blocked IP", "", map[string]interface{}{
-				"client_ip": clientIP,
-				constants.JSONFieldPath: path,
+				"client_ip":               clientIP,
+				constants.JSONFieldPath:   path,
 				constants.JSONFieldMethod: c.Request.Method,
 			})
 			s.handleError(c, http.StatusForbidden, models.ErrIPBlocked, constants.ErrorIPBlocked)
@@ -191,7 +188,6 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		}
 	}
 
-	// Get route configuration
 	routeConfig, exists := s.proxyService.GetRouteConfig(path)
 
 	if !exists {
@@ -204,16 +200,6 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		}
 	}
 
-	// Check if routeConfig is nil before accessing its properties
-	if routeConfig == nil {
-		s.logger.Error(logging.AUTH_FAILURE, "Route config is nil", "", map[string]interface{}{
-			constants.JSONFieldPath: path,
-		})
-		s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, constants.ErrorRouteConfigNil)
-		return
-	}
-
-	// Check authentication requirements
 	if routeConfig.RequiresAuth {
 		userRole := c.GetString(constants.ContextKeyUserRole)
 		if userRole == "" {
@@ -225,7 +211,6 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		}
 	}
 
-	// Check role permissions
 	if len(routeConfig.AllowedRoles) > 0 {
 		userRole := c.GetString(constants.ContextKeyUserRole)
 		hasPermission := false
@@ -245,16 +230,13 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 			return
 		}
 	}
-	// If AllowedRoles is empty, allow access (any role including public)
 
-	// Determine target service
 	targetService := s.proxyService.GetTargetService(path)
 	if targetService == "" {
 		s.handleError(c, http.StatusNotFound, models.ErrSvcUnavailable, constants.ErrorServiceNotFound)
 		return
 	}
 
-	// Prepare request body
 	var body interface{}
 	if c.Request.Body != nil {
 		bodyBytes, err := io.ReadAll(c.Request.Body)
@@ -263,7 +245,6 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 			return
 		}
 		if len(bodyBytes) > 0 {
-			// Parse JSON body to preserve structure
 			if err := json.Unmarshal(bodyBytes, &body); err != nil {
 				s.handleError(c, http.StatusBadRequest, models.ErrSvcUnavailable, constants.ErrorInvalidJSONBody)
 				return
@@ -271,21 +252,18 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		}
 	}
 
-	// Prepare headers
 	headers := make(map[string]string)
 	for key, values := range c.Request.Header {
-		headers[key] = values[0] // Take first value
+		headers[key] = values[0]
 	}
 
-	// Prepare query parameters
 	queryParams := make(map[string]string)
 	for key, values := range c.Request.URL.Query() {
 		if len(values) > 0 {
-			queryParams[key] = values[0] // Take first value
+			queryParams[key] = values[0]
 		}
 	}
 
-	// Create proxy request
 	proxyReq := &models.ProxyRequest{
 		Method:        c.Request.Method,
 		Path:          path,
@@ -302,7 +280,6 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		},
 	}
 
-	// Forward request to backend service
 	resp, err := s.proxyService.ProxyRequest(c.Request.Context(), proxyReq)
 	if err != nil {
 		s.metrics.RecordProxyError(targetService, "request_failed")
@@ -329,7 +306,6 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	rateLimitRemaining := c.Writer.Header().Get(constants.RateLimitHeaderRemaining)
 	rateLimitReset := c.Writer.Header().Get(constants.RateLimitHeaderReset)
 
-	// Copy response headers from backend
 	for key, values := range resp.Header {
 		for _, value := range values {
 			c.Header(key, value)
@@ -347,7 +323,6 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		c.Header(constants.RateLimitHeaderReset, rateLimitReset)
 	}
 
-	// Copy response body
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		s.handleError(c, http.StatusInternalServerError, models.ErrSvcUnavailable, constants.ErrorReadResponseBody)
@@ -357,14 +332,17 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 	// SEC-011: Record failed login only for 401 from POST /auth/login (not 401s from other routes). After 5 in window, set ip_block:<ip> so next login from this IP gets 403.
 	if s.redisService != nil && path == constants.APIV1AuthLogin && c.Request.Method == http.MethodPost && resp.StatusCode == http.StatusUnauthorized {
 		if err := s.redisService.RecordFailedLogin(c.Request.Context(), c.ClientIP()); err != nil {
-			s.logger.Info(logging.REQUEST_END, "RecordFailedLogin failed (non-fatal)", "", map[string]interface{}{
+			s.logger.Error(logging.AUTH_FAILURE, "RecordFailedLogin failed", "", map[string]interface{}{
 				"client_ip": c.ClientIP(),
 				"error":     err.Error(),
 			})
 		}
 	}
 
-	// Return response
+	s.logger.Info(logging.REQUEST_END, fmt.Sprintf("%s %s -> %d", c.Request.Method, path, resp.StatusCode), "", map[string]interface{}{
+		"target_service": targetService,
+		"status_code":    resp.StatusCode,
+	})
 	c.Data(resp.StatusCode, resp.Header.Get("Content-Type"), bodyBytes)
 }
 
@@ -449,8 +427,7 @@ func (s *Server) stripAPIPrefix(path string) string {
 	return path
 }
 
-// generateRequestID generates a simple request ID
-// Phase 2: Use UUID v4 for better uniqueness
+// generateRequestID generates a simple request ID.
 func generateRequestID() string {
 	return fmt.Sprintf("req-%d", time.Now().UnixNano())
 }

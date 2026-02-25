@@ -48,10 +48,6 @@ def get_current_user(
                 detail=ErrorMessages.USER_NOT_FOUND
             )
 
-        logger.info(action=LogAction.AUTH_SUCCESS,
-                   message=f"User verified: {user.username}",
-                   user=user.username,
-                   request_id=authenticated_user.request_id)
         return user
 
     except HTTPException:

@@ -136,7 +136,7 @@ async def startup_inventory_initialization() -> None:
     while True:
         try:
             cycle_count += 1
-            logger.debug(
+            logger.info(
                 action=LogAction.SERVICE_START,
                 message=f"Inventory sync cycle #{cycle_count} starting..."
             )
@@ -145,7 +145,7 @@ async def startup_inventory_initialization() -> None:
             success = await price_update_cycle()
 
             if success:
-                logger.debug(
+                logger.info(
                     action=LogAction.SERVICE_START,
                     message=f"Inventory sync cycle #{cycle_count} completed successfully"
                 )
@@ -162,7 +162,7 @@ async def startup_inventory_initialization() -> None:
             )
 
         # Sleep for configured interval (default: 300 seconds = 5 minutes)
-        logger.debug(
+        logger.info(
             action=LogAction.SERVICE_START,
             message=f"Next sync in {PRICE_UPDATE_INTERVAL_SECONDS}s..."
         )

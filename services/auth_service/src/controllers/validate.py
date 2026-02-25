@@ -41,10 +41,16 @@ def validate_jwt_token(request: ValidateTokenRequest):
     request_id = request.request_id or f"{RequestDefaults.REQUEST_ID_PREFIX}{int(time.time() * 1000)}"
 
     try:
-        # Validate token (internal per-request check; no success log to avoid flooding — login already logs auth_success)
+        # Validate token — only place we log successful JWT validation (once per request at gateway)
         token_manager = TokenManager()
         user_context = token_manager.validate_token_comprehensive(request.token)
 
+        logger.info(
+            action=LogAction.AUTH_SUCCESS,
+            message=f"User authenticated via JWT: {user_context.username}",
+            user=user_context.username,
+            extra=f'{{"{LogField.REQUEST_ID}": "{request_id}"}}',
+        )
         return ValidateTokenResponse(
             valid=True,
             user=user_context.username,

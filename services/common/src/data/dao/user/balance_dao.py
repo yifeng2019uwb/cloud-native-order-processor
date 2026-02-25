@@ -35,20 +35,7 @@ class BalanceDAO:
     def get_balance(self, username: str) -> Balance:
         """Get balance for a user."""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Looking up balance for user: '{username}'"
-            )
-
-            # Use PynamoDB to get balance by primary key
             balance_item = BalanceItem.get(username, BalanceFields.SK_VALUE)
-
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Balance found for user: {username}"
-            )
-
-            # Convert to Balance domain model
             return balance_item.to_balance()
 
         except BalanceItem.DoesNotExist:
@@ -92,31 +79,12 @@ class BalanceDAO:
     def create_transaction(self, transaction: BalanceTransaction) -> BalanceTransaction:
         """Create a new balance transaction."""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Creating balance transaction: user={transaction.username}, "
-                       f"type={transaction.transaction_type.value}, amount={transaction.amount}, "
-                       f"description={transaction.description}"
-            )
-
-            # Convert BalanceTransaction to BalanceTransactionItem with PynamoDB
             transaction_item = BalanceTransactionItem.from_balance_transaction(transaction)
-
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Transaction item prepared: {transaction_item.attribute_values}"
-            )
-
-            # Save using PynamoDB (automatically handles timestamps)
             transaction_item.save()
-
             logger.info(
                 action=LogAction.DB_OPERATION,
-                message=f"Balance transaction created successfully: user={transaction.username}, "
-                       f"amount={transaction.amount}, reference_id={transaction.reference_id}"
+                message=f"Balance transaction created: user={transaction.username}, amount={transaction.amount}, ref={transaction.reference_id}"
             )
-
-            # Convert back to BalanceTransaction domain model
             return transaction_item.to_balance_transaction()
 
         except Exception as e:
@@ -169,25 +137,12 @@ class BalanceDAO:
         All transactions in this simplified system are immediately completed.
         """
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Updating balance from transaction: user={transaction.username}, "
-                       f"transaction_amount={transaction.amount}, type={transaction.transaction_type.value}"
-            )
-
             current_balance = self.get_balance(transaction.username)
             new_balance = current_balance.current_balance + transaction.amount
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Balance calculation: current={current_balance.current_balance}, "
-                        f"transaction={transaction.amount}, new={new_balance}"
-            )
-
             self.update_balance(transaction.username, new_balance)
             logger.info(
                 action=LogAction.DB_OPERATION,
-                message=f"Balance updated from transaction: user={transaction.username}, "
-                       f"new_balance={new_balance}"
+                message=f"Balance updated from transaction: user={transaction.username}, new_balance={new_balance}"
             )
 
         except Exception as e:

@@ -150,8 +150,33 @@ kubernetes_sd_configs:
 - **Centralized Storage**: Loki-based log aggregation
 - **Search & Analysis**: Full-text search and visualization
 
+### **Request ID format (why two types appear)**
+You may see two different `request_id` formats in logs:
+
+| Source | Format example | Where it comes from |
+|--------|----------------|---------------------|
+| **API / controller** (e.g. `inventory`, `order`, `user`) | Long: `req-1771891152664413469` | From HTTP header `X-Request-ID`. Whatever the client or API gateway sends (e.g. gateway-generated or client-generated). |
+| **Database** (service `database`) | Short: `req-8bebccec` | Generated inside the app when no `request_id` is passed to the logger: `req-` + 8 hex chars from `uuid4().hex[:8]`. |
+
+**Relevant constants (no code change — for reference):**
+
+- **When `X-Request-ID` is missing:** `RequestHeaderDefaults.REQUEST_ID_DEFAULT` = `"no-request-id"` (`services/common/src/shared/constants/api_constants.py`). So controllers would log `no-request-id`, not a long number.
+- **Generated ID (used when a log call doesn’t pass `request_id`):** `RequestDefaults.REQUEST_ID_PREFIX` = `"req-"`, `LogDefault.UUID_HEX_LENGTH` = `8` (`services/common/src/shared/logging/log_constants.py`). So any log without an explicit `request_id` gets the short format.
+
+The long format is **not** defined in this repo; it is set by the client or gateway. To have a single format from the edge, configure the **upstream** (gateway/load balancer/client) to send a consistent `X-Request-ID` (e.g. same style as the short format). 
+
+**Database logs:** Each DB log line gets a new generated `request_id` (short format). That value is **not useful for tracing or correlation**—it does not link DB operations to each other or to the API request. For tracing, use the `request_id` from **API/controller** logs (inventory, order, user, etc.) only.
+
 ### **Searching Loki (LogQL)**
 Promtail extracts JSON fields as labels: `service`, `level`, `action`, `user`. Use these in Grafana Explore (data source: Loki).
+
+**Note:** Prefer filtering by **`service`** (e.g. `{service="inventory"}`). Do **not** use `{job="service-json-logs"}` or `{job="docker-containers"}` for general log search — use **`service`** instead.
+
+**Search by request ID** (e.g. `req-1771882714634525128`):
+- **Any service (use this):** `{service=~".+"} |= "req-1771882714634525128"`
+- One service: `{service="inventory"} |= "req-1771882714634525128"`
+
+Request ID is propagated in **controller logs** (e.g. `order`, `user`, `inventory`), so one search by request_id shows all API-level logs for that request. **Database** logs (service `database`) use a different, per-log-line ID and are not correlated by request_id; filter those by `service="database"`, time, and message if needed.
 
 | Service   | Label value  | Example query |
 |-----------|---------------|---------------|
@@ -164,27 +189,27 @@ Promtail extracts JSON fields as labels: `service`, `level`, `action`, `user`. U
 | Insights  | `insights`    | `{service="insights"} \| json` |
 
 **Orders (order service):**
-- All order logs:  
+- All order logs:
   `{service="order"} | json`
-- Filter by action (e.g. request end, errors):  
-  `{service="order"} | json | action="request_end"`  
+- Filter by action (e.g. request end, errors):
+  `{service="order"} | json | action="request_end"`
   `{service="order"} | json | action=~"error|validation_error"`
-- Search message for "order":  
+- Search message for "order":
   `{service="order"} | json | message =~ "(?i)order"`
 
-**Multiple services (e.g. order + user):**  
+**Multiple services (e.g. order + user):**
 `{service=~"order|user"} | json`
 
 ### **Audit log (security events)**
 All audit entries use `service="audit"`. In Grafana Explore (Loki):
 
-- **All audit logs:**  
+- **All audit logs:**
   `{service="audit"} | json`
-- **Filter by action:**  
-  `{service="audit"} | json | action="auth_success"`  
-  `{service="audit"} | json | action="auth_failed"`  
+- **Filter by action:**
+  `{service="audit"} | json | action="auth_success"`
+  `{service="audit"} | json | action="auth_failed"`
   `{service="audit"} | json | action="security_event"`
-- **Search message for a word (e.g. "import"):**  
+- **Search message for a word (e.g. "import"):**
   `{service="audit"} | json | message =~ "(?i)import"`
 
 **What is currently audited:** login success/failure, logout, token created, password change, access denied, and generic security events (e.g. registration validation). **Data import or “import” actions are not logged to the audit log today**; if you need that, add a call to `AuditLogger.log_security_event()` (or a dedicated method) from the code that performs the import.

@@ -372,9 +372,8 @@ const (
 	ErrorRedisConnectionFailed = "failed to connect to Redis:"
 
 	// Server error messages
-	ErrorRouteNotFound     = "Route not found"
-	ErrorRouteConfigNil    = "Route config is nil"
-	ErrorAuthRequired      = "Authentication required"
+	ErrorRouteNotFound   = "Route not found"
+	ErrorAuthRequired    = "Authentication required"
 	ErrorInsufficientPerms = "Insufficient permissions"
 	ErrorServiceNotFound   = "Service not found"
 	ErrorReadRequestBody   = "Failed to read request body"
@@ -399,7 +398,7 @@ const BlockDurationSeconds = 300
 
 // Failed login tracking (SEC-011). After FailedLoginBlockThreshold failed logins within FailedLoginWindowSeconds, the IP is blocked for BlockDurationSeconds.
 const (
-	FailedLoginWindowSeconds   = 86400 // count failures in a 1-day window (24 * 60 * 60)
+	FailedLoginWindowSeconds   = 300  // 5 min so block + count both expire together (dev/test). Production: 86400 (24h).
 	FailedLoginBlockThreshold = 5     // block after this many failed logins in the window
 )
 

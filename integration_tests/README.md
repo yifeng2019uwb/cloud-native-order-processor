@@ -66,7 +66,20 @@ integration_tests/
 pip install -r requirements.txt
 ```
 
-### 2. Run All Tests
+### 2. Clear Redis IP-block state (required before user/auth tests)
+
+If the gateway uses Redis for IP blocking (SEC-011), clear **both** `ip_block:*` and `login_fail:*` before running integration tests, or tests may get **403 AUTH_004 (IP blocked)**. From the directory where `docker-compose.yml` runs (e.g. `docker/`):
+
+```bash
+docker compose exec redis redis-cli --scan --pattern "ip_block:*"   | xargs -I {} docker compose exec -T redis redis-cli DEL {}
+docker compose exec redis redis-cli --scan --pattern "login_fail:*" | xargs -I {} docker compose exec -T redis redis-cli DEL {}
+```
+
+Verify: `docker compose exec redis redis-cli KEYS "ip_block:*"` and `KEYS "login_fail:*"` should both return `(empty array)`. Then run tests immediately.
+
+**Details**: [incident/README.md](incident/README.md#before-running-userintegration-tests-avoid-403-auth_004) · **Runbook**: [docs/runbooks/failed-login-burst.md](../docs/runbooks/failed-login-burst.md).
+
+### 3. Run All Tests
 ```bash
 # Run all integration tests
 ./run_all_tests.sh all
@@ -80,7 +93,7 @@ pip install -r requirements.txt
 ./run_all_tests.sh smoke     # Health checks only
 ```
 
-### 3. View Reports
+### 4. View Reports
 ```bash
 # Open HTML report in browser
 open reports/test_report_*.html
@@ -89,7 +102,7 @@ open reports/test_report_*.html
 cat reports/test_report_*.json
 ```
 
-### 4. Load Tests
+### 5. Load Tests
 For performance and stress testing (rate limiting, circuit breaker, lock management, latency), see the **[Load Tests documentation](load_tests/README.md)**:
 ```bash
 cd load_tests

@@ -58,24 +58,14 @@ class AssetDAO:
     def get_all_assets(self, active_only: bool = False) -> List[Asset]:
         """Get all assets, optionally filter by active status"""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Getting all assets, active_only: {active_only}"
-            )
-
-            # Use PynamoDB to scan all assets
             if active_only:
-                # Filter by is_active = True
                 assets = [asset_item.to_asset() for asset_item in AssetItem.scan(AssetItem.is_active == True)]
             else:
-                # Get all assets
                 assets = [asset_item.to_asset() for asset_item in AssetItem.scan()]
-
             logger.info(
                 action=LogAction.DB_OPERATION,
-                message=f"Found {len(assets)} assets"
+                message=f"All assets: {len(assets)} items, active_only={active_only}"
             )
-
             return assets
 
         except Exception as e:
@@ -103,30 +93,17 @@ class AssetDAO:
             return {}
 
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Batch retrieving {len(asset_ids)} assets"
-            )
-
-            # Use PynamoDB batch_get to retrieve multiple assets
             assets = {}
             for asset_id in asset_ids:
                 try:
                     asset_item = AssetItem.get(asset_id)
                     assets[asset_id] = asset_item.to_asset()
                 except AssetItem.DoesNotExist:
-                    # Asset not found, skip it (as per original behavior)
-                    logger.warning(
-                        action=LogAction.DB_OPERATION,
-                        message=f"Asset '{asset_id}' not found, skipping"
-                    )
                     continue
-
             logger.info(
                 action=LogAction.DB_OPERATION,
-                message=f"Successfully retrieved {len(assets)} out of {len(asset_ids)} requested assets"
+                message=f"Batch assets: {len(assets)} retrieved, {len(asset_ids) - len(assets)} missing"
             )
-
             return assets
 
         except Exception as e:

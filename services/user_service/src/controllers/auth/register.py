@@ -78,6 +78,11 @@ def register_user(
         # Layer 2: Business validation only
         validate_username_uniqueness(user_data.username, user_dao)
         validate_email_uniqueness(user_data.email, user_dao)
+        logger.info(
+            action=LogAction.REQUEST_END,
+            message=f"Email and username available: {user_data.username}",
+            request_id=request_id,
+        )
         validate_age_requirements(user_data.date_of_birth)
 
         # Transform API model to User entity - proper field mapping

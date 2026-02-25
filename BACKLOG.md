@@ -144,6 +144,55 @@
 
 _Optional maintenance items below._
 
+#### **INV-TEST-001: Inventory service pytest collection errors** — 📋 **To Do**
+- **Component**: Inventory Service (tests)
+- **Type**: Maintenance / Environment
+- **Priority**: 📋 **LOW**
+- **Status**: 📋 **To Do**
+- **Goal**: Fix "7 errors during collection" when running pytest in `services/inventory_service`. Tests fail to collect with `ModuleNotFoundError: No module named 'fastapi'` (and similar) when pytest is run without the service virtualenv.
+- **Details**: Running `pytest` (e.g. with coverage via pytest.ini) uses an environment where project deps (fastapi, etc.) are not installed. Collection fails for: `test_assets.py`, `test_dependencies.py`, `test_health.py`, `test_init_inventory.py`, `test_fetch_coins.py`, `test_validation.py`, `test_field_validators.py`.
+- **Acceptance Criteria**:
+  - [ ] Run `./dev.sh test` from `services/inventory_service` succeeds (uses `.venv-inventory_service`).
+  - [ ] Or: document that tests must be run via `./dev.sh test` (not raw `pytest`) so the correct venv is used; optionally add a note in README or pytest.ini.
+  - [ ] Or: fix CI/IDE test runner so it uses the service venv and collection succeeds.
+- **Workaround for now**: From `services/inventory_service`, run `./dev.sh test` (script activates `.venv-inventory_service` and runs pytest with deps). Skip if not blocking.
+
+#### **CI-001: Optional full CI with Docker deploy + integration tests** _(Low priority / try once)_
+- **Component**: CI/CD (GitHub Actions)
+- **Type**: Optional pipeline enhancement
+- **Priority**: 📋 **LOW** (not important; try once to confirm)
+- **Status**: 📋 **To Do**
+- **Goal**: Keep **default CI as-is** (unit tests only / current setting). Allow **optionally** running the **whole** CI pipeline including: **deploy all services in Docker** (local stack: LocalStack + Redis + backend + gateway) and **run all integration tests** — to confirm all services work together. Only when explicitly enabled (e.g. repo variable `ENABLE_INTEGRATION_TESTS=true`).
+- **Default behaviour**: Current CI unchanged — unit tests, frontend/gateway/backend build and test only; no Docker deploy, no integration tests.
+- **Optional run**: When enabled (e.g. via repository variable), run an additional job that: (1) starts LocalStack + Redis, (2) initializes DynamoDB tables, (3) builds and starts all services with Docker Compose (local compose), (4) waits for gateway health, (5) runs `pytest` from `integration_tests/` against `localhost:8080`, (6) tears down. No AWS secrets required for this path; cost $0.
+- **Acceptance Criteria**:
+  - [ ] Default CI remains unit-tests-only (no change to current behaviour)
+  - [ ] When explicitly enabled, full pipeline runs: Docker deploy + all integration tests
+  - [ ] At least one successful full run to confirm all services work
+- **Dependencies**: Existing `.github/workflows/ci-cd.yaml`, `docker/docker-compose.yml`, `docker-compose.local.yml`, `integration_tests/`, `docker/scripts/init-local-dynamodb.sh` (and AWS CLI in CI for init).
+- **Note**: Implementation can follow the “how” described in prior feedback: add/update the integration-tests job to start the local stack, wait for gateway, run pytest, then tear down; job runs only when `vars.ENABLE_INTEGRATION_TESTS == 'true'` and depends on `test` only (no Terraform).
+
+#### **INFRA-023: Request ID in DB/DAO Logs for Full-Trace Search in Loki** _(Discussion / Optional)_
+- **Component**: Logging & Observability (common, all backend services)
+- **Type**: Optional enhancement / discussion
+- **Priority**: 📋 **LOW** (optional; discuss first)
+- **Status**: 💬 **DISCUSSION** — **Do not change code until the team decides.**
+- **Goal**: When searching Loki by request ID (e.g. `{service=~".+"} |= "req-1771882714634525128"`), show **all** logs for that request: not only controller logs (order, user) but also **DAO/database operation logs** (e.g. "Creating order", "Order created successfully", "Balance transaction created") so a single request ID gives the full trace including DB writes.
+- **Current behaviour**: Controllers pass `request_id` from `X-Request-ID` to their own log calls, so controller logs share the request ID. DAOs and TransactionManager use `BaseLogger` without receiving `request_id`, so they log with an **auto-generated** request ID per log line. Searching by the gateway/controller request ID in Loki therefore shows only that service's controller logs, not the database-layer logs for the same request.
+- **Discussion — do we need this?**
+  - **Pros**: One request ID → full trace (API + DB) in Loki; easier debugging and demos.
+  - **Cons**: Small cross-cutting change (context + middleware); DAO code stays unchanged but logger behaviour changes when context is set.
+- **Proposed approach (if we implement)**:
+  1. **Request-scoped context**: Add a small module in common (e.g. `request_context.py`) with a contextvar for `current_request_id` and `set_request_id` / `get_request_id`.
+  2. **BaseLogger**: When `request_id` is not explicitly passed to `log()`, use `get_request_id()` from context before generating a new ID.
+  3. **Middleware**: In each backend service (user, order, inventory, auth, insights), at the start of the request, read `X-Request-ID` and call `set_request_id(...)` so all logs in that request (including DAO/TransactionManager) use the same ID.
+- **Acceptance criteria (if implemented)**:
+  - [ ] Searching Loki by one request ID returns controller logs and database/DAO logs for that request.
+  - [ ] No change to DAO method signatures; only logger and middleware changes.
+- **Dependencies**: INFRA-017 (Request ID propagation) already done at gateway/controller level; this extends it to inner layers.
+- **Files to add/update (if implemented)**: `services/common/src/shared/request_context.py` (new), `base_logger.py` (use context when request_id missing), each service's `middleware.py` (set request_id from header). Monitoring README could add one line that DB logs are included when this is implemented.
+- **Note**: A prototype was reverted before demo; this backlog item captures the idea for post-demo discussion. **No code changes until the team agrees.**
+
 #### **INFRA-022: Remove Kubernetes Scaling & Load Balancing Features (Discussion)**
 - **Component**: Infrastructure & Deployment
 - **Type**: Architecture Simplification / Discussion

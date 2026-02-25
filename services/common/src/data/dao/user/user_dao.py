@@ -56,27 +56,13 @@ class UserDAO:
     def get_user_by_username(self, username: str) -> User:
         """Get user by username (Primary Key lookup)"""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Looking up user by username: '{username}'"
-            )
-
             # Use PynamoDB to get user by primary key
             user_item = UserItem.get(username, UserFields.SK_VALUE)
-
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"User found: {username}"
-            )
 
             # Convert to User domain model
             return user_item.to_user()
 
         except UserItem.DoesNotExist:
-            logger.warning(
-                action=LogAction.DB_OPERATION,
-                message=f"User not found: {username}"
-            )
             raise CNOPUserNotFoundException(f"User with username '{username}' not found")
         except Exception as e:
             logger.error(
@@ -88,24 +74,11 @@ class UserDAO:
     def get_user_by_email(self, email: str) -> User:
         """Get user by email (GSI lookup)"""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Looking up user by email: '{email}'"
-            )
-
             # Use PynamoDB GSI to query by email
             for user_item in UserItem.email_index.query(email):
-                logger.info(
-                    action=LogAction.DB_OPERATION,
-                    message=f"User found by email: {email}"
-                )
                 return user_item.to_user()
 
             # No user found
-            logger.warning(
-                action=LogAction.DB_OPERATION,
-                message=f"User not found by email: {email}"
-            )
             raise CNOPUserNotFoundException(f"User with email '{email}' not found")
 
         except CNOPUserNotFoundException:
@@ -120,12 +93,9 @@ class UserDAO:
     def authenticate_user(self, username: str, password: str) -> User:
         """Authenticate user with username and password"""
         try:
-            # Get user (this will raise CNOPUserNotFoundException if not found)
-            user = self.get_user_by_username(username)
-
-            # Get the stored password hash using PynamoDB
             user_item = UserItem.get(username, UserFields.SK_VALUE)
             stored_hash = user_item.password_hash
+            user = user_item.to_user()
 
             if not stored_hash:
                 logger.error(
@@ -134,7 +104,6 @@ class UserDAO:
                 )
                 raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{username}'")
 
-            # Verify password
             if self.password_manager.verify_password(password, stored_hash):
                 logger.info(
                     action=LogAction.DB_OPERATION,
@@ -143,11 +112,13 @@ class UserDAO:
                 return user
             else:
                 logger.warning(
-                    action=LogAction.ERROR,
+                    action=LogAction.AUTH_FAILED,
                     message=f"Invalid password for user: {username}"
                 )
                 raise CNOPInvalidCredentialsException(f"Invalid credentials for user '{username}'")
 
+        except UserItem.DoesNotExist:
+            raise CNOPUserNotFoundException(f"User with username '{username}' not found")
         except CNOPUserNotFoundException:
             raise
         except CNOPInvalidCredentialsException:
@@ -194,7 +165,7 @@ class UserDAO:
 
         except UserItem.DoesNotExist:
             logger.warning(
-                action=LogAction.ERROR,
+                action=LogAction.NOT_FOUND,
                 message=f"User not found for update: {user.username}"
             )
             raise CNOPUserNotFoundException(f"User with username '{user.username}' not found")

@@ -64,54 +64,32 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 // RoleMiddleware checks if user is authenticated (requiredRoles empty = any authenticated user allowed)
 func RoleMiddleware(requiredRoles []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		logger.Info(logging.REQUEST_START, "RoleMiddleware processing request", "", map[string]interface{}{
-			constants.JSONFieldPath:          c.Request.URL.Path,
-			constants.JSONFieldRequiredRoles: requiredRoles,
-		})
-
-		userRole := c.GetString(constants.ContextKeyUserRole)
-		logger.Info(logging.REQUEST_START, "User role extracted", "", map[string]interface{}{
-			constants.JSONFieldUserRole: userRole,
-		})
-
-		// If no role restrictions, allow access
 		if len(requiredRoles) == 0 {
-			logger.Info(logging.REQUEST_END, "No role restrictions, allowing access", "", nil)
 			c.Next()
 			return
 		}
 
-		// If user has no role but roles are required, deny access
+		userRole := c.GetString(constants.ContextKeyUserRole)
 		if userRole == "" {
-			logger.Error(logging.AUTH_FAILURE, "User has no role but roles are required", "", map[string]interface{}{
-				constants.JSONFieldRequiredRoles: requiredRoles,
+			logger.Error(logging.AUTH_FAILURE, "Authentication required", "", map[string]interface{}{
+				constants.JSONFieldPath: c.Request.URL.Path,
 			})
 			handleAuthError(c, models.ErrPermInsufficient, fmt.Sprintf("Insufficient permissions. Required roles: %v, User role: none", requiredRoles))
 			return
 		}
 
-		// Check if user has required role
-		hasRole := false
 		for _, role := range requiredRoles {
 			if role == userRole {
-				hasRole = true
-				break
+				c.Next()
+				return
 			}
 		}
 
-		if !hasRole {
-			logger.Error(logging.AUTH_FAILURE, "User role not found in required roles", "", map[string]interface{}{
-				constants.JSONFieldUserRole:      userRole,
-				constants.JSONFieldRequiredRoles: requiredRoles,
-			})
-			handleAuthError(c, models.ErrPermInsufficient, fmt.Sprintf("Insufficient permissions. Required roles: %v, User role: %s", requiredRoles, userRole))
-			return
-		}
-
-		logger.Info(logging.REQUEST_END, "User role found in required roles, allowing access", "", map[string]interface{}{
-			constants.JSONFieldUserRole: userRole,
+		logger.Error(logging.AUTH_FAILURE, "Permission denied", "", map[string]interface{}{
+			constants.JSONFieldUserRole:      userRole,
+			constants.JSONFieldRequiredRoles: requiredRoles,
 		})
-		c.Next()
+		handleAuthError(c, models.ErrPermInsufficient, fmt.Sprintf("Insufficient permissions. Required roles: %v, User role: %s", requiredRoles, userRole))
 	}
 }
 

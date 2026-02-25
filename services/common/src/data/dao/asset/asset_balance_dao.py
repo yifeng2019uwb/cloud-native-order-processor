@@ -24,42 +24,21 @@ class AssetBalanceDAO:
     def upsert_asset_balance(self, username: str, asset_id: str, quantity: Decimal) -> AssetBalance:
         """Create or update asset balance atomically"""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Upserting asset balance: user={username}, asset={asset_id}, quantity={quantity}"
-            )
-
             # Try to get existing balance first
             try:
                 balance_item = AssetBalanceItem.get(username, f"{AssetBalanceFields.SK_PREFIX}{asset_id}")
-                # Asset balance exists - update it
                 existing_quantity = Decimal(balance_item.quantity)
                 new_quantity = existing_quantity + quantity
-                logger.info(
-                    action=LogAction.DB_OPERATION,
-                    message=f"Existing balance found: {existing_quantity}, adding {quantity}, new total: {new_quantity}"
-                )
-
-                # Update the balance item
                 balance_item.quantity = str(new_quantity)
                 balance_item.save()
-
                 logger.info(
                     action=LogAction.DB_OPERATION,
-                    message=f"Asset balance updated: user={username}, asset={asset_id}, quantity={existing_quantity} -> {new_quantity}"
+                    message=f"Asset balance updated: user={username}, asset={asset_id}, quantity={new_quantity}"
                 )
-
                 return balance_item.to_asset_balance()
 
             except AssetBalanceItem.DoesNotExist:
-                # Asset balance doesn't exist - create new one
                 new_quantity = quantity
-                logger.info(
-                    action=LogAction.DB_OPERATION,
-                    message=f"No existing balance found, creating new balance with quantity: {new_quantity}"
-                )
-
-                # Create new asset balance
                 new_balance = AssetBalance(
                     username=username,
                     asset_id=asset_id,
@@ -67,12 +46,10 @@ class AssetBalanceDAO:
                 )
                 balance_item = AssetBalanceItem.from_asset_balance(new_balance)
                 balance_item.save()
-
                 logger.info(
                     action=LogAction.DB_OPERATION,
                     message=f"Asset balance created: user={username}, asset={asset_id}, quantity={new_quantity}"
                 )
-
                 return balance_item.to_asset_balance()
 
         except Exception as e:
@@ -85,20 +62,7 @@ class AssetBalanceDAO:
     def get_asset_balance(self, username: str, asset_id: str) -> AssetBalance:
         """Get specific asset balance for user"""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Getting asset balance: user={username}, asset={asset_id}"
-            )
-
-            # Use PynamoDB to get asset balance by primary key
             balance_item = AssetBalanceItem.get(username, f"{AssetBalanceFields.SK_PREFIX}{asset_id}")
-
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Asset balance found: user={username}, asset={asset_id}, quantity={balance_item.quantity}"
-            )
-
-            # Convert to AssetBalance domain model
             return balance_item.to_asset_balance()
 
         except AssetBalanceItem.DoesNotExist:
@@ -117,22 +81,13 @@ class AssetBalanceDAO:
     def get_all_asset_balances(self, username: str) -> List[AssetBalance]:
         """Get all asset balances for a user"""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Querying asset balances for user: {username}"
-            )
-
-            # Use PynamoDB to query asset balances
             balances = []
             for balance_item in AssetBalanceItem.query(username, AssetBalanceItem.Sk.startswith(AssetBalanceFields.SK_PREFIX)):
-                balance = balance_item.to_asset_balance()
-                balances.append(balance)
-
+                balances.append(balance_item.to_asset_balance())
             logger.info(
                 action=LogAction.DB_OPERATION,
-                message=f"Query returned {len(balances)} asset balances for user {username}"
+                message=f"Asset balances for user {username}: {len(balances)} items"
             )
-
             return balances
 
         except Exception as e:
@@ -145,20 +100,12 @@ class AssetBalanceDAO:
     def delete_asset_balance(self, username: str, asset_id: str) -> bool:
         """Delete asset balance"""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Deleting asset balance: user={username}, asset={asset_id}"
-            )
-
-            # Get the asset balance item and delete it
             balance_item = AssetBalanceItem.get(username, f"{AssetBalanceFields.SK_PREFIX}{asset_id}")
             balance_item.delete()
-
             logger.info(
                 action=LogAction.DB_OPERATION,
-                message=f"Asset balance deleted successfully: user={username}, asset={asset_id}"
+                message=f"Asset balance deleted: user={username}, asset={asset_id}"
             )
-
             return True
 
         except AssetBalanceItem.DoesNotExist:

@@ -41,18 +41,10 @@ class OrderDAO:
             # Convert Order entity to OrderItem for database storage
             order_item = OrderItem.from_order(order)
 
-            # Save to database
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Creating order: id={order.order_id}, user={order.username}, "
-                       f"asset={order.asset_id}, type={order.order_type.value}"
-            )
             order_item.save()
-
             logger.info(
                 action=LogAction.DB_OPERATION,
-                message=f"Order created successfully: id={order.order_id}, user={order.username}, "
-                       f"asset={order.asset_id}, type={order.order_type.value}"
+                message=f"Order created: id={order.order_id}, user={order.username}, asset={order.asset_id}"
             )
             return order
 
@@ -108,30 +100,18 @@ class OrderDAO:
             CNOPDatabaseOperationException: If database operation fails
         """
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Retrieving orders for user: username={username}, limit={limit}, offset={offset}"
-            )
-
-            # Query using GSI - query by username (GSI_PK) only
             order_items = OrderItem.user_orders_index.query(
                 username,
-                scan_index_forward=False,  # Most recent first
+                scan_index_forward=False,
                 limit=limit
             )
-
-            # Convert to Order entities
             orders = [order_item.to_order() for order_item in order_items]
-
-            # Apply offset (PynamoDB doesn't support offset directly)
             if offset > 0:
                 orders = orders[offset:]
-
             logger.info(
                 action=LogAction.DB_OPERATION,
-                message=f"Retrieved {len(orders)} orders for user '{username}'"
+                message=f"Orders for user {username}: {len(orders)} items"
             )
-
             return orders
 
         except Exception as e:
@@ -159,27 +139,15 @@ class OrderDAO:
             CNOPDatabaseOperationException: If database operation fails
         """
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Updating order status: id={order_id}, new_status={new_status.value}, reason={reason or 'none'}"
-            )
-
-            # Get existing order
             order_item = OrderItem.get(order_id, OrderFields.SK_VALUE)
-
-            # Update status and reason
             order_item.status = new_status.value
             if reason:
                 order_item.status_reason = reason
-
-            # Save with updated timestamp
             order_item.save()
-
             logger.info(
                 action=LogAction.DB_OPERATION,
-                message=f"Order status updated successfully: id={order_id}, new_status={new_status.value}, reason={reason or 'none'}"
+                message=f"Order status updated: id={order_id}, status={new_status.value}"
             )
-
             return order_item.to_order()
 
         except OrderItem.DoesNotExist:
@@ -210,12 +178,6 @@ class OrderDAO:
             CNOPDatabaseOperationException: If database operation fails
         """
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Checking if order exists: id={order_id}"
-            )
-
-            # Try to get the order
             OrderItem.get(order_id, OrderFields.SK_VALUE)
             return True
 

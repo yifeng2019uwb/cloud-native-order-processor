@@ -23,25 +23,13 @@ class AssetTransactionDAO:
 
     def create_asset_transaction(self, transaction: AssetTransaction) -> AssetTransaction:
         """Create a new asset transaction"""
-        logger.info(
-            action=LogAction.DB_OPERATION,
-            message=f"Creating asset transaction: user={transaction.username}, "
-                   f"asset={transaction.asset_id}, type={transaction.transaction_type.value}, "
-                   f"quantity={transaction.quantity}, price={transaction.price}"
-        )
-
         try:
-            # Create PynamoDB item from domain model
             transaction_item = AssetTransactionItem.from_asset_transaction(transaction)
             transaction_item.save()
-
             logger.info(
                 action=LogAction.DB_OPERATION,
-                message=f"Asset transaction created successfully: user={transaction.username}, "
-                       f"asset={transaction.asset_id}, type={transaction.transaction_type.value}, "
-                       f"quantity={transaction.quantity}"
+                message=f"Asset transaction created: user={transaction.username}, asset={transaction.asset_id}, quantity={transaction.quantity}"
             )
-
             return transaction_item.to_asset_transaction()
 
         except Exception as e:
@@ -53,23 +41,11 @@ class AssetTransactionDAO:
 
     def get_asset_transaction(self, username: str, asset_id: str, timestamp: str) -> AssetTransaction:
         """Get specific asset transaction"""
-        logger.info(
-            action=LogAction.DB_OPERATION,
-            message=f"Getting asset transaction: user={username}, asset={asset_id}, timestamp={timestamp}"
-        )
-
         try:
-            # Use PynamoDB get method
             transaction_item = AssetTransactionItem.get(
                 AssetTransaction.build_pk(username, asset_id),
                 timestamp
             )
-
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Asset transaction found: user={username}, asset={asset_id}, timestamp={timestamp}"
-            )
-
             return transaction_item.to_asset_transaction()
 
         except AssetTransactionItem.DoesNotExist:
@@ -88,27 +64,16 @@ class AssetTransactionDAO:
 
     def get_user_asset_transactions(self, username: str, asset_id: str, limit: Optional[int] = None) -> List[AssetTransaction]:
         """Get all transactions for a user and specific asset"""
-        logger.info(
-            action=LogAction.DB_OPERATION,
-            message=f"Getting user asset transactions: user={username}, asset={asset_id}, limit={limit}"
-        )
-
         try:
-            # Use PynamoDB query method - query by hash key only
             query_result = AssetTransactionItem.query(
                 AssetTransaction.build_pk(username, asset_id),
                 limit=limit
             )
-
-            transactions = []
-            for item in query_result:
-                transactions.append(item.to_asset_transaction())
-
+            transactions = [item.to_asset_transaction() for item in query_result]
             logger.info(
                 action=LogAction.DB_OPERATION,
-                message=f"Found {len(transactions)} asset transactions for user={username}, asset={asset_id}"
+                message=f"Asset transactions for user={username}, asset={asset_id}: {len(transactions)} items"
             )
-
             return transactions
 
         except Exception as e:
