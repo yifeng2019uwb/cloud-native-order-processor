@@ -18,21 +18,11 @@ class AssetDAO:
 
 
     def create_asset(self, asset: Asset) -> Asset:
-        """Create a new asset"""
+        """Create a new asset (internal use e.g. price update job)"""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Creating asset: id={asset.asset_id}, name={asset.name}, category={asset.category}"
-            )
-
             # Convert Asset entity to AssetItem for database storage
             asset_item = AssetItem.from_asset(asset)
             asset_item.save()
-
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Asset created successfully: id={asset.asset_id}, name={asset.name}, category={asset.category}"
-            )
 
             # Convert back to Asset domain model
             return asset_item.to_asset()
@@ -46,18 +36,8 @@ class AssetDAO:
     def get_asset_by_id(self, asset_id: str) -> Asset:
         """Get an asset by its ID"""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Getting asset by ID: {asset_id}"
-            )
-
             # Use PynamoDB to get asset by primary key
             asset_item = AssetItem.get(asset_id)
-
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Asset found: id={asset_id}, name={asset_item.name}"
-            )
 
             # Convert to Asset domain model
             return asset_item.to_asset()
@@ -157,13 +137,8 @@ class AssetDAO:
             raise CNOPDatabaseOperationException(f"Database operation failed while batch retrieving assets: {str(e)}") from e
 
     def update_asset(self, asset: Asset) -> Asset:
-        """Update an asset"""
+        """Update an asset (internal use e.g. price update job)"""
         try:
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Updating asset: id={asset.asset_id}, name={asset.name}"
-            )
-
             # Get existing asset to preserve created_at
             existing_asset_item = AssetItem.get(asset.asset_id)
 
@@ -179,11 +154,6 @@ class AssetDAO:
 
             # Save the updated asset (updated_at will be set automatically in save method)
             asset_item.save()
-
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Asset updated successfully: id={asset.asset_id}, name={asset.name}"
-            )
 
             # Convert back to Asset domain model
             return asset_item.to_asset()

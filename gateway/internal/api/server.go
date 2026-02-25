@@ -60,7 +60,7 @@ func (s *Server) setupRoutes() {
 	s.router.Use(middleware.Recovery())
 
 	// Add auth middleware globally to set user roles for all routes (SEC-011: IP block check when Redis available)
-	s.router.Use(middleware.AuthMiddleware(s.config, s.redisService))
+	s.router.Use(middleware.AuthMiddleware(s.config))
 
 	// Add Redis-based middleware if Redis is available
 	if s.redisService != nil {
@@ -169,8 +169,29 @@ func (s *Server) healthCheck(c *gin.Context) {
 // handleProxyRequest handles all proxy requests with routing and error handling
 // Phase 1: Basic proxy logic with simple error handling
 func (s *Server) handleProxyRequest(c *gin.Context) {
-	// Get route configuration
 	path := c.Request.URL.Path
+
+	// SEC-011: For POST /auth/login only, check if client IP is blocked (brute-force). Return 403 before proxying.
+	if s.redisService != nil && path == constants.APIV1AuthLogin && c.Request.Method == http.MethodPost {
+		clientIP := c.ClientIP()
+		blocked, err := s.redisService.IsIPBlocked(c.Request.Context(), clientIP)
+		if err != nil {
+			s.logger.Info(logging.REQUEST_START, "IP block check failed, allowing request", "", map[string]interface{}{
+				"client_ip": clientIP,
+				"error":     err.Error(),
+			})
+		} else if blocked {
+			s.logger.Error(logging.AUTH_FAILURE, "Request from blocked IP", "", map[string]interface{}{
+				"client_ip": clientIP,
+				constants.JSONFieldPath: path,
+				constants.JSONFieldMethod: c.Request.Method,
+			})
+			s.handleError(c, http.StatusForbidden, models.ErrIPBlocked, constants.ErrorIPBlocked)
+			return
+		}
+	}
+
+	// Get route configuration
 	routeConfig, exists := s.proxyService.GetRouteConfig(path)
 
 	if !exists {
@@ -333,7 +354,7 @@ func (s *Server) handleProxyRequest(c *gin.Context) {
 		return
 	}
 
-	// SEC-011: record failed login for IP block. On 5th 401 from login, set ip_block:<ip> so next request gets 403.
+	// SEC-011: Record failed login only for 401 from POST /auth/login (not 401s from other routes). After 5 in window, set ip_block:<ip> so next login from this IP gets 403.
 	if s.redisService != nil && path == constants.APIV1AuthLogin && c.Request.Method == http.MethodPost && resp.StatusCode == http.StatusUnauthorized {
 		if err := s.redisService.RecordFailedLogin(c.Request.Context(), c.ClientIP()); err != nil {
 			s.logger.Info(logging.REQUEST_END, "RecordFailedLogin failed (non-fatal)", "", map[string]interface{}{

@@ -92,36 +92,11 @@ async def upsert_coins_to_inventory(coins: List[CoinData]) -> int:
         try:
             asset = coin_to_asset(coin)
 
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Processing coin: {asset.asset_id}, current_price: {coin.current_price}"
-            )
-
             try:
-                logger.info(
-                    action=LogAction.DB_OPERATION,
-                    message=f"Checking if asset exists: {asset.asset_id}"
-                )
                 existing_asset = asset_dao.get_asset_by_id(asset.asset_id)
-                logger.info(
-                    action=LogAction.DB_OPERATION,
-                    message=f"Asset exists, updating: {asset.asset_id}"
-                )
                 asset_dao.update_asset(asset)
-                logger.info(
-                    action=LogAction.DB_OPERATION,
-                    message=f"Updated asset: {asset.asset_id}"
-                )
             except (CNOPEntityNotFoundException, CNOPAssetNotFoundException):
-                logger.info(
-                    action=LogAction.DB_OPERATION,
-                    message=f"Asset doesn't exist, creating: {asset.asset_id}"
-                )
                 asset_dao.create_asset(asset)
-                logger.info(
-                    action=LogAction.DB_OPERATION,
-                    message=f"Created asset: {asset.asset_id}"
-                )
             except Exception as e:
                 logger.error(
                     action=LogAction.ERROR,
@@ -161,7 +136,7 @@ async def startup_inventory_initialization() -> None:
     while True:
         try:
             cycle_count += 1
-            logger.info(
+            logger.debug(
                 action=LogAction.SERVICE_START,
                 message=f"Inventory sync cycle #{cycle_count} starting..."
             )
@@ -170,7 +145,7 @@ async def startup_inventory_initialization() -> None:
             success = await price_update_cycle()
 
             if success:
-                logger.info(
+                logger.debug(
                     action=LogAction.SERVICE_START,
                     message=f"Inventory sync cycle #{cycle_count} completed successfully"
                 )
@@ -187,7 +162,7 @@ async def startup_inventory_initialization() -> None:
             )
 
         # Sleep for configured interval (default: 300 seconds = 5 minutes)
-        logger.info(
+        logger.debug(
             action=LogAction.SERVICE_START,
             message=f"Next sync in {PRICE_UPDATE_INTERVAL_SECONDS}s..."
         )
@@ -233,11 +208,6 @@ async def update_redis_prices(coins: List[CoinData]) -> int:
                 time=PRICE_REDIS_TTL_SECONDS,
                 value=price_data.to_json()
             )
-
-            logger.info(
-                action=LogAction.CACHE_OPERATION,
-                message=f"Updated Redis: {price_data.redis_key} = {price_data.price} (TTL: {PRICE_REDIS_TTL_SECONDS}s)"
-            )
             updated_count += 1
 
         except Exception as e:
@@ -258,11 +228,6 @@ async def price_update_cycle():
     Returns True if successful, False if failed
     """
     try:
-        logger.info(
-            action=LogAction.SERVICE_START,
-            message="Starting price update cycle..."
-        )
-
         # 1. Fetch latest prices from CoinGecko
         coins = await fetch_coins()
 
@@ -273,28 +238,15 @@ async def price_update_cycle():
             )
             return False
 
-        logger.info(
-            action=LogAction.REQUEST_END,
-            message=f"Fetched {len(coins)} coins from CoinGecko"
-        )
-
         # 2. Update DynamoDB inventory table
         db_update_count = await upsert_coins_to_inventory(coins)
+
+        # 3. Update Redis price cache (for limit orders)
+        redis_update_count = await update_redis_prices(coins)
+
         logger.info(
             action=LogAction.DB_OPERATION,
-            message=f"Updated {db_update_count} assets in DynamoDB"
-        )
-
-        # 3. Update Redis price cache (NEW for limit orders)
-        redis_update_count = await update_redis_prices(coins)
-        logger.info(
-            action=LogAction.CACHE_OPERATION,
-            message=f"Updated {redis_update_count} prices in Redis"
-        )
-
-        logger.info(
-            action=LogAction.SERVICE_START,
-            message=f"Price update cycle complete: DynamoDB={db_update_count}, Redis={redis_update_count}"
+            message=f"Price update completed: {db_update_count} assets, {redis_update_count} Redis"
         )
         return True
 

@@ -36,15 +36,8 @@ def get_current_user(
         # Get authenticated user from JWT token
         authenticated_user = get_authenticated_user(request)
 
-        logger.info(action=LogAction.REQUEST_START,
-                   message=f"get_current_user called with username: '{authenticated_user.username}'",
-                   request_id=authenticated_user.request_id)
-
         # Get full user details from database
         user = user_dao.get_user_by_username(authenticated_user.username)
-        logger.info(action=LogAction.AUTH_SUCCESS,
-                   message=f"user_dao.get_user_by_username returned: {user}",
-                   request_id=authenticated_user.request_id)
 
         if user is None:
             logger.warning(action=LogAction.AUTH_FAILED,
@@ -55,6 +48,10 @@ def get_current_user(
                 detail=ErrorMessages.USER_NOT_FOUND
             )
 
+        logger.info(action=LogAction.AUTH_SUCCESS,
+                   message=f"User verified: {user.username}",
+                   user=user.username,
+                   request_id=authenticated_user.request_id)
         return user
 
     except HTTPException:

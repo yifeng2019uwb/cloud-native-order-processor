@@ -18,26 +18,10 @@ import (
 // Package-level logger instance
 var logger = logging.NewBaseLogger(logging.GATEWAY)
 
-// AuthMiddleware validates JWT tokens using the Auth Service and extracts user information.
-// If redisService is non-nil, checks client IP against Redis blocked_ips set first (SEC-011); blocked IPs get 403.
-func AuthMiddleware(cfg *config.Config, redisService *services.RedisService) gin.HandlerFunc {
+// AuthMiddleware validates JWT via the Auth Service and sets user context. Does not perform
+// IP block (SEC-011); that is done in handleProxyRequest for POST /auth/login only.
+func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// SEC-011: IP block check (before token validation). Skip if Redis not available.
-		if redisService != nil {
-			clientIP := c.ClientIP()
-			blocked, err := redisService.IsIPBlocked(c.Request.Context(), clientIP)
-			if err != nil {
-				// Redis error: fail open (allow request) to avoid blocking all traffic
-				logger.Info(logging.REQUEST_START, "IP block check failed, allowing request", "", map[string]interface{}{
-					"client_ip": clientIP,
-					"error":     err.Error(),
-				})
-			} else if blocked {
-				handleIPBlocked(c, clientIP)
-				return
-			}
-		}
-
 		// Extract token from Authorization header
 		authHeader := c.GetHeader(constants.AuthorizationHeader)
 
@@ -148,24 +132,5 @@ func handleAuthError(c *gin.Context, errorCode models.ErrorCode, message string)
 	}
 
 	c.JSON(http.StatusUnauthorized, errorResponse)
-	c.Abort()
-}
-
-// handleIPBlocked responds with 403 Forbidden for blocked IPs (SEC-011)
-func handleIPBlocked(c *gin.Context, clientIP string) {
-	logger.Error(logging.AUTH_FAILURE, "Request from blocked IP", "", map[string]interface{}{
-		"client_ip": clientIP,
-		constants.JSONFieldPath:    c.Request.URL.Path,
-		constants.JSONFieldMethod:  c.Request.Method,
-	})
-
-	errorResponse := models.ErrorResponse{
-		Error:     string(models.ErrIPBlocked),
-		Message:   constants.ErrorIPBlocked,
-		Code:      string(models.ErrIPBlocked),
-		Timestamp: time.Now(),
-	}
-
-	c.JSON(http.StatusForbidden, errorResponse)
 	c.Abort()
 }

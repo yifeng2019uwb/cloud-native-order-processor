@@ -42,6 +42,11 @@ export const useInventory = (): UseInventoryReturn => {
 
     try {
       const response = await inventoryApiService.listAssets(params);
+      console.log('[useInventory] listAssets received:', {
+        assetsInResponse: response.data?.length ?? 0,
+        total_count: response.total_count,
+        active_count: response.active_count
+      });
       setState(prev => ({
         ...prev,
         assets: response.data,  // Backend returns 'data' not 'assets'

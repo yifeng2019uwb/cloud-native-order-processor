@@ -162,11 +162,8 @@ const AssetList: React.FC<AssetListProps> = ({ onAssetClick, showFilters = true 
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Assets</h2>
           <p className="text-gray-600">
-            Showing {startItem}-{endItem} of {sortedAssets.length} assets
+            Showing {startItem}-{endItem} of {totalCount} assets
             {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Backend returned: {assets.length} assets | Sorted: {sortedAssets.length} | Paginated: {paginatedAssets.length}
           </p>
         </div>
 

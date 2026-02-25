@@ -169,11 +169,6 @@ class TokenManager:
                 )
                 raise CNOPTokenInvalidException("Token missing subject")
 
-            logger.debug(
-                action=LogAction.SECURITY_EVENT,
-                message=f"Token verified for user: {username}",
-                user=username
-            )
             return username
 
         except jwt.ExpiredSignatureError:
@@ -210,11 +205,6 @@ class TokenManager:
             CNOPTokenInvalidException: If token is invalid
         """
         try:
-            logger.info(
-                action=LogAction.SECURITY_EVENT,
-                message="Starting comprehensive token validation"
-            )
-
             # Parse and validate token
             payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
 

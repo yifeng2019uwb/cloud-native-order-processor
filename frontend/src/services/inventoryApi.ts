@@ -65,8 +65,15 @@ class InventoryApiService {
       limit: params?.limit?.toString()
     });
     const url = `${API_PATHS.INVENTORY_ASSETS}${queryString}`;
+    console.log('[Inventory API] listAssets request:', { params, url });
     const response = await this.api.get<AssetListResponse>(url);
-    return response.data;
+    const body = response.data as AssetListResponse;
+    console.log('[Inventory API] listAssets response:', {
+      dataLength: body.data?.length ?? 0,
+      total_count: body.total_count,
+      active_count: body.active_count
+    });
+    return body;
   }
 
   async getAssetById(assetId: string): Promise<AssetDetailResponse> {

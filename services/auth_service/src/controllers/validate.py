@@ -41,13 +41,9 @@ def validate_jwt_token(request: ValidateTokenRequest):
     request_id = request.request_id or f"{RequestDefaults.REQUEST_ID_PREFIX}{int(time.time() * 1000)}"
 
     try:
-        logger.info(action=LogAction.REQUEST_START, message=TokenValidationMessages.VALIDATING_JWT, extra=f'{{"{LogField.REQUEST_ID}": "{request_id}"}}')
-
-        # Validate token
+        # Validate token (internal per-request check; no success log to avoid flooding — login already logs auth_success)
         token_manager = TokenManager()
         user_context = token_manager.validate_token_comprehensive(request.token)
-
-        logger.info(action=LogAction.AUTH_SUCCESS, message=TokenValidationMessages.TOKEN_VALID, user=user_context.username, extra=f'{{"{LogField.REQUEST_ID}": "{request_id}"}}')
 
         return ValidateTokenResponse(
             valid=True,
