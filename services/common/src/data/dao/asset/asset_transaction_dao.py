@@ -50,7 +50,7 @@ class AssetTransactionDAO:
 
         except AssetTransactionItem.DoesNotExist:
             logger.warning(
-                action=LogAction.DB_OPERATION,
+                action=LogAction.NOT_FOUND,
                 message=f"Asset transaction not found: user={username}, asset={asset_id}, timestamp={timestamp}"
             )
             raise CNOPTransactionNotFoundException(f"Asset transaction not found for user '{username}', asset '{asset_id}', timestamp '{timestamp}'")

@@ -5,8 +5,6 @@ Tests for Balance DAO
 from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import Mock, patch
-from uuid import UUID
-
 import pytest
 
 from src.data.dao.user.balance_dao import BalanceDAO
@@ -46,8 +44,8 @@ TEST_TRANSACTION_TYPE_WITHDRAWAL = "WITHDRAWAL"
 TEST_TRANSACTION_STATUS_COMPLETED = "COMPLETED"
 TEST_TRANSACTION_STATUS_PENDING = "PENDING"
 
-# Test UUID
-TEST_TRANSACTION_ID = "12345678-1234-5678-9012-123456789012"
+# Test transaction ID (timestamp-based str, used as DynamoDB SK)
+TEST_TRANSACTION_ID = "20260225132158123456a1b2c3"
 
 # Test primary keys - use entity methods directly in tests when needed
 # Example: BalanceTransaction.build_pk(TEST_USERNAME)
@@ -248,53 +246,44 @@ class TestBalanceDAO:
 
     # ==================== GET TRANSACTION TESTS ====================
 
-    @patch.object(BalanceTransactionItem, MODEL_QUERY)
-    def test_get_transaction_success(self, mock_query, balance_dao, sample_transaction):
-        """Test successful transaction retrieval"""
-        # Mock query to return transaction
-        transaction_item = BalanceTransactionItem(
-            username=TEST_USERNAME,
-            transaction_id=str(sample_transaction.transaction_id),
-            transaction_type=TransactionType.DEPOSIT.value,
-            amount='50.00',
-            description='Test deposit',
-            status=TransactionStatus.COMPLETED.value,
-            reference_id=TEST_REFERENCE_ID,
-            created_at=sample_transaction.created_at
-        )
-        mock_query.return_value = [transaction_item]
+    @patch.object(BalanceTransactionItem, MODEL_GET)
+    def test_get_transaction_success(self, mock_get, balance_dao, sample_transaction):
+        """Test successful transaction retrieval (GetItem by PK+SK)."""
+        mock_item = Mock()
+        mock_item.to_balance_transaction.return_value = sample_transaction
+        mock_get.return_value = mock_item
 
         result = balance_dao.get_transaction(TEST_USERNAME, sample_transaction.transaction_id)
 
-        # Verify result
         assert result is not None
-        assert result.username == TEST_USERNAME
         assert result.transaction_id == sample_transaction.transaction_id
+        mock_get.assert_called_once_with(
+            BalanceTransaction.build_pk(TEST_USERNAME),
+            sample_transaction.transaction_id,
+        )
 
-        # Verify query was called
-        mock_query.assert_called_once()
-
-    @patch.object(BalanceTransactionItem, MODEL_QUERY)
-    def test_get_transaction_not_found(self, mock_query, balance_dao):
-        """Test transaction retrieval when not found"""
-        # Mock empty query result
-        mock_query.return_value = []
+    @patch.object(BalanceTransactionItem, MODEL_GET)
+    def test_get_transaction_not_found(self, mock_get, balance_dao):
+        """Test transaction retrieval when not found."""
+        mock_get.side_effect = BalanceTransactionItem.DoesNotExist
 
         with pytest.raises(CNOPTransactionNotFoundException) as exc_info:
-            balance_dao.get_transaction(TEST_USERNAME, UUID('12345678-1234-5678-9012-123456789012'))
+            balance_dao.get_transaction(TEST_USERNAME, TEST_TRANSACTION_ID)
 
         assert f"Transaction '{TEST_TRANSACTION_ID}' not found for user '{TEST_USERNAME}'" in str(exc_info.value)
-        mock_query.assert_called_once()
+        mock_get.assert_called_once_with(BalanceTransaction.build_pk(TEST_USERNAME), TEST_TRANSACTION_ID)
 
     # ==================== GET USER TRANSACTIONS TESTS ====================
 
     @patch.object(BalanceTransactionItem, MODEL_QUERY)
     def test_get_user_transactions_success(self, mock_query, balance_dao, sample_transaction):
         """Test successful user transactions retrieval"""
-        # Mock query to return transactions
+        pk = BalanceTransaction.build_pk(TEST_USERNAME)
         transaction_item = BalanceTransactionItem(
+            Pk=pk,
+            Sk=sample_transaction.transaction_id,
             username=TEST_USERNAME,
-            transaction_id=str(sample_transaction.transaction_id),
+            transaction_id=sample_transaction.transaction_id,
             transaction_type=TransactionType.DEPOSIT.value,
             amount='50.00',
             description='Test deposit',
@@ -317,10 +306,12 @@ class TestBalanceDAO:
     @patch.object(BalanceTransactionItem, MODEL_QUERY)
     def test_get_user_transactions_with_pagination(self, mock_query, balance_dao, sample_transaction):
         """Test user transactions retrieval with pagination"""
-        # Mock query to return transactions with pagination
+        pk = BalanceTransaction.build_pk(TEST_USERNAME)
         transaction_item = BalanceTransactionItem(
+            Pk=pk,
+            Sk=sample_transaction.transaction_id,
             username=TEST_USERNAME,
-            transaction_id=str(sample_transaction.transaction_id),
+            transaction_id=sample_transaction.transaction_id,
             transaction_type=TransactionType.DEPOSIT.value,
             amount='50.00',
             description='Test deposit',
@@ -358,44 +349,37 @@ class TestBalanceDAO:
 
     # ==================== CLEANUP TRANSACTION TESTS ====================
 
-    @patch.object(BalanceTransactionItem, MODEL_QUERY)
-    def test_cleanup_failed_transaction_success(self, mock_query, balance_dao):
-        """Test successful transaction cleanup"""
-        # Mock query to return transaction
+    @patch.object(BalanceTransactionItem, MODEL_GET)
+    def test_cleanup_failed_transaction_success(self, mock_get, balance_dao):
+        """Test successful transaction cleanup (GetItem then delete)."""
         transaction_item = Mock()
-        transaction_item.transaction_id = '12345678-1234-5678-9012-123456789012'
         transaction_item.delete = Mock()
-        mock_query.return_value = [transaction_item]
+        mock_get.return_value = transaction_item
 
-        balance_dao.cleanup_failed_transaction(TEST_USERNAME, UUID('12345678-1234-5678-9012-123456789012'))
+        balance_dao.cleanup_failed_transaction(TEST_USERNAME, TEST_TRANSACTION_ID)
 
-        # Verify query and delete were called
-        mock_query.assert_called_once_with(f"{TransactionFields.PK_PREFIX}{TEST_USERNAME}")
+        mock_get.assert_called_once_with(BalanceTransaction.build_pk(TEST_USERNAME), TEST_TRANSACTION_ID)
         transaction_item.delete.assert_called_once()
 
-    @patch.object(BalanceTransactionItem, MODEL_QUERY)
-    def test_cleanup_failed_transaction_not_found(self, mock_query, balance_dao):
-        """Test transaction cleanup when transaction not found"""
-        # Mock empty query result
-        mock_query.return_value = []
+    @patch.object(BalanceTransactionItem, MODEL_GET)
+    def test_cleanup_failed_transaction_not_found(self, mock_get, balance_dao):
+        """Test transaction cleanup when transaction not found."""
+        mock_get.side_effect = BalanceTransactionItem.DoesNotExist
 
-        # Should not raise exception, just log warning
-        balance_dao.cleanup_failed_transaction(TEST_USERNAME, UUID('12345678-1234-5678-9012-123456789012'))
+        balance_dao.cleanup_failed_transaction(TEST_USERNAME, TEST_TRANSACTION_ID)
 
-        # Verify query was called
-        mock_query.assert_called_once_with(f"{TransactionFields.PK_PREFIX}{TEST_USERNAME}")
+        mock_get.assert_called_once_with(BalanceTransaction.build_pk(TEST_USERNAME), TEST_TRANSACTION_ID)
 
-    @patch.object(BalanceTransactionItem, MODEL_QUERY)
-    def test_cleanup_failed_transaction_database_error(self, mock_query, balance_dao):
-        """Test transaction cleanup with database error"""
-        # Mock database error
-        mock_query.side_effect = Exception("Database connection failed")
+    @patch.object(BalanceTransactionItem, MODEL_GET)
+    def test_cleanup_failed_transaction_database_error(self, mock_get, balance_dao):
+        """Test transaction cleanup with database error."""
+        mock_get.side_effect = Exception("Database connection failed")
 
         with pytest.raises(CNOPDatabaseOperationException) as exc_info:
-            balance_dao.cleanup_failed_transaction(TEST_USERNAME, UUID('12345678-1234-5678-9012-123456789012'))
+            balance_dao.cleanup_failed_transaction(TEST_USERNAME, TEST_TRANSACTION_ID)
 
         assert f"Database operation failed while cleaning up transaction for user '{TEST_USERNAME}'" in str(exc_info.value)
-        mock_query.assert_called_once()
+        mock_get.assert_called_once()
 
     # ==================== UPDATE BALANCE FROM TRANSACTION TESTS ====================
 

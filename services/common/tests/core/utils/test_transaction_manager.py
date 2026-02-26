@@ -6,7 +6,6 @@ Tests for TransactionManager class.
 from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID
 
 # Third-party imports
 import pytest
@@ -93,10 +92,10 @@ class TestTransactionManager:
 
     @pytest.fixture
     def mock_transaction(self):
-        """Mock transaction for testing"""
+        """Mock transaction for testing (transaction_id is timestamp-based str)."""
         return BalanceTransaction(
             username=TEST_USERNAME,
-            transaction_id=UUID('12345678-1234-5678-9abc-123456789abc'),
+            transaction_id="20260225132158123456a1b2c3",
             transaction_type=TransactionType.DEPOSIT,
             amount=TEST_DEPOSIT_AMOUNT_50,
             description="Test transaction",

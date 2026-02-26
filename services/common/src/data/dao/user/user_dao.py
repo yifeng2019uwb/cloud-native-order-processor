@@ -119,8 +119,6 @@ class UserDAO:
 
         except UserItem.DoesNotExist:
             raise CNOPUserNotFoundException(f"User with username '{username}' not found")
-        except CNOPUserNotFoundException:
-            raise
         except CNOPInvalidCredentialsException:
             raise
         except Exception as e:

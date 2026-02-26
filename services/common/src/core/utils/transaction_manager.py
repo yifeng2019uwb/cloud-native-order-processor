@@ -17,7 +17,6 @@ from ...data.entities.order import Order, OrderStatus, OrderType
 from ...data.entities.entity_constants import OrderFields
 from ...data.entities.user import (BalanceTransaction, TransactionStatus,
                                    TransactionType, Balance)
-from ...data.entities.entity_constants import TransactionFields
 from ...data.exceptions import (CNOPDatabaseOperationException,
                                 CNOPLockAcquisitionException)
 from ...exceptions.shared_exceptions import CNOPInsufficientBalanceException
@@ -112,14 +111,11 @@ class TransactionManager:
                 )
 
                 transaction = BalanceTransaction(
-                    Pk=f"{TransactionFields.PK_PREFIX}{username}",
                     username=username,
-                    Sk=datetime.now(timezone.utc).isoformat(),
                     transaction_type=TransactionType.DEPOSIT,
                     amount=amount,
                     description="deposit",
                     status=TransactionStatus.COMPLETED,
-                    entity_type=TransactionFields.DEFAULT_ENTITY_TYPE
                 )
 
                 created_transaction = self.balance_dao.create_transaction(transaction)
@@ -209,14 +205,11 @@ class TransactionManager:
                     )
 
                 transaction = BalanceTransaction(
-                    Pk=f"{TransactionFields.PK_PREFIX}{username}",
                     username=username,
-                    Sk=datetime.now(timezone.utc).isoformat(),
                     transaction_type=TransactionType.WITHDRAW,
                     amount=-amount,
                     description="Withdrawal",
                     status=TransactionStatus.COMPLETED,
-                    entity_type=TransactionFields.DEFAULT_ENTITY_TYPE
                 )
 
                 created_transaction = self.balance_dao.create_transaction(transaction)
@@ -329,17 +322,13 @@ class TransactionManager:
 
                 created_order = self.order_dao.create_order(order)
 
-                now_timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
                 transaction = BalanceTransaction(
-                    Pk=f"{TransactionFields.PK_PREFIX}{username}",
                     username=username,
-                    Sk=now_timestamp,
                     transaction_type=TransactionType.ORDER_PAYMENT,
                     amount=-total_cost,  # Negative for payment
                     description=f"Payment for buy order {created_order.order_id}",
                     status=TransactionStatus.COMPLETED,
                     reference_id=created_order.order_id,
-                    created_at=now
                 )
 
                 created_transaction = self.balance_dao.create_transaction(transaction)
@@ -448,16 +437,13 @@ class TransactionManager:
 
                 created_order = self.order_dao.create_order(order)
 
-                now_timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
                 transaction = BalanceTransaction(
-                    Pk=f"{TransactionFields.PK_PREFIX}{username}",
                     username=username,
-                    Sk=now_timestamp,
                     transaction_type=TransactionType.ORDER_SALE,  # Cash from selling assets
                     amount=asset_amount,  # Positive for receipt
                     description=f"Sale proceeds from order {created_order.order_id}",
                     status=TransactionStatus.COMPLETED,
-                    reference_id=created_order.order_id
+                    reference_id=created_order.order_id,
                 )
 
                 created_transaction = self.balance_dao.create_transaction(transaction)

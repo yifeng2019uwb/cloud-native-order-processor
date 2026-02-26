@@ -136,7 +136,7 @@ class AssetDAO:
             return asset_item.to_asset()
         except AssetItem.DoesNotExist:
             logger.warning(
-                action=LogAction.ERROR,
+                action=LogAction.NOT_FOUND,
                 message=f"Asset '{asset.asset_id}' not found for update"
             )
             raise CNOPAssetNotFoundException(f"Asset '{asset.asset_id}' not found")

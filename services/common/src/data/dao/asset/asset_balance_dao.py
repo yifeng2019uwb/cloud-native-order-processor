@@ -67,7 +67,7 @@ class AssetBalanceDAO:
 
         except AssetBalanceItem.DoesNotExist:
             logger.warning(
-                action=LogAction.DB_OPERATION,
+                action=LogAction.NOT_FOUND,
                 message=f"Asset balance not found for user '{username}' and asset '{asset_id}'"
             )
             raise CNOPAssetBalanceNotFoundException(f"Asset balance not found for user '{username}' and asset '{asset_id}'")
@@ -110,7 +110,7 @@ class AssetBalanceDAO:
 
         except AssetBalanceItem.DoesNotExist:
             logger.warning(
-                action=LogAction.DB_OPERATION,
+                action=LogAction.NOT_FOUND,
                 message=f"Asset balance not found for deletion: user={username}, asset={asset_id}"
             )
             return False

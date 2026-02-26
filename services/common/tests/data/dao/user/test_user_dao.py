@@ -310,12 +310,11 @@ class TestUserDAO:
         assert "Invalid credentials for user 'john_doe123'" in str(exc_info.value)
         mock_get.assert_called_once_with('john_doe123', UserFields.SK_VALUE)
 
-    def test_authenticate_user_not_found(self, user_dao):
-        """Test user authentication when user doesn't exist"""
-        # Mock that user doesn't exist
-        user_dao.get_user_by_username = Mock(side_effect=CNOPUserNotFoundException("User with username 'nonexistent' not found"))
+    @patch.object(UserItem, MODEL_GET)
+    def test_authenticate_user_not_found(self, mock_get, user_dao):
+        """Test user authentication when user doesn't exist (authenticate_user uses UserItem.get directly)."""
+        mock_get.side_effect = UserItem.DoesNotExist
 
-        # Should raise CNOPUserNotFoundException
         with pytest.raises(CNOPUserNotFoundException) as exc_info:
             user_dao.authenticate_user('nonexistent', 'ValidPass123!')
 
@@ -453,43 +452,29 @@ class TestUserDAO:
 
         assert "Query failed" in str(exc_info.value)
 
-    def test_authenticate_user_get_user_by_username_exception(self, user_dao):
-        """Test authenticate user when get_user_by_username raises exception"""
-        # Mock get_user_by_username to raise exception
-        user_dao.get_user_by_username = Mock(side_effect=Exception("Username lookup failed"))
+    @patch.object(UserItem, MODEL_GET)
+    def test_authenticate_user_get_user_by_username_exception(self, mock_get, user_dao):
+        """Test authenticate user when UserItem.get raises exception (authenticate_user uses get directly)."""
+        mock_get.side_effect = Exception("Username lookup failed")
 
-        # Should raise the raw exception since DAO doesn't have try-catch blocks
         with pytest.raises(Exception) as exc_info:
             user_dao.authenticate_user('testuser', 'password123')
 
         assert "Username lookup failed" in str(exc_info.value)
 
-    def test_authenticate_user_get_user_by_username_exception_with_email(self, user_dao):
-        """Test authenticate user when get_user_by_username raises exception (email-like username)"""
-        # Mock get_user_by_username to raise exception
-        user_dao.get_user_by_username = Mock(side_effect=Exception("Username lookup failed"))
+    @patch.object(UserItem, MODEL_GET)
+    def test_authenticate_user_get_user_by_username_exception_with_email(self, mock_get, user_dao):
+        """Test authenticate user when UserItem.get raises exception (email-like username)."""
+        mock_get.side_effect = Exception("Username lookup failed")
 
-        # Should raise the raw exception since DAO doesn't have try-catch blocks
         with pytest.raises(Exception) as exc_info:
             user_dao.authenticate_user('test@example.com', 'password123')
 
         assert "Username lookup failed" in str(exc_info.value)
 
-    @patch.object(UserItem,MODEL_GET)
+    @patch.object(UserItem, MODEL_GET)
     def test_authenticate_user_database_get_item_exception(self, mock_get, user_dao):
-        """Test authenticate user when database get raises exception"""
-        # Mock user lookup success
-        user = User(
-            username='john_doe123',
-            email='test@example.com',
-            password='ValidPass123!',
-            first_name='Test',
-            last_name='User',
-            phone='+1234567890'
-        )
-        user_dao.get_user_by_username = Mock(return_value=user)
-
-        # Mock database exception
+        """Test authenticate user when UserItem.get raises exception"""
         mock_get.side_effect = Exception("Database error")
 
         # Authenticate user

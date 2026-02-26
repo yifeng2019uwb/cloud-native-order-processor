@@ -7,7 +7,6 @@ import sys
 # datetime import removed as it's not used directly
 from decimal import Decimal
 from typing import List, Optional
-from uuid import UUID
 
 # Path setup for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -40,7 +39,7 @@ class BalanceDAO:
 
         except BalanceItem.DoesNotExist:
             logger.warning(
-                action=LogAction.DB_OPERATION,
+                action=LogAction.NOT_FOUND,
                 message=f"Balance not found for user: {username}"
             )
             raise CNOPBalanceNotFoundException(f"Balance for user '{username}' not found")
@@ -140,31 +139,24 @@ class BalanceDAO:
             current_balance = self.get_balance(transaction.username)
             new_balance = current_balance.current_balance + transaction.amount
             self.update_balance(transaction.username, new_balance)
-            logger.info(
-                action=LogAction.DB_OPERATION,
-                message=f"Balance updated from transaction: user={transaction.username}, new_balance={new_balance}"
-            )
 
         except Exception as e:
             raise CNOPDatabaseOperationException(f"Database operation failed while updating balance from transaction for user '{transaction.username}': {str(e)}")
 
-    def get_transaction(self, username: str, transaction_id: UUID) -> BalanceTransaction:
-        """Get a specific transaction for a user."""
+    def get_transaction(self, username: str, transaction_id: str) -> BalanceTransaction:
+        """Get a specific transaction by id. Uses PK+SK (no GSI)."""
         try:
-            transactions, _ = self.get_user_transactions(username, limit=1000)
-
-            for transaction in transactions:
-                if transaction.transaction_id == transaction_id:
-                    return transaction
-
+            item = BalanceTransactionItem.get(
+                BalanceTransaction.build_pk(username),
+                transaction_id,
+            )
+            return item.to_balance_transaction()
+        except BalanceTransactionItem.DoesNotExist:
             logger.warning(
-                action=LogAction.ERROR,
+                action=LogAction.NOT_FOUND,
                 message=f"Transaction '{transaction_id}' not found for user '{username}'"
             )
             raise CNOPTransactionNotFoundException(f"Transaction '{transaction_id}' not found for user '{username}'")
-
-        except CNOPTransactionNotFoundException:
-            raise
         except Exception as e:
             logger.error(
                 action=LogAction.ERROR,
@@ -202,26 +194,23 @@ class BalanceDAO:
             )
             raise CNOPDatabaseOperationException(f"Database operation failed while retrieving transactions for user '{username}': {str(e)}")
 
-    def cleanup_failed_transaction(self, username: str, transaction_id: UUID) -> None:
-        """Clean up a failed transaction record to maintain data consistency."""
+    def cleanup_failed_transaction(self, username: str, transaction_id: str) -> None:
+        """Clean up a failed transaction record. Uses GetItem by PK+SK then delete."""
         try:
-            # Find the transaction by querying and then delete it
-            # Note: This matches the archived behavior of finding by transaction_id
-            # Query to find the specific transaction
-            for item in BalanceTransactionItem.query(BalanceTransaction.build_pk(username)):
-                if item.transaction_id == str(transaction_id):
-                    item.delete()
-                    logger.info(
-                        action=LogAction.DB_OPERATION,
-                        message=f"Cleaned up failed transaction: user={username}, transaction_id={transaction_id}"
-                    )
-                    return
-
+            item = BalanceTransactionItem.get(
+                BalanceTransaction.build_pk(username),
+                transaction_id,
+            )
+            item.delete()
+            logger.info(
+                action=LogAction.DB_OPERATION,
+                message=f"Cleaned up failed transaction: user={username}, transaction_id={transaction_id}"
+            )
+        except BalanceTransactionItem.DoesNotExist:
             logger.warning(
-                action=LogAction.ERROR,
+                action=LogAction.NOT_FOUND,
                 message=f"Transaction not found for cleanup: user={username}, transaction_id={transaction_id}"
             )
-
         except Exception as e:
             logger.error(
                 action=LogAction.ERROR,

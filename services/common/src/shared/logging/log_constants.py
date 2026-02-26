@@ -60,6 +60,7 @@ class LogAction:
     DB_CONNECT = "db_connect"
     DB_OPERATION = "db_operation"
     CACHE_OPERATION = "cache_operation"
+    NOT_FOUND = "not_found"
 
     # Financial
     DEPOSIT_SUCCESS = "deposit_success"

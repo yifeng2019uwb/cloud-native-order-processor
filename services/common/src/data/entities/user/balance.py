@@ -5,10 +5,10 @@ Balance-related entities for user service.
 from __future__ import annotations
 
 import os
+import secrets
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
-from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 from pynamodb.attributes import UnicodeAttribute, UTCDateTimeAttribute
@@ -19,6 +19,12 @@ from ...database.database_constants import AWSConfig, TableNames
 from ..datetime_utils import get_current_utc
 from .balance_enums import (DEFAULT_TRANSACTION_STATUS, TransactionStatus,
                             TransactionType)
+
+
+def generate_transaction_id() -> str:
+    """Timestamp-based transaction ID for efficient query (PK=TRANS#user, SK=id). Random suffix avoids duplicates."""
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    return f"{ts}{secrets.token_hex(3)}"  # e.g. 20260225132158123456a1b2c3
 
 
 class Balance(BaseModel):
@@ -38,10 +44,10 @@ class Balance(BaseModel):
 
 
 class BalanceTransaction(BaseModel):
-    """Balance transaction entity - pure business entity without database fields"""
+    """Balance transaction entity - pure business entity without database fields. transaction_id is SK for efficient GetItem."""
 
     username: str = Field(..., description="Username for easy access")
-    transaction_id: UUID = Field(default_factory=uuid4, description="Unique transaction ID")
+    transaction_id: str = Field(default_factory=generate_transaction_id, description="Unique transaction ID (timestamp + suffix, used as DynamoDB SK)")
     transaction_type: TransactionType = Field(..., description="Type of transaction")
     amount: Decimal = Field(..., description="Transaction amount (positive for deposits, negative for withdrawals)")
     description: str = Field(..., description="Transaction description")
@@ -53,7 +59,6 @@ class BalanceTransaction(BaseModel):
         json_encoders={
             datetime: lambda v: v.isoformat(),
             Decimal: str,
-            UUID: str
         }
     )
 
@@ -127,13 +132,13 @@ class BalanceTransactionItem(Model):
         region = os.getenv(AWSConfig.AWS_REGION_ENV_VAR, AWSConfig.DEFAULT_REGION)
         billing_mode = AWSConfig.BILLING_MODE_PAY_PER_REQUEST
 
-    # Primary Key
+    # Primary Key: SK is transaction_id for efficient GetItem (no GSI)
     Pk = UnicodeAttribute(hash_key=True)  # TRANS#{username}
-    Sk = UnicodeAttribute(range_key=True)  # ISO timestamp
+    Sk = UnicodeAttribute(range_key=True)  # transaction_id (timestamp + suffix)
 
     # Transaction fields
     username = UnicodeAttribute()
-    transaction_id = UnicodeAttribute()
+    transaction_id = UnicodeAttribute()  # Same value as Sk
     transaction_type = UnicodeAttribute()
     amount = UnicodeAttribute()  # Store as string for Decimal precision
     description = UnicodeAttribute()
@@ -146,12 +151,12 @@ class BalanceTransactionItem(Model):
 
     @classmethod
     def from_balance_transaction(cls, transaction: BalanceTransaction) -> BalanceTransactionItem:
-        """Create BalanceTransactionItem from BalanceTransaction domain model"""
+        """Create BalanceTransactionItem from BalanceTransaction domain model. Sk = transaction_id."""
         transaction_item = cls()
         transaction_item.Pk = transaction.get_pk()
-        transaction_item.Sk = transaction.created_at.isoformat()
+        transaction_item.Sk = transaction.transaction_id
         transaction_item.username = transaction.username
-        transaction_item.transaction_id = str(transaction.transaction_id)
+        transaction_item.transaction_id = transaction.transaction_id
         transaction_item.transaction_type = transaction.transaction_type.value
         transaction_item.amount = str(transaction.amount)
         transaction_item.description = transaction.description
@@ -161,10 +166,10 @@ class BalanceTransactionItem(Model):
         return transaction_item
 
     def to_balance_transaction(self) -> BalanceTransaction:
-        """Convert BalanceTransactionItem to BalanceTransaction domain model"""
+        """Convert BalanceTransactionItem to BalanceTransaction domain model. transaction_id = Sk."""
         return BalanceTransaction(
             username=self.username,
-            transaction_id=UUID(self.transaction_id),
+            transaction_id=self.Sk,
             transaction_type=TransactionType(self.transaction_type),
             amount=Decimal(self.amount),
             description=self.description,

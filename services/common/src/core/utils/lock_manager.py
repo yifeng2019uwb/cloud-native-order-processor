@@ -200,7 +200,7 @@ def release_lock(username: str, lock_id: str) -> bool:
                 return False
         except UserLockItem.DoesNotExist:
             logger.warning(
-                action=LogAction.DB_OPERATION,
+                action=LogAction.NOT_FOUND,
                 message=f"Lock release failed - lock not found: user={username}, lock_id={lock_id}"
             )
             return False
