@@ -9,14 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Test constants
-const (
-	testServiceName        = "test-service"
-	testFailureThreshold   = 5
-	testSuccessThreshold   = 3
-	testCircuitTimeout     = 10 * time.Second
-	testShortTimeout       = 100 * time.Millisecond
-)
+// testServiceName is a distinct name for the test circuit breaker (not used in production routes).
+const testServiceName = "test-service"
 
 func createTestCircuitBreaker() *CircuitBreaker {
 	return &CircuitBreaker{
@@ -24,9 +18,9 @@ func createTestCircuitBreaker() *CircuitBreaker {
 		state:            constants.CircuitBreakerStateClosed,
 		failureCount:     0,
 		successCount:     0,
-		failureThreshold: testFailureThreshold,
-		timeout:          testCircuitTimeout,
-		successThreshold: testSuccessThreshold,
+		failureThreshold: constants.CircuitBreakerFailureThreshold,
+		timeout:          constants.CircuitBreakerTimeout,
+		successThreshold: constants.CircuitBreakerSuccessThreshold,
 	}
 }
 
@@ -49,8 +43,8 @@ func TestCircuitBreakerCanExecute(t *testing.T) {
 	t.Run("Open state allows execution after timeout", func(t *testing.T) {
 		cb := createTestCircuitBreaker()
 		cb.state = constants.CircuitBreakerStateOpen
-		cb.lastFailureTime = time.Now().Add(-testCircuitTimeout - time.Second)
-		cb.timeout = testCircuitTimeout
+		cb.lastFailureTime = time.Now().Add(-constants.CircuitBreakerTimeout - time.Second)
+		cb.timeout = constants.CircuitBreakerTimeout
 
 		canExecute := cb.CanExecute()
 		assert.True(t, canExecute)
@@ -81,7 +75,7 @@ func TestCircuitBreakerRecordSuccess(t *testing.T) {
 	t.Run("Record success in half-open state reaches threshold", func(t *testing.T) {
 		cb := createTestCircuitBreaker()
 		cb.state = constants.CircuitBreakerStateHalfOpen
-		cb.successCount = testSuccessThreshold - 1
+		cb.successCount = constants.CircuitBreakerSuccessThreshold - 1
 
 		cb.RecordSuccess()
 
@@ -94,7 +88,7 @@ func TestCircuitBreakerRecordSuccess(t *testing.T) {
 	t.Run("Record success in half-open state below threshold", func(t *testing.T) {
 		cb := createTestCircuitBreaker()
 		cb.state = constants.CircuitBreakerStateHalfOpen
-		initialSuccessCount := testSuccessThreshold - 2
+		initialSuccessCount := constants.CircuitBreakerSuccessThreshold - 2
 		cb.successCount = initialSuccessCount
 
 		cb.RecordSuccess()
@@ -119,13 +113,13 @@ func TestCircuitBreakerRecordFailure(t *testing.T) {
 	t.Run("Record failure reaches threshold in closed state", func(t *testing.T) {
 		cb := createTestCircuitBreaker()
 		cb.state = constants.CircuitBreakerStateClosed
-		cb.failureCount = testFailureThreshold - 1
+		cb.failureCount = constants.CircuitBreakerFailureThreshold - 1
 		initialTime := time.Now()
 
 		cb.RecordFailure()
 
 		assert.Equal(t, constants.CircuitBreakerStateOpen, cb.GetState())
-		assert.Equal(t, testFailureThreshold, cb.GetFailureCount())
+		assert.Equal(t, constants.CircuitBreakerFailureThreshold, cb.GetFailureCount())
 		// lastFailureTime should be updated
 		assert.True(t, cb.lastFailureTime.After(initialTime) || cb.lastFailureTime.Equal(initialTime))
 	})
@@ -143,7 +137,7 @@ func TestCircuitBreakerRecordFailure(t *testing.T) {
 		assert.True(t, cb.lastFailureTime.After(initialTime) || cb.lastFailureTime.Equal(initialTime))
 		
 		// If failure count reaches threshold, state should be open
-		if cb.GetFailureCount() >= testFailureThreshold {
+		if cb.GetFailureCount() >= constants.CircuitBreakerFailureThreshold {
 			assert.Equal(t, constants.CircuitBreakerStateOpen, cb.GetState())
 		} else {
 			// Otherwise stays in half-open
@@ -154,13 +148,13 @@ func TestCircuitBreakerRecordFailure(t *testing.T) {
 	t.Run("Record failure in half-open state reaches threshold", func(t *testing.T) {
 		cb := createTestCircuitBreaker()
 		cb.state = constants.CircuitBreakerStateHalfOpen
-		cb.failureCount = testFailureThreshold - 1 // One failure away from threshold
+		cb.failureCount = constants.CircuitBreakerFailureThreshold - 1 // One failure away from threshold
 		initialTime := time.Now()
 
 		cb.RecordFailure()
 
 		assert.Equal(t, constants.CircuitBreakerStateOpen, cb.GetState())
-		assert.Equal(t, testFailureThreshold, cb.GetFailureCount())
+		assert.Equal(t, constants.CircuitBreakerFailureThreshold, cb.GetFailureCount())
 		assert.True(t, cb.lastFailureTime.After(initialTime) || cb.lastFailureTime.Equal(initialTime))
 	})
 
@@ -200,7 +194,7 @@ func TestCircuitBreakerGetState(t *testing.T) {
 func TestCircuitBreakerGetFailureCount(t *testing.T) {
 	cb := createTestCircuitBreaker()
 
-	testCounts := []int{0, 1, 5, 10}
+	testCounts := []int{0, 1, constants.CircuitBreakerFailureThreshold, 10}
 
 	for _, count := range testCounts {
 		t.Run("Failure count", func(t *testing.T) {
@@ -213,7 +207,7 @@ func TestCircuitBreakerGetFailureCount(t *testing.T) {
 func TestCircuitBreakerSuccessCount(t *testing.T) {
 	cb := createTestCircuitBreaker()
 
-	testCounts := []int{0, 1, 3, 5}
+	testCounts := []int{0, 1, constants.CircuitBreakerSuccessThreshold, constants.CircuitBreakerFailureThreshold}
 
 	for _, count := range testCounts {
 		t.Run("Success count", func(t *testing.T) {

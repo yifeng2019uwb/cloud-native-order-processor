@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,9 +18,9 @@ import (
 func TestNewProxyService(t *testing.T) {
 	cfg := &config.Config{
 		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
+			UserService:      constants.DefaultUserServiceURL,
+			InventoryService: constants.DefaultInventoryServiceURL,
+			OrderService:     constants.DefaultOrderServiceURL,
 		},
 	}
 
@@ -33,9 +35,9 @@ func TestNewProxyService(t *testing.T) {
 func TestProxyRequest(t *testing.T) {
 	cfg := &config.Config{
 		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
+			UserService:      constants.DefaultUserServiceURL,
+			InventoryService: constants.DefaultInventoryServiceURL,
+			OrderService:     constants.DefaultOrderServiceURL,
 		},
 	}
 
@@ -44,16 +46,16 @@ func TestProxyRequest(t *testing.T) {
 
 	// Test basic proxy request
 	proxyReq := &models.ProxyRequest{
-		Method:        "GET",
-		Path:          "/test",
+		Method:        http.MethodGet,
+		Path:          constants.APIV1Path + "/test",
 		Headers:       nil,
 		Body:          nil,
-		TargetService: "user_service",
+		TargetService: constants.UserService,
 		TargetPath:    "/test",
 		Context: &models.RequestContext{
 			RequestID:   "test-123",
 			Timestamp:   time.Now(),
-			ServiceName: "user_service",
+			ServiceName: constants.UserService,
 		},
 	}
 
@@ -69,9 +71,9 @@ func TestProxyRequest(t *testing.T) {
 func TestGetRouteConfig(t *testing.T) {
 	cfg := &config.Config{
 		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
+			UserService:      constants.DefaultUserServiceURL,
+			InventoryService: constants.DefaultInventoryServiceURL,
+			OrderService:     constants.DefaultOrderServiceURL,
 		},
 	}
 
@@ -94,9 +96,9 @@ func TestGetRouteConfig(t *testing.T) {
 func TestGetTargetService(t *testing.T) {
 	cfg := &config.Config{
 		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
+			UserService:      constants.DefaultUserServiceURL,
+			InventoryService: constants.DefaultInventoryServiceURL,
+			OrderService:     constants.DefaultOrderServiceURL,
 		},
 	}
 
@@ -131,38 +133,13 @@ func TestGetTargetService(t *testing.T) {
 	assert.Equal(t, "", targetService)
 }
 
-// TestStripAPIPrefix tests API prefix stripping
-func TestStripAPIPrefix(t *testing.T) {
-	cfg := &config.Config{
-		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
-		},
-	}
-
-	service := NewProxyService(cfg)
-
-	// Test auth path stripping
-	stripped := service.stripAPIPrefix(constants.APIV1AuthLogin, constants.APIV1AuthPath)
-	assert.Equal(t, "/login", stripped)
-
-	// Test inventory path stripping
-	stripped = service.stripAPIPrefix(constants.APIV1InventoryAssets, constants.APIV1InventoryPath)
-	assert.Equal(t, "/assets", stripped)
-
-	// Test path without prefix
-	stripped = service.stripAPIPrefix("/test", constants.APIV1AuthPath)
-	assert.Equal(t, "/test", stripped)
-}
-
 // TestBuildTargetURLWithQueryParams tests URL building with query parameters
 func TestBuildTargetURLWithQueryParams(t *testing.T) {
 	cfg := &config.Config{
 		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
+			UserService:      constants.DefaultUserServiceURL,
+			InventoryService: constants.DefaultInventoryServiceURL,
+			OrderService:     constants.DefaultOrderServiceURL,
 		},
 	}
 
@@ -170,46 +147,46 @@ func TestBuildTargetURLWithQueryParams(t *testing.T) {
 
 	// Test inventory service with query parameters
 	proxyReq := &models.ProxyRequest{
-		Method:  "GET",
-		Path:    "/assets",
+		Method:  http.MethodGet,
+		Path:    constants.APIV1InventoryAssets,
 		Headers: nil,
 		Body:    nil,
 		QueryParams: map[string]string{
 			"limit":       "10",
 			"active_only": "true",
 		},
-		TargetService: "inventory_service",
+		TargetService: constants.InventoryService,
 		TargetPath:    "/assets",
 		Context: &models.RequestContext{
 			RequestID:   "test-123",
 			Timestamp:   time.Now(),
-			ServiceName: "inventory_service",
+			ServiceName: constants.InventoryService,
 		},
 	}
 
 	targetURL, err := service.buildTargetURL(proxyReq)
 	assert.NoError(t, err)
-	assert.Equal(t, "http://inventory-service:8001/assets?active_only=true&limit=10", targetURL)
+	assert.Equal(t, constants.DefaultInventoryServiceURL+"/assets?active_only=true&limit=10", targetURL)
 
 	// Test user service with query parameters
-	proxyReq.TargetService = "user_service"
-	proxyReq.TargetPath = "/profile"
+	proxyReq.TargetService = constants.UserService
+	proxyReq.TargetPath = constants.AuthProfilePath
 	proxyReq.QueryParams = map[string]string{
 		"include_details": "true",
 	}
 
 	targetURL, err = service.buildTargetURL(proxyReq)
 	assert.NoError(t, err)
-	assert.Equal(t, "http://user-service:8000/profile?include_details=true", targetURL)
+	assert.Equal(t, constants.DefaultUserServiceURL+constants.AuthProfilePath+"?include_details=true", targetURL)
 }
 
 // TestProxyServiceErrorHandling tests error handling scenarios
 func TestProxyServiceErrorHandling(t *testing.T) {
 	cfg := &config.Config{
 		Services: config.ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
+			UserService:      constants.DefaultUserServiceURL,
+			InventoryService: constants.DefaultInventoryServiceURL,
+			OrderService:     constants.DefaultOrderServiceURL,
 		},
 	}
 
@@ -217,8 +194,8 @@ func TestProxyServiceErrorHandling(t *testing.T) {
 
 	t.Run("Invalid Target Service", func(t *testing.T) {
 		proxyReq := &models.ProxyRequest{
-			Method:        "GET",
-			Path:          "/test",
+			Method:        http.MethodGet,
+			Path:          constants.APIV1Path + "/test",
 			Headers:       nil,
 			Body:          nil,
 			TargetService: "invalid_service",
@@ -237,21 +214,115 @@ func TestProxyServiceErrorHandling(t *testing.T) {
 
 	t.Run("Empty Target Path", func(t *testing.T) {
 		proxyReq := &models.ProxyRequest{
-			Method:        "GET",
-			Path:          "/test",
+			Method:        http.MethodGet,
+			Path:          constants.APIV1Path + "/test",
 			Headers:       nil,
 			Body:          nil,
-			TargetService: "user_service",
+			TargetService: constants.UserService,
 			TargetPath:    "",
 			Context: &models.RequestContext{
 				RequestID:   "test-123",
 				Timestamp:   time.Now(),
-				ServiceName: "user_service",
+				ServiceName: constants.UserService,
 			},
 		}
 
 		targetURL, err := service.buildTargetURL(proxyReq)
 		assert.NoError(t, err)
-		assert.Equal(t, "http://user-service:8000", targetURL)
+		assert.Equal(t, constants.DefaultUserServiceURL, targetURL)
 	})
+}
+
+func TestGetCircuitBreakerStatus(t *testing.T) {
+	cfg := &config.Config{
+		Services: config.ServicesConfig{
+			UserService:      constants.DefaultUserServiceURL,
+			InventoryService: constants.DefaultInventoryServiceURL,
+			OrderService:     constants.DefaultOrderServiceURL,
+			AuthService:      constants.DefaultAuthServiceURL,
+			InsightsService:  constants.DefaultInsightsServiceURL,
+		},
+	}
+	service := NewProxyService(cfg)
+
+	status := service.GetCircuitBreakerStatus()
+
+	assert.Contains(t, status, constants.UserService)
+	assert.Contains(t, status, constants.InventoryService)
+	assert.Contains(t, status, constants.OrderService)
+	assert.Contains(t, status, constants.AuthService)
+	assert.Contains(t, status, constants.InsightsService)
+
+	for _, m := range status {
+		assert.Contains(t, m, constants.CircuitBreakerFieldState)
+		assert.Contains(t, m, constants.CircuitBreakerFieldFailureCount)
+		assert.Contains(t, m, constants.CircuitBreakerFieldServiceName)
+		assert.Equal(t, constants.CircuitBreakerStateClosed, m[constants.CircuitBreakerFieldState])
+	}
+}
+
+func TestBuildTargetURL_InsightsAndAuth(t *testing.T) {
+	cfg := &config.Config{
+		Services: config.ServicesConfig{
+			UserService:      constants.DefaultUserServiceURL,
+			InventoryService: constants.DefaultInventoryServiceURL,
+			OrderService:     constants.DefaultOrderServiceURL,
+			AuthService:      constants.DefaultAuthServiceURL,
+			InsightsService:  constants.DefaultInsightsServiceURL,
+		},
+	}
+	service := NewProxyService(cfg)
+
+	t.Run("InsightsService", func(t *testing.T) {
+		backendPath := strings.TrimPrefix(constants.APIV1InsightsPortfolio, constants.APIV1Path)
+		proxyReq := &models.ProxyRequest{
+			Method:        http.MethodGet,
+			Path:          constants.APIV1InsightsPortfolio,
+			TargetService: constants.InsightsService,
+			TargetPath:    backendPath,
+			Context:       &models.RequestContext{RequestID: "req-1", Timestamp: time.Now(), ServiceName: constants.InsightsService},
+		}
+		targetURL, err := service.buildTargetURL(proxyReq)
+		assert.NoError(t, err)
+		assert.Equal(t, constants.DefaultInsightsServiceURL+backendPath, targetURL)
+	})
+
+	t.Run("AuthService", func(t *testing.T) {
+		proxyReq := &models.ProxyRequest{
+			Method:        http.MethodPost,
+			Path:          constants.APIV1AuthLogin,
+			TargetService: constants.AuthService,
+			TargetPath:    constants.AuthLoginPath,
+			Context:       &models.RequestContext{RequestID: "req-1", Timestamp: time.Now(), ServiceName: constants.AuthService},
+		}
+		targetURL, err := service.buildTargetURL(proxyReq)
+		assert.NoError(t, err)
+		assert.Equal(t, constants.DefaultAuthServiceURL+constants.AuthLoginPath, targetURL)
+	})
+}
+
+func TestProxyRequest_NoCircuitBreakerForService_ReturnsError(t *testing.T) {
+	cfg := &config.Config{
+		Services: config.ServicesConfig{
+			UserService:      constants.DefaultUserServiceURL,
+			InventoryService: constants.DefaultInventoryServiceURL,
+			OrderService:     constants.DefaultOrderServiceURL,
+		},
+	}
+	service := NewProxyService(cfg)
+	ctx := context.Background()
+
+	proxyReq := &models.ProxyRequest{
+		Method:        http.MethodGet,
+		Path:          constants.APIV1Path + "/test",
+		TargetService: "nonexistent_service",
+		TargetPath:    "/test",
+		Context:       &models.RequestContext{RequestID: "req-1", Timestamp: time.Now(), ServiceName: "nonexistent_service"},
+	}
+
+	resp, err := service.ProxyRequest(ctx, proxyReq)
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.Contains(t, err.Error(), "no circuit breaker found")
 }

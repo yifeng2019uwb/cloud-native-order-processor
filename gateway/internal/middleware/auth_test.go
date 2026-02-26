@@ -19,7 +19,7 @@ var testConfig *config.Config
 func init() {
 	testConfig = &config.Config{
 		Services: config.ServicesConfig{
-			AuthService: "http://localhost:8003",
+			AuthService: constants.DefaultAuthServiceURL,
 		},
 	}
 }
@@ -204,7 +204,7 @@ func TestRoleMiddleware(t *testing.T) {
 		var response models.ErrorResponse
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
-		assert.Equal(t, "PERM_001", response.Error)
+		assert.Equal(t, string(models.ErrPermInsufficient), response.Error)
 		assert.Contains(t, response.Message, "Insufficient permissions")
 		assert.Contains(t, response.Message, "guest")
 	})
@@ -388,6 +388,6 @@ func TestHandleAuthError(t *testing.T) {
 	var response models.ErrorResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "AUTH_001", response.Error)
+	assert.Equal(t, string(models.ErrAuthInvalidToken), response.Error)
 	assert.Equal(t, "Test error message", response.Message)
 }

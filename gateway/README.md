@@ -1,66 +1,49 @@
 # 🚪 API Gateway
 
-> High-performance Go-based API gateway with JWT authentication and intelligent request routing
+> Go-based API gateway: single entry point, JWT auth, request routing to backend services, rate limiting, and security (CORS, IP block).
 
 ## 🚀 Quick Start
-- **Prerequisites**: Go 1.24+, Redis (optional)
-- **Build & Test**: `./build.sh` (builds and runs tests)
+
+- **Prerequisites**: Go 1.24+, Redis (optional; enables rate limiting and IP block)
+- **Build & Test**: `./build.sh`
 - **Run Locally**: `./dev.sh run`
-- **Deploy**: From repo root: `./docker/deploy.sh local deploy` (local) or `./docker/deploy.sh gateway deploy` (dev/AWS), or K8s (see [Docker](../docker/README.md), [Kubernetes](../kubernetes/README.md))
-- **Example**: `curl http://localhost:8080/health`
+- **Deploy**: From repo root: `./docker/deploy.sh local deploy` or `./docker/deploy.sh gateway deploy`, or K8s ([Docker](../docker/README.md), [Kubernetes](../kubernetes/README.md))
+- **Health**: `curl http://localhost:8080/health`
 
-## ✨ Key Features
-- JWT authentication
-- Intelligent request routing to backend services
-- Security features (CORS, input validation, **IP block**)
-- Production-ready with comprehensive testing
+## ✨ Main Features
 
-**IP block (SEC-011):** When Redis is available, the auth middleware checks for a per-IP block key before validating the token. Blocked IPs receive 403. After 5 failed logins (401 from POST /auth/login) in a 1-day window, the gateway sets `ip_block:<ip>` in Redis (TTL 5 min dev/test). Ops: manual block with `redis-cli SET ip_block:<ip> 1 EX 300`; unblock: key expires automatically, or `redis-cli DEL ip_block:<ip>`.
+- **Reverse proxy & routing** — Single entry point for all APIs. Routes `/api/v1/*` to backend services (auth, user, inventory, order, portfolio, balance, assets, insights, cny). Configurable service URLs via env (e.g. `USER_SERVICE_URL`, `AUTH_SERVICE_URL`).
+- **JWT authentication** — Validates JWT on protected routes; public routes (e.g. login, register, GET assets) skip token check. Role-based access where required.
+- **Rate limiting** — Redis-based per-IP rate limit when Redis is available; configurable via `GATEWAY_RATE_LIMIT` (requests per minute).
+- **Security** — CORS, IP block (SEC-011) when Redis is available (see below), request logging, panic recovery.
+- **Observability** — Prometheus metrics at `/metrics`, health at `/health` (reports Redis status).
 
-### Tracing IP block in gateway logs
+## IP block (SEC-011)
 
-Use gateway logs to debug why you get **401** instead of **403** after 5 wrong logins:
-
-1. **Startup**  
-   - `"Redis connection successful"` → Redis is used; IP block check and failed-login recording are active.  
-   - `"Redis connection failed"` → Redis is nil; no IP block check and no recording; every request is proxied and you only see 401 from the auth service.
-
-2. **Every request (auth middleware)**  
-   - If Redis errors during `IsIPBlocked`: log `"IP block check failed, allowing request"` with `client_ip` and `error`. Request is allowed (fail-open).  
-   - If IP is blocked: log `"Request from blocked IP"` and respond **403**.
-
-3. **After proxying POST /auth/login**  
-   - If backend returns **401**, gateway calls `RecordFailedLogin(clientIP)` (increment `login_fail:<ip>`, and if count ≥ 5 set `ip_block:<ip>`).  
-   - If that Redis call fails: log `"RecordFailedLogin failed (non-fatal)"` with `client_ip` and `error`; client still gets 401.
-
-**Code path:** `cmd/gateway/main.go` (Redis init) → `internal/middleware/auth.go` (IP block check then pass through) → `internal/api/server.go` `handleProxyRequest` (proxy to auth; on 401 call `redisService.RecordFailedLogin`) → next request from same IP hits middleware and gets 403 if block was set.
-
-**Integration tests:** Full flow (init → 5 wrong logins → 403 → wait 5 min → login works again) is covered by `integration_tests/incident/test_ip_block.py`. Run via `./run_all_tests.sh incident` from `integration_tests`.
+When Redis is available, the auth middleware checks a per-IP block key before validating the token. After 5 failed logins (401 from POST `/auth/login`) in the window, the gateway sets the block; subsequent requests from that IP get **403**. Block and failure-count TTL match so when the block expires the count is removed (fresh start).  
+**Defaults**: 300s (5 min) for dev/test. **Production**: set `GATEWAY_BLOCK_DURATION_SECONDS=86400` and `GATEWAY_FAILED_LOGIN_WINDOW_SECONDS=86400` for 24h.  
+**Ops**: Manual block `redis-cli SET ip_block:<ip> 1 EX 300` (or `EX 86400` for 24h); unblock `redis-cli DEL ip_block:<ip> login_fail:<ip>` (clear both or the next 401 re-blocks).  
+**Troubleshooting**: See [Failed-login burst runbook](../docs/runbooks/failed-login-burst.md) and [integration_tests/incident/README.md](../integration_tests/incident/README.md).
 
 ## 📁 Project Structure
+
 ```
 gateway/
-├── cmd/gateway/                # Application entry point
-├── internal/                  # Private application code
-│   ├── api/                   # HTTP server and routing
-│   ├── config/                # Configuration
-│   ├── middleware/            # Auth, rate limit, metrics, CORS, logging
-│   └── services/              # Proxy, auth client, Redis, circuit breaker
-├── pkg/                       # Public packages (logging, metrics, models, utils)
-├── docker/                    # Docker configuration
-├── build.sh                   # Build and test script
-└── dev.sh                     # Development script
+├── cmd/gateway/                # Entry point
+├── internal/                   # Server, config, middleware, proxy, Redis
+├── pkg/                        # Logging, metrics, models, constants
+├── build.sh, dev.sh
+└── docker/
 ```
 
 ## 🔗 Quick Links
-- [Design Documentation](../docs/design-docs/gateway-design.md)
-- [Services Overview](../services/README.md)
-- [API Documentation](http://localhost:8080/docs)
+
+- [Gateway design](../docs/design-docs/gateway-design.md)
+- [Services overview](../services/README.md)
+- [Failed-login runbook](../docs/runbooks/failed-login-burst.md) (IP block ops)
+- API docs: http://localhost:8080/docs (when running)
 
 ## 📊 Status
-- **Current Status**: ✅ **PRODUCTION READY** - All core features implemented and tested
-- **Last Updated**: February 2026
 
----
-
-**Note**: This is a focused README for quick start and essential information. For detailed technical information, see the design documents and code.
+- **Status**: ✅ Production ready — core features implemented and tested
+- **Last Updated**: Feb 2026

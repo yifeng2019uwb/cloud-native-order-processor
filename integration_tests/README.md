@@ -2,61 +2,30 @@
 
 Enterprise-grade integration testing for the cloud-native order processor.
 
-## ✅ **Latest Update (2025-10-01): Complete Test Suite Refactoring**
+## ✅ **Latest Update (2025-02-25): Redis IP-block docs & runbook**
 
-All integration tests have been refactored to follow consistent best practices:
-- ✅ Removed all `setup_test_user()` methods → Using `TestUserManager.create_test_user()`
-- ✅ Eliminated all if/else and try/except blocks → Direct assertions only
-- ✅ Removed all print statements → Clean test output
-- ✅ Single status code assertions → `== 200` not `in [200, 201]`
-- ✅ Better test isolation → Each test creates its own user
-- ✅ **100% test passing rate** across all 17 test files
+- ✅ **Redis IP-block (SEC-011)**: Before/after clearing, check **both** `ip_block:*` (blocked IPs) and `login_fail:*` (failure count; next 401 can re-block). Clear both key families before user/auth integration tests. See §2 below and [incident/README.md](incident/README.md).
+- ✅ Runbook [failed-login-burst.md](../docs/runbooks/failed-login-burst.md) §5 aligned: check state → clear both → verify with KEYS → run tests.
+
+Previous refactor (test suite): `TestUserManager.create_test_user()`, direct assertions, single status code `== 200`, test isolation, 100% pass across 17 test files.
 
 ## 🏗️ Architecture
 
 ```
 integration_tests/
-├── auth/                          # Centralized auth requirement tests ⭐
-│   ├── test_gateway_auth.py       # Gateway authentication tests
-│   └── README.md                  # Auth testing documentation
-├── config/
-│   ├── api_endpoints.py           # Centralized API endpoint configuration
-│   ├── test_constants.py          # Test field names and constants
-│   └── service_urls.py            # Service URL detection (Docker/K8s)
-├── smoke/
-│   └── health_tests.py            # Basic connectivity checks ✅ Refactored
-├── utils/
-│   ├── test_data.py               # UUID-based test data management
-│   ├── user_manager.py            # User creation and auth helper ⭐
-│   └── simple_retry.py            # Basic retry logic
-├── user_services/
-│   ├── auth/                      # Authentication & profile tests
-│   │   ├── registration_tests.py  # User registration tests ✅ Refactored
-│   │   ├── login_tests.py         # User login tests ✅ Refactored
-│   │   ├── profile_tests.py       # Profile management tests ✅ Refactored
-│   │   └── logout_tests.py        # Logout tests ✅ Refactored
-│   └── balance/                   # Balance & transaction tests
-│       ├── balance_tests.py       # Balance retrieval tests ✅ Refactored
-│       ├── deposit_tests.py       # Deposit operation tests ✅ Refactored
-│       ├── withdraw_tests.py      # Withdrawal operation tests ✅ Refactored
-│       └── transaction_history_tests.py # Transaction history ✅ Refactored
-│   └── insights/                  # AI insights tests
-│       └── insights_tests.py      # Portfolio insights endpoint tests ✅
-├── inventory_service/
-│   └── inventory_tests.py         # Asset management tests ✅ Refactored
-├── order_service/
-│   ├── health/                    # Health check tests
-│   │   └── health_tests.py        # Service health endpoint tests ✅ Refactored
-│   ├── orders/                    # Order management tests
-│   │   ├── list_order_tests.py    # List orders tests ✅ Refactored
-│   │   ├── create_order_tests.py  # Create order tests ✅ Refactored
-│   │   └── get_order_tests.py     # Get specific order tests ✅ Refactored
-│   ├── portfolio_tests.py         # Portfolio management tests ✅ Refactored
-│   ├── asset_balance_tests.py     # Asset balance tests ✅ Refactored
-│   └── asset_transaction_tests.py # Asset transaction history ✅ Refactored
-├── reports/                       # Generated test reports
-├── run_all_tests.sh               # Main test runner script
-└── README.md                      # This file
+├── auth/              # Gateway auth requirement tests
+├── config/             # API endpoints, service URLs, constants
+├── smoke/              # Basic connectivity / health checks
+├── utils/              # User manager, retry, reporting helpers
+├── user_services/      # User API tests: auth, balance, portfolio, insights
+├── inventory_service/  # Asset/inventory API tests
+├── order_service/      # Order, health, asset-transaction tests
+├── incident/           # Incident/security (e.g. IP block SEC-011)
+├── load_tests/         # K6 load and resilience (see load_tests/README.md)
+├── infrastructure/     # Env/infrastructure validation (see README-Infrastructure-Tests.md)
+├── reports/            # Generated test reports
+├── run_all_tests.sh    # Main test runner
+└── README.md           # This file
 ```
 
 ## 🚀 Quick Start
@@ -70,12 +39,21 @@ pip install -r requirements.txt
 
 If the gateway uses Redis for IP blocking (SEC-011), clear **both** `ip_block:*` and `login_fail:*` before running integration tests, or tests may get **403 AUTH_004 (IP blocked)**. From the directory where `docker-compose.yml` runs (e.g. `docker/`):
 
+**Check current state** (blocked IPs vs failure counters — both matter):
+
+```bash
+docker compose exec redis redis-cli KEYS "ip_block:*"    # IPs currently blocked (403)
+docker compose exec redis redis-cli KEYS "login_fail:*"  # IPs with failure count (next 401 can trigger block)
+```
+
+Clear both key families:
+
 ```bash
 docker compose exec redis redis-cli --scan --pattern "ip_block:*"   | xargs -I {} docker compose exec -T redis redis-cli DEL {}
 docker compose exec redis redis-cli --scan --pattern "login_fail:*" | xargs -I {} docker compose exec -T redis redis-cli DEL {}
 ```
 
-Verify: `docker compose exec redis redis-cli KEYS "ip_block:*"` and `KEYS "login_fail:*"` should both return `(empty array)`. Then run tests immediately.
+Verify: run the two `KEYS` commands again; both should return `(empty array)`. Then run tests immediately.
 
 **Details**: [incident/README.md](incident/README.md#before-running-userintegration-tests-avoid-403-auth_004) · **Runbook**: [docs/runbooks/failed-login-burst.md](../docs/runbooks/failed-login-burst.md).
 
@@ -91,6 +69,7 @@ Verify: `docker compose exec redis redis-cli KEYS "ip_block:*"` and `KEYS "login
 ./run_all_tests.sh insights  # Insights service only
 ./run_all_tests.sh auth      # Auth requirement tests
 ./run_all_tests.sh smoke     # Health checks only
+./run_all_tests.sh incident  # Incident tests (e.g. IP block SEC-011; not included in 'all')
 ```
 
 ### 4. View Reports

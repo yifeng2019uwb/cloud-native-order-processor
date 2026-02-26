@@ -70,6 +70,8 @@ const (
 	EnvOrderServiceURL     = "ORDER_SERVICE_URL"
 	EnvAuthServiceURL      = "AUTH_SERVICE_URL"
 	EnvInsightsServiceURL  = "INSIGHTS_SERVICE_URL"
+	EnvBlockDurationSeconds     = "GATEWAY_BLOCK_DURATION_SECONDS"     // IP block TTL; default 300. Set 86400 in production.
+	EnvFailedLoginWindowSeconds = "GATEWAY_FAILED_LOGIN_WINDOW_SECONDS" // Failure count window; default 300. Set 86400 in production.
 )
 
 // Default service URLs
@@ -392,14 +394,14 @@ const (
 	RedisKeyPrefixLoginFail = "login_fail:" // per-IP failed login count; triggers IP block after threshold
 )
 
-// IP block duration (SEC-011). Used when setting a block (e.g. runbook or after 5 failed logins).
-// NOTE: 5 min for dev/testing. Production would use 24hr (86400s).
-const BlockDurationSeconds = 300
-
-// Failed login tracking (SEC-011). After FailedLoginBlockThreshold failed logins within FailedLoginWindowSeconds, the IP is blocked for BlockDurationSeconds.
+// Failed login tracking (SEC-011). Block IP after FailedLoginBlockThreshold failed logins in a sliding window; when block is set, login_fail TTL is set to BlockDurationSeconds so the count is removed when the block expires.
 const (
-	FailedLoginWindowSeconds   = 300  // 5 min so block + count both expire together (dev/test). Production: 86400 (24h).
-	FailedLoginBlockThreshold = 5     // block after this many failed logins in the window
+	// FailedLoginBlockThreshold: block IP after 5 failed logins
+	FailedLoginBlockThreshold = 5
+	// BlockDurationSeconds: default 300s (5 min) for dev/test. Set GATEWAY_BLOCK_DURATION_SECONDS=86400 in production for 24hr block.
+	BlockDurationSeconds = 300
+	// FailedLoginWindowSeconds: sliding window for counting failed logins. Set GATEWAY_FAILED_LOGIN_WINDOW_SECONDS=86400 in production.
+	FailedLoginWindowSeconds = 300
 )
 
 // Context keys

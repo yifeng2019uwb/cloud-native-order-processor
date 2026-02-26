@@ -1,0 +1,752 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>services: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">order-processor-gateway/internal/services/auth_client.go (85.3%)</option>
+				
+				<option value="file1">order-processor-gateway/internal/services/proxy.go (74.2%)</option>
+				
+				<option value="file2">order-processor-gateway/internal/services/redis.go (47.3%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package services
+
+import (
+        "bytes"
+        "context"
+        "encoding/json"
+        "fmt"
+        "io"
+        "net/http"
+
+        "order-processor-gateway/internal/config"
+        "order-processor-gateway/pkg/constants"
+        "order-processor-gateway/pkg/models"
+)
+
+// AuthServiceClient handles communication with the Auth Service
+type AuthServiceClient struct {
+        config *config.Config
+        client *http.Client
+}
+
+// NewAuthServiceClient creates a new auth service client
+func NewAuthServiceClient(cfg *config.Config) *AuthServiceClient <span class="cov8" title="1">{
+        return &amp;AuthServiceClient{
+                config: cfg,
+                client: &amp;http.Client{
+                        Timeout: constants.DefaultTimeout,
+                },
+        }
+}</span>
+
+// ValidateToken sends a JWT token to the Auth Service for validation
+func (a *AuthServiceClient) ValidateToken(ctx context.Context, token string) (*models.UserContext, error) <span class="cov8" title="1">{
+        // Prepare request payload
+        requestPayload := map[string]interface{}{
+                constants.AuthTokenField: token,
+        }
+
+        // Marshal request to JSON
+        requestBody, err := json.Marshal(requestPayload)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to marshal request: %w", err)
+        }</span>
+
+        // Create HTTP request
+        <span class="cov8" title="1">req, err := http.NewRequestWithContext(ctx, "POST", a.config.Services.AuthService+constants.AuthValidatePath, bytes.NewBuffer(requestBody))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create request: %w", err)
+        }</span>
+
+        // Set headers
+        <span class="cov8" title="1">req.Header.Set("Content-Type", constants.ContentTypeJSON)
+        req.Header.Set(constants.XSourceHeader, constants.HeaderValueGateway)
+
+        // Send request to Auth Service
+        resp, err := a.client.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("auth service request failed: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer resp.Body.Close()
+
+        // Read response body
+        responseBody, err := io.ReadAll(resp.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to read response body: %w", err)
+        }</span>
+
+        // Check HTTP status
+        <span class="cov8" title="1">if resp.StatusCode != http.StatusOK </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("auth service returned status %d: %s", resp.StatusCode, string(responseBody))
+        }</span>
+
+        // Parse response
+        <span class="cov8" title="1">var authResponse map[string]interface{}
+        if err := json.Unmarshal(responseBody, &amp;authResponse); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to parse auth service response: %w", err)
+        }</span>
+
+        // Check if token is valid
+        <span class="cov8" title="1">valid, ok := authResponse[constants.AuthValidField].(bool)
+        if !ok || !valid </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("token validation failed: %s", authResponse[constants.AuthMessageField])
+        }</span>
+
+        // Extract user information
+        <span class="cov8" title="1">username, ok := authResponse[constants.AuthUserField].(string)
+        if !ok </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("invalid user information in response")
+        }</span>
+
+        // Extract role from metadata if available, default to "customer"
+        <span class="cov8" title="1">role := constants.DefaultUserRole
+        if metadata, ok := authResponse[constants.AuthMetadataField].(map[string]interface{}); ok </span><span class="cov8" title="1">{
+                if userRole, ok := metadata[constants.AuthRoleField].(string); ok </span><span class="cov8" title="1">{
+                        role = userRole
+                }</span>
+        }
+
+        // Create user context
+        <span class="cov8" title="1">userContext := &amp;models.UserContext{
+                Username: username,
+                Role:     role,
+        }
+
+        return userContext, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package services
+
+import (
+        "bytes"
+        "context"
+        "encoding/json"
+        "fmt"
+        "io"
+        "net/http"
+        "net/url"
+        "strings"
+        "sync"
+        "time"
+
+        "order-processor-gateway/internal/config"
+        "order-processor-gateway/pkg/constants"
+        "order-processor-gateway/pkg/models"
+)
+
+// CircuitBreaker tracks service health and prevents cascading failures
+type CircuitBreaker struct {
+        serviceName      string
+        state            string
+        failureCount     int
+        successCount     int
+        lastFailureTime  time.Time
+        failureThreshold int
+        timeout          time.Duration
+        successThreshold int
+        mutex            sync.RWMutex
+}
+
+// ProxyService handles forwarding requests to backend services
+type ProxyService struct {
+        config          *config.Config
+        client          *http.Client
+        circuitBreakers map[string]*CircuitBreaker
+}
+
+// NewProxyService creates a new proxy service
+func NewProxyService(cfg *config.Config) *ProxyService <span class="cov8" title="1">{
+        circuitBreakers := make(map[string]*CircuitBreaker)
+
+        // Initialize circuit breakers for each service
+        services := []string{
+                constants.UserService,
+                constants.InventoryService,
+                constants.OrderService,
+                constants.AuthService,
+                constants.InsightsService,
+        }
+
+        for _, service := range services </span><span class="cov8" title="1">{
+                circuitBreakers[service] = &amp;CircuitBreaker{
+                        serviceName:      service,
+                        state:            constants.CircuitBreakerStateClosed,
+                        failureCount:     0,
+                        successCount:     0,
+                        failureThreshold: constants.CircuitBreakerFailureThreshold,
+                        timeout:          constants.CircuitBreakerTimeout,
+                        successThreshold: constants.CircuitBreakerSuccessThreshold,
+                }
+        }</span>
+
+        <span class="cov8" title="1">return &amp;ProxyService{
+                config:          cfg,
+                client:          &amp;http.Client{Timeout: constants.DefaultTimeout},
+                circuitBreakers: circuitBreakers,
+        }</span>
+}
+
+// ProxyRequest forwards a request to a backend service with circuit breaker protection
+func (p *ProxyService) ProxyRequest(ctx context.Context, proxyReq *models.ProxyRequest) (*http.Response, error) <span class="cov8" title="1">{
+        // Get circuit breaker for the target service
+        cb, exists := p.circuitBreakers[proxyReq.TargetService]
+        if !exists </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("no circuit breaker found for service: %s", proxyReq.TargetService)
+        }</span>
+
+        // Check if circuit breaker allows the request
+        <span class="cov8" title="1">if !cb.CanExecute() </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("circuit breaker is open for service %s (state: %s, failures: %d)",
+                        proxyReq.TargetService, cb.GetState(), cb.GetFailureCount())
+        }</span>
+
+        // Build target URL
+        <span class="cov8" title="1">targetURL, err := p.buildTargetURL(proxyReq)
+        if err != nil </span><span class="cov0" title="0">{
+                cb.RecordFailure()
+                return nil, fmt.Errorf("failed to build target URL: %w", err)
+        }</span>
+
+        // Create HTTP request
+        <span class="cov8" title="1">req, err := p.createHTTPRequest(ctx, proxyReq, targetURL)
+        if err != nil </span><span class="cov0" title="0">{
+                cb.RecordFailure()
+                return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+        }</span>
+
+        // Forward request to backend service
+        <span class="cov8" title="1">resp, err := p.client.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                cb.RecordFailure()
+                return nil, fmt.Errorf("backend service request failed: %w", err)
+        }</span>
+
+        // Check if response indicates failure (5xx status codes)
+        <span class="cov8" title="1">if resp.StatusCode &gt;= 500 </span><span class="cov0" title="0">{
+                cb.RecordFailure()
+                return resp, nil // Return response even for 5xx errors
+        }</span>
+
+        // Record success for 2xx and 4xx status codes
+        <span class="cov8" title="1">cb.RecordSuccess()
+        return resp, nil</span>
+}
+
+// buildTargetURL constructs the target URL for the backend service
+func (p *ProxyService) buildTargetURL(proxyReq *models.ProxyRequest) (string, error) <span class="cov8" title="1">{
+        var baseURL string
+
+        switch proxyReq.TargetService </span>{
+        case constants.UserService:<span class="cov8" title="1">
+                baseURL = p.config.Services.UserService</span>
+        case constants.InventoryService:<span class="cov8" title="1">
+                baseURL = p.config.Services.InventoryService</span>
+        case constants.OrderService:<span class="cov0" title="0">
+                baseURL = p.config.Services.OrderService</span>
+        case constants.AuthService:<span class="cov0" title="0">
+                baseURL = p.config.Services.AuthService</span>
+        case constants.InsightsService:<span class="cov0" title="0">
+                baseURL = p.config.Services.InsightsService</span>
+        default:<span class="cov8" title="1">
+                return "", fmt.Errorf("unknown target service: %s", proxyReq.TargetService)</span>
+        }
+
+        // Combine base URL with target path
+        <span class="cov8" title="1">targetURL := baseURL + proxyReq.TargetPath
+
+        // Add query parameters if present
+        if len(proxyReq.QueryParams) &gt; 0 </span><span class="cov8" title="1">{
+                u, err := url.Parse(targetURL)
+                if err != nil </span><span class="cov0" title="0">{
+                        return "", fmt.Errorf("failed to parse target URL: %w", err)
+                }</span>
+
+                <span class="cov8" title="1">q := u.Query()
+                for key, value := range proxyReq.QueryParams </span><span class="cov8" title="1">{
+                        q.Set(key, value)
+                }</span>
+                <span class="cov8" title="1">u.RawQuery = q.Encode()
+                targetURL = u.String()</span>
+        }
+
+        <span class="cov8" title="1">return targetURL, nil</span>
+}
+
+// createHTTPRequest creates an HTTP request for the backend service
+func (p *ProxyService) createHTTPRequest(ctx context.Context, proxyReq *models.ProxyRequest, targetURL string) (*http.Request, error) <span class="cov8" title="1">{
+        var body io.Reader
+
+        // Handle request body
+        if proxyReq.Body != nil </span><span class="cov0" title="0">{
+                bodyBytes, err := json.Marshal(proxyReq.Body)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to marshal request body: %w", err)
+                }</span>
+                <span class="cov0" title="0">body = bytes.NewBuffer(bodyBytes)</span>
+        }
+
+        // Create HTTP request
+        <span class="cov8" title="1">req, err := http.NewRequestWithContext(ctx, proxyReq.Method, targetURL, body)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+        }</span>
+
+        // Copy headers from original request
+        <span class="cov8" title="1">for key, value := range proxyReq.Headers </span><span class="cov0" title="0">{
+                req.Header.Set(key, value)
+        }</span>
+
+        // Add request ID header for distributed tracing
+        <span class="cov8" title="1">if proxyReq.Context != nil &amp;&amp; proxyReq.Context.RequestID != "" </span><span class="cov8" title="1">{
+                req.Header.Set(constants.XRequestIDHeader, proxyReq.Context.RequestID)
+        }</span>
+
+        // Add user context headers if user is authenticated
+        <span class="cov8" title="1">if proxyReq.Context != nil &amp;&amp; proxyReq.Context.User != nil &amp;&amp; proxyReq.Context.User.Username != "" </span><span class="cov0" title="0">{
+                req.Header.Set(constants.XUserIDHeader, proxyReq.Context.User.Username)
+                req.Header.Set(constants.XUserRoleHeader, proxyReq.Context.User.Role)
+                req.Header.Set(constants.XAuthenticatedHeader, constants.HeaderValueTrue)
+        }</span>
+
+        // Add source and auth service headers for backend service validation
+        <span class="cov8" title="1">req.Header.Set(constants.XSourceHeader, constants.HeaderValueGateway)
+        req.Header.Set(constants.XAuthServiceHeader, "auth-service")
+
+        // Set content type if not present
+        if req.Header.Get("Content-Type") == "" &amp;&amp; proxyReq.Body != nil </span><span class="cov0" title="0">{
+                req.Header.Set("Content-Type", constants.ContentTypeJSON)
+        }</span>
+
+        <span class="cov8" title="1">return req, nil</span>
+}
+
+// stripAPIPrefix removes the API prefix from the path
+// e.g., "/api/v1/auth/login" -&gt; "/login"
+func (p *ProxyService) stripAPIPrefix(path, prefix string) string <span class="cov8" title="1">{
+        if strings.HasPrefix(path, prefix) </span><span class="cov8" title="1">{
+                return strings.TrimPrefix(path, prefix)
+        }</span>
+        <span class="cov8" title="1">return path</span>
+}
+
+// GetRouteConfig returns the route configuration for a given path
+func (p *ProxyService) GetRouteConfig(path string) (*constants.RouteConfig, bool) <span class="cov8" title="1">{
+        config, exists := constants.RouteConfigs[path]
+        if !exists </span><span class="cov8" title="1">{
+                return nil, false
+        }</span>
+        <span class="cov8" title="1">return &amp;config, true</span>
+}
+
+// GetTargetService determines the target service for a given path
+func (p *ProxyService) GetTargetService(path string) string <span class="cov8" title="1">{
+        switch </span>{
+        case strings.HasPrefix(path, constants.APIV1AuthPath):<span class="cov8" title="1">
+                return constants.UserService</span>
+        case strings.HasPrefix(path, constants.APIV1InventoryPath):<span class="cov8" title="1">
+                return constants.InventoryService</span>
+        case strings.HasPrefix(path, constants.APIV1OrderPath):<span class="cov8" title="1">
+                return constants.OrderService</span>
+        case strings.HasPrefix(path, constants.APIV1PortfolioPath):<span class="cov8" title="1">
+                return constants.UserService</span> // Portfolio is handled by user service
+        case strings.HasPrefix(path, constants.APIV1AssetBalanceByID):<span class="cov8" title="1">
+                return constants.UserService</span> // Asset balance is handled by user service
+        case strings.HasPrefix(path, constants.APIV1BalancePath):<span class="cov8" title="1">
+                return constants.UserService</span> // Balance is handled by user service
+        case strings.HasPrefix(path, constants.APIV1AssetPath):<span class="cov0" title="0">
+                return constants.OrderService</span> // Asset balances handled by order service
+        case strings.HasPrefix(path, constants.APIV1InsightsPath):<span class="cov0" title="0">
+                return constants.InsightsService</span> // Insights service
+        case strings.HasPrefix(path, constants.APIV1CNYPath):<span class="cov0" title="0">
+                return constants.UserService</span> // CNY claim handled by user service
+        default:<span class="cov8" title="1">
+                return ""</span>
+        }
+}
+
+// Circuit breaker methods
+
+// CanExecute checks if the circuit breaker allows the request to proceed
+func (cb *CircuitBreaker) CanExecute() bool <span class="cov8" title="1">{
+        cb.mutex.RLock()
+        defer cb.mutex.RUnlock()
+
+        switch cb.state </span>{
+        case constants.CircuitBreakerStateClosed:<span class="cov8" title="1">
+                return true</span>
+        case constants.CircuitBreakerStateOpen:<span class="cov8" title="1">
+                // Check if timeout has passed to transition to half-open
+                if time.Since(cb.lastFailureTime) &gt;= cb.timeout </span><span class="cov8" title="1">{
+                        cb.mutex.RUnlock()
+                        cb.mutex.Lock()
+                        cb.state = constants.CircuitBreakerStateHalfOpen
+                        cb.successCount = 0
+                        cb.mutex.Unlock()
+                        cb.mutex.RLock()
+                        return true
+                }</span>
+                <span class="cov8" title="1">return false</span>
+        case constants.CircuitBreakerStateHalfOpen:<span class="cov8" title="1">
+                return true</span>
+        default:<span class="cov0" title="0">
+                return false</span>
+        }
+}
+
+// RecordSuccess records a successful request
+func (cb *CircuitBreaker) RecordSuccess() <span class="cov8" title="1">{
+        cb.mutex.Lock()
+        defer cb.mutex.Unlock()
+
+        cb.successCount++
+
+        // If in half-open state and success threshold reached, close the circuit
+        if cb.state == constants.CircuitBreakerStateHalfOpen &amp;&amp; cb.successCount &gt;= cb.successThreshold </span><span class="cov8" title="1">{
+                cb.state = constants.CircuitBreakerStateClosed
+                cb.failureCount = 0
+                cb.successCount = 0
+        }</span>
+}
+
+// RecordFailure records a failed request
+func (cb *CircuitBreaker) RecordFailure() <span class="cov8" title="1">{
+        cb.mutex.Lock()
+        defer cb.mutex.Unlock()
+
+        cb.failureCount++
+        cb.lastFailureTime = time.Now()
+
+        // If failure threshold reached, open the circuit
+        if cb.failureCount &gt;= cb.failureThreshold </span><span class="cov8" title="1">{
+                cb.state = constants.CircuitBreakerStateOpen
+        }</span>
+}
+
+// GetState returns the current circuit breaker state
+func (cb *CircuitBreaker) GetState() string <span class="cov8" title="1">{
+        cb.mutex.RLock()
+        defer cb.mutex.RUnlock()
+        return cb.state
+}</span>
+
+// GetFailureCount returns the current failure count
+func (cb *CircuitBreaker) GetFailureCount() int <span class="cov8" title="1">{
+        cb.mutex.RLock()
+        defer cb.mutex.RUnlock()
+        return cb.failureCount
+}</span>
+
+// GetCircuitBreakerStatus returns the status of all circuit breakers
+func (p *ProxyService) GetCircuitBreakerStatus() map[string]map[string]interface{} <span class="cov0" title="0">{
+        status := make(map[string]map[string]interface{})
+
+        for serviceName, cb := range p.circuitBreakers </span><span class="cov0" title="0">{
+                status[serviceName] = map[string]interface{}{
+                        constants.CircuitBreakerFieldState:        cb.GetState(),
+                        constants.CircuitBreakerFieldFailureCount: cb.GetFailureCount(),
+                        constants.CircuitBreakerFieldServiceName:  cb.serviceName,
+                }
+        }</span>
+
+        <span class="cov0" title="0">return status</span>
+}
+
+// Phase 3: Advanced features (Future - simple comments)
+// - Service discovery integration
+// - Load balancing
+// - Advanced monitoring and metrics
+// - Retry logic with exponential backoff
+// - Advanced caching strategies
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package services
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "os"
+        "strconv"
+        "time"
+
+        "order-processor-gateway/internal/config"
+        "order-processor-gateway/pkg/constants"
+
+        "github.com/redis/go-redis/v9"
+)
+
+func getBlockDurationSeconds() int <span class="cov8" title="1">{
+        if s := os.Getenv(constants.EnvBlockDurationSeconds); s != "" </span><span class="cov0" title="0">{
+                if n, err := strconv.Atoi(s); err == nil &amp;&amp; n &gt; 0 </span><span class="cov0" title="0">{
+                        return n
+                }</span>
+        }
+        <span class="cov8" title="1">return constants.BlockDurationSeconds</span>
+}
+
+func getFailedLoginWindowSeconds() int <span class="cov8" title="1">{
+        if s := os.Getenv(constants.EnvFailedLoginWindowSeconds); s != "" </span><span class="cov0" title="0">{
+                if n, err := strconv.Atoi(s); err == nil &amp;&amp; n &gt; 0 </span><span class="cov0" title="0">{
+                        return n
+                }</span>
+        }
+        <span class="cov8" title="1">return constants.FailedLoginWindowSeconds</span>
+}
+
+// RedisService handles Redis operations
+type RedisService struct {
+        client *redis.Client
+}
+
+// NewRedisService creates a new Redis service
+func NewRedisService(cfg *config.RedisConfig) (*RedisService, error) <span class="cov8" title="1">{
+        client := redis.NewClient(&amp;redis.Options{
+                Addr:     fmt.Sprintf("%s:%s", cfg.Host, cfg.Port),
+                Password: cfg.Password,
+                DB:       cfg.DB,
+        })
+
+        // Test connection
+        ctx, cancel := context.WithTimeout(context.Background(), constants.RedisTimeout)
+        defer cancel()
+
+        if err := client.Ping(ctx).Err(); err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("%s %w", constants.ErrorRedisConnectionFailed, err)
+        }</span>
+
+        <span class="cov8" title="1">return &amp;RedisService{client: client}, nil</span>
+}
+
+// StoreSession stores user session data
+func (r *RedisService) StoreSession(ctx context.Context, sessionID string, data map[string]interface{}, ttl time.Duration) error <span class="cov0" title="0">{
+        jsonData, err := json.Marshal(data)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return r.client.Set(ctx, constants.RedisKeyPrefixSession+sessionID, jsonData, ttl).Err()</span>
+}
+
+// GetSession retrieves user session data
+func (r *RedisService) GetSession(ctx context.Context, sessionID string) (map[string]interface{}, error) <span class="cov0" title="0">{
+        key := constants.RedisKeyPrefixSession + sessionID
+        data, err := r.client.Get(ctx, key).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">var session map[string]interface{}
+        if err := json.Unmarshal([]byte(data), &amp;session); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return session, nil</span>
+}
+
+// CheckRateLimit checks if request is within rate limits
+func (r *RedisService) CheckRateLimit(ctx context.Context, key string, limit int, window time.Duration) (bool, error) <span class="cov8" title="1">{
+        current, err := r.client.Incr(ctx, key).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return false, err
+        }</span>
+
+        // Set expiry on first request
+        <span class="cov8" title="1">if current == 1 </span><span class="cov8" title="1">{
+                r.client.Expire(ctx, key, window)
+        }</span>
+
+        <span class="cov8" title="1">return current &lt;= int64(limit), nil</span>
+}
+
+// CheckRateLimitWithDetails checks if request is within rate limits and returns additional details
+func (r *RedisService) CheckRateLimitWithDetails(ctx context.Context, key string, limit int, window time.Duration) (bool, int64, int64, error) <span class="cov0" title="0">{
+        // Get current count
+        current, err := r.client.Incr(ctx, key).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return false, 0, 0, err
+        }</span>
+
+        // Set expiry on first request
+        <span class="cov0" title="0">if current == 1 </span><span class="cov0" title="0">{
+                r.client.Expire(ctx, key, window)
+        }</span>
+
+        // Calculate remaining requests
+        <span class="cov0" title="0">remaining := int64(limit) - current
+        if remaining &lt; 0 </span><span class="cov0" title="0">{
+                remaining = 0
+        }</span>
+
+        // Get TTL to calculate reset time
+        <span class="cov0" title="0">ttl, err := r.client.TTL(ctx, key).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return false, remaining, 0, err
+        }</span>
+
+        // Calculate reset time (current time + TTL)
+        <span class="cov0" title="0">resetTime := time.Now().Add(ttl).Unix()
+
+        allowed := current &lt;= int64(limit)
+        return allowed, remaining, resetTime, nil</span>
+}
+
+// CacheResponse caches API responses
+func (r *RedisService) CacheResponse(ctx context.Context, key string, data interface{}, ttl time.Duration) error <span class="cov0" title="0">{
+        jsonData, err := json.Marshal(data)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return r.client.Set(ctx, key, jsonData, ttl).Err()</span>
+}
+
+// GetCachedResponse retrieves cached response
+func (r *RedisService) GetCachedResponse(ctx context.Context, key string) ([]byte, error) <span class="cov0" title="0">{
+        return r.client.Get(ctx, key).Bytes()
+}</span>
+
+// SetIPBlock sets the IP block key with TTL (for manual block or testing). Ops equivalent: redis-cli SET ip_block:&lt;ip&gt; 1 EX &lt;seconds&gt;.
+func (r *RedisService) SetIPBlock(ctx context.Context, clientIP string, ttl time.Duration) error <span class="cov8" title="1">{
+        key := constants.RedisKeyPrefixIPBlock + clientIP
+        return r.client.Set(ctx, key, "1", ttl).Err()
+}</span>
+
+// IsIPBlocked returns true if the client IP has an active block key (ip_block:&lt;ip&gt; with TTL).
+// Ops: block with TTL via redis-cli SET ip_block:&lt;ip&gt; 1 EX &lt;seconds&gt; (e.g. EX 300 for 5 min dev/test, EX 86400 for 24hr production).
+func (r *RedisService) IsIPBlocked(ctx context.Context, clientIP string) (bool, error) <span class="cov8" title="1">{
+        key := constants.RedisKeyPrefixIPBlock + clientIP
+        n, err := r.client.Exists(ctx, key).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return false, err
+        }</span>
+        <span class="cov8" title="1">return n &gt; 0, nil</span>
+}
+
+// RecordFailedLogin increments the failed-login count for the client IP. If the count reaches FailedLoginBlockThreshold
+// within the window (FailedLoginWindowSeconds), sets the IP block key (ip_block:&lt;ip&gt;) with TTL BlockDurationSeconds.
+// Call this when the gateway receives 401 from POST /auth/login.
+func (r *RedisService) RecordFailedLogin(ctx context.Context, clientIP string) error <span class="cov8" title="1">{
+        keyFail := constants.RedisKeyPrefixLoginFail + clientIP
+        count, err := r.client.Incr(ctx, keyFail).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">windowSec := getFailedLoginWindowSeconds()
+        if count == 1 </span><span class="cov8" title="1">{
+                r.client.Expire(ctx, keyFail, time.Duration(windowSec)*time.Second)
+        }</span>
+        <span class="cov8" title="1">if count &gt;= int64(constants.FailedLoginBlockThreshold) </span><span class="cov8" title="1">{
+                blockKey := constants.RedisKeyPrefixIPBlock + clientIP
+                blockSec := getBlockDurationSeconds()
+                blockTTL := time.Duration(blockSec) * time.Second
+                if err := r.client.Set(ctx, blockKey, "1", blockTTL).Err(); err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+                // Expire the failure count when the block expires so the count is removed and the user gets a fresh start
+                <span class="cov8" title="1">r.client.Expire(ctx, keyFail, blockTTL)</span>
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+// Close closes Redis connection
+func (r *RedisService) Close() error <span class="cov8" title="1">{
+        return r.client.Close()
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

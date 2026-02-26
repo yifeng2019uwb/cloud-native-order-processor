@@ -1,18 +1,25 @@
 package middleware
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
+	"order-processor-gateway/internal/config"
 	"order-processor-gateway/internal/services"
 	"order-processor-gateway/pkg/constants"
 	"order-processor-gateway/pkg/metrics"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func setupTestRouter() *gin.Engine {
@@ -93,58 +100,97 @@ func TestRecovery(t *testing.T) {
 	})
 }
 
-// Test constants for middleware
-const (
-	testRateLimit       = 100
-	testRateLimitWindow = time.Minute
-	testSessionID       = "test-session-123"
-	testClientIP        = "127.0.0.1"
-	testEndpoint        = "/test"
-	testMethod          = "GET"
-)
+func TestMetricsHTTP(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	gm := metrics.NewGatewayMetricsWithRegistry(reg)
+	router := setupTestRouter()
+	router.Use(MetricsHTTP(gm))
+	router.GET(constants.HealthPath, func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{constants.JSONFieldStatus: constants.StatusHealthy})
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, constants.HealthPath, nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	// MetricsHTTP runs c.Next() then RecordRequest; no way to assert metrics without reading registry
+	_, err := reg.Gather()
+	assert.NoError(t, err)
+}
+
+// newRedisServiceWithMiniredis returns a RedisService backed by miniredis (no real Redis).
+func newRedisServiceWithMiniredis(t *testing.T) *services.RedisService {
+	t.Helper()
+	mr := miniredis.RunT(t)
+	addr := mr.Addr()
+	parts := strings.Split(addr, ":")
+	require.Len(t, parts, 2, "miniredis addr")
+	cfg := &config.RedisConfig{Host: parts[0], Port: parts[1], Password: "", DB: 0, SSL: false}
+	svc, err := services.NewRedisService(cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = svc.Close() })
+	return svc
+}
 
 func TestRateLimitMiddleware(t *testing.T) {
-	// Test constants
-	const (
-		testLimit        = 100
-		testWindow       = time.Minute
-		testEndpointPath = "/test"
-		testClientIPAddr = "127.0.0.1"
-	)
+	limit := constants.FailedLoginBlockThreshold + 5
+	window := constants.RateLimitWindow
 
 	t.Run("Middleware can be created", func(t *testing.T) {
 		reg := prometheus.NewRegistry()
 		rateLimitMetrics := metrics.NewRateLimitMetricsWithRegistry(reg)
 		var redisService *services.RedisService = nil
-		middleware := RateLimitMiddleware(redisService, testLimit, testWindow, rateLimitMetrics)
-		assert.NotNil(t, middleware)
+		mw := RateLimitMiddleware(redisService, limit, window, rateLimitMetrics)
+		assert.NotNil(t, mw)
 	})
 
-	t.Run("Middleware handles nil metrics gracefully", func(t *testing.T) {
-		// Note: Can't test with nil redisService as it causes panic when calling CheckRateLimitWithDetails
-		// Instead, we test that middleware can be created with nil metrics
-		reg := prometheus.NewRegistry()
-		rateLimitMetrics := metrics.NewRateLimitMetricsWithRegistry(reg)
-		var redisService *services.RedisService = nil
-		middleware := RateLimitMiddleware(redisService, testLimit, testWindow, rateLimitMetrics)
-		assert.NotNil(t, middleware)
+	t.Run("With miniredis - request allowed and headers set", func(t *testing.T) {
+		redisSvc := newRedisServiceWithMiniredis(t)
+		router := setupTestRouter()
+		router.Use(RateLimitMiddleware(redisSvc, limit, window, nil))
+		router.GET(constants.HealthPath, func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{constants.JSONFieldStatus: constants.StatusHealthy})
+		})
 
-		// When redisService is nil, the middleware will panic when executed
-		// This is expected behavior - redisService should not be nil in production
-		// The test verifies middleware creation, not execution with nil service
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, constants.HealthPath, nil)
+		req.RemoteAddr = "192.0.2.1:12345"
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, strconv.Itoa(limit), w.Header().Get(constants.RateLimitHeaderLimit))
+		assert.NotEmpty(t, w.Header().Get(constants.RateLimitHeaderRemaining))
+		assert.NotEmpty(t, w.Header().Get(constants.RateLimitHeaderReset))
 	})
 
-	t.Run("Middleware can be created and configured", func(t *testing.T) {
-		reg := prometheus.NewRegistry()
-		rateLimitMetrics := metrics.NewRateLimitMetricsWithRegistry(reg)
+	t.Run("With miniredis - rate exceeded returns 429", func(t *testing.T) {
+		redisSvc := newRedisServiceWithMiniredis(t)
+		smallLimit := 2
+		router := setupTestRouter()
+		router.Use(RateLimitMiddleware(redisSvc, smallLimit, window, nil))
+		router.GET(constants.APIV1Path+"/test", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{})
+		})
 
-		// Create a RedisService struct (but with nil client, which will cause errors but not panic on creation)
-		redisService := &services.RedisService{}
-		middleware := RateLimitMiddleware(redisService, testLimit, testWindow, rateLimitMetrics)
-		assert.NotNil(t, middleware)
+		path := constants.APIV1Path + "/test"
+		for i := 0; i < smallLimit; i++ {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodGet, path, nil)
+			req.RemoteAddr = "192.0.2.2:12345"
+			router.ServeHTTP(w, req)
+			assert.Equal(t, http.StatusOK, w.Code, "request %d should be allowed", i+1)
+		}
 
-		// Note: Full execution test requires a valid Redis connection or mock
-		// This test verifies middleware creation and structure
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, path, nil)
+		req.RemoteAddr = "192.0.2.2:12345"
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusTooManyRequests, w.Code)
+		var body map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &body)
+		require.NoError(t, err)
+		assert.Equal(t, constants.ErrorRateLimitExceeded, body[constants.JSONFieldError])
 	})
 }
 
@@ -156,11 +202,9 @@ const (
 
 func TestSessionMiddleware(t *testing.T) {
 	t.Run("No session header - passes through", func(t *testing.T) {
+		redisSvc := newRedisServiceWithMiniredis(t)
 		router := setupTestRouter()
-		redisService := &services.RedisService{} // Nil - will fail but middleware should handle
-		middleware := SessionMiddleware(redisService)
-
-		router.Use(middleware)
+		router.Use(SessionMiddleware(redisSvc))
 		router.GET(testPath, func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{constants.JSONFieldMessage: "test"})
 		})
@@ -169,26 +213,53 @@ func TestSessionMiddleware(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, testPath, nil)
 		router.ServeHTTP(w, req)
 
-		// Should pass through without session header
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
 
-	t.Run("Session header triggers session validation", func(t *testing.T) {
-		// Note: This test verifies that middleware calls GetSession when session header is present
-		// Full execution test requires a valid Redis connection or mock
-		// Since RedisService with nil client causes panic, we only test the middleware creation
-		router := setupTestRouter()
-		redisService := &services.RedisService{} // Nil client - will panic if GetSession is called
-		middleware := SessionMiddleware(redisService)
-		assert.NotNil(t, middleware)
+	t.Run("With miniredis - valid session sets context", func(t *testing.T) {
+		redisSvc := newRedisServiceWithMiniredis(t)
+		sessionData := map[string]interface{}{"user_id": "u1", "email": "u1@example.com"}
+		err := redisSvc.StoreSession(context.Background(), testSessionIDValue, sessionData, time.Minute)
+		require.NoError(t, err)
 
-		router.Use(middleware)
+		router := setupTestRouter()
+		router.Use(SessionMiddleware(redisSvc))
+		var gotSession interface{}
 		router.GET(testPath, func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{constants.JSONFieldMessage: "test"})
+			gotSession, _ = c.Get(constants.ContextKeySession)
+			c.JSON(http.StatusOK, gin.H{constants.JSONFieldMessage: "ok"})
 		})
 
-		// Test that middleware exists and can be configured
-		// Full execution test requires proper Redis setup or mocks
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, testPath, nil)
+		req.Header.Set(constants.XSessionIDHeader, testSessionIDValue)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		require.NotNil(t, gotSession)
+		sess, ok := gotSession.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "u1", sess["user_id"])
+	})
+
+	t.Run("With miniredis - invalid session returns 401", func(t *testing.T) {
+		redisSvc := newRedisServiceWithMiniredis(t)
+		router := setupTestRouter()
+		router.Use(SessionMiddleware(redisSvc))
+		router.GET(testPath, func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{})
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, testPath, nil)
+		req.Header.Set(constants.XSessionIDHeader, "nonexistent-session-id")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		var body map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &body)
+		require.NoError(t, err)
+		assert.Equal(t, constants.ErrorSessionInvalid, body[constants.JSONFieldError])
 	})
 
 	t.Run("Middleware can be created", func(t *testing.T) {

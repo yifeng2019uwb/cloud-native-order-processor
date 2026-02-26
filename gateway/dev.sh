@@ -43,13 +43,15 @@ Usage: $0 {build|test|clean} [test_target]
 Commands:
     build              Build the gateway binary
     test [test_target] Run gateway tests (all or specific package)
+    cover [pkg]        Generate coverage profile and HTML report (see which lines are covered)
     clean              Clean build artifacts
 
 Examples:
     $0 build                    # Build gateway
     $0 test                     # Run all tests
     $0 test internal/api        # Test specific package
-    $0 test "internal/*"        # Test packages matching pattern
+    $0 cover                    # Coverage for all packages → coverage.html
+    $0 cover internal/services  # Coverage for one package → coverage.html
     $0 clean                    # Clean build files
 
 EOF
@@ -114,6 +116,28 @@ test() {
     log_success "Gateway tests completed"
 }
 
+# Generate coverage profile and HTML report (green = covered, red = not covered)
+cover() {
+    local pkg="$1"
+    cd "$SCRIPT_DIR"
+
+    if [[ -z "$pkg" ]]; then
+        log_info "Generating coverage for all packages..."
+        go test -coverprofile=coverage.out ./... 2>/dev/null || true
+    else
+        log_info "Generating coverage for: $pkg"
+        go test -coverprofile=coverage.out ./${pkg}/... 2>/dev/null || true
+    fi
+    if [[ ! -f coverage.out ]]; then
+        log_error "No coverage.out (tests may have failed). Run: go test -coverprofile=coverage.out ./..."
+        exit 1
+    fi
+
+    go tool cover -html=coverage.out -o coverage.html
+    log_success "Wrote coverage.html — open in a browser to see line-by-line (green=covered, red=uncovered)"
+    go tool cover -func=coverage.out | tail -8
+}
+
 # Clean build artifacts
 clean() {
     log_info "Cleaning gateway build artifacts..."
@@ -125,6 +149,10 @@ clean() {
         rm -f gateway
         log_info "Removed gateway binary"
     fi
+
+    # Remove coverage artifacts
+    rm -f coverage.out coverage.html coverage_services.out coverage_services.html
+    log_info "Removed coverage files"
 
     # Remove test cache
     if [[ -d ".test-cache" ]]; then
@@ -154,6 +182,9 @@ main() {
             ;;
         test)
             test "$2"
+            ;;
+        cover)
+            cover "$2"
             ;;
         clean)
             clean

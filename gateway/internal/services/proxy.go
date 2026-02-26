@@ -193,7 +193,7 @@ func (p *ProxyService) createHTTPRequest(ctx context.Context, proxyReq *models.P
 
 	// Add source and auth service headers for backend service validation
 	req.Header.Set(constants.XSourceHeader, constants.HeaderValueGateway)
-	req.Header.Set(constants.XAuthServiceHeader, "auth-service")
+	req.Header.Set(constants.XAuthServiceHeader, constants.AuthService)
 
 	// Set content type if not present
 	if req.Header.Get("Content-Type") == "" && proxyReq.Body != nil {
@@ -201,15 +201,6 @@ func (p *ProxyService) createHTTPRequest(ctx context.Context, proxyReq *models.P
 	}
 
 	return req, nil
-}
-
-// stripAPIPrefix removes the API prefix from the path
-// e.g., "/api/v1/auth/login" -> "/login"
-func (p *ProxyService) stripAPIPrefix(path, prefix string) string {
-	if strings.HasPrefix(path, prefix) {
-		return strings.TrimPrefix(path, prefix)
-	}
-	return path
 }
 
 // GetRouteConfig returns the route configuration for a given path

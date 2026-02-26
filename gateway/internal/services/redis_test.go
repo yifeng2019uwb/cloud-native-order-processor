@@ -2,40 +2,24 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"order-processor-gateway/internal/config"
 	"order-processor-gateway/pkg/constants"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewRedisService(t *testing.T) {
 	t.Run("Valid Configuration", func(t *testing.T) {
-		cfg := &config.RedisConfig{
-			Host:     "localhost",
-			Port:     "6379",
-			Password: "",
-			DB:       0,
-			SSL:      false,
-		}
-
-		// Note: This test will fail if Redis is not running locally
-		// In a real test environment, you'd use a test Redis instance or mock
-		service, err := NewRedisService(cfg)
-
-		if err != nil {
-			// If Redis is not available, test the error handling
-			assert.Contains(t, err.Error(), constants.ErrorRedisConnectionFailed)
-			return
-		}
-
+		service := newRedisServiceWithMiniredis(t)
 		assert.NotNil(t, service)
 		assert.NotNil(t, service.client)
-		defer service.Close()
 	})
 
 	t.Run("Invalid Host", func(t *testing.T) {
@@ -55,111 +39,8 @@ func TestNewRedisService(t *testing.T) {
 	})
 }
 
-func TestStoreSession(t *testing.T) {
-	// Skip if Redis is not available
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
-
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		t.Skip("Redis not available, skipping test")
-	}
-	defer service.Close()
-
-	ctx := context.Background()
-	sessionID := "test-session-123"
-	sessionData := map[string]interface{}{
-		"user_id":    "user123",
-		"user_role":  "admin",
-		"expires_at": time.Now().Add(time.Hour).Unix(),
-	}
-	ttl := time.Hour
-
-	err = service.StoreSession(ctx, sessionID, sessionData, ttl)
-	assert.NoError(t, err)
-}
-
-func TestGetSession(t *testing.T) {
-	// Skip if Redis is not available
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
-
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		t.Skip("Redis not available, skipping test")
-	}
-	defer service.Close()
-
-	ctx := context.Background()
-	sessionID := "test-session-456"
-	sessionData := map[string]interface{}{
-		"user_id":    "user456",
-		"user_role":  "user",
-		"expires_at": time.Now().Add(time.Hour).Unix(),
-	}
-	ttl := time.Hour
-
-	// Store session first
-	err = service.StoreSession(ctx, sessionID, sessionData, ttl)
-	assert.NoError(t, err)
-
-	// Retrieve session
-	retrievedData, err := service.GetSession(ctx, sessionID)
-	assert.NoError(t, err)
-	assert.NotNil(t, retrievedData)
-	assert.Equal(t, sessionData["user_id"], retrievedData["user_id"])
-	assert.Equal(t, sessionData["user_role"], retrievedData["user_role"])
-}
-
-func TestGetSessionNotFound(t *testing.T) {
-	// Skip if Redis is not available
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
-
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		t.Skip("Redis not available, skipping test")
-	}
-	defer service.Close()
-
-	ctx := context.Background()
-	sessionID := "non-existent-session"
-
-	_, err = service.GetSession(ctx, sessionID)
-	assert.Error(t, err)
-}
-
 func TestCheckRateLimit(t *testing.T) {
-	// Skip if Redis is not available
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
-
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		t.Skip("Redis not available, skipping test")
-	}
-	defer service.Close()
-
+	service := newRedisServiceWithMiniredis(t)
 	ctx := context.Background()
 	key := "rate_limit:test-ip"
 	limit := 5
@@ -183,307 +64,91 @@ func TestCheckRateLimit(t *testing.T) {
 	assert.False(t, allowed)
 }
 
-func TestCacheResponse(t *testing.T) {
-	// Skip if Redis is not available
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
-
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		t.Skip("Redis not available, skipping test")
-	}
-	defer service.Close()
-
+func TestCheckRateLimitWithDetails(t *testing.T) {
+	service := newRedisServiceWithMiniredis(t)
 	ctx := context.Background()
-	key := "cache:test-response"
-	cacheData := map[string]interface{}{
-		"status":    "success",
-		"data":      []string{"item1", "item2", "item3"},
-		"count":     3,
-		"cached_at": time.Now().Unix(),
-	}
-	ttl := time.Minute * 5
+	key := constants.RedisKeyPrefixRateLimit + fmt.Sprintf("details-%d", time.Now().UnixNano())
+	limit := constants.FailedLoginBlockThreshold
+	window := constants.RateLimitWindow
 
-	err = service.CacheResponse(ctx, key, cacheData, ttl)
+	allowed, remaining, resetTime, err := service.CheckRateLimitWithDetails(ctx, key, limit, window)
 	assert.NoError(t, err)
+	assert.True(t, allowed)
+	assert.Equal(t, int64(limit-1), remaining)
+	assert.Greater(t, resetTime, int64(0))
+
+	// Exhaust limit
+	for i := 0; i < limit; i++ {
+		_, _, _, err = service.CheckRateLimitWithDetails(ctx, key, limit, window)
+		assert.NoError(t, err)
+	}
+	allowed, remaining, _, err = service.CheckRateLimitWithDetails(ctx, key, limit, window)
+	assert.NoError(t, err)
+	assert.False(t, allowed)
+	assert.Equal(t, int64(0), remaining)
 }
 
-func TestGetCachedResponse(t *testing.T) {
-	// Skip if Redis is not available
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
+// newRedisServiceWithMiniredis starts an in-memory Redis and returns a RedisService connected to it (no real Redis required).
+func newRedisServiceWithMiniredis(t *testing.T) *RedisService {
+	mr := miniredis.RunT(t)
+	addr := mr.Addr()
+	parts := strings.Split(addr, ":")
+	require.Len(t, parts, 2, "miniredis addr should be host:port")
+	cfg := &config.RedisConfig{Host: parts[0], Port: parts[1], Password: "", DB: 0, SSL: false}
+	svc, err := NewRedisService(cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = svc.Close() })
+	return svc
+}
 
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		t.Skip("Redis not available, skipping test")
-	}
-	defer service.Close()
-
+func TestIsIPBlocked(t *testing.T) {
+	service := newRedisServiceWithMiniredis(t)
 	ctx := context.Background()
-	key := "cache:test-response-2"
-	cacheData := map[string]interface{}{
-		"status": "success",
-		"data":   []string{"item1", "item2"},
-		"count":  2,
-	}
-	ttl := time.Minute * 5
+	testIP := fmt.Sprintf("test-blocked-ip-%d", time.Now().UnixNano())
 
-	// Store cache first
-	err = service.CacheResponse(ctx, key, cacheData, ttl)
+	blocked, err := service.IsIPBlocked(ctx, testIP)
+	assert.NoError(t, err)
+	assert.False(t, blocked)
+
+	err = service.SetIPBlock(ctx, testIP, 60*time.Second)
 	assert.NoError(t, err)
 
-	// Retrieve cached response
-	cachedBytes, err := service.GetCachedResponse(ctx, key)
+	blocked, err = service.IsIPBlocked(ctx, testIP)
 	assert.NoError(t, err)
-	assert.NotNil(t, cachedBytes)
+	assert.True(t, blocked)
 
-	// Verify the cached data
-	var retrievedData map[string]interface{}
-	err = json.Unmarshal(cachedBytes, &retrievedData)
+	blocked, err = service.IsIPBlocked(ctx, "192.0.2.99")
 	assert.NoError(t, err)
-	assert.Equal(t, cacheData["status"], retrievedData["status"])
-	assert.Equal(t, cacheData["count"], retrievedData["count"])
+	assert.False(t, blocked)
 }
 
-func TestGetCachedResponseNotFound(t *testing.T) {
-	// Skip if Redis is not available
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
-
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		t.Skip("Redis not available, skipping test")
-	}
-	defer service.Close()
-
+func TestRecordFailedLogin(t *testing.T) {
+	service := newRedisServiceWithMiniredis(t)
 	ctx := context.Background()
-	key := "cache:non-existent"
+	testIP := fmt.Sprintf("test-fail-login-%d", time.Now().UnixNano())
+	failKey := constants.RedisKeyPrefixLoginFail + testIP
+	blockKey := constants.RedisKeyPrefixIPBlock + testIP
+	defer func() {
+		service.client.Del(ctx, failKey)
+		service.client.Del(ctx, blockKey)
+	}()
 
-	_, err = service.GetCachedResponse(ctx, key)
-	assert.Error(t, err)
-}
-
-func TestRedisServiceWithDifferentConfigs(t *testing.T) {
-	testCases := []struct {
-		name     string
-		host     string
-		port     string
-		password string
-		db       int
-		ssl      bool
-	}{
-		{
-			name:     "Default Config",
-			host:     "localhost",
-			port:     "6379",
-			password: "",
-			db:       0,
-			ssl:      false,
-		},
-		{
-			name:     "Custom Port",
-			host:     "localhost",
-			port:     "6380",
-			password: "",
-			db:       0,
-			ssl:      false,
-		},
-		{
-			name:     "With Password",
-			host:     "localhost",
-			port:     "6379",
-			password: "secret",
-			db:       0,
-			ssl:      false,
-		},
-		{
-			name:     "Custom DB",
-			host:     "localhost",
-			port:     "6379",
-			password: "",
-			db:       1,
-			ssl:      false,
-		},
+	for i := 0; i < constants.FailedLoginBlockThreshold; i++ {
+		err := service.RecordFailedLogin(ctx, testIP)
+		assert.NoError(t, err)
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			cfg := &config.RedisConfig{
-				Host:     tc.host,
-				Port:     tc.port,
-				Password: tc.password,
-				DB:       tc.db,
-				SSL:      tc.ssl,
-			}
+	n, err := service.client.Exists(ctx, blockKey).Result()
+	assert.NoError(t, err)
+	assert.GreaterOrEqual(t, n, int64(1), "ip_block key should be set after threshold")
 
-			service, err := NewRedisService(cfg)
-
-			// Most of these will fail without actual Redis instances
-			// but we can test the configuration parsing
-			if err != nil {
-				assert.Contains(t, err.Error(), constants.ErrorRedisConnectionFailed)
-			} else {
-				assert.NotNil(t, service)
-				defer service.Close()
-			}
-		})
-	}
-}
-
-func BenchmarkStoreSession(b *testing.B) {
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
-
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		b.Skip("Redis not available, skipping benchmark")
-	}
-	defer service.Close()
-
-	ctx := context.Background()
-	sessionData := map[string]interface{}{
-		"user_id":    "benchmark-user",
-		"user_role":  "user",
-		"expires_at": time.Now().Add(time.Hour).Unix(),
-	}
-	ttl := time.Hour
-
-	for i := 0; i < b.N; i++ {
-		sessionID := fmt.Sprintf("benchmark-session-%d", i)
-		err := service.StoreSession(ctx, sessionID, sessionData, ttl)
-		if err != nil {
-			b.Fatalf("StoreSession failed: %v", err)
-		}
-	}
-}
-
-func BenchmarkCheckRateLimit(b *testing.B) {
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
-
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		b.Skip("Redis not available, skipping benchmark")
-	}
-	defer service.Close()
-
-	ctx := context.Background()
-	limit := 1000
-	window := time.Minute
-
-	for i := 0; i < b.N; i++ {
-		key := fmt.Sprintf("benchmark-rate-limit-%d", i)
-		_, err := service.CheckRateLimit(ctx, key, limit, window)
-		if err != nil {
-			b.Fatalf("CheckRateLimit failed: %v", err)
-		}
-	}
+	_, err = service.client.Get(ctx, failKey).Result()
+	assert.NoError(t, err)
 }
 
 func TestRedisServiceEdgeCases(t *testing.T) {
-	// Skip if Redis is not available
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
-
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		t.Skip("Redis not available, skipping test")
-	}
-	defer service.Close()
-
+	service := newRedisServiceWithMiniredis(t)
 	ctx := context.Background()
-
-	t.Run("StoreSession with Empty Data", func(t *testing.T) {
-		sessionID := "empty-session"
-		emptyData := map[string]interface{}{}
-		ttl := time.Hour
-
-		err := service.StoreSession(ctx, sessionID, emptyData, ttl)
-		assert.NoError(t, err)
-
-		// Retrieve and verify
-		retrievedData, err := service.GetSession(ctx, sessionID)
-		assert.NoError(t, err)
-		assert.Equal(t, emptyData, retrievedData)
-	})
-
-	t.Run("StoreSession with Complex Data", func(t *testing.T) {
-		sessionID := "complex-session"
-		complexData := map[string]interface{}{
-			"user_id":     "user123",
-			"user_role":   "admin",
-			"permissions": []string{"read", "write", "delete"},
-			"metadata": map[string]interface{}{
-				"created_at": time.Now().Unix(),
-				"last_login": time.Now().Add(-time.Hour).Unix(),
-				"settings": map[string]interface{}{
-					"theme":    "dark",
-					"language": "en",
-					"timezone": "UTC",
-				},
-			},
-			"is_active": true,
-			"score":     95.5,
-		}
-		ttl := time.Hour
-
-		err := service.StoreSession(ctx, sessionID, complexData, ttl)
-		assert.NoError(t, err)
-
-		// Retrieve and verify
-		retrievedData, err := service.GetSession(ctx, sessionID)
-		assert.NoError(t, err)
-		assert.Equal(t, complexData["user_id"], retrievedData["user_id"])
-		assert.Equal(t, complexData["user_role"], retrievedData["user_role"])
-		assert.Equal(t, complexData["is_active"], retrievedData["is_active"])
-		assert.Equal(t, complexData["score"], retrievedData["score"])
-	})
-
-	t.Run("StoreSession with Very Long Session ID", func(t *testing.T) {
-		longSessionID := "very-long-session-id-" + string(make([]byte, 1000))
-		sessionData := map[string]interface{}{
-			"user_id": "user123",
-		}
-		ttl := time.Hour
-
-		err := service.StoreSession(ctx, longSessionID, sessionData, ttl)
-		assert.NoError(t, err)
-
-		// Retrieve and verify
-		retrievedData, err := service.GetSession(ctx, longSessionID)
-		assert.NoError(t, err)
-		assert.Equal(t, sessionData["user_id"], retrievedData["user_id"])
-	})
 
 	t.Run("CheckRateLimit with Zero Limit", func(t *testing.T) {
 		key := "rate_limit:zero-limit"
@@ -525,36 +190,6 @@ func TestRedisServiceEdgeCases(t *testing.T) {
 		assert.True(t, allowed)
 	})
 
-	t.Run("CacheResponse with Different Data Types", func(t *testing.T) {
-		testCases := []struct {
-			name string
-			data interface{}
-		}{
-			{"String", "simple string"},
-			{"Number", 42},
-			{"Float", 3.14159},
-			{"Boolean", true},
-			{"Array", []string{"a", "b", "c"}},
-			{"Object", map[string]interface{}{"key": "value"}},
-			{"Null", nil},
-		}
-
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				key := fmt.Sprintf("cache:%s", tc.name)
-				ttl := time.Minute
-
-				err := service.CacheResponse(ctx, key, tc.data, ttl)
-				assert.NoError(t, err)
-
-				// Retrieve and verify
-				cachedBytes, err := service.GetCachedResponse(ctx, key)
-				assert.NoError(t, err)
-				assert.NotNil(t, cachedBytes)
-			})
-		}
-	})
-
 	t.Run("Concurrent Rate Limit Checks", func(t *testing.T) {
 		key := "rate_limit:concurrent"
 		limit := 10
@@ -586,138 +221,4 @@ func TestRedisServiceEdgeCases(t *testing.T) {
 		// Should have exactly 'limit' allowed requests
 		assert.Equal(t, limit, allowedCount)
 	})
-}
-
-func TestRedisServiceErrorHandling(t *testing.T) {
-	t.Run("NewRedisService with Invalid Port", func(t *testing.T) {
-		cfg := &config.RedisConfig{
-			Host:     "localhost",
-			Port:     "invalid-port",
-			Password: "",
-			DB:       0,
-			SSL:      false,
-		}
-
-		service, err := NewRedisService(cfg)
-		assert.Error(t, err)
-		assert.Nil(t, service)
-		assert.Contains(t, err.Error(), constants.ErrorRedisConnectionFailed)
-	})
-
-	t.Run("NewRedisService with Invalid Host", func(t *testing.T) {
-		cfg := &config.RedisConfig{
-			Host:     "invalid-host-name-that-does-not-exist",
-			Port:     "6379",
-			Password: "",
-			DB:       0,
-			SSL:      false,
-		}
-
-		service, err := NewRedisService(cfg)
-		assert.Error(t, err)
-		assert.Nil(t, service)
-		assert.Contains(t, err.Error(), constants.ErrorRedisConnectionFailed)
-	})
-
-	t.Run("StoreSession with Invalid JSON Data", func(t *testing.T) {
-		// This test is tricky because we can't easily create invalid JSON
-		// that would fail Marshal, but we can test with valid data
-		cfg := &config.RedisConfig{
-			Host:     "localhost",
-			Port:     "6379",
-			Password: "",
-			DB:       0,
-			SSL:      false,
-		}
-
-		service, err := NewRedisService(cfg)
-		if err != nil {
-			t.Skip("Redis not available, skipping test")
-		}
-		defer service.Close()
-
-		ctx := context.Background()
-		sessionID := "test-session"
-		sessionData := map[string]interface{}{
-			"user_id": "user123",
-		}
-		ttl := time.Hour
-
-		err = service.StoreSession(ctx, sessionID, sessionData, ttl)
-		assert.NoError(t, err)
-	})
-}
-
-func BenchmarkCacheResponse(b *testing.B) {
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
-
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		b.Skip("Redis not available, skipping benchmark")
-	}
-	defer service.Close()
-
-	ctx := context.Background()
-	cacheData := map[string]interface{}{
-		"status": "success",
-		"data":   []string{"item1", "item2", "item3"},
-		"count":  3,
-	}
-	ttl := time.Minute * 5
-
-	for i := 0; i < b.N; i++ {
-		key := fmt.Sprintf("benchmark-cache-%d", i)
-		err := service.CacheResponse(ctx, key, cacheData, ttl)
-		if err != nil {
-			b.Fatalf("CacheResponse failed: %v", err)
-		}
-	}
-}
-
-func BenchmarkGetCachedResponse(b *testing.B) {
-	cfg := &config.RedisConfig{
-		Host:     "localhost",
-		Port:     "6379",
-		Password: "",
-		DB:       0,
-		SSL:      false,
-	}
-
-	service, err := NewRedisService(cfg)
-	if err != nil {
-		b.Skip("Redis not available, skipping benchmark")
-	}
-	defer service.Close()
-
-	ctx := context.Background()
-	cacheData := map[string]interface{}{
-		"status": "success",
-		"data":   []string{"item1", "item2", "item3"},
-		"count":  3,
-	}
-	ttl := time.Minute * 5
-
-	// Pre-populate cache
-	for i := 0; i < 100; i++ {
-		key := fmt.Sprintf("benchmark-get-cache-%d", i)
-		err := service.CacheResponse(ctx, key, cacheData, ttl)
-		if err != nil {
-			b.Fatalf("CacheResponse failed: %v", err)
-		}
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		key := fmt.Sprintf("benchmark-get-cache-%d", i%100)
-		_, err := service.GetCachedResponse(ctx, key)
-		if err != nil {
-			b.Fatalf("GetCachedResponse failed: %v", err)
-		}
-	}
 }

@@ -30,7 +30,7 @@
 |------|--------|--------|
 | 2.1 | **Check if the IP is already blocked.** | Gateway (SEC-011) auto-sets `ip_block:<ip>` in Redis after 5 failed logins in the 1-day window. If the burst just happened, the next request from that IP may already get 403. |
 | 2.2 | **If Redis is available and you need to block immediately** (e.g. before 5 failures, or to extend block): | From a host that can reach Redis (e.g. exec into gateway pod or bastion): |
-| | Block the IP with TTL (e.g. 5 min dev/test, 24h prod): | `redis-cli SET ip_block:<client_ip> 1 EX 300` (5 min) or `EX 86400` (24h). Key prefix: `ip_block:`. |
+| | Block the IP with TTL: | `redis-cli SET ip_block:<client_ip> 1 EX 300` (5 min, gateway default) or `EX 86400` (24h production). Failure count expires with the block. Key prefix: `ip_block:`. |
 | 2.3 | **Verify block**: From that IP, a request to the gateway (e.g. POST /api/v1/auth/login or GET /health) should receive **403**. | Integration test flow: `integration_tests/incident/test_ip_block.py` (run `./run_all_tests.sh incident` from `integration_tests`). |
 
 **Containment achieved when**: Requests from that IP to the gateway return 403 (block enforced by gateway auth middleware).
@@ -67,14 +67,10 @@
 
 | Step | Action |
 |------|--------|
-| 5.1 | From the directory where `docker-compose.yml` runs (e.g. `docker/`), clear all IP-block and login-fail keys: |
-| | **Docker Compose**: |
-| | `docker compose exec redis redis-cli --scan --pattern "ip_block:*"   \| xargs -I {} docker compose exec -T redis redis-cli DEL {}` |
-| | `docker compose exec redis redis-cli --scan --pattern "login_fail:*" \| xargs -I {} docker compose exec -T redis redis-cli DEL {}` |
-| | **Plain Docker**: Replace `docker compose exec redis` with `docker exec <redis_container_name>`. |
-| | **Redis on host**: `redis-cli KEYS "ip_block:*"` and `KEYS "login_fail:*"`, then `DEL` each key (or use a loop). |
-| 5.2 | Verify: `KEYS "ip_block:*"` and `KEYS "login_fail:*"` both return `(empty array)`. |
-| 5.3 | Run integration tests immediately (e.g. `cd integration_tests && ./run_all_tests.sh user`). |
+| 5.1 | **Check current state** (from directory where `docker-compose.yml` runs, e.g. `docker/`): `docker compose exec redis redis-cli KEYS "ip_block:*"` (IPs currently blocked → 403), `docker compose exec redis redis-cli KEYS "login_fail:*"` (IPs with failure count; next 401 can re-block). Redis on host: `redis-cli KEYS "ip_block:*"` and `redis-cli KEYS "login_fail:*"`. |
+| 5.2 | **Clear both** key families. Docker Compose: `docker compose exec redis redis-cli --scan --pattern "ip_block:*" \| xargs -I {} docker compose exec -T redis redis-cli DEL {}` and `docker compose exec redis redis-cli --scan --pattern "login_fail:*" \| xargs -I {} docker compose exec -T redis redis-cli DEL {}`. Plain Docker: use `docker exec <redis_container_name>`. Redis on host: KEYS then DEL each. |
+| 5.3 | Verify: run the two KEYS commands again; both return `(empty array)`. |
+| 5.4 | Run integration tests (e.g. `cd integration_tests && ./run_all_tests.sh user`). |
 
 See [integration_tests/README.md](../../integration_tests/README.md) and [integration_tests/incident/README.md](../../integration_tests/incident/README.md#before-running-userintegration-tests-avoid-403-auth_004).
 

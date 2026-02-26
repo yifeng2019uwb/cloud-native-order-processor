@@ -58,7 +58,7 @@ func (s *Server) setupRoutes() {
 	s.router.Use(middleware.Logger())
 	s.router.Use(middleware.Recovery())
 
-	// Add auth middleware globally to set user roles for all routes (SEC-011: IP block check when Redis available)
+	// Add auth middleware globally to set user roles for all routes (JWT validation only; IP block is in handleProxyRequest)
 	s.router.Use(middleware.AuthMiddleware(s.config))
 
 	// Add Redis-based middleware if Redis is available

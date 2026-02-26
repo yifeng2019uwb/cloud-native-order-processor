@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"order-processor-gateway/internal/config"
@@ -11,6 +13,24 @@ import (
 
 	"github.com/redis/go-redis/v9"
 )
+
+func getBlockDurationSeconds() int {
+	if s := os.Getenv(constants.EnvBlockDurationSeconds); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 {
+			return n
+		}
+	}
+	return constants.BlockDurationSeconds
+}
+
+func getFailedLoginWindowSeconds() int {
+	if s := os.Getenv(constants.EnvFailedLoginWindowSeconds); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 {
+			return n
+		}
+	}
+	return constants.FailedLoginWindowSeconds
+}
 
 // RedisService handles Redis operations
 type RedisService struct {
@@ -124,6 +144,12 @@ func (r *RedisService) GetCachedResponse(ctx context.Context, key string) ([]byt
 	return r.client.Get(ctx, key).Bytes()
 }
 
+// SetIPBlock sets the IP block key with TTL (for manual block or testing). Ops equivalent: redis-cli SET ip_block:<ip> 1 EX <seconds>.
+func (r *RedisService) SetIPBlock(ctx context.Context, clientIP string, ttl time.Duration) error {
+	key := constants.RedisKeyPrefixIPBlock + clientIP
+	return r.client.Set(ctx, key, "1", ttl).Err()
+}
+
 // IsIPBlocked returns true if the client IP has an active block key (ip_block:<ip> with TTL).
 // Ops: block with TTL via redis-cli SET ip_block:<ip> 1 EX <seconds> (e.g. EX 300 for 5 min dev/test, EX 86400 for 24hr production).
 func (r *RedisService) IsIPBlocked(ctx context.Context, clientIP string) (bool, error) {
@@ -144,14 +170,19 @@ func (r *RedisService) RecordFailedLogin(ctx context.Context, clientIP string) e
 	if err != nil {
 		return err
 	}
+	windowSec := getFailedLoginWindowSeconds()
 	if count == 1 {
-		r.client.Expire(ctx, keyFail, time.Duration(constants.FailedLoginWindowSeconds)*time.Second)
+		r.client.Expire(ctx, keyFail, time.Duration(windowSec)*time.Second)
 	}
 	if count >= int64(constants.FailedLoginBlockThreshold) {
 		blockKey := constants.RedisKeyPrefixIPBlock + clientIP
-		if err := r.client.Set(ctx, blockKey, "1", time.Duration(constants.BlockDurationSeconds)*time.Second).Err(); err != nil {
+		blockSec := getBlockDurationSeconds()
+		blockTTL := time.Duration(blockSec) * time.Second
+		if err := r.client.Set(ctx, blockKey, "1", blockTTL).Err(); err != nil {
 			return err
 		}
+		// Expire the failure count when the block expires so the count is removed and the user gets a fresh start
+		r.client.Expire(ctx, keyFail, blockTTL)
 	}
 	return nil
 }

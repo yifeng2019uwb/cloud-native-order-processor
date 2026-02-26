@@ -236,23 +236,23 @@ func TestConfigStructs(t *testing.T) {
 
 	t.Run("ServicesConfig", func(t *testing.T) {
 		config := ServicesConfig{
-			UserService:      "http://user-service:8000",
-			InventoryService: "http://inventory-service:8001",
-			OrderService:     "http://order-service:8002",
-			AuthService:      "http://auth-service:8003",
+			UserService:      constants.DefaultUserServiceURL,
+			InventoryService: constants.DefaultInventoryServiceURL,
+			OrderService:     constants.DefaultOrderServiceURL,
+			AuthService:      constants.DefaultAuthServiceURL,
 		}
 
-		if config.UserService != "http://user-service:8000" {
-			t.Errorf("Expected user service http://user-service:8000, got %s", config.UserService)
+		if config.UserService != constants.DefaultUserServiceURL {
+			t.Errorf("Expected user service %s, got %s", constants.DefaultUserServiceURL, config.UserService)
 		}
-		if config.InventoryService != "http://inventory-service:8001" {
-			t.Errorf("Expected inventory service http://inventory-service:8001, got %s", config.InventoryService)
+		if config.InventoryService != constants.DefaultInventoryServiceURL {
+			t.Errorf("Expected inventory service %s, got %s", constants.DefaultInventoryServiceURL, config.InventoryService)
 		}
-		if config.OrderService != "http://order-service:8002" {
-			t.Errorf("Expected order service http://order-service:8002, got %s", config.OrderService)
+		if config.OrderService != constants.DefaultOrderServiceURL {
+			t.Errorf("Expected order service %s, got %s", constants.DefaultOrderServiceURL, config.OrderService)
 		}
-		if config.AuthService != "http://auth-service:8003" {
-			t.Errorf("Expected auth service http://auth-service:8003, got %s", config.AuthService)
+		if config.AuthService != constants.DefaultAuthServiceURL {
+			t.Errorf("Expected auth service %s, got %s", constants.DefaultAuthServiceURL, config.AuthService)
 		}
 	})
 }
