@@ -30,17 +30,17 @@
 ---
 
 ## 📌 **Status** (as of Feb 2026)
-- **Current focus:** DEMO-001 (full workflow demo) and optional FEATURE-002 frontend (Insights UI — paused).
-- **Recently completed:** SEC-010 (failed-login runbook), SEC-011 (IP block / brute-force protection in gateway), metrics (4 gateway + 3 per backend per [docs/METRICS.md](docs/METRICS.md)), CNY-001, monitoring design updates, doc cleanup (project-status, INFRA-009 audit, monitoring task plan removed).
+- **Current focus:** Optional FEATURE-002 frontend (Insights UI — paused).
+- **Recently completed:** DEMO-001 (full workflow demo — video uploaded to YouTube), SEC-010 (failed-login runbook), SEC-011 (IP block / brute-force protection in gateway), metrics (4 gateway + 3 per backend per [docs/METRICS.md](docs/METRICS.md)), CNY-001, monitoring design updates, doc cleanup (project-status, INFRA-009 audit, monitoring task plan removed), **README updates** (all folder READMEs updated to Feb 2026, dates synchronized, deployment paths corrected, monitoring status updated).
 - **Active & planned:** See section below; optional/maintenance items at end.
 
 ---
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
-> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) ~~AI Insights~~ (frontend paused – local deploy config complexity) → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) ~~CNY-001~~ ✅ → 7) **DEMO-001** → 8) Others
+> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) ~~AI Insights~~ (frontend paused – local deploy config complexity) → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) ~~CNY-001~~ ✅ → 7) ~~DEMO-001~~ ✅ → 8) Others
 
-> **Next**: DEMO-001 — Full workflow demo (all existing APIs, runbook/script)
+> **Next**: Optional maintenance tasks or new features
 
 ---
 
@@ -104,28 +104,6 @@
 
 ---
 
-#### **DEMO-001: Project Demo — Full Workflow & All Existing APIs** 🔥 **PRIORITY #6**
-- **Component**: Demo / Documentation
-- **Type**: Demo Preparation & Delivery
-- **Priority**: 🔥 **HIGH**
-- **Status**: 📋 **To Do**
-- **Goal**: Demo this project end-to-end: show how the project works using **all existing APIs** and the **whole workflow** (auth → user → portfolio → orders → inventory/prices, gateway, frontend).
-- **Scope**:
-  - **All existing APIs**: Auth (login/register/token), User (profile, portfolio), Order (place/list), Inventory (assets, prices), Gateway as single entry, plus any other live endpoints.
-  - **Whole workflow**: End-to-end flow showing how a user signs in, views portfolio, sees prices, places an order, and how services interact (e.g. gateway → backend services, frontend ↔ API).
-  - **Optional part**: FEATURE-002 (AI Analysis / Insights) 🚧 **IN PROGRESS**
-- **Acceptance Criteria**:
-  - [ ] Demo script or runbook that walks through the full workflow with running services
-  - [ ] All major existing APIs exercised and explained (auth, user, portfolio, orders, inventory/prices)
-  - [ ] Clear narrative for how the project works (architecture, request flow, data flow)
-  - [ ] Demo can be delivered live (or recorded) using your running service(s)
-  - [ ] Optional: One-pager (e.g. Postman collection or curl/UI steps) for reproducibility
-- **Deliverables** (examples):
-  - Demo script / talking points (step-by-step flow)
-  - List of APIs and order of calls for the workflow
-  - Optional: Short doc or checklist (“How this project works” for the demo)
-- **Dependencies**: Running services (local or deployed); FEATURE-002 🚧 **IN PROGRESS**
-- **Demo assistance**: An AI assistant can help create the script, API order, and narrative once you share how you run the project (e.g. `dev.sh`, endpoints, frontend URL). No code change required—this task is about **preparing and delivering** the demo with existing APIs and workflow.
 
 #### **SEC-010: Incident Response Simulation — Failed-Login Runbook** ✅ **COMPLETED**
 - **Component**: Security Operations / Documentation
@@ -143,19 +121,6 @@
 ---
 
 _Optional maintenance items below._
-
-#### **INV-TEST-001: Inventory service pytest collection errors** — 📋 **To Do**
-- **Component**: Inventory Service (tests)
-- **Type**: Maintenance / Environment
-- **Priority**: 📋 **LOW**
-- **Status**: 📋 **To Do**
-- **Goal**: Fix "7 errors during collection" when running pytest in `services/inventory_service`. Tests fail to collect with `ModuleNotFoundError: No module named 'fastapi'` (and similar) when pytest is run without the service virtualenv.
-- **Details**: Running `pytest` (e.g. with coverage via pytest.ini) uses an environment where project deps (fastapi, etc.) are not installed. Collection fails for: `test_assets.py`, `test_dependencies.py`, `test_health.py`, `test_init_inventory.py`, `test_fetch_coins.py`, `test_validation.py`, `test_field_validators.py`.
-- **Acceptance Criteria**:
-  - [ ] Run `./dev.sh test` from `services/inventory_service` succeeds (uses `.venv-inventory_service`).
-  - [ ] Or: document that tests must be run via `./dev.sh test` (not raw `pytest`) so the correct venv is used; optionally add a note in README or pytest.ini.
-  - [ ] Or: fix CI/IDE test runner so it uses the service venv and collection succeeds.
-- **Workaround for now**: From `services/inventory_service`, run `./dev.sh test` (script activates `.venv-inventory_service` and runs pytest with deps). Skip if not blocking.
 
 #### **CI-001: Optional full CI with Docker deploy + integration tests** _(Low priority / try once)_
 - **Component**: CI/CD (GitHub Actions)
@@ -514,6 +479,10 @@ _Optional maintenance items below._
 - **Summary**: Gateway auth middleware checks Redis `ip_block:<ip>` before token validation; blocked IPs get 403. Gateway records failed logins (401 from POST /auth/login) and sets `ip_block:<ip>` after 5 failures in a 1-day window (TTL 5 min dev / configurable). Integration tests (`integration_tests/incident/test_ip_block.py`) verify full flow: init → 5 wrong logins → 6th request 403 → wait 5 min → login works again.
 - **Details**: See DAILY_WORK_LOG.md
 
+#### **DEMO-001: Project Demo — Full Workflow & All Existing APIs** ✅ **COMPLETED**
+- **Component**: Demo / Documentation
+- **Summary**: Full workflow demo completed and video uploaded to YouTube. Demo covers all existing APIs (auth, user, portfolio, orders, inventory/prices, gateway, frontend) with end-to-end workflow demonstration. See YouTube link in README.md.
+
 #### **CNY-001: Chinese New Year Secret (Full Stack)** ✅ **COMPLETED**
 - **Component**: Frontend + User Service + Gateway
 - **Summary**: Hidden 🧧 trigger in Dashboard footer; modal for secret phrase; `POST /api/v1/cny/claim`; big/small red pocket images (`bigrpocket.jpg`, `littleredpocket.jpg`); amount at bottom. Backend: config `cny_phrases.json`, one red pocket per user per day. See DAILY_WORK_LOG.md for details.
@@ -749,6 +718,9 @@ _Optional maintenance items below._
 #### **TEST-001: Integration Test Suite Enhancement** ✅ **COMPLETED**
 - Enhanced integration test suite to cover all services
 
+#### **INV-TEST-001: Inventory service pytest collection errors** ✅ **COMPLETED**
+- Workaround documented: Tests must be run via `./dev.sh test` (not raw `pytest`) to ensure the service virtual environment is activated. Documentation added to README.md and pytest.ini. See DAILY_WORK_LOG.md for details.
+
 #### **DEV-001: Standardize dev.sh Scripts with Import Validation** ✅ **COMPLETED**
 - Standardized all service dev.sh scripts with import validation
 
@@ -790,6 +762,11 @@ _Optional maintenance items below._
 #### **JWT-001: Fix JWT Response Format Inconsistency** ✅ **COMPLETED**
 - JWT response format issues resolved - auth service working correctly in integration tests
 
+### **📚 Documentation**
+
+#### **DOC-001: Update All Folder READMEs** ✅ **COMPLETED**
+- Updated all folder READMEs to February 2026, synchronized dates, corrected deployment paths, updated monitoring status to PRODUCTION READY. See DAILY_WORK_LOG.md for details.
+
 ---
 
 ## 📈 **PROJECT STATUS SUMMARY**
@@ -804,20 +781,19 @@ _Optional maintenance items below._
 
 ### **🔄 Current Focus**
 - **Infrastructure**: Deploy infra now — **DB (DynamoDB) + Docker only** (docker-compose with Redis). No Kubernetes for demo.
-- **DEMO-001: Project Demo** — Full workflow & all existing APIs. **FEATURE-002: AI Analysis** 🔄 **IN PROGRESS** — Backend complete, deployment & frontend pending.
+- **FEATURE-002: AI Analysis** 🔄 **IN PROGRESS** — Backend complete, deployment & frontend pending.
 - **FEATURE-002 Next Steps**: Deploy insights service → Run integration tests → Add gateway route → Frontend integration
 
 ### **📋 Next Milestones**
 - **Q4 2025**: ✅ **COMPLETED** — Backend cleanup, frontend auth, monitoring
 - **Q1 2026**: ✅ **COMPLETED** — Core platform, Docker, K8s, EKS deployment
-- **DEMO-001**: Project demo with all existing APIs and whole workflow (script, narrative, run-through)
+- **DEMO-001**: ✅ **COMPLETED** — Project demo completed and video uploaded to YouTube
 - **Demo (one part)**: FEATURE-002 (AI Analysis endpoint + frontend) 🚧 **IN PROGRESS**
 - **Optional**: INFRA-021 (K8s simplify), ARCH-002 (CORS), CODE-001 (TODOs) — low priority
 
 **🎯 IMMEDIATE NEXT STEP**:
-1. **DEMO-001** — Prepare and deliver project demo (all existing APIs, full workflow)
-2. Deploy infra: DB (DynamoDB) + Docker — no Kubernetes needed for demo
-3. FEATURE-002 (AI Analysis): **PAUSED** — Frontend deferred (local deploy config complexity)
+1. FEATURE-002 (AI Analysis): **PAUSED** — Frontend deferred (local deploy config complexity)
+2. Optional maintenance tasks or new features
 
 ---
 
@@ -839,8 +815,9 @@ _Optional maintenance items below._
 
 ---
 
-*Last Updated: 2/15/2026*
+*Last Updated: 2/6/2026*
 *📋 Note: CNY-001 COMPLETED – Frontend: CnyTrigger, CnyClaimModal, big/small red pocket images, amount at bottom*
+*📋 Note: ✅ **README UPDATES COMPLETED** - All folder READMEs synchronized to Feb 2026, dates updated, deployment paths corrected, monitoring status updated to PRODUCTION READY*
 *Next Review: As needed. Backlog cleaned; limit order (FEATURE-001) deferred.*
 *📋 Note: ✅ **AWS EKS DEPLOYMENT SUCCESS** - Production-ready cloud-native architecture deployed with 95% functionality, comprehensive integration testing, and zero ongoing costs*
 *📋 Note: ✅ **Frontend Tasks COMPLETED** - All major frontend issues resolved, port standardized to 3000, authentication working*

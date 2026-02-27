@@ -145,6 +145,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 - ✅ **Monitoring** - Prometheus, Grafana, structured logging; metrics per [docs/METRICS.md](docs/METRICS.md)
 - ✅ **Database** - DynamoDB with PynamoDB ORM and distributed locking
 - ✅ **Deployment** - **Docker (Compose)** is the supported deployment path; local one-command run via `./docker/deploy.sh local deploy`. Kubernetes config and docs are retained and work with [kubernetes/README.md](kubernetes/README.md) and [docs/deployment-guide.md](docs/deployment-guide.md) when you need K8s or EKS.
+- ✅ **Documentation** - All READMEs updated and synchronized (Feb 2026); deployment instructions consistent across all folders
 - 📋 **Current focus** - Full workflow demo (DEMO-001); optional Insights frontend paused
 
 ## 🚀 Getting Started

@@ -20,9 +20,9 @@ For testers and learners: download the repo, have Docker, run one command.
 
 ### AWS deploy (requires AWS credentials)
 - **Prerequisites**: Docker, Docker Compose, AWS credentials
-- **Deploy All**: `./deploy.sh all deploy` (deploy all services with AWS DynamoDB)
-- **Deploy Single**: `./deploy.sh [service_name] deploy` (deploy specific service)
-- **Stop All**: `./deploy.sh all stop`
+- **Deploy All**: `./docker/deploy.sh all deploy` (deploy all services with AWS DynamoDB)
+- **Deploy Single**: `./docker/deploy.sh [service_name] deploy` (deploy specific service)
+- **Stop All**: `./docker/deploy.sh all stop`
 
 ## ✨ Key Features
 - Multi-service architecture with Docker Compose
@@ -40,12 +40,15 @@ docker/
 │   ├── user_service/         # User Service Dockerfile
 │   ├── order_service/        # Order Service Dockerfile
 │   ├── inventory_service/    # Inventory Service Dockerfile
-│   └── auth_service/         # Auth Service Dockerfile
+│   ├── auth_service/         # Auth Service Dockerfile
+│   └── insights-service/     # Insights Service Dockerfile
 ├── standard/                 # Standard Dockerfile templates
 │   └── Dockerfile.template   # Base template for services
 ├── docker-compose.yml        # Production configuration
 ├── docker-compose.dev.yml    # Development configuration
+├── docker-compose.local.yml  # Local development configuration
 ├── deploy.sh                 # Main deployment script
+├── SETUP_INSIGHTS.md         # Insights service setup guide
 └── README.md                 # This file
 ```
 
@@ -57,7 +60,7 @@ docker/
 
 ## 📊 Status
 - **Current Status**: ✅ **PRODUCTION READY** - All services containerized and working
-- **Last Updated**: January 8, 2025
+- **Last Updated**: February 2026
 
 ---
 

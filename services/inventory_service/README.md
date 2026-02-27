@@ -4,7 +4,8 @@
 
 ## 🚀 Quick Start
 - **Prerequisites**: Python 3.11+, pip, virtual environment
-- **Build & Test**: `./dev.sh` (builds and runs unit tests)
+- **Build & Test**: `./dev.sh build` (builds) or `./dev.sh test` (runs unit tests)
+  - **Note**: Always use `./dev.sh test` to run tests (not raw `pytest`). The script activates the service virtual environment (`.venv-inventory_service`) with all dependencies.
 - **Deploy**: From repo root: `./docker/deploy.sh local deploy` (local) or `./docker/deploy.sh inventory_service deploy` (dev/AWS), or K8s (see [Docker](../../docker/README.md), [Kubernetes](../../kubernetes/README.md))
 - **Integration Tests**: `./integration_tests/run_all_tests.sh`
 - **Example**: `curl http://localhost:8001/health`

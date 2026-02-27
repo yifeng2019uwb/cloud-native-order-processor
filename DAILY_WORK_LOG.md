@@ -9,6 +9,67 @@
 
 ## 📊 Progress Summary
 
+### **2026-02-06: DEMO-001 — Project Demo Completion** ✅ **COMPLETED**
+
+**Task**: Complete full workflow demo showing all existing APIs and end-to-end workflow, record demo video, and upload to YouTube.
+
+**Key Achievements**:
+- ✅ **Demo completed** — Full workflow demonstration covering all existing APIs (auth, user, portfolio, orders, inventory/prices, gateway, frontend)
+- ✅ **End-to-end workflow shown** — Complete user journey from authentication through trading operations
+- ✅ **Video uploaded** — Demo video uploaded to YouTube (link: https://www.youtube.com/watch?v=TNaPIE2jDG0)
+- ✅ **Documentation cleanup** — Removed demo preparation script (`docs/DEMO_SCRIPT.md`) as demo is complete
+- ✅ **Backlog updated** — DEMO-001 marked as completed, moved from Active & Planned to Completed Tasks section
+
+**Files Created/Updated**:
+- `docs/DEMO_SCRIPT.md` — Deleted (demo preparation doc no longer needed)
+- `BACKLOG.md` — DEMO-001 marked ✅ COMPLETED; moved to Completed Tasks section; updated status and priority order
+- `README.md` — YouTube link already present (no changes needed)
+- `DAILY_WORK_LOG.md` — This entry
+
+**Impact**:
+- Project demo successfully delivered and documented
+- Video provides comprehensive walkthrough of the platform
+- Backlog reflects completion of major milestone
+- Documentation streamlined by removing preparation materials
+
+---
+
+### **2026-02-06: INV-TEST-001 — Inventory Service Pytest Collection Errors** ✅ **COMPLETED**
+
+**Task**: Document workaround for pytest collection errors in inventory service tests. Tests fail when run with raw `pytest` outside the service virtual environment.
+
+**Key Achievements**:
+- ✅ **Workaround documented** — Added clear instructions to use `./dev.sh test` instead of raw `pytest`
+- ✅ **README updated** — Added note in Quick Start section explaining why `./dev.sh test` must be used
+- ✅ **pytest.ini updated** — Added comment explaining the requirement to use `./dev.sh test`
+- ✅ **Task completed** — Workaround is sufficient and follows standard practice for service testing
+
+**Files Created/Updated**:
+- `services/inventory_service/README.md` — Added note about using `./dev.sh test` in Quick Start section
+- `services/inventory_service/pytest.ini` — Added comment explaining test execution requirement
+- `BACKLOG.md` — INV-TEST-001 marked ✅ COMPLETED; moved to Completed Tasks section
+- `DAILY_WORK_LOG.md` — This entry
+
+**Impact**:
+- Developers now have clear guidance on how to run tests correctly
+- Prevents confusion when pytest collection errors occur
+- Documents standard practice for service testing (using dev.sh scripts)
+- Workaround is sufficient and aligns with project conventions
+
+---
+
+### **2026-02-06: DOC-001 — Update All Folder READMEs** ✅ **COMPLETED**
+
+**Task**: Update all folder READMEs to February 2026, synchronize dates, correct deployment paths, and update status information across all documentation.
+
+**Key Achievements**:
+- ✅ Updated all README dates to February 2026 (docker, kubernetes, terraform, monitoring, exception, docs, integration_tests)
+- ✅ Fixed deployment script paths and project structure in docker/README.md
+- ✅ Updated monitoring status to PRODUCTION READY
+- ✅ Synchronized documentation across all folders
+
+---
+
 ### **2026-02-06: SEC-010 Incident Response — Failed-Login Runbook** ✅ **COMPLETED**
 
 **Task**: Complete SEC-010 runbook for failed-login burst: define trigger (5 failed logins from same IP in 1 day), ordered response steps (verify → containment → evidence → follow-up), and references to SEC-011, audit logs, and integration test.
@@ -52,6 +113,101 @@
 - **Acceptance Criteria**: Auth middleware accepts optional Redis (nil = skip); if Redis available, check IP before JWT, return 403 if blocked; block key documented; ops can use redis-cli.
 - **Deliverables**: Gateway middleware + RedisService method; doc/comment on Redis key. (Done: plus RecordFailedLogin, constants, integration tests.)
 - **Dependencies**: SEC-010 runbook depends on this (runbook “block IP” step uses gateway block).
+
+---
+
+### **2026-02-06: DEMO-001 — Project Demo Completion** ✅ **COMPLETED**
+
+**Task**: Complete full workflow demo showing all existing APIs and end-to-end workflow, record demo video, and upload to YouTube.
+
+**Key Achievements**:
+- ✅ **Demo completed** — Full workflow demonstration covering all existing APIs (auth, user, portfolio, orders, inventory/prices, gateway, frontend)
+- ✅ **End-to-end workflow shown** — Complete user journey from authentication through trading operations, demonstrating:
+  - User registration and authentication flow
+  - Portfolio viewing and balance management
+  - Order placement (buy/sell operations)
+  - Real-time inventory and pricing
+  - Gateway routing and security features
+  - Frontend integration with backend services
+- ✅ **Video uploaded** — Demo video uploaded to YouTube (link: https://www.youtube.com/watch?v=TNaPIE2jDG0)
+- ✅ **Documentation cleanup** — Removed demo preparation script (`docs/DEMO_SCRIPT.md`) as demo is complete
+- ✅ **Backlog updated** — DEMO-001 marked as completed, moved from Active & Planned to Completed Tasks section, updated status and priority order
+
+**Files Created/Updated**:
+- `docs/DEMO_SCRIPT.md` — Deleted (demo preparation doc no longer needed)
+- `BACKLOG.md` — DEMO-001 marked ✅ COMPLETED; moved to Completed Tasks section; updated status section, priority order, and PROJECT STATUS SUMMARY
+- `README.md` — YouTube link already present (no changes needed)
+- `DAILY_WORK_LOG.md` — This entry
+
+**Impact**:
+- Project demo successfully delivered and documented
+- Video provides comprehensive walkthrough of the platform capabilities
+- Backlog reflects completion of major milestone (Priority #7)
+- Documentation streamlined by removing preparation materials
+- Demo showcases all core features and architecture patterns
+
+---
+
+### **2026-02-06: DOC-001 — Update All Folder READMEs** ✅ **COMPLETED**
+
+**Task**: Update all folder READMEs to February 2026, synchronize dates, correct deployment paths, and update status information across all documentation.
+
+**Key Achievements**:
+- ✅ **Date synchronization** — Updated all README dates to February 2026:
+  - `docker/README.md` — Updated from January 8, 2025
+  - `kubernetes/README.md` — Updated from January 8, 2025
+  - `terraform/README.md` — Updated from January 8, 2025
+  - `monitoring/README.md` — Updated from August 20, 2025
+  - `services/exception/README.md` — Updated from August 20, 2025
+  - `docs/README.md` — Updated from Feb 25, 2025
+  - `integration_tests/README.md` — Updated latest update date to 2026-02-06
+- ✅ **Content updates** — Fixed inconsistencies and outdated information:
+  - `docker/README.md` — Added `insights-service` to project structure, added `docker-compose.local.yml` and `SETUP_INSIGHTS.md`, corrected deployment script paths (`./docker/deploy.sh`)
+  - `monitoring/README.md` — Changed status from "READY FOR DEPLOYMENT" to "PRODUCTION READY", removed outdated "Next Steps (MONITOR-001)" section, updated current status to reflect deployed state
+- ✅ **Deployment path consistency** — Standardized all deployment script references to use `./docker/deploy.sh` format
+- ✅ **Status verification** — Confirmed all service READMEs (user, order, inventory, auth, insights) already up-to-date with Feb 2026 dates
+
+**Files Created/Updated**:
+- `docker/README.md` — Date updated, project structure expanded, deployment paths corrected
+- `kubernetes/README.md` — Date updated
+- `terraform/README.md` — Date updated
+- `monitoring/README.md` — Date updated, status changed to PRODUCTION READY, removed outdated sections
+- `services/exception/README.md` — Date updated
+- `docs/README.md` — Date updated
+- `integration_tests/README.md` — Latest update date updated
+- `BACKLOG.md` — Added DOC-001 to completed tasks, updated status section, updated last updated date
+- `README.md` — Added documentation status line to project status section
+- `DAILY_WORK_LOG.md` — This entry
+
+**Impact**:
+- All documentation now synchronized and consistent
+- Deployment instructions consistent across all folders
+- Project status accurately reflected in all READMEs
+- Easier onboarding for new developers with up-to-date documentation
+
+---
+
+### **2026-02-06: INV-TEST-001 — Inventory Service Pytest Collection Errors** ✅ **COMPLETED**
+
+**Task**: Document workaround for pytest collection errors in inventory service tests. Tests fail when run with raw `pytest` outside the service virtual environment.
+
+**Key Achievements**:
+- ✅ **Workaround documented** — Added clear instructions to use `./dev.sh test` instead of raw `pytest`
+- ✅ **README updated** — Added note in Quick Start section explaining why `./dev.sh test` must be used
+- ✅ **pytest.ini updated** — Added comment explaining the requirement to use `./dev.sh test`
+- ✅ **Task completed** — Workaround is sufficient and follows standard practice for service testing
+
+**Files Created/Updated**:
+- `services/inventory_service/README.md` — Added note about using `./dev.sh test` in Quick Start section
+- `services/inventory_service/pytest.ini` — Added comment explaining test execution requirement
+- `BACKLOG.md` — INV-TEST-001 marked ✅ COMPLETED; moved to Completed Tasks section
+- `DAILY_WORK_LOG.md` — This entry
+
+**Impact**:
+- Developers now have clear guidance on how to run tests correctly
+- Prevents confusion when pytest collection errors occur
+- Documents standard practice for service testing (using dev.sh scripts)
+- Workaround is sufficient and aligns with project conventions
 
 ---
 

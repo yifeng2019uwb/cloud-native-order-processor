@@ -2,7 +2,7 @@
 
 Enterprise-grade integration testing for the cloud-native order processor.
 
-## ✅ **Latest Update (2025-02-25): Redis IP-block docs & runbook**
+## ✅ **Latest Update (2026-02-06): Redis IP-block docs & runbook**
 
 - ✅ **Redis IP-block (SEC-011)**: Before/after clearing, check **both** `ip_block:*` (blocked IPs) and `login_fail:*` (failure count; next 401 can re-block). Clear both key families before user/auth integration tests. See §2 below and [incident/README.md](incident/README.md).
 - ✅ Runbook [failed-login-burst.md](../docs/runbooks/failed-login-burst.md) §5 aligned: check state → clear both → verify with KEYS → run tests.
