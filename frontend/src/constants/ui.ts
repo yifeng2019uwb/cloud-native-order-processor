@@ -23,7 +23,7 @@ export const UI_STRINGS = {
   DASHBOARD: 'Dashboard',
   PORTFOLIO: 'Portfolio',
   TRADING: 'Trading',
-  INVENTORY: 'Inventory',
+  MARKET: 'Market',
   ACCOUNT: 'Account',
   PROFILE: 'Profile',
 

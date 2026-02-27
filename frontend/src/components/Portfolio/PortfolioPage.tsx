@@ -228,7 +228,10 @@ const PortfolioPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {(orders || []).slice(0, 10).map(order => (
+                        {[...(orders || [])]
+                          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                          .slice(0, 10)
+                          .map(order => (
                           <tr key={order.order_id}>
                             <td className="px-3 py-2 text-sm text-gray-900">{order.asset_id}</td>
                             <td className="px-3 py-2 text-sm">
@@ -284,26 +287,41 @@ const PortfolioPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Actions */}
+          {/* Quick Navigation — same as Account */}
           <div className="mt-6 bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Navigation</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Go to <strong>Market</strong> to view all assets and choose one to trade or research. Use <strong>Start Trading</strong> to place buy/sell orders.
+            </p>
             <div className="flex flex-wrap gap-4">
+              <Link
+                to="/market"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+              >
+                📋 Market — view all assets
+              </Link>
               <Link
                 to="/trading"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
               >
-                📈 Trade Assets
+                📈 Start Trading
               </Link>
               <Link
-                to="/account"
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+                to="/portfolio"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
               >
-                💰 Manage Balance
+                📊 View Portfolio
+              </Link>
+              <Link
+                to="/profile"
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+              >
+                👤 Manage Profile
               </Link>
               <button
                 onClick={loadPortfolioData}
                 disabled={isLoading}
-                className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md font-medium transition-colors"
+                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md font-medium transition-colors"
               >
                 {isLoading ? '🔄 Refreshing...' : '🔄 Refresh Data'}
               </button>

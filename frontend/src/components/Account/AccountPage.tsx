@@ -401,7 +401,16 @@ const AccountPage: React.FC = () => {
           {/* Navigation Links */}
           <div className="mt-6 bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Navigation</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Go to <strong>Market</strong> to view all assets and choose one to trade or research. Use <strong>Start Trading</strong> to place buy/sell orders.
+            </p>
             <div className="flex flex-wrap gap-4">
+              <Link
+                to="/market"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+              >
+                📋 Market — view all assets
+              </Link>
               <Link
                 to="/trading"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium transition-colors"

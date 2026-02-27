@@ -13,6 +13,10 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 - 🛡️ **Resilience Patterns** - Circuit breakers, retry logic, distributed locking
 - 🐳 **Deployment** - **Docker (Compose)** for day-to-day use; Kubernetes config retained and documented for K8s/EKS (see [Deployment](#-deployment) below)
 
+## 🎬 Watch the Demo
+
+**[▶ Watch on YouTube](https://www.youtube.com/watch?v=TNaPIE2jDG0)** — Video walkthrough of the Cloud-Native Order Processor platform.
+
 ## 🏗️ High-Level System Overview
 
 **Architecture:**

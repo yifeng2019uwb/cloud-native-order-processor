@@ -213,11 +213,11 @@ const Dashboard: React.FC = () => {
                 </Link>
 
                 <Link
-                  to="/inventory"
+                  to="/market"
                   className="border border-gray-200 rounded-lg p-4 text-center hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
                 >
                   <div className="text-2xl text-indigo-600 mb-2">🏪</div>
-                  <h4 className="text-sm font-medium text-gray-900">Inventory</h4>
+                  <h4 className="text-sm font-medium text-gray-900">Market</h4>
                   <p className="text-xs text-gray-500 mt-1">Browse available assets</p>
                 </Link>
 

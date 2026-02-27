@@ -32,10 +32,10 @@ const InventoryPage: React.FC = () => {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Inventory
+                Market
               </h1>
               <p className="text-sm text-gray-600">
-                Browse available assets
+                Browse the market
               </p>
             </div>
 
@@ -87,7 +87,7 @@ const InventoryPage: React.FC = () => {
             <div>
               <h2 className="text-3xl font-bold text-gray-900">Available Assets</h2>
               <p className="mt-2 text-gray-600">
-                Browse and explore our inventory of digital assets
+                Browse and explore the market
               </p>
             </div>
 

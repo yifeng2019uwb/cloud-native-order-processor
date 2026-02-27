@@ -61,7 +61,7 @@ const LandingPage: React.FC = () => {
           </p>
           <div className="mt-8 flex justify-center space-x-4">
             <Link
-              to="/inventory"
+              to="/market"
               className="bg-gray-100 hover:bg-gray-200 text-gray-900 px-6 py-3 rounded-md text-lg font-medium transition-colors"
             >
               Browse Assets

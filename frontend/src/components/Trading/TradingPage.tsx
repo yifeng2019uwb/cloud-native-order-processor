@@ -641,7 +641,10 @@ const TradingPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {(orders || []).slice(0, 5).map(order => (
+                          {[...(orders || [])]
+                            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                            .slice(0, 5)
+                            .map(order => (
                             <tr key={order.order_id}>
                               <td className="px-3 py-2 text-sm text-gray-900">{order.asset_id}</td>
                               <td className="px-3 py-2 text-sm">

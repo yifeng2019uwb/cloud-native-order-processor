@@ -135,10 +135,8 @@ const AppRoutes: React.FC = () => {
       />
       {/* Public Routes */}
       <Route path="/" element={<LandingPage />} />
-      <Route
-        path="/inventory"
-        element={<InventoryPage />}
-      />
+      <Route path="/market" element={<InventoryPage />} />
+      <Route path="/inventory" element={<Navigate to="/market" replace />} />
 
       {/* Protected Routes */}
       <Route
