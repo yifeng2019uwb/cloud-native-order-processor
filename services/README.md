@@ -212,7 +212,7 @@ A comprehensive microservices platform showcasing production-ready patterns incl
 - ✅ **Monitoring** - Prometheus, Grafana, structured logging; see [METRICS.md](../docs/METRICS.md)
 - ✅ **Database** - DynamoDB with PynamoDB ORM and distributed locking
 - ✅ **Deployment** - Docker (local: `./docker/deploy.sh local deploy`; dev/AWS: `./docker/deploy.sh all deploy` or per-service); K8s deploy via [kubernetes/README.md](../kubernetes/README.md)
-- 🔄 **Insights Service** - Backend complete; frontend integration optional/paused
+- ✅ **Insights Service** - Backend complete
 
 ---
 

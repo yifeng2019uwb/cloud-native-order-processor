@@ -30,7 +30,6 @@
 ---
 
 ## 📌 **Status** (as of Feb 2026)
-- **Current focus:** Optional FEATURE-002 frontend (Insights UI — paused).
 - **Recently completed:** DEMO-001 (full workflow demo — video uploaded to YouTube), SEC-010 (failed-login runbook), SEC-011 (IP block / brute-force protection in gateway), metrics (4 gateway + 3 per backend per [docs/METRICS.md](docs/METRICS.md)), CNY-001, monitoring design updates, doc cleanup (project-status, INFRA-009 audit, monitoring task plan removed), **README updates** (all folder READMEs updated to Feb 2026, dates synchronized, deployment paths corrected, monitoring status updated).
 - **Active & planned:** See section below; optional/maintenance items at end.
 
@@ -38,17 +37,17 @@
 
 ## 🚀 **ACTIVE & PLANNED TASKS**
 
-> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) ~~AI Insights~~ (frontend paused – local deploy config complexity) → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) ~~CNY-001~~ ✅ → 7) ~~DEMO-001~~ ✅ → 8) Others
+> **Priority Order**: 1) ~~Load Testing~~ ✅ → 2) ~~AI Insights~~ ✅ → 3) ~~Local Deploy~~ ✅ → 4) ~~Frontend fixes~~ ✅ → 5) ~~Daily deposit/withdraw limits~~ ✅ → 6) ~~CNY-001~~ ✅ → 7) ~~DEMO-001~~ ✅ → 8) Others
 
 > **Next**: Optional maintenance tasks or new features
 
 ---
 
-#### **FEATURE-002: AI Analysis / Insights (Option 1)** — _Part of demo_ 🔥 **PRIORITY #2**
+#### **FEATURE-002: AI Analysis / Insights (Option 1)** ✅ **COMPLETED**
 - **Component**: Insights Service (new microservice)
 - **Type**: New Feature
 - **Priority**: 🔥 **HIGH** (Complete Quickly - Optional but Needs Completion)
-- **Status**: 🚧 **IN PROGRESS**
+- **Status**: ✅ **COMPLETED** (Backend complete; frontend integration skipped)
 - **Goal**: Add an endpoint that aggregates portfolio, orders, and price data, calls an external LLM API (Google Gemini), and returns a short text analysis for display in the UI.
 - **Design doc**: **Optional** for this scope. A short design note (1–2 pages) is enough if you want to lock scope before coding or hand off to someone else. Use a full design doc if you need review, multiple implementers, or future extension. Suggested contents if you add one: scope (Option 1 only), endpoint contract (path, method, request/response), data flow (which services are called, payload to LLM), prompt strategy (system + user prompt, length limits), config (env vars, API key), error handling and timeouts.
 - **Approach** (Option 1 – lightweight):
@@ -70,18 +69,14 @@
   - [x] **Add gateway route** for insights endpoint
   - [x] **Happy case verified** - Endpoint returns 200 OK with valid response
   - [x] **Run integration tests** successfully (end-to-end verification)
-  - [ ] **Frontend integration**: API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile _(**PAUSED**: local deploy needs extra config, causes issues — resume later)_
-  - [ ] **Frontend can request and display** the analysis (e.g. on dashboard or profile)
 - **Estimated time for this part**:
   - **Backend (endpoint + LLM integration)**: ~2–4 hours
-  - **Frontend (call API + display)**: ~1–2 hours
   - **Testing + run-through for this feature**: ~1–2 hours
-  - **Total for this part**: **~4–8 hours** (your full demo can include other flows as well).
+  - **Total for this part**: **~3–6 hours** (your full demo can include other flows as well).
 - **Dependencies**: Existing user, order, inventory/price services; external LLM API key and SDK (e.g. `openai`, `anthropic`).
 - **Files to add/update** (examples):
   - New route/handler in user_service (or dedicated insights module): e.g. `services/user_service/src/.../insights.py` and router registration
   - Gateway: proxy route for the new endpoint if needed
-  - Frontend: new API client method, component for "Insights" or "AI Summary", and wiring to dashboard/profile
   - Config/env: document new env var(s) for LLM API key
 - **Demo assistance**: Yes — an AI assistant can help with this part and with the full demo once it's in place: e.g. scripted flow for the AI insights step, plus talking points and narrative for the rest of your demo. Share your running endpoints (and optionally a Postman/curl one-pager), and the assistant can suggest exact requests, UI clicks, and narrative.
 
@@ -781,19 +776,17 @@ _Optional maintenance items below._
 
 ### **🔄 Current Focus**
 - **Infrastructure**: Deploy infra now — **DB (DynamoDB) + Docker only** (docker-compose with Redis). No Kubernetes for demo.
-- **FEATURE-002: AI Analysis** 🔄 **IN PROGRESS** — Backend complete, deployment & frontend pending.
-- **FEATURE-002 Next Steps**: Deploy insights service → Run integration tests → Add gateway route → Frontend integration
+- **FEATURE-002: AI Analysis** ✅ **COMPLETED** — Backend complete and deployed.
 
 ### **📋 Next Milestones**
 - **Q4 2025**: ✅ **COMPLETED** — Backend cleanup, frontend auth, monitoring
 - **Q1 2026**: ✅ **COMPLETED** — Core platform, Docker, K8s, EKS deployment
 - **DEMO-001**: ✅ **COMPLETED** — Project demo completed and video uploaded to YouTube
-- **Demo (one part)**: FEATURE-002 (AI Analysis endpoint + frontend) 🚧 **IN PROGRESS**
+- **FEATURE-002**: ✅ **COMPLETED** — AI Analysis backend complete and deployed
 - **Optional**: INFRA-021 (K8s simplify), ARCH-002 (CORS), CODE-001 (TODOs) — low priority
 
 **🎯 IMMEDIATE NEXT STEP**:
-1. FEATURE-002 (AI Analysis): **PAUSED** — Frontend deferred (local deploy config complexity)
-2. Optional maintenance tasks or new features
+- Optional maintenance tasks or new features
 
 ---
 

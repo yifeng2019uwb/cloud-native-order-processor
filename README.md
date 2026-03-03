@@ -4,14 +4,14 @@
 
 ## 🎯 What is CNOP?
 
-A comprehensive, production-ready microservices platform that demonstrates modern cloud-native architecture patterns with a **security-first approach**. Built for learning enterprise patterns while showcasing real-world trading platform capabilities.
+A production-ready microservices platform implementing enterprise cloud-native patterns with a security-first approach.
 
 **Key Features:**
-- 🔐 **Enterprise Security** - JWT authentication, rate limiting, circuit breakers
-- 🏗️ **Microservices Architecture** - 6 independent services with clear responsibilities
-- 📊 **Comprehensive Monitoring** - Prometheus, Grafana, structured logging, security analytics
+- 🔐 **Enterprise Security** - JWT authentication, rate limiting, IP blocking, circuit breakers
+- 🏗️ **Microservices Architecture** - 7 services (user, order, inventory, auth, insights, gateway, frontend)
+- 📊 **Comprehensive Monitoring** - Prometheus, Grafana, structured logging
 - 🛡️ **Resilience Patterns** - Circuit breakers, retry logic, distributed locking
-- 🐳 **Deployment** - **Docker (Compose)** for day-to-day use; Kubernetes config retained and documented for K8s/EKS (see [Deployment](#-deployment) below)
+- 🐳 **Deployment** - Docker Compose for local/AWS; Kubernetes config available
 
 ## 🎬 Watch the Demo
 
@@ -55,7 +55,7 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 **Enterprise Security Features:**
 - **JWT Authentication** - Centralized token validation with Auth Service
 - **Rate Limiting** - Per-IP and per-user request throttling
-- **IP Block (SEC-011)** - Brute-force protection: after 5 failed logins per IP in a 1-day window, the gateway blocks the IP (403) for a configured period; integration tests in `integration_tests/incident/`
+- **IP Block (SEC-011)** - Brute-force protection (5 failed logins → IP blocked); see [integration tests](integration_tests/incident/README.md)
 - **Circuit Breakers** - Service failure protection and resilience
 - **Input Validation** - Comprehensive request validation and sanitization
 - **Audit Logging** - Security event tracking and compliance
@@ -86,67 +86,37 @@ A comprehensive, production-ready microservices platform that demonstrates moder
 **Data Consistency:**
 - **Distributed Locking** - User-level locks for atomic operations (Redis-based)
 - **Transaction Management** - Database transaction coordination
-- **Atomic Operations** - Database operations with rollback support
 - **Audit Logging** - Comprehensive audit trail for security and compliance
 
 ## 🏗️ Data Architecture
 
-**Database Design:**
-- **DynamoDB** - Serverless NoSQL with single-table design
-- **PynamoDB ORM** - Type-safe database operations
-- **Redis** - Caching, rate limiting, distributed locking, and session management
-- **Atomic Operations** - Database operations with rollback support
-
-**Data Models:**
-- **User Entities** - Authentication, profiles, and account management
-- **Order Entities** - Trading operations and order lifecycle
-- **Asset Entities** - Inventory management and market data
-- **Transaction Entities** - Audit trail and financial operations
+- **DynamoDB** - Serverless NoSQL with single-table design (PynamoDB ORM)
+- **Redis** - Caching, rate limiting, distributed locking
 
 ## 🔄 Service Integration
 
-**Inter-Service Communication:**
-- **Synchronous HTTP/REST** - Direct API calls between services via API Gateway
-- **Centralized Authentication** - JWT validation through Auth Service
-- **API Gateway Routing** - Single entry point for all service requests
-- **Redis-based Coordination** - Shared state for distributed locking and caching
-- **Error Handling** - Consistent exception handling and error responses
-
-**Shared Components:**
-- **Common Package** - Shared utilities, data models, and security
-- **Exception Handling** - Standardized error responses with RFC 7807
-- **Structured Logging** - JSON logging with correlation IDs
-- **Monitoring Integration** - Prometheus metrics and health checks
+- **HTTP/REST** - Synchronous communication via API Gateway
+- **Centralized Auth** - JWT validation through Auth Service
+- **Shared Components** - Common package, exception handling (RFC 7807), structured logging
 
 ## 🐳 Deployment
 
-- **Primary**: We use **Docker (Compose)** for deployment. Run locally with one command (see [Getting Started](#-getting-started)); no Kubernetes or AWS required.
-- **Kubernetes**: K8s manifests and scripts are **kept** in the repo and remain valid. Use them when you need K8s or AWS EKS; see [Kubernetes](kubernetes/README.md) and [Deployment Guide](docs/deployment-guide.md) for K8s/EKS steps and prerequisites.
+- **Docker Compose** - Primary deployment method (local & AWS); see [Getting Started](#-getting-started)
+- **Kubernetes** - Config available for K8s/EKS; see [kubernetes/README.md](kubernetes/README.md)
 
 ## 📚 Documentation
 
-- **[Services Overview](services/README.md)** - Service architecture and development
-- **[Docker](docker/README.md)** - Docker Compose deploy (local & AWS)
-- **[Kubernetes](kubernetes/README.md)** - K8s deploy (config retained; see Deployment above)
-- **[Deployment Guide](docs/deployment-guide.md)** - Full deployment options (Docker, K8s, AWS)
-- **[Insights Setup](docker/SETUP_INSIGHTS.md)** - AI insights service setup and end-to-end flow
-- **[Common Package](services/common/README.md)** - Shared components and utilities
-- **[Architecture](docs/design-docs/)** - System design and patterns
-- **[Security](docs/design-docs/monitoring-design.md)** - Security monitoring and analytics
-- **[OWASP ZAP Security Scan](docs/OWASP_ZAP_SCAN.md)** - How to run ZAP baseline scan and interpret the report
-- **[Metrics](docs/METRICS.md)** - Application metrics (plan + PromQL); single source of truth
-- **[Testing](integration_tests/README.md)** - Testing strategy and implementation
+- **[Services](services/README.md)** | **[Docker](docker/README.md)** | **[Kubernetes](kubernetes/README.md)** | **[Deployment Guide](docs/deployment-guide.md)**
+- **[Architecture](docs/design-docs/)** | **[Security](docs/design-docs/monitoring-design.md)** | **[Metrics](docs/METRICS.md)** | **[Testing](integration_tests/README.md)**
 
 ## 📌 Project Status (Feb 2026)
 
-- ✅ **Core Services** - All services operational (user, order, inventory, auth, insights, gateway)
-- ✅ **Authentication** - JWT-based auth with centralized validation
-- ✅ **Security** - Rate limiting, IP block (brute-force protection), circuit breakers, audit logging, STRIDE threat model, OWASP ZAP scan (65 PASS, 0 FAIL)
-- ✅ **Monitoring** - Prometheus, Grafana, structured logging; metrics per [docs/METRICS.md](docs/METRICS.md)
-- ✅ **Database** - DynamoDB with PynamoDB ORM and distributed locking
-- ✅ **Deployment** - **Docker (Compose)** is the supported deployment path; local one-command run via `./docker/deploy.sh local deploy`. Kubernetes config and docs are retained and work with [kubernetes/README.md](kubernetes/README.md) and [docs/deployment-guide.md](docs/deployment-guide.md) when you need K8s or EKS.
-- ✅ **Documentation** - All READMEs updated and synchronized (Feb 2026); deployment instructions consistent across all folders
-- 📋 **Current focus** - Full workflow demo (DEMO-001); optional Insights frontend paused
+- ✅ **Core Services** - All 7 services operational
+- ✅ **Security** - JWT auth, rate limiting, IP blocking, circuit breakers, STRIDE threat model, OWASP ZAP scan (65 PASS, 0 FAIL)
+- ✅ **Monitoring** - Prometheus, Grafana, structured logging; see [METRICS.md](docs/METRICS.md)
+- ✅ **Database** - DynamoDB (PynamoDB ORM) + Redis
+- ✅ **Deployment** - Docker Compose (primary); Kubernetes config available
+- ✅ **Documentation** - All READMEs synchronized (Feb 2026)
 
 ## 🚀 Getting Started
 
@@ -172,10 +142,9 @@ See [Docker README](docker/README.md) for more options (AWS deploy, stop, logs).
 
 ### Next Steps
 
-1. **Architecture**: Review [Services Overview](services/README.md) for service architecture
-2. **Security**: Check [Security Monitoring](docs/design-docs/monitoring-design.md) for security patterns
-3. **Development**: Follow [Local Development Guide](docs/deployment-guide.md) for detailed setup
-4. **Testing**: Use [Integration Tests](integration_tests/README.md) for testing (run `./integration_tests/run_all_tests.sh` for full suite)
+- Review [Services Overview](services/README.md) for architecture details
+- Check [Deployment Guide](docs/deployment-guide.md) for development setup
+- Run integration tests: `./integration_tests/run_all_tests.sh`
 
 ---
 
