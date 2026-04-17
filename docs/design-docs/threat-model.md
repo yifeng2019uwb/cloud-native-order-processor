@@ -20,6 +20,30 @@ This document maps STRIDE threats to components, mitigations, and test coverage 
 |----------|-----------|------------|---------------------------|
 | User A → User B's order | Order Service | **Implemented:** Identity from JWT only (not request body). `get_order` loads order then checks `order.username == current_user.username`; mismatch → 404 so User A cannot get User B's order. | `integration_tests/order_service/orders/get_order_tests.py` — `test_get_order_idor_user_b_cannot_get_user_a_order()` |
 
+## OWASP ZAP(Zed Attack Proxy) Scan Results
+
+Ran OWASP ZAP v2.17.0 baseline scan against the running API (2026-02-21).
+
+| Risk Level | Count |
+|------------|-------|
+| High       | 0     |
+| Medium     | 1     |
+| Low        | 0     |
+| Informational | 1  |
+| False Positives | 0 |
+
+**Medium — Cross-Domain Misconfiguration (CORS)**
+- `Access-Control-Allow-Origin: *` set on the gateway
+- Risk: unauthenticated endpoints accessible from any domain
+- Accepted for local dev scope; production fix: restrict CORS to known origins
+- Report: `docker/zap-report.html`
+
+**Informational — Storable and Cacheable Content**
+- No explicit cache-control headers set
+- Not a security risk for this project scope; noted for production hardening
+
+---
+
 ## Out of Scope
 
 - **mTLS between services** — Single developer / internal network; TLS at edge sufficient for project scope.
@@ -34,3 +58,5 @@ This document maps STRIDE threats to components, mitigations, and test coverage 
 - Rate limiting: `integration_tests/load_tests/k6/README.md`, `gateway/pkg/utils/rate_limit.go`
 - IP block (SEC-011): `gateway/README.md`, `integration_tests/incident/README.md`, `docs/design-docs/security-audit.md` (§11)
 - Audit logging: `services/common/src/auth/security/audit_logger.py`; query audit logs: `{service="audit"} \| json \| action="auth_failed"` (Loki)
+- OWASP ZAP scan config: `docker/zap.yaml`
+- OWASP ZAP HTML report: `docker/zap-report.html`
