@@ -4,7 +4,7 @@
 
 services:
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:3.8.1
     container_name: order-processor-localstack
     ports:
       - "4566:4566"            # LocalStack Gateway (all AWS APIs)
