@@ -46,8 +46,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown (if needed in future)
-    logger.info(action=LogAction.SERVICE_STOP, message="Inventory service shutting down")
+    logger.info(action=LogAction.SERVICE_START, message="Inventory service shutting down")
 
 # Create FastAPI app
 app = FastAPI(

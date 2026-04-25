@@ -1,0 +1,24 @@
+# Shared env vars for all services — sourced from docker-compose.local.yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-processor-config
+  namespace: order-processor
+  labels:
+    app: order-processor
+    environment: gke
+data:
+  ENVIRONMENT: "local"
+  AWS_ENDPOINT_URL: "http://localstack:4566"
+  AWS_REGION: "us-east-1"
+  AWS_ACCESS_KEY_ID: "test"
+  AWS_SECRET_ACCESS_KEY: "test"
+  USERS_TABLE: "order-processor-local-users"
+  ORDERS_TABLE: "order-processor-local-orders"
+  INVENTORY_TABLE: "order-processor-local-inventory"
+  REDIS_ENDPOINT: "redis"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  LOG_FILE_PATH: "/app/logs"
+  PYTHONPATH: "/root/.local/lib/python3.11/site-packages:/app"

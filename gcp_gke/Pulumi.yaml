@@ -1,0 +1,3 @@
+name: order-processor-gke
+runtime: go
+description: GKE cluster for cloud-native-order-processor (eBPF monitoring target)

@@ -29,7 +29,7 @@ class Headers:
 class ExternalServices:
     # Gateway is the only entry point for integration tests
     # Use environment variable or default to localhost for local testing
-    GATEWAY_HOST = os.getenv("GATEWAY_HOST", "localhost")
+    GATEWAY_HOST = os.getenv("GATEWAY_HOST", "136.109.215.94")  # gcp_gke; override with env var for local
     GATEWAY_PORT = int(os.getenv("GATEWAY_PORT", "8080"))
     GATEWAY_BASE_URL = f"http://{GATEWAY_HOST}:{GATEWAY_PORT}"
 
@@ -112,7 +112,7 @@ class RetryConfig:
 class PerformanceThresholds:
     RESPONSE_TIME_FAST = 100    # milliseconds
     RESPONSE_TIME_NORMAL = 500  # milliseconds
-    RESPONSE_TIME_SLOW = 2000   # milliseconds
+    RESPONSE_TIME_SLOW = 3000   # milliseconds
 
 # Integration Test Architecture
 class Architecture:

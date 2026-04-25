@@ -13,6 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, OrderAPI, UserAPI
 from test_constants import OrderFields, TestValues, UserFields
+from constants import Timeouts
 
 # Use plain dictionaries for integration tests to maintain black-box testing
 # No need to import service models as we test HTTP/JSON responses
@@ -20,7 +21,7 @@ from test_constants import OrderFields, TestValues, UserFields
 class CreateOrderTests:
     """Integration tests for order creation - focus on validation"""
 
-    def __init__(self, timeout: int = 10):
+    def __init__(self, timeout: int = Timeouts.LONG):
         self.timeout = timeout
         self.session = requests.Session()
         self.user_manager = TestUserManager()

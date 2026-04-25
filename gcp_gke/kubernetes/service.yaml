@@ -1,0 +1,102 @@
+# Services — copied from kubernetes/prod/service.yaml
+# Changes: removed AWS load balancer annotations (not needed on GKE)
+# gateway stays LoadBalancer — GKE creates a GCP load balancer automatically
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: user-service
+    environment: gke
+spec:
+  type: ClusterIP
+  selector:
+    app: order-processor
+    component: user-service
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: inventory-service
+    environment: gke
+spec:
+  type: ClusterIP
+  selector:
+    app: order-processor
+    component: inventory-service
+  ports:
+  - name: http
+    port: 8001
+    targetPort: 8001
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: order-service
+    environment: gke
+spec:
+  type: ClusterIP
+  selector:
+    app: order-processor
+    component: order-service
+  ports:
+  - name: http
+    port: 8002
+    targetPort: 8002
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: auth-service
+    environment: gke
+spec:
+  type: ClusterIP
+  selector:
+    app: order-processor
+    component: auth-service
+  ports:
+  - name: http
+    port: 8003
+    targetPort: 8003
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: gateway
+    environment: gke
+spec:
+  type: LoadBalancer
+  selector:
+    app: order-processor
+    component: gateway
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP

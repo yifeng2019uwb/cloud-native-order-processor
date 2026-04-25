@@ -1,0 +1,364 @@
+# Deployments — adapted from kubernetes/prod/deployment.yaml
+# Changes from prod:
+#   - image paths use Artifact Registry (us-west1-docker.pkg.dev) not GCR
+#   - removed imagePullSecrets (node SA has artifactregistry.reader via Pulumi IAM)
+#   - removed securityContext (Dockerfiles install to /root/.local; runAsUser 1000 blocks access)
+#   - envFrom ConfigMap replaces most hardcoded env vars
+#   - REDIS_ENDPOINT now points to in-cluster redis service
+#   - environment label changed to gke
+#   - CPU/memory sized for single-node demo workload
+#
+# CPU sizing rationale (IO-bound Python/FastAPI services):
+#   idle:                    1–5m per service
+#   integration tests ~10 req/s:  10–30m per service  ← sized for this
+#   1000 req/s (hypothetical):    400–700m per service (scale out with replicas)
+# Request = scheduler guarantee. Limit = hard cap for bursts.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: user-service
+    environment: gke
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-processor
+      component: user-service
+  template:
+    metadata:
+      labels:
+        app: order-processor
+        component: user-service
+        environment: gke
+    spec:
+      serviceAccountName: order-processor-sa
+      containers:
+      - name: user-service
+        image: us-west1-docker.pkg.dev/ebpfagent/order-processor/user-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+        envFrom:
+        - configMapRef:
+            name: order-processor-config
+        env:
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: jwt-secret
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "75m"
+          limits:
+            memory: "256Mi"
+            cpu: "150m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: inventory-service
+    environment: gke
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-processor
+      component: inventory-service
+  template:
+    metadata:
+      labels:
+        app: order-processor
+        component: inventory-service
+        environment: gke
+    spec:
+      serviceAccountName: order-processor-sa
+      containers:
+      - name: inventory-service
+        image: us-west1-docker.pkg.dev/ebpfagent/order-processor/inventory-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8001
+          name: http
+        envFrom:
+        - configMapRef:
+            name: order-processor-config
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: order-service
+    environment: gke
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-processor
+      component: order-service
+  template:
+    metadata:
+      labels:
+        app: order-processor
+        component: order-service
+        environment: gke
+    spec:
+      serviceAccountName: order-processor-sa
+      containers:
+      - name: order-service
+        image: us-west1-docker.pkg.dev/ebpfagent/order-processor/order-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8002
+          name: http
+        envFrom:
+        - configMapRef:
+            name: order-processor-config
+        env:
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: jwt-secret
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "75m"
+          limits:
+            memory: "256Mi"
+            cpu: "150m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: auth-service
+    environment: gke
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-processor
+      component: auth-service
+  template:
+    metadata:
+      labels:
+        app: order-processor
+        component: auth-service
+        environment: gke
+    spec:
+      serviceAccountName: order-processor-sa
+      containers:
+      - name: auth-service
+        image: us-west1-docker.pkg.dev/ebpfagent/order-processor/auth-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8003
+          name: http
+        envFrom:
+        - configMapRef:
+            name: order-processor-config
+        env:
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: jwt-secret
+        - name: JWT_ALGORITHM
+          value: "HS256"
+        - name: JWT_EXPIRATION_MINUTES
+          value: "60"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "75m"
+          limits:
+            memory: "256Mi"
+            cpu: "150m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: order-processor
+  labels:
+    app: order-processor
+    component: gateway
+    environment: gke
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-processor
+      component: gateway
+  template:
+    metadata:
+      labels:
+        app: order-processor
+        component: gateway
+        environment: gke
+    spec:
+      serviceAccountName: order-processor-sa
+      containers:
+      - name: gateway
+        image: us-west1-docker.pkg.dev/ebpfagent/order-processor/gateway:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        envFrom:
+        - configMapRef:
+            name: order-processor-config
+        env:
+        - name: GATEWAY_HOST
+          value: "0.0.0.0"
+        - name: GATEWAY_PORT
+          value: "8080"
+        - name: USER_SERVICE_URL
+          value: "http://user-service:8000"
+        - name: INVENTORY_SERVICE_URL
+          value: "http://inventory-service:8001"
+        - name: ORDER_SERVICE_URL
+          value: "http://order-service:8002"
+        - name: AUTH_SERVICE_URL
+          value: "http://auth-service:8003"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "75m"
+          limits:
+            memory: "256Mi"
+            cpu: "150m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: logs-volume
+        emptyDir: {}

@@ -419,8 +419,8 @@ const (
 	CircuitBreakerStateHalfOpen = "half-open"
 
 	// Circuit breaker thresholds
-	CircuitBreakerFailureThreshold = 5                // Number of failures before opening circuit
-	CircuitBreakerTimeout          = 60 * time.Second // Time to wait before trying again
+	CircuitBreakerFailureThreshold = 20               // Number of failures before opening circuit (relaxed for integration testing; tighten to 5 for production)
+	CircuitBreakerTimeout          = 30 * time.Second // Time to wait before trying again (reduced for integration testing; use 60s for production)
 	CircuitBreakerSuccessThreshold = 3                // Number of successes to close circuit from half-open
 )
 

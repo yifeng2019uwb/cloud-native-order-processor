@@ -13,6 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
 from simple_retry import simple_retry
 from api_endpoints import APIEndpoints, InventoryAPI
 from test_constants import InventoryFields, TestValues, CommonFields
+from constants import PerformanceThresholds
 
 # Import service models directly from files to avoid __init__.py dependency chain
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services', 'inventory_service', 'src'))
@@ -171,7 +172,7 @@ class InventoryServiceTests:
         end_time = time.time()
 
         response_time = (end_time - start_time) * 1000  # Convert to milliseconds
-        assert response_time < 1000, f"Response time {response_time:.2f}ms exceeds 1000ms threshold"
+        assert response_time < PerformanceThresholds.RESPONSE_TIME_SLOW, f"Response time {response_time:.2f}ms exceeds {PerformanceThresholds.RESPONSE_TIME_SLOW}ms threshold (LocalStack full-scan is ~15x slower than real DynamoDB)"
         assert r.status_code == 200
 
     def test_unsupported_query_params(self):

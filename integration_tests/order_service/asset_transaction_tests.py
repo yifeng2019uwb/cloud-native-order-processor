@@ -14,11 +14,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
 from user_manager import TestUserManager
 from api_endpoints import APIEndpoints, OrderAPI, UserAPI
 from test_constants import OrderFields, TestValues, UserFields
+from constants import Timeouts
 
 class AssetTransactionTests:
     """Integration tests for asset transaction history API"""
 
-    def __init__(self, timeout: int = 10):
+    def __init__(self, timeout: int = Timeouts.LONG):
         self.timeout = timeout
         self.session = requests.Session()
         self.user_manager = TestUserManager()
