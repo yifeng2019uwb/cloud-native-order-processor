@@ -64,6 +64,7 @@ const (
 const (
 	arRegion     = "us-west1"
 	arRepository = "order-processor"
+	arEbpfRepo   = "ebpf-edr"
 )
 
 // Container images — Artifact Registry (us-west1) avoids GCR→AR routing issues on GKE Ubuntu nodes
@@ -76,4 +77,5 @@ const (
 	imageOrder      = imagePrefix + "order-service:latest"
 	imageRedis      = "redis:7-alpine"
 	imageLocalstack = "localstack/localstack:3.8.1"
+	imageEbpfEdr    = "us-west1-docker.pkg.dev/" + projectID + "/" + arEbpfRepo + "/ebpf-edr:latest"
 )

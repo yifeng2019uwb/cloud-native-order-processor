@@ -8,9 +8,18 @@ import (
 )
 
 func setupRegistry(ctx *pulumi.Context, sa *serviceaccount.Account) error {
-	// Artifact Registry repository — us-west1 matches the GKE cluster zone
 	_, err := artifactregistry.NewRepository(ctx, "order-processor-registry", &artifactregistry.RepositoryArgs{
 		RepositoryId: pulumi.String(arRepository),
+		Location:     pulumi.String(arRegion),
+		Format:       pulumi.String("DOCKER"),
+	})
+	if err != nil {
+		return err
+	}
+
+	// Separate repo for the eBPF EDR agent image — built and pushed from ebpf-edr-demo/
+	_, err = artifactregistry.NewRepository(ctx, "ebpf-edr-registry", &artifactregistry.RepositoryArgs{
+		RepositoryId: pulumi.String(arEbpfRepo),
 		Location:     pulumi.String(arRegion),
 		Format:       pulumi.String("DOCKER"),
 	})

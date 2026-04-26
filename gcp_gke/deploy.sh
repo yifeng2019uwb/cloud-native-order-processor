@@ -69,10 +69,12 @@ for_each_cluster() {
 }
 
 deploy_full() {
+    local region=$1
     deploy_infra
     deploy_deps
     deploy_app
     show_status
+    _apply_daemonset "$region"
 }
 
 # ── namespace + secret ────────────────────────────────────────────────────────
