@@ -4,10 +4,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ID="ebpfagent"
 SERVICE_ACCOUNT_ID="order-processor-sa"
-ZONE="us-west1-a"
-CLUSTER_NAME="order-processor-cluster"
 PULUMI_STACK="gke-dev"
 
 info()    { echo "[INFO]  $*"; }
@@ -74,14 +73,20 @@ setup_pulumi() {
 
 # ── kubectl ───────────────────────────────────────────────────────────────────
 connect_kubectl() {
-    info "Connecting kubectl to GKE cluster $CLUSTER_NAME..."
-    if gcloud container clusters describe "$CLUSTER_NAME" --zone "$ZONE" >/dev/null 2>&1; then
-        gcloud container clusters get-credentials "$CLUSTER_NAME" \
-            --zone "$ZONE" --project "$PROJECT_ID"
-        success "kubectl connected to $CLUSTER_NAME"
-    else
-        warn "Cluster '$CLUSTER_NAME' not found yet — run this after 'pulumi up'"
-    fi
+    info "Reading cluster list from Pulumi stack outputs..."
+    local regions
+    regions=$(cd "$SCRIPT_DIR" && pulumi stack output clusterRegions --json 2>/dev/null | jq -r '.[]') \
+        || error "Cannot read clusterRegions — run 'pulumi up' first"
+
+    for region in $regions; do
+        local cluster zone
+        cluster=$(cd "$SCRIPT_DIR" && pulumi stack output "clusterName-${region}" 2>/dev/null)
+        zone=$(cd "$SCRIPT_DIR" && pulumi stack output "clusterZone-${region}" 2>/dev/null)
+        info "Connecting kubectl to $cluster ($zone)..."
+        gcloud container clusters get-credentials "$cluster" \
+            --zone "$zone" --project "$PROJECT_ID"
+        success "Connected: $cluster"
+    done
 }
 
 # ── main ──────────────────────────────────────────────────────────────────────

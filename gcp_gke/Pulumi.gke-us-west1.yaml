@@ -1,0 +1,4 @@
+config:
+  gcp:project: ebpfagent
+  order-processor-gke:region: us-west1
+  order-processor-gke:zone: us-west1-a

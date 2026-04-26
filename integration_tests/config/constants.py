@@ -29,7 +29,9 @@ class Headers:
 class ExternalServices:
     # Gateway is the only entry point for integration tests
     # Use environment variable or default to localhost for local testing
-    GATEWAY_HOST = os.getenv("GATEWAY_HOST", "136.109.215.94")  # gcp_gke; override with env var for local
+    # Gateway: http://34.75.224.245:8080 -- east;
+    # Gateway: http://136.109.131.172:8080 -- west
+    GATEWAY_HOST = os.getenv("GATEWAY_HOST", "34.75.224.245")  # gcp_gke; override with env var for local
     GATEWAY_PORT = int(os.getenv("GATEWAY_PORT", "8080"))
     GATEWAY_BASE_URL = f"http://{GATEWAY_HOST}:{GATEWAY_PORT}"
 

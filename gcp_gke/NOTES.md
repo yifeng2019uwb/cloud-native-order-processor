@@ -14,20 +14,53 @@ Deploy cloud-native-order-processor to GKE as an alternative environment alongsi
 - **DB**: LocalStack inside the cluster — same as Docker local setup, no cloud DB needed
 - **K8s manifests**: reuse/adapt from existing kubernetes/prod/, no changes to originals
 - **Image registry**: Artifact Registry (`us-west1-docker.pkg.dev`) NOT GCR (`gcr.io`) — GKE Ubuntu nodes with containerd generate malformed token scopes when pulling from GCR-backed-by-AR, causing 403s regardless of IAM. AR directly works cleanly.
-- **Machine type**: `e2-medium` — e2-small has only ~17m CPU left after GKE system pods; LocalStack needs >256MB RAM
+- **Machine type**: `e2-standard-2` — e2-medium (4GB) too tight, Python services OOMKilled; e2-small only ~17m CPU left after GKE system pods
 - **IAM + AR repo**: managed by Pulumi (`pulumi_registry.go`) — not manual gcloud commands
+- **Multi-region strategy**: single Pulumi stack manages all clusters; clusters defined as a Go slice in `config.go`; one AR registry shared across all regions; `deploy.sh all` reads cluster list from Pulumi outputs and deploys to every cluster automatically
 
 ## Design principle: scale easily, implement incrementally
 
 Not everything will be built at once. Each piece should work standalone and extend naturally — adding a region, a service, or an eBPF rule should be a small delta, not a rewrite. Build the first slice correctly; the rest follows the same pattern.
 
-## Multi-region goal
+## Multi-region design
 
-Design the Pulumi program to support deploying to multiple GCP regions. Each region gets its own GKE cluster. Services can run in different regions simultaneously — this gives the eBPF project more varied environments to monitor (different network latency profiles, different geo, same workload).
+Each region gets its own GKE cluster. Services run simultaneously across regions — different network latency profiles, different geo, same workload — giving the eBPF project varied environments to monitor.
 
-Start with one region first. Region should be a Pulumi config variable so adding a second region is just a config change, not a code change.
+### Single-stack, clusters-as-code
 
-Each cluster gets its own eBPF DaemonSet — one agent per node, region-tagged alerts.
+One Pulumi stack (`gke-dev`) manages everything: SA, AR registry, and all clusters. Clusters are defined as a Go slice in `config.go` — adding a region is one line of code, not a new stack.
+
+```go
+// config.go
+var clusters = []ClusterConfig{
+    {Name: "order-processor-cluster-us-west1", Region: "us-west1", Zone: "us-west1-a"},
+    {Name: "order-processor-cluster-us-east1", Region: "us-east1", Zone: "us-east1-b"},
+}
+```
+
+`pulumi up` creates all clusters in the list. Pulumi exports `clusterRegions` (string array) plus `clusterName-<region>` and `clusterZone-<region>` per cluster.
+
+**Why single stack over stack-per-region:**
+- SA and AR registry are project-level resources — only one should own them; stack-per-region causes 409 conflicts on the second stack
+- One `pulumi up` / `pulumi destroy` manages everything consistently
+- Simpler: no `pulumi stack select` before every operation
+
+### deploy.sh reads from Pulumi — no hardcoded cluster list
+
+`deploy.sh all` reads `clusterRegions` from Pulumi outputs and iterates:
+```bash
+regions=$(pulumi stack output clusterRegions --json | jq -r '.[]')
+for region in $regions; do
+    cluster=$(pulumi stack output "clusterName-${region}")
+    zone=$(pulumi stack output "clusterZone-${region}")
+    gcloud container clusters get-credentials "$cluster" --zone "$zone"
+    # deploy infra + app to this cluster
+done
+```
+
+Adding a new region: update `clusters` in `config.go` → `pulumi up` → `deploy.sh all` picks it up automatically.
+
+Each cluster gets its own eBPF DaemonSet — `deploy.sh daemonset` similarly loops over all clusters. DaemonSet manifest uses `$REGION` env var so `WorkloadMeta.Region` is tagged correctly per cluster.
 
 ## Approach
 
@@ -40,60 +73,63 @@ Start small — get Pulumi to create a GKE cluster in one region and deploy one 
 
 ## Setup & Deploy Steps
 
-### One-time setup (new machine or new GCP project)
+### Step 1 — One-time per machine (run once, not per region)
 
 ```bash
 cd gcp_gke/
-./setup.sh all          # gcloud auth + enable APIs + pulumi login + stack init
+./setup.sh all          # gcloud auth + enable GCP APIs + pulumi login
 ```
 
-Or run individual steps:
+Or individual steps if needed:
 ```bash
 ./setup.sh tools        # check required tools (gcloud, pulumi, kubectl, docker, go)
-./setup.sh gcp          # set GCP project + enable APIs
-./setup.sh pulumi       # go mod tidy + pulumi login + stack init + config
-./setup.sh kubectl      # connect kubectl to existing cluster
+./setup.sh gcp          # gcloud auth + set project + enable APIs
+./setup.sh pulumi       # go mod tidy + pulumi login
 ```
 
-### Provision GKE cluster (Pulumi)
+### Step 2 — Build and push Docker images (once, or when service code changes)
+
+Images are shared across all regions — only one registry (`us-west1-docker.pkg.dev`).
 
 ```bash
 cd gcp_gke/
-pulumi up               # create cluster + node pool + service account
+./deploy.sh build       # builds all 5 service images and pushes to Artifact Registry
 ```
 
-After cluster is up, connect kubectl:
-```bash
-./setup.sh kubectl
+### Step 3 — Add a region (edit code, then deploy)
+
+To add a new region, add one entry to `clusters` in `config.go`:
+```go
+var clusters = []ClusterConfig{
+    {Name: "order-processor-cluster-us-west1", Region: "us-west1", Zone: "us-west1-a"},
+    {Name: "order-processor-cluster-us-east1", Region: "us-east1", Zone: "us-east1-b"}, // new
+}
 ```
 
-### Build and push Docker images to Artifact Registry
-
-```bash
-cd gcp_gke/
-./deploy.sh build       # builds all 5 service images and pushes to us-west1-docker.pkg.dev
-```
-
-### Deploy services to GKE
-
+Then:
 ```bash
 cd gcp_gke/
-./deploy.sh all         # namespace + secret + configmap + localstack + redis + services + deployments
+pulumi up               # creates the new cluster (existing clusters unchanged)
+./deploy.sh all         # auto-reads cluster list from Pulumi, deploys to every cluster
 ```
 
-Or deploy in stages:
+### Step 4 — Deploy eBPF DaemonSet to all clusters
+
 ```bash
-./deploy.sh infra       # namespace + secret + configmap only
-./deploy.sh app         # localstack + redis + services + deployments
-./deploy.sh status      # check pod/service status
+# First build and push the EDR image (from ebpf-edr-demo/):
+make docker-push
+
+# Then deploy DaemonSet to all clusters:
+cd gcp_gke/
+./deploy.sh daemonset   # loops over all clusters, skips gracefully if image not found
 ```
 
 ### Teardown
 
 ```bash
 cd gcp_gke/
-./cleanup.sh            # delete namespace + all resources inside it
-pulumi destroy          # destroy GKE cluster + node pool + AR repo + IAM
+./cleanup.sh            # deletes K8s namespace + resources in currently connected cluster
+pulumi destroy          # destroys all clusters + SA + AR repo
 ```
 
 ## Troubleshooting
@@ -106,13 +142,26 @@ Happens when a `pulumi up` or `pulumi destroy` was interrupted, leaving GCP reso
 pulumi refresh --yes    # sync state; clears pending operations
 
 # If resources still exist in GCP but not in Pulumi state, import them:
-pulumi import "gcp:container/cluster:Cluster" "order-processor-cluster" \
-    "projects/ebpfagent/locations/us-west1-a/clusters/order-processor-cluster" --yes
+pulumi import "gcp:container/cluster:Cluster" "order-processor-cluster-us-west1" \
+    "projects/ebpfagent/locations/us-west1-a/clusters/order-processor-cluster-us-west1" --yes
+
+pulumi import "gcp:container/cluster:Cluster" "order-processor-cluster-us-east1" \
+    "projects/ebpfagent/locations/us-east1-b/clusters/order-processor-cluster-us-east1" --yes
 
 pulumi import "gcp:artifactregistry/repository:Repository" "order-processor-registry" \
     "projects/ebpfagent/locations/us-west1/repositories/order-processor" --yes
 
 pulumi up --yes
+```
+
+### Stale stack from old stack-per-region approach
+
+If a stale `gke-us-east1` or `gke-us-west1` stack exists from a previous approach, destroy and remove it:
+
+```bash
+pulumi stack select gke-us-east1
+pulumi destroy --yes
+pulumi stack rm gke-us-east1
 ```
 
 ### ImagePullBackOff 403 on GCR images

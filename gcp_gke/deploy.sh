@@ -45,8 +45,34 @@ build_images() {
 check_prereqs() {
     info "Checking prerequisites..."
     command -v kubectl >/dev/null 2>&1 || error "kubectl not found"
-    kubectl cluster-info >/dev/null 2>&1   || error "No cluster connection — run: gcloud container clusters get-credentials <cluster> --zone <zone>"
+    command -v jq     >/dev/null 2>&1 || error "jq not found — install with: brew install jq"
     success "Prerequisites OK"
+}
+
+# ── per-cluster loop ──────────────────────────────────────────────────────────
+# Calls fn "$region" for every cluster in the Pulumi stack output.
+for_each_cluster() {
+    local fn=$1
+    local regions
+    regions=$(cd "$SCRIPT_DIR" && pulumi stack output clusterRegions --json 2>/dev/null | jq -r '.[]') \
+        || error "Cannot read clusterRegions — run 'pulumi up' first"
+
+    for region in $regions; do
+        local cluster zone
+        cluster=$(cd "$SCRIPT_DIR" && pulumi stack output "clusterName-${region}" 2>/dev/null)
+        zone=$(cd "$SCRIPT_DIR" && pulumi stack output "clusterZone-${region}" 2>/dev/null)
+        info "=== Cluster: $cluster ($region) ==="
+        gcloud container clusters get-credentials "$cluster" \
+            --zone "$zone" --project "$PROJECT_ID" --quiet
+        $fn "$region"
+    done
+}
+
+deploy_full() {
+    deploy_infra
+    deploy_deps
+    deploy_app
+    show_status
 }
 
 # ── namespace + secret ────────────────────────────────────────────────────────
@@ -125,6 +151,27 @@ show_status() {
     fi
 }
 
+# ── daemonset ────────────────────────────────────────────────────────────────
+_apply_daemonset() {
+    local region=$1
+    local image="us-west1-docker.pkg.dev/ebpfagent/ebpf-edr/ebpf-edr:latest"
+    local ds_yaml="$K8S_DIR/ebpf-edr-ds.yaml"
+
+    if [ ! -f "$ds_yaml" ]; then
+        warn "ebpf-edr-ds.yaml not found — skipping ($ds_yaml)"
+        return 0
+    fi
+
+    if ! gcloud artifacts docker images describe "$image" >/dev/null 2>&1; then
+        warn "eBPF EDR image not found in Artifact Registry — skipping DaemonSet deploy"
+        warn "Build and push from ebpf-edr-demo/: make docker-push"
+        return 0
+    fi
+
+    REGION=$region envsubst < "$ds_yaml" | kubectl apply -f -
+    success "eBPF EDR DaemonSet deployed (region=$region)"
+}
+
 # ── main ──────────────────────────────────────────────────────────────────────
 main() {
     local cmd="${1:-all}"
@@ -133,13 +180,13 @@ main() {
 
     case "$cmd" in
         all)
-            deploy_infra
-            deploy_deps
-            deploy_app
-            show_status
+            for_each_cluster deploy_full
             ;;
         build)
             build_images
+            ;;
+        daemonset)
+            for_each_cluster _apply_daemonset
             ;;
         infra)
             deploy_infra
@@ -153,12 +200,13 @@ main() {
             show_status
             ;;
         *)
-            echo "Usage: $0 [all|build|infra|app|status]"
-            echo "  all    — full deploy (default)"
-            echo "  build  — build and push Docker images to Artifact Registry"
-            echo "  infra  — namespace, secret, configmap only"
-            echo "  app    — localstack, redis, services, deployments"
-            echo "  status — show pods, services, gateway IP"
+            echo "Usage: $0 [all|build|daemonset|infra|app|status]"
+            echo "  all       — deploy services to every cluster in Pulumi stack"
+            echo "  build     — build and push Docker images to Artifact Registry"
+            echo "  daemonset — deploy eBPF EDR DaemonSet to every cluster (skips if image not found)"
+            echo "  infra     — namespace, secret, configmap (current kubectl context)"
+            echo "  app       — localstack, redis, services, deployments (current context)"
+            echo "  status    — show pods, services, gateway IP (current context)"
             exit 1
             ;;
     esac

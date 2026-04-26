@@ -177,6 +177,7 @@ Same validation methodology as the Docker VM — reuse existing test suite.
 | Gateway exposure | LoadBalancer Service, external IP: `136.109.215.94:8080` | Done |
 | Integration test target | `GATEWAY_HOST=136.109.215.94` in `config/constants.py` | Done |
 | All integration tests | auth ✓, inventory ✓, order ✓, user ✓ | Done |
+| Multi-region Pulumi refactor | Reusable `deployCluster()` function, region as config var, `REGION` env var in DaemonSet | Planned |
 
 ---
 
@@ -185,3 +186,4 @@ Same validation methodology as the Docker VM — reuse existing test suite.
 - **Machine type**: `e2-medium` — e2-small insufficient for LocalStack + GKE system pods
 - **Image registry**: Artifact Registry (not GCR) — GKE Ubuntu containerd generates malformed token scopes for GCR causing 403s
 - **Manifests**: separate `gcp_gke/kubernetes/` directory (not overlays) — simpler for a standalone demo environment
+- **Multi-region**: each GCP region = separate Pulumi stack (`pulumi stack init us-east1`), same Go code, different config. DaemonSet injects `REGION` env var per cluster so eBPF `WorkloadIdentity.Region` is tagged correctly.
